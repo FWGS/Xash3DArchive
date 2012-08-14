@@ -83,6 +83,11 @@ qboolean CL_IsInConsole( void )
 	return ( cls.key_dest == key_console );
 }
 
+qboolean CL_IsIntermission( void )
+{
+	return cl.refdef.intermission;
+}
+
 qboolean CL_IsPlaybackDemo( void )
 {
 	return cls.demoplayback;

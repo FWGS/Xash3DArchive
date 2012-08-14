@@ -435,6 +435,11 @@ void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLan
 		svgame.dllFuncs.pfnResetGlobalState();
 		SV_SpawnEntities( pMapName, SV_EntityScript( ));
 		svgame.globals->frametime = 0.0f;
+
+		if( sv_newunit->integer )
+		{
+			SV_ClearSaveDir();
+		}
 	}
 
 	// always clearing newunit variable

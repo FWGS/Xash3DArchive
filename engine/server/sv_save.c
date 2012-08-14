@@ -611,6 +611,12 @@ int SV_IsValidSave( void )
 		return 0;
 	}
 
+	if( CL_IsIntermission( ))
+	{
+		Msg( "Can't save during intermission.\n" );
+		return 0;
+	}
+
 	if( sv_maxclients->integer != 1 )
 	{
 		Msg( "Can't save multiplayer games.\n" );
@@ -1393,7 +1399,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 		FS_Read( pFile, &position, sizeof( position ));
 
 		BF_WriteByte( &sv.signon, svc_stufftext );
-		BF_WriteString( &sv.signon, va( "music %s %s %i\n", curtrack, looptrack, position ));
+		BF_WriteString( &sv.signon, va( "music \"%s\" \"%s\" %i\n", curtrack, looptrack, position ));
 	}
 
 	FS_Close( pFile );

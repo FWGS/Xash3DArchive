@@ -728,6 +728,7 @@ qboolean CL_IsInGame( void );
 qboolean CL_IsInMenu( void );
 qboolean CL_IsInConsole( void );
 qboolean CL_IsThirdPerson( void );
+qboolean CL_IsIntermission( void );
 float CL_GetServerTime( void );
 float CL_GetLerpFrac( void );
 void CL_CharEvent( int key );

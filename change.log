@@ -1,4 +1,4 @@
-build ????
+build 2015
 
 Server: fix the sound problem with weapons
 Render: added rendermode kRenderWorldGlow (6) like in HL2
@@ -66,6 +66,17 @@ GameUI: don't draw logo.avi for mods without this file in gamedir
 GameUI: fix buttons loader bug
 GameUI: enable scissor for all ScrollList menus
 GameUI: restore the menu buttons control from keyboard
+Client: get walk animation support for 'wrong' player models that uses different skeleton
+Server: ignore savegame during intermission (used for Quake remake)
+Render: merge mirrors with same plane into one pass (perfomance option)
+Render: fix errors in function GL_CleanupTextureUnits (it was cause problems in XashXT)
+Render: allow decals on 'Solid" surfaces (grates, ladders etc)
+Render: rewrite "r_lighting_extended 2" mode
+Render: add optional texture sorting for models with Additive and Transparent textures (r_studio_sort_textures cvar)
+Engine: makes AABB transform trace an option for switchable engine features
+Engine: allow studiomodel textures up to 4096x4096 (for indexed images)
+Server: merge PVS for looking for client through portal cameras
+Server: fix bug with collect savegame info from basedir (e.g. valve)
 
 
 build 1905
