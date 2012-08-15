@@ -1301,6 +1301,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 			VectorNormalize( chromeupvec );
 			CrossProduct( tmp, chromeupvec, chromerightvec );
 			VectorNormalize( chromerightvec );
+			VectorNegate( chromeupvec, chromeupvec );
 		}
 
 		Matrix3x4_VectorIRotate( g_bonestransform[bone], chromeupvec, g_chromeup[bone] );

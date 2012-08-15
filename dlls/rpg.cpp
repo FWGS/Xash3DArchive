@@ -485,6 +485,7 @@ void CRpg::PrimaryAttack()
 	else
 	{
 		PlayEmptySound( );
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.2;
 	}
 	UpdateSpot( );
 }

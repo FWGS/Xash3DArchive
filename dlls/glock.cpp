@@ -233,7 +233,7 @@ void CGlock::Reload( void )
 	if (m_iClip == 0)
 		iResult = DefaultReload( 17, GLOCK_RELOAD, 1.5 );
 	else
-		iResult = DefaultReload( 18, GLOCK_RELOAD_NOT_EMPTY, 1.5 );
+		iResult = DefaultReload( 17, GLOCK_RELOAD_NOT_EMPTY, 1.5 );
 
 	if (iResult)
 	{
@@ -249,7 +249,7 @@ void CGlock::WeaponIdle( void )
 
 	m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
 
-	if (m_flTimeWeaponIdle > gpGlobals->time)
+	if (m_flTimeWeaponIdle > UTIL_WeaponTimeBase())
 		return;
 
 	// only idle if the slid isn't back

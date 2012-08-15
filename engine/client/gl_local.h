@@ -31,7 +31,7 @@ extern byte	*r_temppool;
 
 #define MAX_TEXTURES	4096
 #define MAX_DETAIL_TEXTURES	256
-#define MAX_LIGHTMAPS	128
+#define MAX_LIGHTMAPS	256
 #define SUBDIVIDE_SIZE	64
 #define MAX_MIRRORS		32	// per one frame!
 

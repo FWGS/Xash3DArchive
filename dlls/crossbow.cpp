@@ -527,6 +527,7 @@ void CCrossbow::WeaponIdle( void )
 				SendWeaponAnim( CROSSBOW_FIDGET2 );
 				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 80.0 / 30.0;
 			}
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
 		}
 	}
 }
