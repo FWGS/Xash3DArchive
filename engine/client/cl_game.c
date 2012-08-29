@@ -629,7 +629,7 @@ can be modulated
 void CL_DrawScreenFade( void )
 {
 	screenfade_t	*sf = &clgame.fade;
-	int		iFadeAlpha;
+	int		iFadeAlpha, testFlags;
 
 	// keep pushing reset time out indefinitely
 	if( sf->fadeFlags & FFADE_STAYOUT )
@@ -645,8 +645,10 @@ void CL_DrawScreenFade( void )
 		return;
 	}
 
+	testFlags = (sf->fadeFlags & ~FFADE_MODULATE);
+
 	// fading...
-	if( sf->fadeFlags == FFADE_STAYOUT )
+	if( testFlags == FFADE_STAYOUT )
 	{
 		iFadeAlpha = sf->fadealpha;
 	}
@@ -659,7 +661,9 @@ void CL_DrawScreenFade( void )
 
 	pglColor4ub( sf->fader, sf->fadeg, sf->fadeb, iFadeAlpha );
 
-	GL_SetRenderMode( kRenderTransTexture );
+	if( sf->fadeFlags & FFADE_MODULATE )
+		GL_SetRenderMode( kRenderTransAdd );
+	else GL_SetRenderMode( kRenderTransTexture );
 	R_DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, cls.fillImage );
 	pglColor4ub( 255, 255, 255, 255 );
 }

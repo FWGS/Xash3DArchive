@@ -791,6 +791,7 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		cls.state = ca_active;
 		cl.force_refdef = true;
 		cls.changelevel = false;		// changelevel is done
+		cls.changedemo = false;			// changedemo is done
 
 		SCR_MakeLevelShot();		// make levelshot if needs
 		Cvar_SetFloat( "scr_loading", 0.0f );	// reset progress bar	

@@ -209,6 +209,7 @@ void SV_Map_f( void )
 
 	SCR_BeginLoadingPlaque( false );
 
+	sv.changelevel = false;
 	sv.background = false;
 	sv.loadgame = false; // set right state
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
@@ -261,6 +262,7 @@ void SV_MapBackground_f( void )
 	SV_Shutdown( true );
 	NET_Config ( false ); // close network sockets
 
+	sv.changelevel = false;
 	sv.background = true;
 	sv.loadgame = false; // set right state
 

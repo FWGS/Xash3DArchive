@@ -1892,7 +1892,7 @@ static void R_StudioDrawPoints( void )
 
 	if( g_nForceFaceFlags & STUDIO_NF_CHROME )
 	{
-		scale = 1.0f + RI.currententity->curstate.renderamt * (1.0f / 255.0f);
+		scale = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 
 		for( i = 0; i < m_pSubModel->numnorms; i++ )
 			Matrix3x4_VectorRotate( g_bonestransform[pnormbone[i]], pstudionorms[i], g_xformnorms[i] );

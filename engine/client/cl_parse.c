@@ -541,7 +541,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	clgame.load_sequence++;	// now all hud sprites are invalid
 
 	// wipe the client_t struct
-	if( !cls.changelevel )
+	if( !cls.changelevel && !cls.changedemo )
 		CL_ClearState ();
 	cls.state = ca_connected;
 
@@ -583,7 +583,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 	menu.globals->maxClients = cl.maxclients;
 	Q_strncpy( menu.globals->maptitle, clgame.maptitle, sizeof( menu.globals->maptitle ));
 
-	if( !cls.changelevel ) CL_InitEdicts (); // re-arrange edicts
+	if( !cls.changelevel && !cls.changedemo )
+		CL_InitEdicts (); // re-arrange edicts
 
 	// get splash name
 	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s", clgame.mapname ));

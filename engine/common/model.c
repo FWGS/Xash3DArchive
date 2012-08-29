@@ -2721,7 +2721,7 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean force )
 
 	if( !Q_stricmp( cm_models[0].name, name ) && !force )
 	{
-		// singleplayer mode: server already loading map
+		// singleplayer mode: server already loaded map
 		com_models[1] = cm_models; // make link to world
 		if( checksum ) *checksum = world.checksum;
 
@@ -2938,9 +2938,9 @@ Mod_Handle
 */
 model_t *Mod_Handle( int handle )
 {
-	if( handle < 0 || handle > MAX_MODELS )
+	if( handle < 0 || handle >= MAX_MODELS )
 	{
-		Host_Error( "Mod_Handle: bad handle #%i\n", handle );
+		MsgDev( D_NOTE, "Mod_Handle: bad handle #%i\n", handle );
 		return NULL;
 	}
 	return com_models[handle];

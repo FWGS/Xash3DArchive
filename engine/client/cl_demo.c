@@ -555,6 +555,9 @@ CL_DemoCompleted
 */
 void CL_DemoCompleted( void )
 {
+	if( cls.demonum != -1 )
+		cls.changedemo = true;
+
 	CL_StopPlayback();
 
 	if( !CL_NextDemo() && host.developer <= 2 )
@@ -662,6 +665,10 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 		CL_DemoCompleted();
 		return false;
 	}
+
+	// HACKHACK: changedemo issues
+	if( !cls.netchan.remote_address.type )
+		cls.netchan.remote_address.type = NA_LOOPBACK;
 
 	if( cl.refdef.paused || cls.key_dest != key_game )
 	{
@@ -790,10 +797,15 @@ void CL_StopPlayback( void )
 	demo.directory.entries = NULL;
 	demo.entry = NULL;
 
-	// let game known about movie state	
-	cls.state = ca_disconnected;
 	cls.demoname[0] = '\0';	// clear demoname too
 	menu.globals->demoname[0] = '\0';
+
+	if( !cls.changedemo )
+	{
+		// let game known about movie state	
+		cls.state = ca_disconnected;
+		cls.demonum = -1;
+	}
 }
 
 /* 
@@ -1022,6 +1034,17 @@ void CL_PlayDemo_f( void )
 		return;
 	}
 
+	if( cls.demoplayback )
+	{
+		CL_StopPlayback();
+	}
+
+	if( cls.demorecording )
+	{
+		Msg( "Can't playback during demo record.\n");
+		return;
+	}
+
 	Q_strncpy( demoname, Cmd_Argv( 1 ), sizeof( demoname ) - 1 );
 	Q_snprintf( filename, sizeof( filename ), "demos/%s.dem", demoname );
 
@@ -1075,15 +1098,27 @@ void CL_PlayDemo_f( void )
 		FS_Close( cls.demofile );
 		cls.demofile = NULL;
 		cls.demonum = -1; // stop demo loop
+		cls.changedemo = false;
 		return;
 	}
 
-	// NOTE: at this point demo is still valid
-	CL_Disconnect();
-	Host_ShutdownServer();
+	if( cls.changedemo )
+	{
+		S_StopAllSounds();
+		SCR_BeginLoadingPlaque( cl.background );
 
-	Con_Close();
-	UI_SetActiveMenu( false );
+		CL_ClearState ();
+		CL_InitEdicts (); // re-arrange edicts
+	}
+	else
+	{
+		// NOTE: at this point demo is still valid
+		CL_Disconnect();
+		Host_ShutdownServer();
+
+		Con_Close();
+		UI_SetActiveMenu( false );
+	}
 
 	// allocate demo entries
 	demo.directory.entries = Mem_Alloc( cls.mempool, sizeof( demoentry_t ) * demo.directory.numentries );
@@ -1154,7 +1189,7 @@ Return to looping demos
 void CL_Demos_f( void )
 {
 	if( cls.demonum == -1 )
-		cls.demonum = 1;
+		cls.demonum = 0;
 
 	CL_Disconnect ();
 	CL_NextDemo ();

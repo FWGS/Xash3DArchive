@@ -434,6 +434,7 @@ typedef struct
 	connstate_t	state;
 	qboolean		initialized;
 	qboolean		changelevel;		// during changelevel
+	qboolean		changedemo;		// during changedemo
 
 	// screen rendering information
 	float		disable_screen;		// showing loading plaque between levels
@@ -612,6 +613,7 @@ void CL_Demos_f( void );
 void CL_DeleteDemo_f( void );
 void CL_Record_f( void );
 void CL_Stop_f( void );
+void CL_FreeDemo( void );
 
 //
 // cl_events.c

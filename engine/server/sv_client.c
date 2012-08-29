@@ -1041,6 +1041,7 @@ void SV_PutClientInServer( edict_t *ent )
 	}
 
 	// clear any temp states
+	sv.changelevel = false;
 	sv.loadgame = false;
 	sv.paused = false;
 

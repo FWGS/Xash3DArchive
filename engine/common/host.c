@@ -365,7 +365,7 @@ void Host_RestartAmbientSounds( void )
 		if( !soundInfo[i].looping || soundInfo[i].entnum == -1 )
 			continue;
 
-		Msg( "Restarting sound %s...\n", soundInfo[i].name );
+		MsgDev( D_NOTE, "Restarting sound %s...\n", soundInfo[i].name );
 		S_StopSound( soundInfo[i].entnum, soundInfo[i].channel, soundInfo[i].name );
 		SV_StartSound( pfnPEntityOfEntIndex( soundInfo[i].entnum ), CHAN_STATIC, soundInfo[i].name,
 		soundInfo[i].volume, soundInfo[i].attenuation, 0, soundInfo[i].pitch );

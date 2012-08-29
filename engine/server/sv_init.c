@@ -351,6 +351,7 @@ void SV_ActivateServer( void )
 
 	sv.state = ss_active;
 	physinfo->modified = true;
+	sv.changelevel = false;
 	sv.paused = false;
 
 	Host_SetServerState( sv.state );
@@ -463,13 +464,14 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 {
 	int	i, current_skill;
 	qboolean	loadgame, paused;
-	qboolean	background;
+	qboolean	background, changelevel;
 
 	Cmd_ExecuteString( "latch\n", src_command );
 
 	// save state
 	loadgame = sv.loadgame;
 	background = sv.background;
+	changelevel = sv.changelevel;
 	paused = sv.paused;
 
 	if( sv.state == ss_dead )
@@ -499,6 +501,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	sv.paused = paused;
 	sv.loadgame = loadgame;
 	sv.background = background;
+	sv.changelevel = changelevel;
 	sv.time = 1.0f;			// server spawn time it's always 1.0 second
 	svgame.globals->time = sv.time;
 	
@@ -710,6 +713,7 @@ qboolean SV_NewGame( const char *mapName, qboolean loadGame )
 
 	sv.loadgame = loadGame;
 	sv.background = false;
+	sv.changelevel = false;
 
 	if( !SV_SpawnServer( mapName, NULL ))
 		return false;

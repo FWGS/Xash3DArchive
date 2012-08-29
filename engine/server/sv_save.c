@@ -1889,6 +1889,8 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 	Q_strncpy( level, mapname, MAX_STRING );
 	Q_strncpy( oldlevel, sv.name, MAX_STRING );
 	sv.background = false;
+	sv.changelevel = true;	// NOTE: this is used to indicate changelevel for classic Quake changelevel
+				// because demos wan't properly update clock on a new level while recording
 
 	if( loadfromsavedgame )
 	{

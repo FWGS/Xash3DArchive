@@ -1023,14 +1023,14 @@ void CL_RocketTrail( vec3_t start, vec3_t end, int type )
 		switch( type )
 		{
 		case 0:	// rocket trail
-			p->ramp = Com_RandomLong( 0, 4 );
+			p->ramp = (rand() & 3);
 			p->color = ramp3[(int)p->ramp];
 			p->type = pt_fire;
 			for( j = 0; j < 3; j++ )
 				p->org[j] = start[j] + ((rand() % 6 ) - 3 );
 			break;
 		case 1:	// smoke smoke
-			p->ramp = Com_RandomLong( 2, 6 );
+			p->ramp = (rand() & 3) + 2;
 			p->color = ramp3[(int)p->ramp];
 			p->type = pt_fire;
 			for( j = 0; j < 3; j++ )
@@ -1038,7 +1038,7 @@ void CL_RocketTrail( vec3_t start, vec3_t end, int type )
 			break;
 		case 2:	// blood
 			p->type = pt_grav;
-			p->color = Com_RandomLong( 67, 71 );
+			p->color = 67 + (rand() & 3);
 			for( j = 0; j < 3; j++ )
 				p->org[j] = start[j] + ((rand() % 6 ) - 3 );
 			break;
@@ -1066,17 +1066,17 @@ void CL_RocketTrail( vec3_t start, vec3_t end, int type )
 			break;
 		case 4:	// slight blood
 			p->type = pt_grav;
-			p->color = Com_RandomLong( 67, 71 );
+			p->color = 67 + (rand() & 3);
 			for( j = 0; j < 3; j++ )
-				p->org[j] = start[j] + Com_RandomFloat( -3.0f, 3.0f );
+				p->org[j] = start[j] + ((rand() % 6) - 3);
 			len -= 3;
 			break;
 		case 6:	// voor trail
-			p->color = Com_RandomLong( 152, 156 );
+			p->color = 9 * 16 + 8 + (rand() & 3);
 			p->type = pt_static;
 			p->die += 0.3f;
 			for( j = 0; j < 3; j++ )
-				p->org[j] = start[j] + Com_RandomFloat( -16.0f, 16.0f );
+				p->org[j] = start[j] + ((rand() & 15) - 8);
 			break;
 		}
 		VectorAdd( start, vec, start );

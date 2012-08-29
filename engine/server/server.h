@@ -110,6 +110,7 @@ typedef struct server_s
 
 	qboolean		background;	// this is background map
 	qboolean		loadgame;		// client begins should reuse existing entity
+	qboolean		changelevel;	// set if changelevel in-action (smooth or classic)
 	int		viewentity;	// applied on client restore. this is temporare place
 					// until client connected
 

@@ -1034,7 +1034,10 @@ void Cvar_List_f( void )
 
 		if( var->flags & CVAR_CHEAT ) Msg( "CHEAT " );
 		else Msg( " " );
-		Msg(" %s \"%s\" %s\n", var->name, var->string, var->description );
+
+		if( var->flags & ( CVAR_EXTDLL|CVAR_CLIENTDLL ))
+			Msg(" %s \"%s\" %s\n", var->name, var->string );
+		else Msg(" %s \"%s\" %s\n", var->name, var->string, var->description );
 		j++;
 	}
 

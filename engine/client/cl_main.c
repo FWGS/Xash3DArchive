@@ -786,6 +786,7 @@ void CL_Disconnect( void )
 		return;
 
 	cls.connect_time = 0;
+	cls.changedemo = false;
 	CL_Stop_f();
 
 	// send a disconnect message to the server
