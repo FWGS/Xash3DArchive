@@ -988,7 +988,7 @@ void SV_PutClientInServer( edict_t *ent )
 		if( svgame.globals->cdAudioTrack )
 		{
 			BF_WriteByte( &client->netchan.message, svc_stufftext );
-			BF_WriteString( &client->netchan.message, va( "cd play %3d\n", svgame.globals->cdAudioTrack ));
+			BF_WriteString( &client->netchan.message, va( "cd loop %3d\n", svgame.globals->cdAudioTrack ));
 			svgame.globals->cdAudioTrack = 0;
 		}
 	}
@@ -1911,6 +1911,12 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 	{
 		// custom client commands
 		svgame.dllFuncs.pfnClientCommand( cl->edict );
+
+		if( !Q_strcmp( Cmd_Argv( 0 ), "fullupdate" ))
+		{
+			// resend the ambient sounds for demo recording
+			Host_RestartAmbientSounds();
+		}
 	}
 }
 

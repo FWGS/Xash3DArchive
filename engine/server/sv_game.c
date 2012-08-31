@@ -2052,6 +2052,19 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 
 /*
 =================
+SV_StartMusic
+
+=================
+*/
+void SV_StartMusic( const char *curtrack, const char *looptrack, fs_offset_t position )
+{
+	BF_WriteByte( &sv.multicast, svc_stufftext );
+	BF_WriteString( &sv.multicast, va( "music \"%s\" \"%s\" %i\n", curtrack, looptrack, position ));
+	SV_Send( MSG_ALL, NULL, NULL );
+}
+
+/*
+=================
 pfnTraceLine
 
 =================

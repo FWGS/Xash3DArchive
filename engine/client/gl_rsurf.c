@@ -220,7 +220,7 @@ void GL_SetupFogColorForSurfaces( void )
 	vec3_t	fogColor;
 	float	factor, div;
 
-	if(( !RI.fogEnabled && !RI.fogCustom ) || RI.refdef.onlyClientDraw )
+	if(( !RI.fogEnabled && !RI.fogCustom ) || RI.refdef.onlyClientDraw || !RI.currententity )
 		return;
 
 	if( RI.currententity->curstate.rendermode == kRenderTransTexture )

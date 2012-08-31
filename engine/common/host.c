@@ -351,7 +351,9 @@ Write ambient sounds into demo
 void Host_RestartAmbientSounds( void )
 {
 	soundlist_t	soundInfo[64];
+	string		curtrack, looptrack;
 	int		i, nSounds;
+	fs_offset_t	position;
 
 	if( !SV_Active( ))
 	{
@@ -369,6 +371,12 @@ void Host_RestartAmbientSounds( void )
 		S_StopSound( soundInfo[i].entnum, soundInfo[i].channel, soundInfo[i].name );
 		SV_StartSound( pfnPEntityOfEntIndex( soundInfo[i].entnum ), CHAN_STATIC, soundInfo[i].name,
 		soundInfo[i].volume, soundInfo[i].attenuation, 0, soundInfo[i].pitch );
+	}
+
+	// restart soundtrack
+	if( S_StreamGetCurrentState( curtrack, looptrack, &position ))
+	{
+		SV_StartMusic( curtrack, looptrack, position );
 	}
 }
 

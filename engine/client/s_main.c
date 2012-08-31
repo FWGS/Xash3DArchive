@@ -1711,6 +1711,8 @@ void S_SoundInfo_f( void )
 	Msg( "%5d bits/sample\n", 16 );
 	Msg( "%5d bytes/sec\n", SOUND_DMA_SPEED );
 	Msg( "%5d total_channels\n", total_channels );
+
+	S_PrintBackgroundTrackState ();
 }
 
 /*

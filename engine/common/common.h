@@ -741,7 +741,9 @@ void COM_AddAppDirectoryToSearchPath( const char *pszBaseDir, const char *appNam
 int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBufferSize );
 struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull, int ignore_pe );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
+void SV_StartMusic( const char *curtrack, const char *looptrack, fs_offset_t position );
 int R_CreateDecalList( struct decallist_s *pList, qboolean changelevel );
+qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *position );
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );

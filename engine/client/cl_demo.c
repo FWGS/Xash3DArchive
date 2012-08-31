@@ -369,9 +369,6 @@ void CL_WriteDemoHeader( const char *name )
 
 	Cbuf_InsertText( "fullupdate\n" );
 	Cbuf_Execute();
-
-	// resend the ambient sounds
-	Host_RestartAmbientSounds();
 }
 
 /*
@@ -800,6 +797,9 @@ void CL_StopPlayback( void )
 	cls.demoname[0] = '\0';	// clear demoname too
 	menu.globals->demoname[0] = '\0';
 
+	S_StopAllSounds();
+	S_StopBackgroundTrack();
+
 	if( !cls.changedemo )
 	{
 		// let game known about movie state	
@@ -1209,5 +1209,10 @@ void CL_Stop_f( void )
 	CL_StopRecord();
 	CL_StopPlayback();
 	SCR_StopCinematic();
-	S_StopBackgroundTrack();
+
+	// stop background track that was runned from the console
+	if( !SV_Active( ))
+	{
+		S_StopBackgroundTrack();
+	}
 }
