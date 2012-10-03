@@ -359,7 +359,7 @@ channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx, const vec3_t pos )
 	int	i, dupe = 0;
 
 #if 1	// TODO: remove this code when predicting is will be done
-	// check for dupliacte sounds
+	// check for duplicate sounds
 	for( i = 0; i < total_channels; i++ )
 	{
 		if( channels[i].sfx == sfx && VectorCompare( channels[i].origin, pos ))

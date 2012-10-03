@@ -3509,9 +3509,20 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 	Q_memcpy( loadmodel->cache.data, buffer, phdr->length );
 #endif
 	// setup bounding box
-	VectorCopy( phdr->bbmin, loadmodel->mins );
-	VectorCopy( phdr->bbmax, loadmodel->maxs );
+	if( VectorIsNull( phdr->bbmin ) && VectorIsNull( phdr->bbmax ))
+	{
+		mstudioseqdesc_t *pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 
+		// just to have something valid here
+		VectorCopy( pseqdesc[0].bbmin, loadmodel->mins );
+		VectorCopy( pseqdesc[0].bbmax, loadmodel->maxs );
+	}
+	else
+	{
+		VectorCopy( phdr->bbmin, loadmodel->mins );
+		VectorCopy( phdr->bbmax, loadmodel->maxs );
+	}
+	
 	loadmodel->numframes = R_StudioBodyVariations( loadmodel );
 	loadmodel->radius = RadiusFromBounds( loadmodel->mins, loadmodel->maxs );
 	loadmodel->flags = phdr->flags; // copy header flags

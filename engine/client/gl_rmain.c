@@ -877,11 +877,82 @@ static void R_EndGL( void )
 
 /*
 =============
+R_RecursiveFindWaterTexture
+
+using to find source waterleaf with
+watertexture to grab fog values from it
+=============
+*/
+static gltexture_t *R_RecursiveFindWaterTexture( const mnode_t *node, const mnode_t *ignore, qboolean down )
+{
+	gltexture_t *tex = NULL;
+
+	// assure the initial node is not null
+	// we could check it here, but we would rather check it 
+	// outside the call to get rid of one additional recursion level
+	ASSERT( node != NULL );
+
+	// ignore solid nodes
+	if( node->contents == CONTENTS_SOLID )
+		return NULL;
+
+	if( node->contents < 0 )
+	{
+		mleaf_t		*pleaf;
+		msurface_t	**mark;
+		int		i, c;
+
+		// ignore non-liquid leaves
+		if( node->contents != CONTENTS_WATER && node->contents != CONTENTS_LAVA && node->contents != CONTENTS_SLIME )
+			 return NULL;
+
+		// find texture
+		pleaf = (mleaf_t *)node;
+		mark = pleaf->firstmarksurface;
+		c = pleaf->nummarksurfaces;	
+
+		for( i = 0; i < c; i++, mark++ )
+		{
+			if( (*mark)->flags & SURF_DRAWTURB && (*mark)->texinfo && (*mark)->texinfo->texture )
+				return R_GetTexture( (*mark)->texinfo->texture->gl_texturenum );
+		}
+
+		// texture not found
+		return NULL;
+	}
+
+	// this is a regular node
+	// traverse children
+	if( node->children[0] && ( node->children[0] != ignore ))
+	{
+		tex = R_RecursiveFindWaterTexture( node->children[0], node, true );
+		if( tex ) return tex;
+	}
+
+	if( node->children[1] && ( node->children[1] != ignore ))
+	{
+		tex = R_RecursiveFindWaterTexture( node->children[1], node, true );
+		if( tex )	return tex;
+	}
+
+	// for down recursion, return immediately
+	if( down ) return NULL;
+
+	// texture not found, step up if any
+	if( node->parent )
+		return R_RecursiveFindWaterTexture( node->parent, node, false );
+
+	// top-level node, bail out
+	return NULL;
+}
+
+/*
+=============
 R_CheckFog
 
 check for underwater fog
-FIXME: this code is wrong, we need to compute fog volumes (as water volumes)
-and get fog params from texture water on a surface.
+Using backward recursion to find waterline leaf
+from underwater leaf (idea: XaeroX)
 =============
 */
 static void R_CheckFog( void )
@@ -931,23 +1002,11 @@ static void R_CheckFog( void )
 		}
 		else
 		{
-			msurface_t	**surf;
-
-			count = r_viewleaf->nummarksurfaces;	
-
-			for( i = 0, surf = r_viewleaf->firstmarksurface; i < count; i++, surf++ )
-			{
-				if((*surf)->flags & SURF_DRAWTURB && (*surf)->texinfo && (*surf)->texinfo->texture )
-				{
-					tex = R_GetTexture( (*surf)->texinfo->texture->gl_texturenum );
-					RI.cached_contents = r_viewleaf->contents;
-					break;
-				}
-			}
+			tex = R_RecursiveFindWaterTexture( r_viewleaf->parent, NULL, false );
+			if( tex ) RI.cached_contents = r_viewleaf->contents;
 		}
 
-		if( i == count || !tex )
-			return;	// no valid fogs
+		if( !tex ) return;	// no valid fogs
 
 		// copy fog params
 		RI.fogColor[0] = tex->fogParams[0] / 255.0f;
