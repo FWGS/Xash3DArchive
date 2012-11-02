@@ -1809,6 +1809,18 @@ static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedir
 		search = &fs_directpath;
 		Q_memset( search, 0, sizeof( searchpath_t ));
 
+		// root folder has a more priority than netpath
+		Q_strncpy( search->filename, host.rootdir, sizeof( search->filename ));
+		Q_strcat( search->filename, "\\" );
+		Q_snprintf( netpath, MAX_SYSPATH, "%s%s", search->filename, name );
+
+		if( FS_SysFileExists( netpath ))
+		{
+			if( index != NULL )
+				*index = -1;
+			return search;
+		}
+
 		// search for environment path
 		while( pEnvPath )
 		{
@@ -1817,16 +1829,19 @@ static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedir
 			Q_strncpy( search->filename, pEnvPath, (end - pEnvPath) + 1 );
 			Q_strcat( search->filename, "\\" );
 			Q_snprintf( netpath, MAX_SYSPATH, "%s%s", search->filename, name );
+
 			if( FS_SysFileExists( netpath ))
 			{
-				if( index != NULL ) *index = -1;
+				if( index != NULL )
+					*index = -1;
 				return search;
 			}
 			pEnvPath += (end - pEnvPath) + 1; // move pointer
 		}
 	}
 
-	if( index != NULL ) *index = -1;
+	if( index != NULL )
+		*index = -1;
 
 	return NULL;
 }

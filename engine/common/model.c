@@ -119,7 +119,7 @@ Mod_PrintBSPFileSizes
 Dumps info about current file
 =============
 */
-void Mod_PrintBSPFileSizes( void )
+void Mod_PrintBSPFileSizes_f( void )
 {
 	int	totalmemory = 0;
 	model_t	*w = worldmodel;
@@ -152,6 +152,33 @@ void Mod_PrintBSPFileSizes( void )
 	totalmemory += Mod_GlobUsage( "entdata",	world.entdatasize,	MAX_MAP_ENTSTRING );
 
 	Msg( "=== Total BSP file data space used: %s ===\n", Q_memprint( totalmemory ));
+}
+
+/*
+================
+Mod_Modellist_f
+================
+*/
+void Mod_Modellist_f( void )
+{
+	int	i, nummodels;
+	model_t	*mod;
+
+	Msg( "\n" );
+	Msg( "-----------------------------------\n" );
+
+	for( i = nummodels = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
+	{
+		if( !mod->name[0] )
+			continue; // free slot
+
+		Msg( "%s%s\n", mod->name, (mod->type == mod_bad) ? " (DEFAULTED)" : "" );
+		nummodels++;
+	}
+
+	Msg( "-----------------------------------\n" );
+	Msg( "%i total models\n", nummodels );
+	Msg( "\n" );
 }
 
 /*
@@ -449,7 +476,8 @@ Mod_FreeModel
 */
 static void Mod_FreeModel( model_t *mod )
 {
-	if( !mod || !mod->mempool )
+	// already freed?
+	if( !mod || !mod->name[0] )
 		return;
 
 	// select the properly unloader
@@ -484,7 +512,8 @@ void Mod_Init( void )
 		mod_allow_materials = Cvar_Get( "host_allow_materials", "0", CVAR_LATCH|CVAR_ARCHIVE, "allow HD textures" );
 	else mod_allow_materials = NULL; // no reason to load HD-textures for dedicated server
 
-	Cmd_AddCommand( "mapstats", Mod_PrintBSPFileSizes, "show stats for currently loaded map" );
+	Cmd_AddCommand( "mapstats", Mod_PrintBSPFileSizes_f, "show stats for currently loaded map" );
+	Cmd_AddCommand( "modellist", Mod_Modellist_f, "display loaded models list" );
 
 	Mod_InitStudioHull ();
 }
@@ -2086,10 +2115,8 @@ Mod_LoadEntities
 */
 static void Mod_LoadEntities( const dlump_t *l )
 {
-	byte	*in;
-
-	in = (void *)(mod_base + l->fileofs);
-	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen );	
+	// make sure what we really has terminator
+	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen + 1 );
 	Q_memcpy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
 	if( world.loading ) world.entdatasize = l->filelen;
 }
