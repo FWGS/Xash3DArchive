@@ -1593,8 +1593,8 @@ void S_RenderFrame( ref_params_t *fd )
 			if( ch->sfx && ( ch->leftvol || ch->rightvol ))
 			{
 				info.index = total;
-				Con_NXPrintf( &info, "chan %i, lv%3i rv%3i %s\n",
-				i, ch->leftvol, ch->rightvol, ch->sfx->name );
+				Con_NXPrintf( &info, "chan %i, pos (%.f %.f %.f) ent %i, lv%3i rv%3i %s\n",
+				i, ch->origin[0], ch->origin[1], ch->origin[2], ch->entnum, ch->leftvol, ch->rightvol, ch->sfx->name );
 				total++;
 			}
 		}

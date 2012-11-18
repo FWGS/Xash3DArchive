@@ -78,10 +78,10 @@ void V_SetupRefDef( void )
 		cl.refdef.viewport[3] = scr_height->integer - sb_lines;
 	if( cl.refdef.viewport[3] > scr_height->integer )
 		cl.refdef.viewport[3] = scr_height->integer;
-
+#if 0
 	cl.refdef.viewport[2] &= ~7;
 	cl.refdef.viewport[3] &= ~1;
-
+#endif
 	cl.refdef.viewport[0] = (scr_width->integer - cl.refdef.viewport[2]) / 2;
 	cl.refdef.viewport[1] = (scr_height->integer - sb_lines - cl.refdef.viewport[3]) / 2;
 

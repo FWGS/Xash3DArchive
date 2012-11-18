@@ -1694,7 +1694,7 @@ void Host_ClientFrame( void )
 
 	VGui_RunFrame ();
 
-	clgame.dllFuncs.pfnFrame( cl.time );
+	clgame.dllFuncs.pfnFrame( host.frametime );
 
 	// fetch results from server
 	CL_ReadPackets();

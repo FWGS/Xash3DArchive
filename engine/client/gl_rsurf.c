@@ -303,11 +303,8 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 		glt = R_GetTexture( fa->texinfo->texture->gl_texturenum );
 		tex = fa->texinfo->texture;
 		ASSERT( glt != NULL && tex != NULL );
-// DEBUG
-		if( glt->srcWidth != tex->width )
-			Msg( "Texture %s updates conveyor width from %i to %i\n", tex->name, glt->srcWidth, tex->width );
 
-		// update conveyor widths for properly scrolling speed
+		// update conveyor widths for keep properly speed of scrolling
 		glt->srcWidth = tex->width;
 		glt->srcHeight = tex->height;
 	}

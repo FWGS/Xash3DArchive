@@ -25,6 +25,13 @@ GNU General Public License for more details.
 #include "mathlib.h"
 
 #define FILE_BUFF_SIZE		2048
+#define PAK_LOAD_OK			0
+#define PAK_LOAD_COULDNT_OPEN		1
+#define PAK_LOAD_BAD_HEADER		2
+#define PAK_LOAD_BAD_FOLDERS		3
+#define PAK_LOAD_TOO_MANY_FILES	4
+#define PAK_LOAD_NO_FILES		5
+#define PAK_LOAD_CORRUPTED		6	
 
 typedef struct stringlist_s
 {
@@ -107,6 +114,7 @@ static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char match
 static packfile_t* FS_AddFileToPack( const char* name, pack_t *pack, fs_offset_t offset, fs_offset_t size );
 static byte *W_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
 static qboolean FS_SysFileExists( const char *path );
+static qboolean FS_SysFolderExists( const char *path );
 static long FS_SysFileTime( const char *filename );
 static char W_TypeFromExt( const char *lumpname );
 static const char *W_ExtFromType( char lumptype );
@@ -425,7 +433,7 @@ Loads the header and directory, adding the files at the beginning
 of the list so they override previous pack files.
 =================
 */
-pack_t *FS_LoadPackPAK( const char *packfile )
+pack_t *FS_LoadPackPAK( const char *packfile, int *error )
 {
 	dpackheader_t	header;
 	int		i, numpackfiles;
@@ -434,12 +442,18 @@ pack_t *FS_LoadPackPAK( const char *packfile )
 	dpackfile_t	*info;
 
 	packhandle = open( packfile, O_RDONLY|O_BINARY );
-	if( packhandle < 0 ) return NULL;
+	if( packhandle < 0 )
+	{
+		MsgDev( D_NOTE, "%s couldn't open\n", packfile );
+		if( error ) *error = PAK_LOAD_COULDNT_OPEN;
+		return NULL;
+	}
 	read( packhandle, (void *)&header, sizeof( header ));
 
 	if( header.ident != IDPACKV1HEADER )
 	{
 		MsgDev( D_NOTE, "%s is not a packfile. Ignored.\n", packfile );
+		if( error ) *error = PAK_LOAD_BAD_HEADER;
 		close( packhandle );
 		return NULL;
 	}
@@ -447,6 +461,7 @@ pack_t *FS_LoadPackPAK( const char *packfile )
 	if( header.dirlen % sizeof( dpackfile_t ))
 	{
 		MsgDev( D_ERROR, "%s has an invalid directory size. Ignored.\n", packfile );
+		if( error ) *error = PAK_LOAD_BAD_FOLDERS;
 		close( packhandle );
 		return NULL;
 	}
@@ -456,13 +471,15 @@ pack_t *FS_LoadPackPAK( const char *packfile )
 	if( numpackfiles > MAX_FILES_IN_PACK )
 	{
 		MsgDev( D_ERROR, "%s has too many files ( %i ). Ignored.\n", packfile, numpackfiles );
+		if( error ) *error = PAK_LOAD_TOO_MANY_FILES;
 		close( packhandle );
 		return NULL;
 	}
 
 	if( numpackfiles <= 0 )
 	{
-		MsgDev( D_ERROR, "%s has no files. Ignored.\n", packfile );
+		MsgDev( D_NOTE, "%s has no files. Ignored.\n", packfile );
+		if( error ) *error = PAK_LOAD_NO_FILES;
 		close( packhandle );
 		return NULL;
 	}
@@ -473,8 +490,9 @@ pack_t *FS_LoadPackPAK( const char *packfile )
 	if( header.dirlen != read( packhandle, (void *)info, header.dirlen ))
 	{
 		MsgDev( D_NOTE, "%s is an incomplete PAK, not loading\n", packfile );
-		Mem_Free( info );
+		if( error ) *error = PAK_LOAD_CORRUPTED;
 		close( packhandle );
+		Mem_Free( info );
 		return NULL;
 	}
 
@@ -491,8 +509,10 @@ pack_t *FS_LoadPackPAK( const char *packfile )
 		FS_AddFileToPack( info[i].name, pack, info[i].filepos, info[i].filelen );
 	}
 
-	Mem_Free( info );
 	MsgDev( D_NOTE, "Adding packfile: %s (%i files)\n", packfile, numpackfiles );
+	if( error ) *error = PAK_LOAD_OK;
+	Mem_Free( info );
+
 	return pack;
 }
 
@@ -515,6 +535,7 @@ static qboolean FS_AddPack_Fullpath( const char *pakfile, qboolean *already_load
 	searchpath_t	*search;
 	pack_t		*pak = NULL;
 	const char	*ext = FS_FileExtension( pakfile );
+	int		errorcode;
 	
 	for( search = fs_searchpaths; search; search = search->next )
 	{
@@ -527,7 +548,7 @@ static qboolean FS_AddPack_Fullpath( const char *pakfile, qboolean *already_load
 
 	if( already_loaded ) *already_loaded = false;
 
-	if( !Q_stricmp( ext, "pak" )) pak = FS_LoadPackPAK( pakfile );
+	if( !Q_stricmp( ext, "pak" )) pak = FS_LoadPackPAK( pakfile, &errorcode );
 	else MsgDev( D_ERROR, "\"%s\" does not have a pack extension\n", pakfile );
 
 	if( pak )
@@ -579,7 +600,8 @@ static qboolean FS_AddPack_Fullpath( const char *pakfile, qboolean *already_load
 	}
 	else
 	{
-		MsgDev( D_ERROR, "FS_AddPack_Fullpath: unable to load pak \"%s\"\n", pakfile );
+		if( errorcode != PAK_LOAD_NO_FILES )
+			MsgDev( D_ERROR, "FS_AddPack_Fullpath: unable to load pak \"%s\"\n", pakfile );
 		return false;
 	}
 }
@@ -882,7 +904,7 @@ void FS_Rescan( void )
 
 	if( Q_stricmp( GI->basedir, GI->gamedir ))
 		FS_AddGameHierarchy( GI->basedir, 0 );
-	if( Q_stricmp( GI->basedir, GI->falldir ))
+	if( Q_stricmp( GI->basedir, GI->falldir ) && Q_stricmp( GI->gamedir, GI->falldir ))
 		FS_AddGameHierarchy( GI->falldir, 0 );
 	FS_AddGameHierarchy( GI->gamedir, FS_GAMEDIR_PATH );
 }
@@ -1204,6 +1226,12 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		}
 	}
 
+	if( !FS_SysFolderExists( va( "%s\\%s", host.rootdir, GameInfo->gamedir )))
+		Q_strncpy( GameInfo->gamedir, gamedir, sizeof( GameInfo->gamedir ));
+
+	if( !FS_SysFolderExists( va( "%s\\%s", host.rootdir, GameInfo->falldir )))
+		GameInfo->falldir[0] = '\0';
+
 	Mem_Free( afile );
 	return true;
 }
@@ -1423,6 +1451,13 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 			}
 		}
 	}
+
+	// make sure what gamedir is really exist
+	if( !FS_SysFolderExists( va( "%s\\%s", host.rootdir, GameInfo->gamedir )))
+		Q_strncpy( GameInfo->gamedir, gamedir, sizeof( GameInfo->gamedir ));
+
+	if( !FS_SysFolderExists( va( "%s\\%s", host.rootdir, GameInfo->falldir )))
+		GameInfo->falldir[0] = '\0';
 
 	Mem_Free( afile );
 	return true;
@@ -1694,6 +1729,20 @@ qboolean FS_SysFileExists( const char *path )
 	if( desc < 0 ) return false;
 	close( desc );
 	return true;
+}
+
+/*
+==================
+FS_SysFolderExists
+
+Look for a existing folder
+==================
+*/
+qboolean FS_SysFolderExists( const char *path )
+{
+	DWORD	dwFlags = GetFileAttributes( path );
+
+	return ( dwFlags != -1 ) && ( dwFlags & FILE_ATTRIBUTE_DIRECTORY );
 }
 
 /*

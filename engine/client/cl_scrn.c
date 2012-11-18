@@ -306,13 +306,13 @@ SCR_AddDirtyPoint
 */
 void SCR_AddDirtyPoint( int x, int y )
 {
-	if (x < scr_dirty.x1)
+	if( x < scr_dirty.x1 )
 		scr_dirty.x1 = x;
-	if (x > scr_dirty.x2)
+	if( x > scr_dirty.x2 )
 		scr_dirty.x2 = x;
-	if (y < scr_dirty.y1)
+	if( y < scr_dirty.y1 )
 		scr_dirty.y1 = y;
-	if (y > scr_dirty.y2)
+	if( y > scr_dirty.y2 )
 		scr_dirty.y2 = y;
 }
 
@@ -343,6 +343,7 @@ void SCR_TileClear( void )
 	// erase rect will be the union of the past three frames
 	// so tripple buffering works properly
 	clear = scr_dirty;
+
 	for( i = 0; i < 2; i++ )
 	{
 		if( scr_old_dirty[i].x1 < clear.x1 )

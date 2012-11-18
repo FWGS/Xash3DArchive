@@ -1,3 +1,31 @@
+build 2112
+
+Engine: fix bug with ambient sounds that won't writes into demo
+Client: allow plaque 'loading' between demos change
+Client: make work fade flag FFADE_MODULATE
+Render: fixed underwater fog recursive leaf search code (thx XaeroX)
+Render: replace all 'random' calls in CL_RocketTrail code from RANDOM_LONG to rand() to get more compatibility with original quake particles
+Render: adding default studiomodel bbox for right culling client static entities
+Sound: add info about background track state into console command "s_info"
+Sound: increase static channels count up to 128
+Client: write background track state into demo
+Engine: fix crash when typing 'cvarlist' into console
+FS: allows lookup system files into root directory (e.g. vgui.dll etc)
+Engine: added new command 'modellist" (prints list about all loaded models)
+Engine: add terminator for entity string to be guranteed have valid end of the entity string
+Engine: purge all fake bmodels from previous map when server is changed
+Memory: increase check for filename debug length from 32 to 128 characters
+Server: background track which will be specfied from worldpsawn settings now are looped
+Engine: fix bug with recorded demos in Quake Remake after changelevel
+GameUI: 'gamestartup.mp3' now are looped
+Server: fix the SV_StudioSetupBones interface declaration error (thx maricool)
+Render: change MAXSTUDIOTEXTURES limit from 128 to 256
+Client: change passed argument for HUD_Frame callback from cl.time to host.frametime (thx XWider)
+Client: remove screen align to prevent deform on resolution 1366x768
+FS: do check what mod folder is really existed (this helps avoid to creating empty folder)
+GameUI: replace checkbox "Allow Software" with "Vertical Sync" in menu "Video Modes"
+
+
 build 2015
 
 Server: fix the sound problem with weapons

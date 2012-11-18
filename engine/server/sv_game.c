@@ -1447,7 +1447,7 @@ int SV_CheckClientPVS( int check, qboolean bMergePVS )
 	VectorAdd( ent->v.origin, ent->v.view_ofs, view );
 	leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
 	pvs = Mod_LeafPVS( leaf, sv.worldmodel );
-	memcpy( clientpvs, pvs, pvsbytes );
+	Q_memcpy( clientpvs, pvs, pvsbytes );
 
 	// transition in progress
 	if( !cl ) return i;

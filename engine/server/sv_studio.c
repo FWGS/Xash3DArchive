@@ -616,12 +616,12 @@ static qboolean SV_StudioSetupModel( edict_t *ent, int iBone, qboolean bInverseP
 		blending[1] = 0;
 
 		pBlendAPI->SV_StudioSetupBones( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin,
-			controller, blending, iBone, ent );
+			controller, blending, ent, iBone );
           }
           else
           {
 		pBlendAPI->SV_StudioSetupBones( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin,
-			ent->v.controller, ent->v.blending, iBone, ent );
+			ent->v.controller, ent->v.blending, ent, iBone );
 	}
 
 	return true;
