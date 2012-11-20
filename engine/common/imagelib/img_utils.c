@@ -16,10 +16,12 @@ GNU General Public License for more details.
 #include "imagelib.h"
 #include "mathlib.h"
 #include "mod_local.h"
+#include "gl_export.h"
 
 convar_t *gl_round_down;
 
 #define LERPBYTE( i )	r = resamplerow1[i]; out[i] = (byte)(((( resamplerow2[i] - r ) * lerp)>>16 ) + r )
+#define FILTER_SIZE		5
 
 uint d_8toQ1table[256];
 uint d_8toHLtable[256];
@@ -80,6 +82,38 @@ static byte palette_hl[768] =
 59,183,155,55,199,195,55,231,227,87,0,255,0,171,231,255,215,255,255,103,0,0,139,0,0,179,0,0,215,0,0,255,0,0,255,243,
 147,255,247,199,255,255,255,159,91,83
 };
+
+static float FILTER[NUM_FILTERS][FILTER_SIZE][FILTER_SIZE] = 
+{ 
+{ // regular blur 
+{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }, 
+{ 0.0f, 1.0f, 1.0f, 1.0f, 0.0f }, 
+{ 0.0f, 1.0f, 1.0f, 1.0f, 0.0f }, 
+{ 0.0f, 1.0f, 1.0f, 1.0f, 0.0f }, 
+{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }, 
+}, 
+{ // light blur 
+{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }, 
+{ 0.0f, 1.0f, 1.0f, 1.0f, 0.0f }, 
+{ 0.0f, 1.0f, 4.0f, 1.0f, 0.0f }, 
+{ 0.0f, 1.0f, 1.0f, 1.0f, 0.0f }, 
+{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }, 
+}, 
+{ // find edges 
+{ 0.0f,  0.0f,  0.0f,  0.0f, 0.0f }, 
+{ 0.0f, -1.0f, -1.0f, -1.0f, 0.0f }, 
+{ 0.0f, -1.0f,  8.0f, -1.0f, 0.0f }, 
+{ 0.0f, -1.0f, -1.0f, -1.0f, 0.0f }, 
+{ 0.0f,  0.0f,  0.0f,  0.0f, 0.0f }, 
+}, 
+{ // emboss  
+{-0.7f, -0.7f, -0.7f, -0.7f, 0.0f }, 
+{-0.7f, -0.7f, -0.7f,  0.0f, 0.7f }, 
+{-0.7f, -0.7f,  0.0f,  0.7f, 0.7f }, 
+{-0.7f,  0.0f,  0.7f,  0.7f, 0.7f }, 
+{ 0.0f,  0.7f,  0.7f,  0.7f, 0.7f }, 
+}
+}; 
 
 /*
 =============================================================================
@@ -1345,7 +1379,128 @@ qboolean Image_RemapInternal( rgbdata_t *pic, int topColor, int bottomColor )
 	return true;
 }
 
-qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags )
+/* 
+================== 
+Image_ApplyFilter
+
+Applies a 5 x 5 filtering matrix to the texture, then runs it through a simulated OpenGL texture environment 
+blend with the original data to derive a new texture.  Freaky, funky, and *f--king* *fantastic*.  You can do 
+reasonable enough "fake bumpmapping" with this baby... 
+
+Filtering algorithm from http://www.student.kuleuven.ac.be/~m0216922/CG/filtering.html 
+All credit due 
+================== 
+*/
+qboolean Image_ApplyFilter( rgbdata_t *pic, int filter, float factor, float bias, flFlags_t flags, GLenum blendFunc )
+{ 
+	int	i, x, y; 
+	uint	*fin, *fout; 
+	size_t	size;
+
+	// first expand the image into 32-bit buffer
+	pic = Image_DecompressInternal( pic );
+
+	size = image.width * image.height * 4;
+	image.tempbuffer = Mem_Realloc( host.imagepool, image.tempbuffer, size );
+	fout = (uint *)image.tempbuffer;
+	fin = (uint *)pic->buffer;
+
+	for( x = 0; x < image.width; x++ ) 
+	{ 
+		for( y = 0; y < image.height; y++ ) 
+		{ 
+			vec3_t	vout = { 0.0f, 0.0f, 0.0f }; 
+			int	pos_x, pos_y;
+
+			for( pos_x = 0; pos_x < FILTER_SIZE; pos_x++ ) 
+			{ 
+				for( pos_y = 0; pos_y < FILTER_SIZE; pos_y++ ) 
+				{ 
+					int	img_x = (x - (FILTER_SIZE / 2) + pos_x + image.width) % image.width; 
+					int	img_y = (y - (FILTER_SIZE / 2) + pos_y + image.height) % image.height; 
+
+					// casting's a unary operation anyway, so the othermost set of brackets in the left part 
+					// of the rvalue should not be necessary... but i'm paranoid when it comes to C... 
+					vout[0] += ((float)((byte *)&fin[img_y * image.width + img_x])[0]) * FILTER[filter][pos_x][pos_y]; 
+					vout[1] += ((float)((byte *)&fin[img_y * image.width + img_x])[1]) * FILTER[filter][pos_x][pos_y]; 
+					vout[2] += ((float)((byte *)&fin[img_y * image.width + img_x])[2]) * FILTER[filter][pos_x][pos_y]; 
+				} 
+			} 
+
+			// multiply by factor, add bias, and clamp 
+			for( i = 0; i < 3; i++ ) 
+			{ 
+				vout[i] *= factor; 
+				vout[i] += bias; 
+				vout[i] = bound( 0.0f, vout[i], 255.0f );
+			} 
+
+			if( flags & FILTER_GRAYSCALE ) 
+			{ 
+				// NTSC greyscale conversion standard 
+				float avg = (vout[0] * 30.0f + vout[1] * 59.0f + vout[2] * 11.0f) / 100.0f; 
+
+				// divide by 255 so GL operations work as expected 
+				vout[0] = avg / 255.0f; 
+				vout[1] = avg / 255.0f; 
+				vout[2] = avg / 255.0f; 
+			} 
+
+			// write to temp - first, write data in (to get the alpha channel quickly and 
+			// easily, which will be left well alone by this particular operation...!) 
+			fout[y * image.width + x] = fin[y * image.width + x]; 
+
+			// now write in each element, applying the blend operator.  blend 
+			// operators are based on standard OpenGL TexEnv modes, and the 
+			// formulas are derived from the OpenGL specs (http://www.opengl.org). 
+			for( i = 0; i < 3; i++ ) 
+			{ 
+				// divide by 255 so GL operations work as expected 
+				float	src = ((float)((byte *)&fin[y * image.width + x])[i]) / 255.0f; 
+				float	tmp;
+
+				switch( blendFunc ) 
+				{ 
+				case GL_ADD: 
+					tmp = vout[i] + src; 
+					break; 
+				case GL_BLEND: 
+					// default is FUNC_ADD here 
+					// CsS + CdD works out as Src * Dst * 2 
+					tmp = vout[i] * src * 2.0f; 
+					break; 
+				case GL_DECAL: 
+					// same as GL_REPLACE unless there's alpha, which we ignore for this 
+				case GL_REPLACE: 
+					tmp = vout[i]; 
+					break; 
+				case GL_ADD_SIGNED: 
+					tmp = (vout[i] + src) - 0.5f; 
+					break; 
+				case GL_MODULATE: 
+				default:	// same as default 
+					tmp = vout[i] * src; 
+					break; 
+				} 
+
+				// multiply back by 255 to get the proper byte scale 
+				tmp *= 255.0f; 
+
+				// bound the temp target again now, cos the operation may have thrown it out 
+				tmp = bound( 0.0f, tmp, 255.0f );
+				// and copy it in 
+				((byte *)&fout[y * image.width + x])[i] = (byte)tmp; 
+			} 
+		} 
+	} 
+
+	// copy result back
+	Q_memcpy( fin, fout, size );
+
+	return true;
+}
+
+qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags, imgfilter_t *filter )
 {
 	rgbdata_t	*pic = *pix;
 	qboolean	result = true;
@@ -1359,7 +1514,7 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uin
 		return false;
 	}
 
-	if( !flags )
+	if( !flags && !filter )
 	{
 		// clear any force flags
 		image.force_flags = 0;
@@ -1383,6 +1538,8 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uin
 	// update format to RGBA if any
 	if( flags & IMAGE_FORCE_RGBA ) pic = Image_DecompressInternal( pic );
 	if( flags & IMAGE_LIGHTGAMMA ) pic = Image_LightGamma( pic, gamma );
+
+	if( filter ) Image_ApplyFilter( pic, filter->filter, filter->factor, filter->bias, filter->flags, filter->blendFunc );
 
 	// quantize image
 	if( flags & IMAGE_QUANTIZE ) pic = Image_Quantize( pic );

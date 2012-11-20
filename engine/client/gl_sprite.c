@@ -66,7 +66,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	if( mod->flags & 256 ) // it's a HUD sprite
 	{
 		Q_snprintf( texname, sizeof( texname ), "#HUD/%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
-		gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags );
+		gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags, NULL );
 	}
 	else
 	{
@@ -79,7 +79,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 			Q_snprintf( texname, sizeof( texname ), "materials/%s/frame%i%i.tga", sprname, num / 10, num % 10 );
 
 			if( FS_FileExists( texname, false ))
-				gl_texturenum = GL_LoadTexture( texname, NULL, 0, r_texFlags );
+				gl_texturenum = GL_LoadTexture( texname, NULL, 0, r_texFlags, NULL );
 
 			if( gl_texturenum )
 				load_external = true; // sucessfully loaded
@@ -88,7 +88,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 		if( !load_external )
 		{
 			Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
-			gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags );
+			gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags, NULL );
 		}
 		else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
 	}	
@@ -319,7 +319,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size, qboolean 
 	if( h < MAPSPRITE_SIZE ) h = MAPSPRITE_SIZE;
 
 	// resample image if needed
-	Image_Process( &pix, w, h, 0.0f, IMAGE_FORCE_RGBA|IMAGE_RESAMPLE );
+	Image_Process( &pix, w, h, 0.0f, IMAGE_FORCE_RGBA|IMAGE_RESAMPLE, NULL );
 
 	w = h = MAPSPRITE_SIZE;
 

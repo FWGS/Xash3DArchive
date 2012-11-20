@@ -612,6 +612,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 	texture_t		*altanims[10];
 	int		num, max, altmax;
 	char		texname[64];
+	imgfilter_t	*filter;
 	mip_t		*mt;
 	int 		i, j; 
 
@@ -669,6 +670,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		// convert to lowercase
 		Q_strnlwr( mt->name, mt->name, sizeof( mt->name ));
 		Q_strncpy( tx->name, mt->name, sizeof( tx->name ));
+		filter = R_FindTexFilter( tx->name ); // grab texture filter
 
 		tx->width = mt->width;
 		tx->height = mt->height;
@@ -693,7 +695,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 
 				if( load_external )
 				{
-					tr.solidskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP );
+					tr.solidskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP, NULL );
 					GL_SetTextureType( tr.solidskyTexture, TEX_BRUSH );
 					load_external = false;
 				}
@@ -715,7 +717,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 
 					if( load_external )
 					{
-						tr.alphaskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP );
+						tr.alphaskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP, NULL );
 						GL_SetTextureType( tr.alphaskyTexture, TEX_BRUSH );
 						load_external = false;
 					}
@@ -767,12 +769,12 @@ load_wad_textures:
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 				if( bmodel_version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
-				tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0 );
+				tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0, filter );
 			}
 			else
 			{
 				// okay, loading it from wad
-				tx->gl_texturenum = GL_LoadTexture( texname, NULL, 0, 0 );
+				tx->gl_texturenum = GL_LoadTexture( texname, NULL, 0, 0, filter );
 
 				if( !tx->gl_texturenum && load_external )
 				{
@@ -817,7 +819,7 @@ load_wad_textures:
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 				if( bmodel_version == HLBSP_VERSION ) size += sizeof( short ) + 768;
 
-				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_NOMIPMAP|TF_MAKELUMA );
+				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_NOMIPMAP|TF_MAKELUMA, NULL );
 			}
 			else
 			{
@@ -830,7 +832,7 @@ load_wad_textures:
 				if( !load_external_luma ) src = FS_LoadFile( va( "%s.mip", tx->name ), &srcSize, false );
 
 				// okay, loading it from wad or hi-res version
-				tx->fb_texturenum = GL_LoadTexture( texname, src, srcSize, TF_NOMIPMAP|TF_MAKELUMA );
+				tx->fb_texturenum = GL_LoadTexture( texname, src, srcSize, TF_NOMIPMAP|TF_MAKELUMA, NULL );
 				if( src ) Mem_Free( src );
 
 				if( !tx->fb_texturenum && load_external_luma )

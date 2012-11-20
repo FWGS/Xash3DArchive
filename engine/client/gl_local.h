@@ -165,6 +165,7 @@ typedef struct
 	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
 	float		lightcache[MAX_LIGHTSTYLES];
 
+	float		viewplanedist;
 	mplane_t		clipPlane;
 } ref_instance_t;
 
@@ -307,7 +308,7 @@ void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height,
 void R_SetTextureParameters( void );
 gltexture_t *R_GetTexture( GLenum texnum );
 void GL_SetTextureType( GLenum texnum, GLenum type );
-int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
+int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, imgfilter_t *filter );
 int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean update );
 byte *GL_ResampleTexture( const byte *source, int in_w, int in_h, int out_w, int out_h, qboolean isNormalMap );
 int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags );
@@ -381,6 +382,11 @@ void Matrix4x4_CreateProjection(matrix4x4 out, float xMax, float xMin, float yMa
 void Matrix4x4_CreateOrtho(matrix4x4 m, float xLeft, float xRight, float yBottom, float yTop, float zNear, float zFar);
 void Matrix4x4_CreateModelview( matrix4x4 out );
 
+//
+// gl_rmisc.
+//
+void R_ParseTexFilters( const char *filename );
+imgfilter_t *R_FindTexFilter( const char *texname );
 
 //
 // gl_rsurf.c
@@ -443,7 +449,7 @@ void R_Shutdown( void );
 qboolean R_Init( void );
 void R_Shutdown( void );
 void VID_CheckChanges( void );
-int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags );
+int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, imgfilter_t *filter );
 void GL_FreeImage( const char *name );
 qboolean VID_ScreenShot( const char *filename, int shot_type );
 qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qboolean skyshot );

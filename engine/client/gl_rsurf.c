@@ -1304,7 +1304,7 @@ static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
 {
 	msurface_t	*surf1, *surf2;
 	mextrasurf_t	*info1, *info2;
-	vec3_t		vecLength, org1, org2;
+	vec3_t		org1, org2;
 	float		len1, len2;
 
 	surf1 = (msurface_t *)*a;
@@ -1316,10 +1316,9 @@ static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
 	VectorAdd( RI.currententity->origin, info1->origin, org1 );
 	VectorAdd( RI.currententity->origin, info2->origin, org2 );
 
-	VectorSubtract( RI.vieworg, org1, vecLength );
-	len1 = VectorLength( vecLength );
-	VectorSubtract( RI.vieworg, org2, vecLength );
-	len2 = VectorLength( vecLength );
+	// compare by plane dists
+	len1 = DotProduct( org1, RI.vforward ) - RI.viewplanedist;
+	len2 = DotProduct( org2, RI.vforward ) - RI.viewplanedist;
 
 	if( len1 > len2 )
 		return -1;

@@ -444,7 +444,7 @@ void R_SetupSky( const char *skyboxname )
 	for( i = 0; i < 6; i++ )
 	{
 		Q_snprintf( sidename, sizeof( sidename ), "%s%s", loadname, r_skyBoxSuffix[i] );
-		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY );
+		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY, NULL );
 		GL_SetTextureType( tr.skyboxTextures[i], TEX_CUBEMAP );
 		if( !tr.skyboxTextures[i] ) break;
 	}
@@ -457,7 +457,7 @@ void R_SetupSky( const char *skyboxname )
 	for( i = 0; i < 6; i++ )
 	{
 		Q_snprintf( sidename, sizeof( sidename ), "%s_%s", loadname, r_skyBoxSuffix[i] );
-		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY );
+		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY, NULL );
 		GL_SetTextureType( tr.skyboxTextures[i], TEX_CUBEMAP );
 		if( !tr.skyboxTextures[i] ) break;
 	}

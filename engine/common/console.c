@@ -439,7 +439,7 @@ static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
 	if( font->valid ) return; // already loaded
 
 	// loading conchars
-	font->hFontTexture = GL_LoadTexture( va( "fonts/font%i", fontNumber ), NULL, 0, TF_FONT|TF_NEAREST );
+	font->hFontTexture = GL_LoadTexture( va( "fonts/font%i", fontNumber ), NULL, 0, TF_FONT|TF_NEAREST, NULL );
 	R_GetTextureParms( &fontWidth, NULL, font->hFontTexture );
 		
 	// setup creditsfont
@@ -1947,14 +1947,14 @@ void Con_VidInit( void )
 		if( scr_width->integer < 640 )
 		{
 			if( FS_FileExists( "cached/conback400", false ))
-				con.background = GL_LoadTexture( "cached/conback400", NULL, 0, TF_IMAGE );
-			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE );
+				con.background = GL_LoadTexture( "cached/conback400", NULL, 0, TF_IMAGE, NULL );
+			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE, NULL );
 		}
 		else
 		{
 			if( FS_FileExists( "cached/conback640", false ))
-				con.background = GL_LoadTexture( "cached/conback640", NULL, 0, TF_IMAGE );
-			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE );
+				con.background = GL_LoadTexture( "cached/conback640", NULL, 0, TF_IMAGE, NULL );
+			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE, NULL );
 		}
 	}
 	else
@@ -1962,14 +1962,14 @@ void Con_VidInit( void )
 		if( scr_width->integer < 640 )
 		{
 			if( FS_FileExists( "cached/loading400", false ))
-				con.background = GL_LoadTexture( "cached/loading400", NULL, 0, TF_IMAGE );
-			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE );
+				con.background = GL_LoadTexture( "cached/loading400", NULL, 0, TF_IMAGE, NULL );
+			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE, NULL );
 		}
 		else
 		{
 			if( FS_FileExists( "cached/loading640", false ))
-				con.background = GL_LoadTexture( "cached/loading640", NULL, 0, TF_IMAGE );
-			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE );
+				con.background = GL_LoadTexture( "cached/loading640", NULL, 0, TF_IMAGE, NULL );
+			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE, NULL );
 		}
 	}
 

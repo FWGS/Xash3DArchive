@@ -2649,7 +2649,7 @@ int CL_DecalIndex( int id )
 			Q_snprintf( decalname, sizeof( decalname ), "materials/decals/%s.tga", host.draw_decals[id] );
 
 			if( FS_FileExists( decalname, false ))
-				gl_texturenum = GL_LoadTexture( decalname, NULL, 0, TF_DECAL );
+				gl_texturenum = GL_LoadTexture( decalname, NULL, 0, TF_DECAL, NULL );
 
 			if( gl_texturenum )
 			{
@@ -2670,7 +2670,7 @@ int CL_DecalIndex( int id )
 			}
 		}
 
-		if( !load_external ) cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL );
+		if( !load_external ) cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL, NULL );
 	}
 	host.decal_loading = false;
 

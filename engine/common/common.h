@@ -474,6 +474,16 @@ typedef enum
 	IMAGE_REMAP	= BIT(27),	// interpret width and height as top and bottom color
 } imgFlags_t;
 
+// ordering is important!
+typedef enum
+{
+	BLUR_FILTER = 0,
+	BLUR_FILTER2,
+	EDGE_FILTER,
+	EMBOSS_FILTER,
+	NUM_FILTERS,
+} pixfilter_t;
+
 typedef struct rgbdata_s
 {
 	word	width;		// image width
@@ -487,6 +497,21 @@ typedef struct rgbdata_s
 	size_t	size;		// for bounds checking
 } rgbdata_t;
 
+// imgfilter processing flags
+typedef enum
+{
+	FILTER_GRAYSCALE	= BIT(0),
+} flFlags_t;
+
+typedef struct imgfilter_s
+{
+	int	filter;		// pixfilter_t
+	float	factor;		// filter factor value
+	float	bias;		// filter bias value
+	flFlags_t	flags;		// filter additional flags
+	uint	blendFunc;	// blending mode
+} imgfilter_t;
+
 //
 // imagelib
 //
@@ -497,7 +522,7 @@ qboolean FS_SaveImage( const char *filename, rgbdata_t *pix );
 rgbdata_t *FS_CopyImage( rgbdata_t *in );
 void FS_FreeImage( rgbdata_t *pack );
 extern const bpc_desc_t PFDesc[];	// image get pixelformat
-qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags );
+qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags, imgfilter_t *filter );
 void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end );
 void Image_SetForceFlags( uint flags );	// set image force flags on loading
 

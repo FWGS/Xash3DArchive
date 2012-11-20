@@ -229,7 +229,7 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 	VectorCopy( angles, angles2 );
 	angles2[PITCH] = -angles2[PITCH]; // stupid quake bug
 
-	pBlendAPI->SV_StudioSetupBones( model, frame, sequence, angles2, origin, pcontroller, pblending, -1, pEdict );
+	pBlendAPI->SV_StudioSetupBones( model, frame, sequence, angles2, origin, pcontroller, pblending, pEdict, -1 );
 	phitbox = (mstudiobbox_t *)((byte *)mod_studiohdr + mod_studiohdr->hitboxindex);
 
 	for( i = j = 0; i < mod_studiohdr->numhitboxes; i++, j += 6 )
@@ -626,7 +626,7 @@ NOTE: pEdict is unused
 ====================
 */
 static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, const vec3_t angles, const vec3_t origin,
-	const byte *pcontroller, const byte *pblending, int iBone, const edict_t *pEdict )
+	const byte *pcontroller, const byte *pblending, const edict_t *pEdict, int iBone )
 {
 	int		i, j, numbones = 0;
 	int		boneused[MAXSTUDIOBONES];
@@ -749,7 +749,7 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *origin, 
 	angles2[PITCH] = -angles2[PITCH];
 
 	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, angles2, e->v.origin,
-		e->v.controller, e->v.blending, pAtt[iAttachment].bone, e );
+		e->v.controller, e->v.blending, e, pAtt[iAttachment].bone );
 
 	// compute pos and angles
 	if( origin != NULL )
@@ -780,7 +780,7 @@ void Mod_GetBonePosition( const edict_t *e, int iBone, float *origin, float *ang
 	if( !mod_studiohdr ) return;
 
 	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, e->v.angles, e->v.origin,
-		e->v.controller, e->v.blending, iBone, e );
+		e->v.controller, e->v.blending, e, iBone );
 
 	if( origin ) Matrix3x4_OriginFromMatrix( studio_bones[iBone], origin );
 	if( angles ) VectorAngles( studio_bones[iBone][0], angles ); // bone forward to angles

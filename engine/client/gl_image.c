@@ -879,7 +879,7 @@ GL_UploadTexture
 upload texture into video memory
 ===============
 */
-static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImage )
+static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImage, imgfilter_t *filter )
 {
 	byte		*buf, *data;
 	const byte	*bufend;
@@ -929,7 +929,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		img_flags |= IMAGE_FORCE_RGBA;
 
 	// processing image before uploading (force to rgba, make luma etc)
-	if( pic->buffer ) Image_Process( &pic, 0, 0, 0.0f, img_flags );
+	if( pic->buffer ) Image_Process( &pic, 0, 0, 0.0f, img_flags, filter );
 
 	if( tex->flags & TF_LUMINANCE )
 	{
@@ -1069,7 +1069,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 GL_LoadTexture
 ================
 */
-int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
+int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, imgfilter_t *filter )
 {
 	gltexture_t	*tex;
 	rgbdata_t		*pic;
@@ -1085,7 +1085,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 		return 0;
 	}
 
-	// get rid of black vertical line on a 'BlackMesa map'
+	// HACKHACK: get rid of black vertical line on a 'BlackMesa map'
 	if( !Q_strcmp( name, "#lab1_map1.mip" ) || !Q_strcmp( name, "#lab1_map2.mip" ))
 	{
 		flags |= TF_NEAREST;
@@ -1138,10 +1138,10 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 		tex->texnum = tr.skyboxbasenum++;
 	else tex->texnum = i; // texnum is used for fast acess into r_textures array too
 
-	GL_UploadTexture( pic, tex, false );
+	GL_UploadTexture( pic, tex, false, filter );
 	GL_TexFilter( tex, false ); // update texture filter, wrap etc
 
-	if(!( flags & (TF_KEEP_8BIT|TF_KEEP_RGBDATA)))
+	if(!( flags & ( TF_KEEP_8BIT|TF_KEEP_RGBDATA )))
 		FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
@@ -1221,7 +1221,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 		tex->flags |= flags;
 	}
 
-	GL_UploadTexture( pic, tex, update );
+	GL_UploadTexture( pic, tex, update, NULL );
 	GL_TexFilter( tex, update ); // update texture filter, wrap etc
 
 	if( !update )
@@ -1319,9 +1319,9 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 
 	// all the operations makes over the image copy not an original
 	pic = FS_CopyImage( image->original );
-	Image_Process( &pic, topColor, bottomColor, gamma, flags );
+	Image_Process( &pic, topColor, bottomColor, gamma, flags, NULL );
 
-	GL_UploadTexture( pic, image, true );
+	GL_UploadTexture( pic, image, true, NULL );
 	GL_TexFilter( image, true ); // update texture filter, wrap etc
 
 	FS_FreeImage( pic );
@@ -1992,6 +1992,8 @@ void R_InitImages( void )
 	// set texture parameters
 	R_SetTextureParameters();
 	R_InitBuiltinTextures();
+
+	R_ParseTexFilters( "scripts/texfilter.txt" );
 }
 
 /*

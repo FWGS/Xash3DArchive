@@ -780,6 +780,9 @@ static void R_SetupFrame( void )
 	VectorCopy( RI.refdef.vieworg, RI.vieworg );
 	AngleVectors( RI.refdef.viewangles, RI.vforward, RI.vright, RI.vup );
 
+	// setup viewplane dist
+	RI.viewplanedist = DotProduct( RI.refdef.vieworg, RI.vforward );
+
 	if( !r_lockcull->integer )
 	{
 		VectorCopy( RI.vforward, RI.cull_vforward );
@@ -1523,6 +1526,11 @@ static const char *GL_TextureName( unsigned int texnum )
 	return R_GetTexture( texnum )->name;	
 }
 
+static int GL_LoadTextureNoFilter( const char *name, const byte *buf, size_t size, int flags )
+{
+	return GL_LoadTexture( name, buf, size, flags, NULL );	
+}
+
 static render_api_t gRenderAPI =
 {
 	GL_RenderGetParm,
@@ -1539,7 +1547,7 @@ static render_api_t gRenderAPI =
 	R_StoreEfrags,
 	GL_FindTexture,
 	GL_TextureName,
-	GL_LoadTexture,
+	GL_LoadTextureNoFilter,
 	GL_CreateTexture,
 	GL_FreeTexture,
 	DrawSingleDecal,

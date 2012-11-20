@@ -358,8 +358,8 @@ static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long im
 	// add default parms to image
 	flags |= TF_IMAGE;
 
-	host.decal_loading = true;
-	tx = GL_LoadTexture( szPicName, image_buf, image_size, flags );
+	host.decal_loading = true; // allow decal images for menu
+	tx = GL_LoadTexture( szPicName, image_buf, image_size, flags, NULL );
 	host.decal_loading = false;
 
 	return tx;

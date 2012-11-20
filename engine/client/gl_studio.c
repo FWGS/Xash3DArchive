@@ -3373,7 +3373,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		Q_snprintf( texname, sizeof( texname ), "materials/%s/%s.tga", mdlname, name );
 
 		if( FS_FileExists( texname, false ))
-			gl_texturenum = GL_LoadTexture( texname, NULL, 0, flags );
+			gl_texturenum = GL_LoadTexture( texname, NULL, 0, flags, NULL );
 
 		if( gl_texturenum )
 		{
@@ -3390,7 +3390,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 
 		// build the texname
 		Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
-		ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags );
+		ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags, NULL );
           }
           else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
   

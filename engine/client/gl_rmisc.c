@@ -27,6 +27,15 @@ typedef struct
 	int		lMax;
 } dmaterial_t;
 
+typedef struct
+{
+	char		texname[64];		// shortname
+	imgfilter_t	filter;
+} dfilter_t;
+
+dfilter_t		*tex_filters[MAX_TEXTURES];
+int		num_texfilters;
+
 // default rules for apply detail textures.
 // maybe move this to external script?
 static const dmaterial_t detail_table[] =
@@ -246,7 +255,7 @@ void R_ParseDetailTextures( const char *filename )
 			if( Q_stricmp( tex->name, texname ))
 				continue;
 
-			tex->dt_texturenum = GL_LoadTexture( detail_texname, NULL, 0, TF_FORCE_COLOR );
+			tex->dt_texturenum = GL_LoadTexture( detail_texname, NULL, 0, TF_FORCE_COLOR, NULL );
 
 			// texture is loaded
 			if( tex->dt_texturenum )
@@ -263,6 +272,117 @@ void R_ParseDetailTextures( const char *filename )
 	}
 
 	Mem_Free( afile );
+}
+
+void R_ParseTexFilters( const char *filename )
+{
+	char	*afile, *pfile;
+	string	token, texname;
+	dfilter_t	*tf;
+	int	i;
+
+	afile = FS_LoadFile( filename, NULL, false );
+	if( !afile ) return;
+
+	pfile = afile;
+
+	// format: 'texturename' 'filtername' 'factor' 'bias' 'blendmode' 'grayscale'
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
+	{
+		qboolean		parse_filter = false;
+		imgfilter_t	filter;
+
+		Q_memset( &filter, 0, sizeof( filter ));
+		Q_strncpy( texname, token, sizeof( texname ));
+
+		// parse filter
+		pfile = COM_ParseFile( pfile, token );
+		if( !Q_stricmp( token, "blur" ))
+			filter.filter = BLUR_FILTER;
+		else if( !Q_stricmp( token, "blur2" ))
+			filter.filter = BLUR_FILTER2;
+		else if( !Q_stricmp( token, "edge" ))
+			filter.filter = EDGE_FILTER;
+		else if( !Q_stricmp( token, "emboss" ))
+			filter.filter = EMBOSS_FILTER;
+
+		// reading factor
+		pfile = COM_ParseFile( pfile, token );
+		filter.factor = Q_atof( token );
+
+		// reading bias
+		pfile = COM_ParseFile( pfile, token );
+		filter.bias = Q_atof( token );
+
+		// reading blendFunc
+		pfile = COM_ParseFile( pfile, token );
+		if( !Q_stricmp( token, "modulate" ) || !Q_stricmp( token, "GL_MODULATE" ))
+			filter.blendFunc = GL_MODULATE;
+		else if( !Q_stricmp( token, "replace" ) || !Q_stricmp( token, "GL_REPLACE" ))
+			filter.blendFunc = GL_REPLACE;
+		else if( !Q_stricmp( token, "add" ) || !Q_stricmp( token, "GL_ADD" ))
+			filter.blendFunc = GL_ADD;
+		else if( !Q_stricmp( token, "decal" ) || !Q_stricmp( token, "GL_DECAL" ))
+			filter.blendFunc = GL_DECAL;
+		else if( !Q_stricmp( token, "blend" ) || !Q_stricmp( token, "GL_BLEND" ))
+			filter.blendFunc = GL_BLEND;
+		else if( !Q_stricmp( token, "add_signed" ) || !Q_stricmp( token, "GL_ADD_SIGNED" ))
+			filter.blendFunc = GL_ADD_SIGNED;
+		else MsgDev( D_WARN, "unknown blendFunc '%s' specified for texture '%s'\n", texname, token );
+
+		// reading flags
+		pfile = COM_ParseFile( pfile, token );
+		filter.flags = Q_atoi( token );
+
+		// make sure what factor is not zeroed
+		if( filter.factor == 0.0f )
+		{
+			MsgDev( D_WARN, "texfilter for texture %s has factor 0! Ignored\n", texname );
+			continue;
+		}
+
+		// check if already existed
+		for( i = 0; i < num_texfilters; i++ )
+		{
+			tf = tex_filters[i];
+
+			if( !Q_stricmp( tf->texname, texname ))
+			{
+				MsgDev( D_WARN, "texture %s has specified multiple filters! Ignored\n", texname );
+				break;
+			}
+		}
+
+		if( i != num_texfilters )
+			continue;	// already specified
+
+		// allocate new texfilter
+		tf = Z_Malloc( sizeof( dfilter_t ));
+		tex_filters[num_texfilters++] = tf;
+
+		Q_strncpy( tf->texname, texname, sizeof( tf->texname ));
+		tf->filter = filter;
+	}
+
+	MsgDev( D_INFO, "%i texture filters parsed\n", num_texfilters );
+
+	Mem_Free( afile );
+}
+
+imgfilter_t *R_FindTexFilter( const char *texname )
+{
+	dfilter_t	*tf;
+	int	i;
+
+	for( i = 0; i < num_texfilters; i++ )
+	{
+		tf = tex_filters[i];
+
+		if( !Q_stricmp( tf->texname, texname ))
+			return &tf->filter;
+	}
+
+	return NULL;
 }
 
 void R_NewMap( void )
