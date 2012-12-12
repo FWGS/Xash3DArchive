@@ -37,6 +37,8 @@ GNU General Public License for more details.
 #define PLATE_HUE_START	160
 #define PLATE_HUE_END	191
 
+#define LM_SAMPLE_SIZE	world.lm_sample_size// lightmap resoultion
+
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
 #define INFO_SURF( surf, mod )	(mod->surfaces + (surf - (mextrasurf_t *)mod->cache.data)) 
 
@@ -70,6 +72,7 @@ typedef struct
 	qboolean		loading;		// true if worldmodel is loading
 	qboolean		sky_sphere;	// true when quake sky-sphere is used
 	qboolean		has_mirrors;	// one or more brush models contain reflective textures
+	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
 
 	vec3_t		mins;		// real accuracy world bounds
 	vec3_t		maxs;

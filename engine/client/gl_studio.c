@@ -2640,7 +2640,7 @@ static void GL_StudioDrawShadow( void )
 				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 				pglEnable( GL_BLEND );
 				pglShadeModel( GL_FLAT );
-				shadow_alpha2 = 1.0 - shadow_alpha;
+				shadow_alpha2 = 1.0f - shadow_alpha;
 
 				pglColor4f( 0.0f, 0.0f, 0.0f, shadow_alpha2 );
 

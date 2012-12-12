@@ -1544,50 +1544,57 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	SaveRestore_Rebase( pSaveData );
 
 	// create entity list
-	for( i = 0; i < pSaveData->tableCount; i++ )
+	if( svgame.physFuncs.pfnCreateEntitiesInRestoreList != NULL )
 	{
-		pEntInfo = &pSaveData->pTable[i];
-
-		if( pEntInfo->classname != 0 && pEntInfo->size && !( pEntInfo->flags & FENTTABLE_REMOVED ))
+		svgame.physFuncs.pfnCreateEntitiesInRestoreList( pSaveData, createPlayers );
+	}
+	else
+	{
+		for( i = 0; i < pSaveData->tableCount; i++ )
 		{
-			if( pEntInfo->id == 0 ) // worldspawn
+			pEntInfo = &pSaveData->pTable[i];
+
+			if( pEntInfo->classname != 0 && pEntInfo->size && !( pEntInfo->flags & FENTTABLE_REMOVED ))
 			{
-				ASSERT( i == 0 );
-
-				pent = EDICT_NUM( 0 );
-
-				SV_InitEdict( pent );
-				pent = SV_AllocPrivateData( pent, pEntInfo->classname );
-			}
-			else if(( pEntInfo->id > 0 ) && ( pEntInfo->id < svgame.globals->maxClients + 1 ))
-			{
-				edict_t	*ed;
-
-				if(!( pEntInfo->flags & FENTTABLE_PLAYER ))
+				if( pEntInfo->id == 0 ) // worldspawn
 				{
-					MsgDev( D_WARN, "ENTITY IS NOT A PLAYER: %d\n", i );
-					ASSERT( 0 );
+					ASSERT( i == 0 );
+
+					pent = EDICT_NUM( 0 );
+
+					SV_InitEdict( pent );
+					pent = SV_AllocPrivateData( pent, pEntInfo->classname );
 				}
-
-				ed = EDICT_NUM( pEntInfo->id );
-
-				if( ed && createPlayers )
+				else if(( pEntInfo->id > 0 ) && ( pEntInfo->id < svgame.globals->maxClients + 1 ))
 				{
-					ASSERT( ed->free == false );
-					// create the player
-					pent = SV_AllocPrivateData( ed, pEntInfo->classname );
+					edict_t	*ed;
+
+					if(!( pEntInfo->flags & FENTTABLE_PLAYER ))
+					{
+						MsgDev( D_WARN, "ENTITY IS NOT A PLAYER: %d\n", i );
+						ASSERT( 0 );
+					}
+
+					ed = EDICT_NUM( pEntInfo->id );
+
+					if( ed && createPlayers )
+					{
+						ASSERT( ed->free == false );
+						// create the player
+						pent = SV_AllocPrivateData( ed, pEntInfo->classname );
+					}
+					else pent = NULL;
 				}
-				else pent = NULL;
+				else
+				{
+					pent = SV_AllocPrivateData( NULL, pEntInfo->classname );
+				}
+				pEntInfo->pent = pent;
 			}
 			else
 			{
-				pent = SV_AllocPrivateData( NULL, pEntInfo->classname );
+				pEntInfo->pent = NULL; // invalid
 			}
-			pEntInfo->pent = pent;
-		}
-		else
-		{
-			pEntInfo->pent = NULL; // invalid
 		}
 	}
 
@@ -1656,44 +1663,51 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 	movedCount = 0;
 
 	// create entity list
-	for( i = 0; i < pSaveData->tableCount; i++ )
+	if( svgame.physFuncs.pfnCreateEntitiesInTransitionList != NULL )
 	{
-		pEntInfo = &pSaveData->pTable[i];
-		pent = NULL;
-
-		if( pEntInfo->size && pEntInfo->id != 0 )
+		svgame.physFuncs.pfnCreateEntitiesInTransitionList( pSaveData, levelMask );
+	}
+	else
+	{
+		for( i = 0; i < pSaveData->tableCount; i++ )
 		{
-			if( pEntInfo->classname != 0 )
+			pEntInfo = &pSaveData->pTable[i];
+			pent = NULL;
+
+			if( pEntInfo->size && pEntInfo->id != 0 )
 			{
-				active = (pEntInfo->flags & levelMask) ? 1 : 0;
-
-				// spawn players
-				if(( pEntInfo->id > 0) && ( pEntInfo->id < svgame.globals->maxClients + 1 ))	
+				if( pEntInfo->classname != 0 )
 				{
-					edict_t	*ed = EDICT_NUM( pEntInfo->id );
+					active = (pEntInfo->flags & levelMask) ? 1 : 0;
 
-					if( active && ed && !ed->free )
+					// spawn players
+					if(( pEntInfo->id > 0) && ( pEntInfo->id < svgame.globals->maxClients + 1 ))	
 					{
-						if(!( pEntInfo->flags & FENTTABLE_PLAYER ))
+						edict_t	*ed = EDICT_NUM( pEntInfo->id );
+
+						if( active && ed && !ed->free )
 						{
-							MsgDev( D_WARN, "ENTITY IS NOT A PLAYER: %d\n", i );
-							ASSERT( 0 );
+							if(!( pEntInfo->flags & FENTTABLE_PLAYER ))
+							{
+								MsgDev( D_WARN, "ENTITY IS NOT A PLAYER: %d\n", i );
+								ASSERT( 0 );
+							}
+							pent = SV_AllocPrivateData( ed, pEntInfo->classname );
 						}
-						pent = SV_AllocPrivateData( ed, pEntInfo->classname );
+					}
+					else if( active )
+					{
+						// create named entity
+						pent = SV_AllocPrivateData( NULL, pEntInfo->classname );
 					}
 				}
-				else if( active )
+				else
 				{
-					// create named entity
-					pent = SV_AllocPrivateData( NULL, pEntInfo->classname );
+					MsgDev( D_WARN, "Entity with data saved, but with no classname\n" );
 				}
 			}
-			else
-			{
-				MsgDev( D_WARN, "Entity with data saved, but with no classname\n" );
-			}
+			pEntInfo->pent = pent;
 		}
-		pEntInfo->pent = pent;
 	}
 
 	// re-base the savedata since we re-ordered the entity/table / restore fields

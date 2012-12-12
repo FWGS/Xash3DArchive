@@ -90,6 +90,10 @@ typedef struct physics_interface_s
 	void		( *ClipPMoveToEntity)( struct physent_s *pe, const float *start, float *mins, float *maxs, const float *end, struct pmtrace_s *tr );
 	// called at end the frame of SV_Physics call
 	void		( *SV_EndFrame )( void );
+	// called through save\restore process
+	void		(*pfnCreateEntitiesInTransitionList)( SAVERESTOREDATA*, int levelMask );
+	// called through save\restore process
+	void		(*pfnCreateEntitiesInRestoreList)( SAVERESTOREDATA*, int createPlayers );
 } physics_interface_t;
 
 #endif//PHYSINT_H

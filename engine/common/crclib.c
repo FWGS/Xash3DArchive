@@ -237,6 +237,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 	char	buffer[1024];
 	int	i, num_bytes, lumplen;
 	qboolean	blue_shift = false;
+	int	NUM_LUMPS;
 
 	if( !crcvalue ) return false;
 
@@ -260,7 +261,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 	}
 
 	// invalid version ?
-	if( header.version != Q1BSP_VERSION && header.version != HLBSP_VERSION )
+	if( header.version != Q1BSP_VERSION && header.version != HLBSP_VERSION && header.version != XTBSP_VERSION )
 	{
 		FS_Close( f );
 		return false;
@@ -273,7 +274,11 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename )
 	if( header.lumps[LUMP_ENTITIES].fileofs <= 1024 && (header.lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
 		blue_shift = true;
 
-	for( i = 0; i < HEADER_LUMPS; i++ )
+	if( header.version == XTBSP_VERSION )
+		NUM_LUMPS = 17; // two extra lumps added
+	else NUM_LUMPS = HEADER_LUMPS;
+
+	for( i = 0; i < NUM_LUMPS; i++ )
 	{
 		if( blue_shift && i == LUMP_PLANES ) continue;
 		else if( i == LUMP_ENTITIES ) continue;

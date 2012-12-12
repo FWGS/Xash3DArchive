@@ -182,13 +182,13 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 			s = DotProduct( verts, warpface->texinfo->vecs[0] ) + warpface->texinfo->vecs[0][3];
 			s -= warpface->texturemins[0];
 			s += warpface->light_s * LM_SAMPLE_SIZE;
-			s += 8;
+			s += LM_SAMPLE_SIZE >> 1;
 			s /= BLOCK_WIDTH * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
 
 			t = DotProduct( verts, warpface->texinfo->vecs[1] ) + warpface->texinfo->vecs[1][3];
 			t -= warpface->texturemins[1];
 			t += warpface->light_t * LM_SAMPLE_SIZE;
-			t += 8;
+			t += LM_SAMPLE_SIZE >> 1;
 			t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
 
 			poly->verts[i+1][5] = s;
@@ -350,13 +350,13 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 		s = DotProduct( vec, fa->texinfo->vecs[0] ) + fa->texinfo->vecs[0][3];
 		s -= fa->texturemins[0];
 		s += fa->light_s * LM_SAMPLE_SIZE;
-		s += 8;
+		s += LM_SAMPLE_SIZE >> 1;
 		s /= BLOCK_WIDTH * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
 
 		t = DotProduct( vec, fa->texinfo->vecs[1] ) + fa->texinfo->vecs[1][3];
 		t -= fa->texturemins[1];
 		t += fa->light_t * LM_SAMPLE_SIZE;
-		t += 8;
+		t += LM_SAMPLE_SIZE >> 1;
 		t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
 
 		poly->verts[i][5] = s;
@@ -435,8 +435,8 @@ void R_AddDynamicLights( msurface_t *surf )
 	// no dlighted surfaces here
 	if( !R_CountSurfaceDlights( surf )) return;
 
-	smax = (surf->extents[0] >> 4) + 1;
-	tmax = (surf->extents[1] >> 4) + 1;
+	smax = (surf->extents[0] / LM_SAMPLE_SIZE) + 1;
+	tmax = (surf->extents[1] / LM_SAMPLE_SIZE) + 1;
 	tex = surf->texinfo;
 
 	for( lnum = 0; lnum < MAX_DLIGHTS; lnum++ )
@@ -619,8 +619,8 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
 	int	i, map, size, s, t;
 	color24	*lm;
 
-	smax = ( surf->extents[0] >> 4 ) + 1;
-	tmax = ( surf->extents[1] >> 4 ) + 1;
+	smax = ( surf->extents[0] / LM_SAMPLE_SIZE ) + 1;
+	tmax = ( surf->extents[1] / LM_SAMPLE_SIZE ) + 1;
 	size = smax * tmax;
 
 	lm = surf->samples;
@@ -839,8 +839,8 @@ void R_BlendLightmaps( void )
 			int	smax, tmax;
 			byte	*base;
 
-			smax = ( surf->extents[0] >> 4 ) + 1;
-			tmax = ( surf->extents[1] >> 4 ) + 1;
+			smax = ( surf->extents[0] / LM_SAMPLE_SIZE ) + 1;
+			tmax = ( surf->extents[1] / LM_SAMPLE_SIZE ) + 1;
 			info = SURF_INFO( surf, RI.currentmodel );
 
 			if( LM_AllocBlock( smax, tmax, &info->dlight_s, &info->dlight_t ))
@@ -865,8 +865,8 @@ void R_BlendLightmaps( void )
 						info = SURF_INFO( drawsurf, RI.currentmodel );
 
 						DrawGLPolyChain( drawsurf->polys,
-						( drawsurf->light_s - info->dlight_s ) * ( 1.0f / 128.0f ), 
-						( drawsurf->light_t - info->dlight_t ) * ( 1.0f / 128.0f ));
+						( drawsurf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_WIDTH ), 
+						( drawsurf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_HEIGHT ));
 					}
 				}
 
@@ -898,8 +898,8 @@ void R_BlendLightmaps( void )
 				info = SURF_INFO( surf, RI.currentmodel );
 
 				DrawGLPolyChain( surf->polys,
-				( surf->light_s - info->dlight_s ) * ( 1.0f / 128.0f ),
-				( surf->light_t - info->dlight_t ) * ( 1.0f / 128.0f ));
+				( surf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_WIDTH ),
+				( surf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_HEIGHT ));
 			}
 		}
 	}
@@ -1156,11 +1156,11 @@ dynamic:
 	{
 		if(( fa->styles[maps] >= 32 || fa->styles[maps] == 0 ) && ( fa->dlightframe != tr.framecount ))
 		{
-			byte	temp[34*34*4];
+			byte	temp[132*132*4];
 			int	smax, tmax;
 
-			smax = ( fa->extents[0] >> 4 ) + 1;
-			tmax = ( fa->extents[1] >> 4 ) + 1;
+			smax = ( fa->extents[0] / LM_SAMPLE_SIZE ) + 1;
+			tmax = ( fa->extents[1] / LM_SAMPLE_SIZE ) + 1;
 
 			R_BuildLightMap( fa, temp, smax * 4 );
 			R_SetCacheState( fa );
@@ -1979,8 +1979,8 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 	if( surf->flags & SURF_DRAWTILED )
 		return;
 
-	smax = ( surf->extents[0] >> 4 ) + 1;
-	tmax = ( surf->extents[1] >> 4 ) + 1;
+	smax = ( surf->extents[0] / LM_SAMPLE_SIZE ) + 1;
+	tmax = ( surf->extents[1] / LM_SAMPLE_SIZE ) + 1;
 
 	if( !LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t ))
 	{

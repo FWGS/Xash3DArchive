@@ -25,7 +25,7 @@ static gltexture_t	r_textures[MAX_TEXTURES];
 static gltexture_t	*r_texturesHashTable[TEXTURES_HASH_SIZE];
 static int	r_numTextures;
 static byte	*scaledImage = NULL;	// pointer to a scaled image
-static byte	data2D[256*256*4];		// intermediate texbuffer
+static byte	data2D[512*512*4];		// intermediate texbuffer
 static rgbdata_t	r_image;			// generic pixelbuffer used for internal textures
 
 // internal tables

@@ -280,16 +280,16 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 		if(( s < 0 || s > surf->extents[0] ) || ( t < 0 || t > surf->extents[1] ))
 			continue;
 
-		s >>= 4;
-		t >>= 4;
+		s /= LM_SAMPLE_SIZE;
+		t /= LM_SAMPLE_SIZE;
 
 		if( !surf->samples )
 			return true;
 
 		VectorClear( r_pointColor );
 
-		lm = surf->samples + (t * ((surf->extents[0] >> 4) + 1) + s);
-		size = ((surf->extents[0] >> 4) + 1) * ((surf->extents[1] >> 4) + 1);
+		lm = surf->samples + (t * ((surf->extents[0]  / LM_SAMPLE_SIZE) + 1) + s);
+		size = ((surf->extents[0]  / LM_SAMPLE_SIZE) + 1) * ((surf->extents[1]  / LM_SAMPLE_SIZE) + 1);
 
 		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{
