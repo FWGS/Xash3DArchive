@@ -17,7 +17,6 @@ cl_dll\
 cl_dll\hl\
 common\
 dlls\
-dlls\wpn_shared
 game_shared\
 game_launch\
 engine\

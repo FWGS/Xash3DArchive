@@ -99,7 +99,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 
 	if( bhdr.bitsPerPixel <= 8 )
 	{
-		// figure out how many entires are actually in the table
+		// figure out how many entries are actually in the table
 		if( bhdr.colors == 0 )
 		{
 			bhdr.colors = 256;

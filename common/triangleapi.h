@@ -31,7 +31,7 @@ typedef enum
 #define TRI_LINES		4
 #define TRI_TRIANGLE_STRIP	5
 #define TRI_QUAD_STRIP	6
-#define TRI_POINTS		7
+#define TRI_POINTS		7	// Xash3D added
 
 typedef struct triangleapi_s
 {

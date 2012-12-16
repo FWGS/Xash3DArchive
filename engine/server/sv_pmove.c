@@ -314,10 +314,10 @@ static void pfnParticle( float *origin, int color, float life, int zpos, int zve
 	}
 
 	BF_WriteByte( &sv.reliable_datagram, svc_particle );
-	BF_WriteBitVec3Coord( &sv.reliable_datagram, origin );
+	BF_WriteVec3Coord( &sv.reliable_datagram, origin );
 	BF_WriteChar( &sv.reliable_datagram, 0 ); // no x-vel
 	BF_WriteChar( &sv.reliable_datagram, 0 ); // no y-vel
-	v = bound( -128, (zpos * zvel) * 16, 127 );
+	v = bound( -128, (zpos * zvel) * 16.0f, 127 );
 	BF_WriteChar( &sv.reliable_datagram, v ); // write z-vel
 	BF_WriteByte( &sv.reliable_datagram, 1 );
 	BF_WriteByte( &sv.reliable_datagram, color );

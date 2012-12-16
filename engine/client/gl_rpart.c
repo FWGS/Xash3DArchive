@@ -1490,7 +1490,7 @@ void CL_TracerEffect( const vec3_t start, const vec3_t end )
 
 /*
 ===============
-CL_TracerEffect
+CL_UserTracerParticle
 
 ===============
 */

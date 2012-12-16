@@ -206,8 +206,6 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 	mstudiobbox_t	*phitbox;
 	int		i, j;
 
-	ASSERT( numhitboxes );
-
 	if( mod_studiocache->integer )
 	{
 		bonecache = Mod_CheckStudioCache( model, frame, sequence, angles, origin, size, pcontroller, pblending );

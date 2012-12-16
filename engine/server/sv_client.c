@@ -19,7 +19,7 @@ GNU General Public License for more details.
 #include "net_encode.h"
 #include "net_api.h"
 
-const char *clc_strings[9] =
+const char *clc_strings[11] =
 {
 	"clc_bad",
 	"clc_nop",
@@ -30,6 +30,8 @@ const char *clc_strings[9] =
 	"clc_userinfo",
 	"clc_fileconsistency",
 	"clc_voicedata",
+	"clc_requestcvarvalue",
+	"clc_requestcvarvalue2",
 };
 
 typedef struct ucmd_s
@@ -57,11 +59,13 @@ void SV_GetChallenge( netadr_t from )
 	double	oldestTime;
 
 	oldestTime = 0x7fffffff;
+
 	// see if we already have a challenge for this ip
-	for (i = 0; i < MAX_CHALLENGES; i++ )
+	for( i = 0; i < MAX_CHALLENGES; i++ )
 	{
 		if( !svs.challenges[i].connected && NET_CompareAdr( from, svs.challenges[i].adr ))
 			break;
+
 		if( svs.challenges[i].time < oldestTime )
 		{
 			oldestTime = svs.challenges[i].time;
@@ -92,9 +96,9 @@ A connection request that did not come from the master
 */
 void SV_DirectConnect( netadr_t from )
 {
-	char		physinfo[512];
 	char		userinfo[MAX_INFO_STRING];
 	sv_client_t	temp, *cl, *newcl;
+	char		physinfo[512];
 	int		i, edictnum;
 	int		qport, version;
 	int		count = 0;
@@ -102,6 +106,7 @@ void SV_DirectConnect( netadr_t from )
 	edict_t		*ent;
 
 	version = Q_atoi( Cmd_Argv( 1 ));
+
 	if( version != PROTOCOL_VERSION )
 	{
 		Netchan_OutOfBandPrint( NS_SERVER, from, "print\nServer uses protocol version %i.\n", PROTOCOL_VERSION );
@@ -117,7 +122,9 @@ void SV_DirectConnect( netadr_t from )
 	// quick reject
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
-		if( cl->state == cs_free ) continue;
+		if( cl->state == cs_free )
+			continue;
+
 		if( NET_CompareBaseAdr( from, cl->netchan.remote_address ) && ( cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
 		{
 			if( !NET_IsLocalAddress( from ) && ( host.realtime - cl->lastconnect ) < sv_reconnect_limit->value )
@@ -147,8 +154,8 @@ void SV_DirectConnect( netadr_t from )
 			return;
 		}
 
-		svs.challenges[i].connected = true;
 		MsgDev( D_NOTE, "Client %i connecting with challenge %p\n", i, challenge );
+		svs.challenges[i].connected = true;
 	}
 
 	// force the IP key/value pair so the game can filter based on ip
@@ -160,7 +167,9 @@ void SV_DirectConnect( netadr_t from )
 	// if there is already a slot for this ip, reuse it
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
-		if( cl->state == cs_free ) continue;
+		if( cl->state == cs_free )
+			continue;
+
 		if( NET_CompareBaseAdr( from, cl->netchan.remote_address ) && ( cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
 		{
 			MsgDev( D_INFO, "%s:reconnect\n", NET_AdrToString( from ));
@@ -171,7 +180,8 @@ void SV_DirectConnect( netadr_t from )
 
 	// find a client slot
 	newcl = NULL;
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++)
+
+	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( cl->state == cs_free )
 		{
@@ -183,7 +193,7 @@ void SV_DirectConnect( netadr_t from )
 	if( !newcl )
 	{
 		Netchan_OutOfBandPrint( NS_SERVER, from, "print\nServer is full.\n" );
-		MsgDev( D_INFO, "SV_DirectConnect: rejected a connection.\n");
+		MsgDev( D_INFO, "SV_DirectConnect: rejected a connection.\n" );
 		return;
 	}
 
@@ -191,7 +201,8 @@ void SV_DirectConnect( netadr_t from )
 	// accept the new client
 gotnewcl:	
 	// this is the only place a sv_client_t is ever initialized
-	if( sv_maxclients->integer == 1 )	// save physinfo for singleplayer
+
+	if( sv_maxclients->integer == 1 ) // save physinfo for singleplayer
 		Q_strncpy( physinfo, newcl->physinfo, sizeof( physinfo ));
 
 	*newcl = temp;
@@ -216,6 +227,7 @@ gotnewcl:
 		if( *Info_ValueForKey( userinfo, "rejmsg" )) 
 			Netchan_OutOfBandPrint( NS_SERVER, from, "print\n%s\nConnection refused.\n", Info_ValueForKey( userinfo, "rejmsg" ));
 		else Netchan_OutOfBandPrint( NS_SERVER, from, "print\nConnection refused.\n" );
+
 		MsgDev( D_ERROR, "SV_DirectConnect: game rejected a connection.\n");
 		SV_DropClient( newcl );
 		return;
@@ -241,6 +253,7 @@ gotnewcl:
 	// the server can hold, send a heartbeat to the master.
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 		if( cl->state >= cs_connected ) count++;
+
 	if( count == 1 || count == sv_maxclients->integer )
 		svs.last_heartbeat = MAX_HEARTBEAT;
 }
@@ -291,8 +304,8 @@ edict_t *SV_FakeConnect( const char *netname )
 	// setup fake client params
 	Info_SetValueForKey( userinfo, "name", netname );
 	Info_SetValueForKey( userinfo, "model", "gordon" );
-	Info_SetValueForKey( userinfo, "topcolor", "1" );
-	Info_SetValueForKey( userinfo, "bottomcolor", "1" );
+	Info_SetValueForKey( userinfo, "topcolor", "0" );
+	Info_SetValueForKey( userinfo, "bottomcolor", "0" );
 
 	// force the IP key/value pair so the game can filter based on ip
 	Info_SetValueForKey( userinfo, "ip", "127.0.0.1" );
@@ -300,6 +313,7 @@ edict_t *SV_FakeConnect( const char *netname )
 	// find a client slot
 	newcl = &temp;
 	Q_memset( newcl, 0, sizeof( sv_client_t ));
+
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
 		if( cl->state == cs_free )
@@ -333,7 +347,6 @@ edict_t *SV_FakeConnect( const char *netname )
 	newcl->fakeclient = true;
 	newcl->delta_sequence = -1;
 	newcl->userid = g_userid++;		// create unique userid
-	ent->v.flags |= FL_FAKECLIENT;	// mark it as fakeclient
 
 	// get the game a chance to reject this connection or modify the userinfo
 	if( !SV_ClientConnect( ent, userinfo ))
@@ -347,6 +360,7 @@ edict_t *SV_FakeConnect( const char *netname )
 
 	MsgDev( D_NOTE, "Bot %i connecting with challenge %p\n", i, -1 );
 
+	ent->v.flags |= FL_FAKECLIENT;	// mark it as fakeclient
 	newcl->state = cs_spawned;
 	newcl->lastmessage = host.realtime;	// don't timeout
 	newcl->lastconnect = host.realtime;
@@ -518,6 +532,7 @@ char *SV_StatusString( void )
 			playerLength = Q_strlen( player );
 			if( statusLength + playerLength >= sizeof( status ))
 				break; // can't hold any more
+
 			Q_strcpy( status + statusLength, player );
 			statusLength += playerLength;
 		}
@@ -632,6 +647,7 @@ void SV_Info( netadr_t from )
 		Info_SetValueForKey( string, "maxcl", va( "%i", sv_maxclients->integer ));
 		Info_SetValueForKey( string, "gamedir", GI->gamefolder );
 	}
+
 	Netchan_OutOfBandPrint( NS_SERVER, from, "info\n%s", string );
 }
 
@@ -720,6 +736,11 @@ void SV_Ping( netadr_t from )
 	Netchan_OutOfBandPrint( NS_SERVER, from, "ack" );
 }
 
+/*
+================
+Rcon_Validate
+================
+*/
 qboolean Rcon_Validate( void )
 {
 	if( !Q_strlen( rcon_password->string ))
@@ -867,6 +888,12 @@ void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 	else BF_WriteOneBit( msg, 0 );
 }
 
+/*
+===================
+SV_RefreshUserinfo
+
+===================
+*/
 void SV_RefreshUserinfo( void )
 {
 	int		i;
@@ -913,9 +940,16 @@ qboolean SV_ShouldUpdatePing( sv_client_t *cl )
 		cl->next_checkpingtime = host.realtime + 2.0;
 		return true;
 	}
+
 	return false;
 }
 
+/*
+===================
+SV_IsPlayerIndex
+
+===================
+*/
 qboolean SV_IsPlayerIndex( int idx )
 {
 	if( idx > 0 && idx <= sv_maxclients->integer )
@@ -1169,7 +1203,7 @@ void SV_SendResourceList_f( sv_client_t *cl )
 {
 	int		index = 0;
 	int		rescount = 0;
-	resourcelist_t	reslist;
+	resourcelist_t	reslist;	// g-cont. what about stack???
 	size_t		msg_size;
 
 	Q_memset( &reslist, 0, sizeof( resourcelist_t ));
@@ -1844,7 +1878,7 @@ SV_SendRes_f
 void SV_SendRes_f( sv_client_t *cl )
 {
 	sizebuf_t	msg;
-	byte	buffer[65535];
+	byte	buffer[65535];	// g-cont. what about stack??
 
 	if( cl->state != cs_connected )
 	{
@@ -2140,7 +2174,7 @@ void SV_ParseCvarValue( sv_client_t *cl, sizebuf_t *msg )
 {
 	const char *value = BF_ReadString( msg );
 
-	if( svgame.dllFuncs2.pfnCvarValue )
+	if( svgame.dllFuncs2.pfnCvarValue != NULL )
 		svgame.dllFuncs2.pfnCvarValue( cl->edict, value );
 	MsgDev( D_AICONSOLE, "Cvar query response: name:%s, value:%s\n", cl->name, value );
 }
@@ -2159,7 +2193,7 @@ void SV_ParseCvarValue2( sv_client_t *cl, sizebuf_t *msg )
 	Q_strcpy( name, BF_ReadString( msg ));
 	Q_strcpy( value, BF_ReadString( msg ));
 
-	if( svgame.dllFuncs2.pfnCvarValue2 )
+	if( svgame.dllFuncs2.pfnCvarValue2 != NULL )
 		svgame.dllFuncs2.pfnCvarValue2( cl->edict, requestID, name, value );
 	MsgDev( D_AICONSOLE, "Cvar query response: name:%s, request ID %d, cvar:%s, value:%s\n", cl->name, requestID, name, value );
 }

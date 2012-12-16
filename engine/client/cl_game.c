@@ -1013,7 +1013,7 @@ void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize )
 		Host_Error( "CL_LinkUserMessage: bad message name\n" );
 
 	if( svc_num < svc_lastmsg )
-		Host_Error( "CL_LinkUserMessage: tired to hook a system message \"%s\"\n", svc_strings[svc_num] );	
+		Host_Error( "CL_LinkUserMessage: tried to hook a system message \"%s\"\n", svc_strings[svc_num] );	
 
 	// see if already hooked
 	for( i = 0; i < MAX_USER_MESSAGES && clgame.msg[i].name[0]; i++ )

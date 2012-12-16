@@ -28,7 +28,7 @@ BRUSH MODELS
 // header
 #define Q1BSP_VERSION	29	// quake1 regular version (beta is 28)
 #define HLBSP_VERSION	30	// half-life regular version
-#define XTBSP_VERSION	31	// extended lightmaps and clipnodes limit
+#define XTBSP_VERSION	31	// extended lightmaps and expanded clipnodes limit
 
 // worldcraft predefined angles
 #define ANGLE_UP			-1
@@ -71,7 +71,7 @@ BRUSH MODELS
 #define MAX_MAP_SURFEDGES		0x200000		// can be increased but not needed
 #define MAX_MAP_TEXTURES		2048		// can be increased but not needed
 #define MAX_MAP_MIPTEX		0x2000000		// 32 Mb internal textures data
-#define MAX_MAP_LIGHTING		0x2000000		// 32 Mb lightmap raw data (can contain bumpdata too)
+#define MAX_MAP_LIGHTING		0x2000000		// 32 Mb lightmap raw data (can contain deluxemaps)
 #define MAX_MAP_VISIBILITY		0x800000		// 8 Mb visdata
 
 // quake lump ordering
@@ -93,8 +93,8 @@ BRUSH MODELS
 #define HEADER_LUMPS		15
 
 // version 31
-#define LUMP_CLIPNODES2		15		// hull0 goes into LUMP_NODES, hull1 goes into LUMP_CLIPNODES
-#define LUMP_CLIPNODES3		16		// , hull2 goes into LUMP_CLIPNODES2, hull3 goes into LUMP_CLIPNODES3
+#define LUMP_CLIPNODES2		15		// hull0 goes into LUMP_NODES, hull1 goes into LUMP_CLIPNODES,
+#define LUMP_CLIPNODES3		16		// hull2 goes into LUMP_CLIPNODES2, hull3 goes into LUMP_CLIPNODES3
 
 // texture flags
 #define TEX_SPECIAL			BIT( 0 )		// sky or slime, no lightmap or 256 subdivision

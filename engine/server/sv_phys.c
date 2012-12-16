@@ -77,6 +77,12 @@ void SV_CheckAllEnts( void )
 	{
 		e = EDICT_NUM( i );
 
+		// DEBUG: check 'gamestate' for using by mods
+		if( e->v.gamestate != 0 )
+		{
+			MsgDev( D_INFO, "Entity %s[%i] uses gamestate %i\n", SV_ClassName( e ), NUM_FOR_EDICT( e ), e->v.gamestate );
+		}
+
 		if( e->free && e->pvPrivateData != NULL )
 		{
 			MsgDev( D_ERROR, "Freed entity %s (%i) has private data.\n", SV_ClassName( e ), i );

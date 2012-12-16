@@ -639,7 +639,7 @@
 #define VOL_NORM			1.0
 
 // plats
-#define	PLAT_LOW_TRIGGER	1
+#define PLAT_LOW_TRIGGER		1
 
 // Trains
 #define SF_TRAIN_WAIT_RETRIGGER	1
@@ -751,19 +751,6 @@ typedef struct
 {
 	unsigned	r, g, b, a;
 } colorVec;
-
-#ifdef _WIN32
-#pragma pack( push, 2 )
-#endif
-
-typedef struct
-{
-	unsigned short r, g, b, a;
-} PackedColorVec;
-
-#ifdef _WIN32
-#pragma pack( pop )
-#endif
 
 typedef struct link_s
 {

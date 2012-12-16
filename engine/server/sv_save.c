@@ -558,7 +558,7 @@ void RestoreSound( soundlist_t *entry )
 	if( flags & SND_PITCH ) BF_WriteByte( &sv.signon, entry->pitch );
 
 	BF_WriteWord( &sv.signon, entry->entnum );
-	BF_WriteBitVec3Coord( &sv.signon, entry->origin );
+	BF_WriteVec3Coord( &sv.signon, entry->origin );
 	BF_WriteByte( &sv.signon, entry->wordIndex );
 
 	// send two doubles as raw-data

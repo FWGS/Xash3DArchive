@@ -220,9 +220,7 @@ convar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, cons
 		// if we have a latched string, take that value now
 		if( var->latched_string )
 		{
-			char *s;
-
-			s = var->latched_string;
+			char *s = var->latched_string;
 			var->latched_string = NULL; // otherwise cvar_set2 would free it
 			Cvar_Set2( var_name, s, true );
 			Mem_Free( s );
@@ -1128,7 +1126,7 @@ void Cvar_Latched_f( void )
 
 /*
 ============
-Cvar_Latched_f
+Cvar_LatchedVideo_f
 
 Now all latched video strings is valid
 ============

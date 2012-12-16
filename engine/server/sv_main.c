@@ -69,6 +69,10 @@ convar_t	*mp_consistency;
 convar_t	*serverinfo;
 convar_t	*physinfo;
 convar_t	*clockwindow;
+convar_t	*deathmatch;
+convar_t	*teamplay;
+convar_t	*skill;
+convar_t	*coop;
 
 // sky variables
 convar_t	*sv_skycolor_r;
@@ -630,10 +634,10 @@ void SV_Init( void )
 {
 	SV_InitOperatorCommands();
 
-	Cvar_Get ("skill", "1", CVAR_LATCH, "game skill level" );
-	Cvar_Get ("deathmatch", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays deathmatch state" );
-	Cvar_Get ("teamplay", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays teamplay state" );
-	Cvar_Get ("coop", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays cooperative state" );
+	skill = Cvar_Get ("skill", "1", CVAR_LATCH, "game skill level" );
+	deathmatch = Cvar_Get ("deathmatch", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays deathmatch state" );
+	teamplay = Cvar_Get ("teamplay", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays teamplay state" );
+	coop = Cvar_Get ("coop", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays cooperative state" );
 	Cvar_Get ("protocol", va( "%i", PROTOCOL_VERSION ), CVAR_INIT, "displays server protocol version" );
 	Cvar_Get ("defaultmap", "", CVAR_SERVERNOTIFY, "holds the multiplayer mapname" );
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );

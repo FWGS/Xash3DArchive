@@ -466,8 +466,6 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	qboolean	loadgame, paused;
 	qboolean	background, changelevel;
 
-	Cmd_ExecuteString( "latch\n", src_command );
-
 	// save state
 	loadgame = sv.loadgame;
 	background = sv.background;
@@ -476,6 +474,9 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 
 	if( sv.state == ss_dead )
 		SV_InitGame(); // the game is just starting
+	else if( !sv_maxclients->modified )
+		Cmd_ExecuteString( "latch\n", src_command );
+	else MsgDev( D_ERROR, "SV_SpawnServer: while 'maxplayers' was modified.\n" );
 
 	if( !svs.initialized )
 		return false;
@@ -596,6 +597,9 @@ void SV_InitGame( void )
 		CL_Drop();
 	}
 
+	// now apply latched commands
+	Cmd_ExecuteString( "latch\n", src_command );
+
 	if( Cvar_VariableValue( "coop" ) && Cvar_VariableValue ( "deathmatch" ) && Cvar_VariableValue( "teamplay" ))
 	{
 		MsgDev( D_WARN, "Deathmatch, Teamplay and Coop set, defaulting to Deathmatch\n");
@@ -607,7 +611,7 @@ void SV_InitGame( void )
 	// so unless they explicity set coop, force it to deathmatch
 	if( host.type == HOST_DEDICATED )
 	{
-		if(!Cvar_VariableValue( "coop" ) && !Cvar_VariableValue( "teamplay" ))
+		if( !Cvar_VariableValue( "coop" ) && !Cvar_VariableValue( "teamplay" ))
 			Cvar_FullSet( "deathmatch", "1",  CVAR_LATCH );
 	}
 

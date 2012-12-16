@@ -3310,9 +3310,6 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	if( ptexture->flags & STUDIO_NF_TRANSPARENT )
 		flags |= (TF_CLAMP|TF_NOMIPMAP);
 
-	if( ptexture->flags & ( STUDIO_NF_NORMALMAP|STUDIO_NF_HEIGHTMAP ))
-		flags |= TF_NORMALMAP;
-
 	// store some textures for remapping
 	if( !Q_strnicmp( ptexture->name, "DM_Base", 7 ) || !Q_strnicmp( ptexture->name, "remap", 5 ))
 	{
@@ -3509,20 +3506,9 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 	Q_memcpy( loadmodel->cache.data, buffer, phdr->length );
 #endif
 	// setup bounding box
-	if( VectorIsNull( phdr->bbmin ) && VectorIsNull( phdr->bbmax ))
-	{
-		mstudioseqdesc_t *pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
+	VectorCopy( phdr->bbmin, loadmodel->mins );
+	VectorCopy( phdr->bbmax, loadmodel->maxs );
 
-		// just to have something valid here
-		VectorCopy( pseqdesc[0].bbmin, loadmodel->mins );
-		VectorCopy( pseqdesc[0].bbmax, loadmodel->maxs );
-	}
-	else
-	{
-		VectorCopy( phdr->bbmin, loadmodel->mins );
-		VectorCopy( phdr->bbmax, loadmodel->maxs );
-	}
-	
 	loadmodel->numframes = R_StudioBodyVariations( loadmodel );
 	loadmodel->radius = RadiusFromBounds( loadmodel->mins, loadmodel->maxs );
 	loadmodel->flags = phdr->flags; // copy header flags

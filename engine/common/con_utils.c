@@ -610,6 +610,10 @@ qboolean Cmd_GetGamesList( const char *s, char *completedname, int length )
 	string	gamedirs[MAX_MODS];
 	string	matchbuf;
 
+	// stand-alone games doesn't have cmd "game"
+	if( !Cmd_Exists( "game" ))
+		return false;
+
 	// compare gamelist with current keyword
 	for( i = 0, numgamedirs = 0; i < SI.numgames; i++ )
 	{

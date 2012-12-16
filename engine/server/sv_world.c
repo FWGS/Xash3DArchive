@@ -955,8 +955,6 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 	qboolean	rotated, transform_bbox;
 	matrix4x4	matrix;
 
-	ASSERT( trace );
-
 	Q_memset( trace, 0, sizeof( trace_t ));
 	VectorCopy( end, trace->endpos );
 	trace->fraction = 1.0f;
@@ -1566,9 +1564,6 @@ void SV_SetLightStyle( int style, const char* s )
 {
 	int	j, k;
 
-	ASSERT( s );
-	ASSERT( style >= 0 && style < MAX_LIGHTSTYLES );
-
 	Q_strncpy( sv.lightstyles[style].pattern, s, sizeof( sv.lightstyles[0].pattern ));
 
 	j = Q_strlen( s );
@@ -1594,7 +1589,10 @@ needs to get correct working SV_LightPoint
 */
 const char *SV_GetLightStyle( int style )
 {
-	ASSERT( style >= 0 && style < MAX_LIGHTSTYLES );
+	if( style < 0 ) style = 0;
+	if( style >= MAX_LIGHTSTYLES )
+		Host_Error( "SV_GetLightStyle: style: %i >= %d", style, MAX_LIGHTSTYLES );
+
 	return sv.lightstyles[style].pattern;
 }
 
