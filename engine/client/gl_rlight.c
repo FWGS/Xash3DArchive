@@ -355,13 +355,13 @@ get_light:
 	VectorCopy( point, end );
 	if( invLight )
 	{
-		start[2] = point[2] - 64;
-		end[2] = point[2] + 8192;
+		start[2] = point[2] - 64.0f;
+		end[2] = point[2] + world.size[2];
 	}
 	else
 	{
-		start[2] = point[2] + 64;
-		end[2] = point[2] - 8192;
+		start[2] = point[2] + 64.0f;
+		end[2] = point[2] - world.size[2];
 	}
 
 	// always have valid model

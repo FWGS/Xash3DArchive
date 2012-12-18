@@ -380,8 +380,8 @@ typedef struct
 	int		old_trace_hull;		// used by PM_Push\Pop state
 	int		oldcount;			// used by PM_Push\Pop state
 
-	vec3_t		player_mins[4];		// 4 hulls allowed
-	vec3_t		player_maxs[4];		// 4 hulls allowed
+	vec3_t		player_mins[MAX_MAP_HULLS];	// 4 hulls allowed
+	vec3_t		player_maxs[MAX_MAP_HULLS];	// 4 hulls allowed
 
 	cl_user_message_t	msg[MAX_USER_MESSAGES];	// keep static to avoid fragment memory
 	cl_user_event_t	*events[MAX_EVENTS];

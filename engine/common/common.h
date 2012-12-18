@@ -179,10 +179,10 @@ typedef struct gameinfo_s
 	char		sp_entity[32];	// e.g. info_player_start
 	char		mp_entity[32];	// e.g. info_player_deathmatch
 
-	float		client_mins[4][3];	// 4 hulls allowed
-	float		client_maxs[4][3];	// 4 hulls allowed
+	float		client_mins[MAX_MAP_HULLS][3];	// 4 hulls allowed
+	float		client_maxs[MAX_MAP_HULLS][3];	// 4 hulls allowed
 
-	char		ambientsound[NUM_AMBIENTS][64];// quake ambient sounds
+	char		ambientsound[NUM_AMBIENTS][64];	// quake ambient sounds
 
 	int		max_edicts;	// min edicts is 600, max edicts is 4096
 	int		max_tents;	// min temp ents is 300, max is 2048

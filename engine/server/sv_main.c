@@ -102,8 +102,8 @@ Updates the cl->ping variables
 */
 void SV_CalcPings( void )
 {
-	int		i, j;
 	sv_client_t	*cl;
+	int		i, j;
 	int		total, count;
 
 	if( !svs.clients ) return;
@@ -112,8 +112,9 @@ void SV_CalcPings( void )
 	for( i = 0; i < sv_maxclients->integer; i++ )
 	{
 		cl = &svs.clients[i];
-		if( cl->state != cs_spawned ) continue;
-		if( cl->fakeclient ) continue;
+
+		if( cl->state != cs_spawned || cl->fakeclient )
+			continue;
 
 		total = count = 0;
 
@@ -165,7 +166,7 @@ int SV_CalcPacketLoss( sv_client_t *cl )
 	}
 
 	if( !count ) return 100;
-	losspercent = 100.0 * ( float )lost / ( float )count;
+	losspercent = 100.0f * ( float )lost / ( float )count;
 
 	return (int)losspercent;
 }
@@ -241,7 +242,7 @@ void SV_UpdateMovevars( qboolean initialize )
 	svgame.movevars.wateralpha = sv_wateralpha->value;
 	svgame.movevars.features = host.features; // just in case. not really need
 
-	if( initialize ) return;
+	if( initialize ) return; // too early
 
 	if( MSG_WriteDeltaMovevars( &sv.reliable_datagram, &svgame.oldmovevars, &svgame.movevars ))
 		Q_memcpy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
@@ -385,7 +386,6 @@ void SV_ReadPackets( void )
 					SV_ProcessFile( cl, cl->netchan.incomingfilename );
 				}
 			}
-
 			break;
 		}
 
@@ -437,6 +437,7 @@ void SV_CheckTimeouts( void )
 			cl->state = cs_free; // can now be reused
 			continue;
 		}
+
 		if(( cl->state == cs_connected || cl->state == cs_spawned ) && cl->lastmessage < droppoint )
 		{
 			SV_BroadcastPrintf( PRINT_HIGH, "%s timed out\n", cl->name );
@@ -492,7 +493,7 @@ SV_IsSimulating
 */
 qboolean SV_IsSimulating( void )
 {
-	if( sv.background && SV_Active() && CL_Active( ))
+	if( sv.background && SV_Active() && CL_Active())
 	{
 		if( CL_IsInConsole( ))
 			return false;
@@ -814,5 +815,6 @@ void SV_Shutdown( qboolean reconnect )
 		svs.num_client_entities = 0;
 		svs.next_client_entities = 0;
 	}
+
 	svs.initialized = false;
 }

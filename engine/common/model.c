@@ -44,7 +44,7 @@ model_t		*worldmodel;
 
 
 // default hullmins
-static vec3_t cm_hullmins[4] =
+static vec3_t cm_hullmins[MAX_MAP_HULLS] =
 {
 { -16, -16, -36 },
 { -16, -16, -18 },
@@ -53,7 +53,7 @@ static vec3_t cm_hullmins[4] =
 };
 
 // defualt hullmaxs
-static vec3_t cm_hullmaxs[4] =
+static vec3_t cm_hullmaxs[MAX_MAP_HULLS] =
 {
 {  16,  16,  36 },
 {  16,  16,  18 },

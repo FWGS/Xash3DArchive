@@ -412,10 +412,9 @@ static void pfnStuckTouch( int hitent, pmtrace_t *tr )
 	for( i = 0; i < clgame.pmove->numtouch; i++ )
 	{
 		if( clgame.pmove->touchindex[i].ent == hitent )
-			break;
+			return;
 	}
 
-	if( i != clgame.pmove->numtouch ) return;
 	if( clgame.pmove->numtouch >= MAX_PHYSENTS )
 	{
 		MsgDev( D_ERROR, "PM_StuckTouch: MAX_TOUCHENTS limit exceeded\n" );

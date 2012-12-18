@@ -458,7 +458,7 @@ qboolean R_CullStudioModel( cl_entity_t *e )
 	if( !e || !e->model || !e->model->cache.data )
 		return true;
 
-	if( e == &clgame.viewent && r_lefthand->integer >= 2 )
+	if( e == &clgame.viewent && ( r_lefthand->integer >= 2 || gl_overview->integer ))
 		return true; // hidden
 
 	if( !R_StudioComputeBBox( e, NULL ))

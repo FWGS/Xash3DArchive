@@ -374,9 +374,9 @@ void SV_DeactivateServer( void )
 {
 	int	i;
 
-	if( !svs.initialized ) return;
+	if( !svs.initialized || sv.state == ss_dead )
+		return;
 
-	if( sv.state == ss_dead ) return;
 	sv.state = ss_dead;
 
 	SV_FreeEdicts ();
@@ -446,9 +446,7 @@ void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLan
 	// always clearing newunit variable
 	Cvar_SetFloat( "sv_newunit", 0 );
 
-	// call before sending baselines into the client
-	svgame.dllFuncs.pfnCreateInstancedBaselines();
-
+	// relese all intermediate entities
 	SV_FreeOldEntities ();
 }
 
@@ -528,7 +526,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 
 	Cvar_SetFloat( "skill", (float)current_skill );
 
-	if( sv.background )
+	if( sv.background )	// tell the game parts about background state
 		Cvar_FullSet( "sv_background", "1", CVAR_READ_ONLY );
 	else Cvar_FullSet( "sv_background", "0", CVAR_READ_ONLY );
 
