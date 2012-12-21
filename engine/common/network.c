@@ -333,14 +333,14 @@ qboolean NET_CompareBaseAdr( const netadr_t a, const netadr_t b )
 
 	if( a.type == NA_IP )
 	{
-		if(!memcmp( a.ip, b.ip, 4 ))
+		if(!Q_memcmp( a.ip, b.ip, 4 ))
 			return true;
 		return false;
 	}
 
 	if( a.type == NA_IPX )
 	{
-		if(!memcmp( a.ipx, b.ipx, 10 ))
+		if(!Q_memcmp( a.ipx, b.ipx, 10 ))
 			return true;
 		return false;
 	}
@@ -358,14 +358,14 @@ qboolean NET_CompareAdr( const netadr_t a, const netadr_t b )
 
 	if( a.type == NA_IP )
 	{
-		if(!memcmp( a.ip, b.ip, 4 ) && a.port == b.port )
+		if(!Q_memcmp( a.ip, b.ip, 4 ) && a.port == b.port )
 			return true;
 		return false;
 	}
 
 	if( a.type == NA_IPX )
 	{
-		if(!memcmp( a.ipx, b.ipx, 10 ) && a.port == b.port )
+		if(!Q_memcmp( a.ipx, b.ipx, 10 ) && a.port == b.port )
 			return true;
 		return false;
 	}
@@ -774,7 +774,6 @@ void NET_GetLocalAddress( void )
 	char		buff[512];
 	struct sockaddr_in	address;
 	int		namelen;
-	int		net_error = 0;
 
 	Q_memset( &net_local, 0, sizeof( netadr_t ));
 

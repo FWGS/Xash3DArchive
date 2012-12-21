@@ -53,7 +53,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	if( bhdr.reserved0 != 0 ) return false;
 	if( bhdr.planes != 1 ) return false;
 
-	if( memcmp( bhdr.id, "BM", 2 ))
+	if( Q_memcmp( bhdr.id, "BM", 2 ))
 	{
 		MsgDev( D_ERROR, "Image_LoadBMP: only Windows-style BMP files supported (%s)\n", name );
 		return false;

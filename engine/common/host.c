@@ -21,9 +21,6 @@ GNU General Public License for more details.
 #include "input.h"
 #include "features.h"
 
-static const char *show_credits = "\n\n\n\n\tCopyright XashXT Group %s ©\n\t\
-          All Rights Reserved\n\n\t           Visit www.xash.ru\n";
-
 typedef void (*pfnChangeGame)( const char *progname );
 
 pfnChangeGame	pChangeGame = NULL;
@@ -608,6 +605,11 @@ static void Host_Crash_f( void )
 	*(int *)0 = 0xffffffff;
 }
 
+/*
+=================
+Host_InitCommon
+=================
+*/
 void Host_InitCommon( const char *progname, qboolean bChangeGame )
 {
 	MEMORYSTATUS	lpBuffer;
@@ -757,7 +759,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 {
 	static double	oldtime, newtime;
 
-	pChangeGame = func;
+	pChangeGame = func;	// may be NULL
 
 	Host_InitCommon( progname, bChangeGame );
 

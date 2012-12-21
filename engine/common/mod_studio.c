@@ -163,7 +163,7 @@ mstudiocache_t *Mod_CheckStudioCache( model_t *model, float frame, int sequence,
 
 		if( pCache->model == model && pCache->frame == frame && pCache->sequence == sequence &&
 		VectorCompare( angles, pCache->angles ) && VectorCompare( origin, pCache->origin ) && VectorCompare( size, pCache->size ) &&
-		!memcmp( pCache->controler, pcontroller, 4 ) && !memcmp( pCache->blending, pblending, 2 ))
+		!Q_memcmp( pCache->controler, pcontroller, 4 ) && !Q_memcmp( pCache->blending, pblending, 2 ))
 		{
 			return pCache;
 		}
@@ -249,7 +249,7 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 		studio_planes[j+5].dist -= DotProductAbs( studio_planes[j+5].normal, size );
 	}
 
-	// tell trace code about hibox count
+	// tell trace code about hitbox count
 	*numhitboxes = mod_studiohdr->numhitboxes;
 
 	if( mod_studiocache->integer )
@@ -285,7 +285,9 @@ static void Mod_StudioCalcBoneAdj( float *adj, const byte *pcontroller )
 	{
 		i = pbonecontroller[j].index;
 
-		if( i == 4 ) continue; // ignore mouth
+		if( i == STUDIO_MOUTH )
+			continue; // ignore mouth
+
 		if( i <= MAXSTUDIOCONTROLLERS )
 		{
 			// check for 360% wrapping
@@ -487,7 +489,7 @@ static void Mod_StudioCalcRotations( int boneused[], int numbones, const byte *p
 	float		s;
 
 	if( f > pseqdesc->numframes - 1 )
-		f = 0;
+		f = 0.0f;
 	else if( f < -0.01f )
 		f = -0.01f;
 
@@ -522,21 +524,22 @@ static float Mod_StudioEstimateFrame( float frame, mstudioseqdesc_t *pseqdesc )
 	double	f;
 	
 	if( pseqdesc->numframes <= 1 )
-		f = 0;
-	else f = ( frame * ( pseqdesc->numframes - 1 )) / 256.0;
+		f = 0.0f;
+	else f = ( frame * ( pseqdesc->numframes - 1 )) / 256.0f;
  
 	if( pseqdesc->flags & STUDIO_LOOPING ) 
 	{
 		if( pseqdesc->numframes > 1 )
 			f -= (int)(f / (pseqdesc->numframes - 1)) *  (pseqdesc->numframes - 1);
-		if( f < 0 ) f += (pseqdesc->numframes - 1);
+		if( f < 0.0f ) f += (pseqdesc->numframes - 1);
 	}
 	else 
 	{
-		if( f >= pseqdesc->numframes - 1.001 )
-			f = pseqdesc->numframes - 1.001;
-		if( f < 0.0 )  f = 0.0;
+		if( f >= pseqdesc->numframes - 1.001f )
+			f = pseqdesc->numframes - 1.001f;
+		if( f < 0.0f )  f = 0.0f;
 	}
+
 	return f;
 }
 

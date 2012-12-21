@@ -3258,7 +3258,7 @@ NetAPI_SendRequest
 */
 void NetAPI_SendRequest( int context, int request, int flags, double timeout, netadr_t *remote_address, net_api_response_func_t response )
 {
-	net_request_t	*nr;
+	net_request_t	*nr = NULL;
 	string		req;
 	int		i;
 

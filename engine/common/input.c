@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #define WND_BORDER		3			// sentinel border in pixels
 
 HICON	in_mousecursor;
-qboolean	in_mouseactive;		// false when not focus app
+qboolean	in_mouseactive;				// false when not focus app
 qboolean	in_restore_spi;
 qboolean	in_mouseinitialized;
 int	in_mouse_oldbuttonstate;
@@ -335,6 +335,7 @@ void IN_MouseEvent( int mstate )
 		{
 			Key_Event( K_MOUSE1 + i, true );
 		}
+
 		if(!( mstate & ( 1<<i )) && ( in_mouse_oldbuttonstate & ( 1<<i )))
 		{
 			Key_Event( K_MOUSE1 + i, false );
@@ -577,5 +578,6 @@ long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
 		}
 		break;
 	}
+
 	return DefWindowProc( hWnd, uMsg, wParam, lParam );
 }

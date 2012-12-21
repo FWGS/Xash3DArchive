@@ -136,8 +136,8 @@ static const loadpixformat_t load_game[] =
 { "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_HL },	// hl studio model skins
 { "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_HL },	// hl sprite frames
 { "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_HL },	// hl menu images (cached.wad etc)
-{ "%s%s.%s", "fnt", Image_LoadFNT, IL_HINT_HL },	// hl menu images (cached.wad etc)
-{ "%s%s.%s", "pal", Image_LoadPAL, IL_HINT_NO },	// install studio palette
+{ "%s%s.%s", "fnt", Image_LoadFNT, IL_HINT_HL },	// hl console font (fonts.wad etc)
+{ "%s%s.%s", "pal", Image_LoadPAL, IL_HINT_NO },	// install studio\sprite palette
 { NULL, NULL, NULL, IL_HINT_NO }
 };
 
@@ -166,7 +166,7 @@ void Image_Init( void )
 {
 	// init pools
 	host.imagepool = Mem_AllocPool( "ImageLib Pool" );
-	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_RENDERINFO, "down size non-power of two textures" );
+	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_GLCONFIG, "down size non-power of two textures" );
 
 	// install image formats (can be re-install later by Image_Setup)
 	switch( host.type )
@@ -181,6 +181,7 @@ void Image_Init( void )
 		image.saveformats = save_null;
 		break;
 	}
+
 	image.tempbuffer = NULL;
 }
 
@@ -196,6 +197,7 @@ byte *Image_Copy( size_t size )
 
 	out = Mem_Alloc( host.imagepool, size );
 	Q_memcpy( out, image.tempbuffer, size );
+
 	return out; 
 }
 
@@ -266,9 +268,9 @@ int Image_ComparePalette( const byte *pal )
 {
 	if( pal == NULL )
 		return PAL_INVALID;
-	else if( !memcmp( palette_q1, pal, 768 ))
+	else if( !Q_memcmp( palette_q1, pal, 768 ))
 		return PAL_QUAKE1;
-	else if( !memcmp( palette_hl, pal, 768 ))
+	else if( !Q_memcmp( palette_hl, pal, 768 ))
 		return PAL_HALFLIFE;
 	return PAL_CUSTOM;		
 }
@@ -419,6 +421,7 @@ void Image_ConvertPalTo24bit( rgbdata_t *pic )
 		pal24[1] = pal32[1];
 		pal24[2] = pal32[2];
 	}
+
 	Mem_Free( pic->palette );
 	pic->palette = converted;
 	pic->type = PF_INDEXED_24;
@@ -638,11 +641,13 @@ static void Image_Resample24LerpLine( const byte *in, byte *out, int inwidth, in
 	for( j = 0, f = 0; j < outwidth; j++, f += fstep )
 	{
 		xi = f>>16;
+
 		if( xi != oldx )
 		{
 			in += (xi - oldx) * 3;
 			oldx = xi;
 		}
+
 		if( xi < endx )
 		{
 			lerp = f & 0xFFFF;
@@ -661,16 +666,15 @@ static void Image_Resample24LerpLine( const byte *in, byte *out, int inwidth, in
 
 void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight )
 {
+	const byte *inrow;
 	int	i, j, r, yi, oldy = 0, f, fstep, lerp, endy = (inheight - 1);
 	int	inwidth4 = inwidth * 4;
 	int	outwidth4 = outwidth * 4;
-	const byte *inrow;
-	byte	*out;
+	byte	*out = (byte *)outdata;
 	byte	*resamplerow1;
 	byte	*resamplerow2;
 
-	out = (byte *)outdata;
-	fstep = (int)(inheight * 65536.0f/outheight);
+	fstep = (int)(inheight * 65536.0f / outheight);
 
 	resamplerow1 = (byte *)Mem_Alloc( host.imagepool, outwidth * 4 * 2);
 	resamplerow2 = resamplerow1 + outwidth * 4;
@@ -695,7 +699,9 @@ void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *
 				Image_Resample32LerpLine( inrow + inwidth4, resamplerow2, inwidth, outwidth );
 				oldy = yi;
 			}
+
 			j = outwidth - 4;
+
 			while( j >= 0 )
 			{
 				LERPBYTE( 0);
@@ -719,6 +725,7 @@ void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *
 				resamplerow2 += 16;
 				j -= 4;
 			}
+
 			if( j & 2 )
 			{
 				LERPBYTE( 0);
@@ -733,6 +740,7 @@ void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *
 				resamplerow1 += 8;
 				resamplerow2 += 8;
 			}
+
 			if( j & 1 )
 			{
 				LERPBYTE( 0);
@@ -743,6 +751,7 @@ void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *
 				resamplerow1 += 4;
 				resamplerow2 += 4;
 			}
+
 			resamplerow1 -= outwidth4;
 			resamplerow2 -= outwidth4;
 		}
@@ -755,13 +764,12 @@ void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *
 				else Image_Resample32LerpLine( inrow, resamplerow1, inwidth, outwidth);
 				oldy = yi;
 			}
+
 			Q_memcpy( out, resamplerow1, outwidth4 );
 		}
 	}
 
 	Mem_Free( resamplerow1 );
-	resamplerow1 = NULL;
-	resamplerow2 = NULL;
 }
 
 void Image_Resample32Nolerp( const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight )
@@ -770,11 +778,11 @@ void Image_Resample32Nolerp( const void *indata, int inwidth, int inheight, void
 	uint	frac, fracstep;
 	int	*inrow, *out = (int *)outdata; // relies on int being 4 bytes
 
-	fracstep = inwidth * 0x10000/outwidth;
+	fracstep = inwidth * 0x10000 / outwidth;
 
 	for( i = 0; i < outheight; i++)
 	{
-		inrow = (int *)indata + inwidth * (i * inheight/outheight);
+		inrow = (int *)indata + inwidth * (i * inheight / outheight);
 		frac = fracstep>>1;
 		j = outwidth - 4;
 
@@ -787,12 +795,14 @@ void Image_Resample32Nolerp( const void *indata, int inwidth, int inheight, void
 			out += 4;
 			j -= 4;
 		}
+
 		if( j & 2 )
 		{
 			out[0] = inrow[frac >> 16];frac += fracstep;
 			out[1] = inrow[frac >> 16];frac += fracstep;
 			out += 2;
 		}
+
 		if( j & 1 )
 		{
 			out[0] = inrow[frac >> 16];frac += fracstep;
@@ -803,10 +813,10 @@ void Image_Resample32Nolerp( const void *indata, int inwidth, int inheight, void
 
 void Image_Resample24Lerp( const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight )
 {
+	const byte *inrow;
 	int	i, j, r, yi, oldy, f, fstep, lerp, endy = (inheight - 1);
 	int	inwidth3 = inwidth * 3;
 	int	outwidth3 = outwidth * 3;
-	const byte *inrow;
 	byte	*out = (byte *)outdata;
 	byte	*resamplerow1;
 	byte	*resamplerow2;
@@ -836,7 +846,9 @@ void Image_Resample24Lerp( const void *indata, int inwidth, int inheight, void *
 				Image_Resample24LerpLine( inrow + inwidth3, resamplerow2, inwidth, outwidth );
 				oldy = yi;
 			}
+
 			j = outwidth - 4;
+
 			while( j >= 0 )
 			{
 				LERPBYTE( 0);
@@ -856,6 +868,7 @@ void Image_Resample24Lerp( const void *indata, int inwidth, int inheight, void *
 				resamplerow2 += 12;
 				j -= 4;
 			}
+
 			if( j & 2 )
 			{
 				LERPBYTE( 0);
@@ -868,6 +881,7 @@ void Image_Resample24Lerp( const void *indata, int inwidth, int inheight, void *
 				resamplerow1 += 6;
 				resamplerow2 += 6;
 			}
+
 			if( j & 1 )
 			{
 				LERPBYTE( 0);
@@ -877,6 +891,7 @@ void Image_Resample24Lerp( const void *indata, int inwidth, int inheight, void *
 				resamplerow1 += 3;
 				resamplerow2 += 3;
 			}
+
 			resamplerow1 -= outwidth3;
 			resamplerow2 -= outwidth3;
 		}
@@ -889,18 +904,18 @@ void Image_Resample24Lerp( const void *indata, int inwidth, int inheight, void *
 				else Image_Resample24LerpLine( inrow, resamplerow1, inwidth, outwidth );
 				oldy = yi;
 			}
+
 			Q_memcpy( out, resamplerow1, outwidth3 );
 		}
 	}
+
 	Mem_Free( resamplerow1 );
-	resamplerow1 = NULL;
-	resamplerow2 = NULL;
 }
 
 void Image_Resample24Nolerp( const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight )
 {
-	int	i, j, f, inwidth3 = inwidth * 3;
 	uint	frac, fracstep;
+	int	i, j, f, inwidth3 = inwidth * 3;
 	byte	*inrow, *out = (byte *)outdata;
 
 	fracstep = inwidth * 0x10000 / outwidth;
@@ -935,6 +950,7 @@ void Image_Resample24Nolerp( const void *indata, int inwidth, int inheight, void
 			frac += fracstep;
 			j -= 4;
 		}
+
 		if( j & 2 )
 		{
 			f = (frac >> 16)*3;
@@ -949,6 +965,7 @@ void Image_Resample24Nolerp( const void *indata, int inwidth, int inheight, void
 			frac += fracstep;
 			out += 2;
 		}
+
 		if( j & 1 )
 		{
 			f = (frac >> 16)*3;
@@ -970,10 +987,12 @@ void Image_Resample8Nolerp( const void *indata, int inwidth, int inheight, void 
 
 	in = (byte *)indata;
 	fracstep = inwidth * 0x10000 / outwidth;
+
 	for( i = 0; i < outheight; i++, out += outwidth )
 	{
 		inrow = in + inwidth*(i*inheight/outheight);
 		frac = fracstep>>1;
+
 		for( j = 0; j < outwidth; j++ )
 		{
 			out[j] = inrow[frac>>16];
@@ -1007,11 +1026,13 @@ byte *Image_ResampleInternal( const void *indata, int inwidth, int inheight, int
 		Image_Resample8Nolerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
 		break;		
 	case PF_RGB_24:
+	case PF_BGR_24:
 		image.tempbuffer = (byte *)Mem_Realloc( host.imagepool, image.tempbuffer, outwidth * outheight * 3 );
 		if( quality ) Image_Resample24Lerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
 		else Image_Resample24Nolerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
 		break;
 	case PF_RGBA_32:
+	case PF_BGRA_32:
 		image.tempbuffer = (byte *)Mem_Realloc( host.imagepool, image.tempbuffer, outwidth * outheight * 4 );
 		if( quality ) Image_Resample32Lerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
 		else Image_Resample32Nolerp( indata, inwidth, inheight, image.tempbuffer, outwidth, outheight );
@@ -1033,7 +1054,6 @@ Image_Flood
 */
 byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int outwidth, int outheight, int type, qboolean *resampled )
 {
-	qboolean	quality = Image_CheckFlag( IL_USE_LERPING );
 	int	samples = PFDesc[type].bpp;
 	int	newsize, x, y, i;
 	byte	*in, *out;
@@ -1106,7 +1126,7 @@ byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int t
 	byte	*out;
 
 	// nothing to process
-	if(!(flags & (IMAGE_FLIP_X|IMAGE_FLIP_Y|IMAGE_ROT_90)))
+	if( !( flags & (IMAGE_FLIP_X|IMAGE_FLIP_Y|IMAGE_ROT_90)))
 		return (byte *)in;
 
 	switch( type )
@@ -1114,14 +1134,16 @@ byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int t
 	case PF_INDEXED_24:
 	case PF_INDEXED_32:
 	case PF_RGB_24:
+	case PF_BGR_24:
 	case PF_RGBA_32:
+	case PF_BGRA_32:
 		image.tempbuffer = Mem_Realloc( host.imagepool, image.tempbuffer, width * height * samples );
 		break;
 	default:
-		// we can flip DXT without expanding to RGBA? hmmm...
 		MsgDev( D_WARN, "Image_Flip: unsupported format %s\n", PFDesc[type].name );
 		return (byte *)in;	
 	}
+
 	out = image.tempbuffer;
 
 	if( flip_i )
@@ -1150,6 +1172,7 @@ byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int t
 		*srcwidth = width;
 		*srcheight = height;	
 	}
+
 	return image.tempbuffer;
 }
 
@@ -1197,6 +1220,7 @@ byte *Image_CreateLumaInternal( byte *fin, int width, int height, int type, int 
 		MsgDev( D_WARN, "Image_MakeLuma: unsupported format %s\n", PFDesc[type].name );
 		return (byte *)fin;	
 	}
+
 	return image.tempbuffer;
 }
 
@@ -1217,7 +1241,7 @@ qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
 
 	// reallocate image buffer
 	image.rgba = Mem_Alloc( host.imagepool, image.size );	
-	if( expand_to_rgba == false ) Q_memcpy( image.rgba, in, image.size );
+	if( !expand_to_rgba ) Q_memcpy( image.rgba, in, image.size );
 	else if( !Image_Copy8bitRGBA( in, image.rgba, mipsize ))
 		return false; // probably pallette not installed
 
@@ -1259,15 +1283,6 @@ qboolean Image_Decompress( const byte *data )
 		if( !Image_Copy8bitRGBA( fin, fout, image.width * image.height ))
 			return false;
 		break;
-	case PF_RGB_24:
-		for (i = 0; i < image.width * image.height; i++ )
-		{
-			fout[(i<<2)+0] = fin[i*3+0];
-			fout[(i<<2)+1] = fin[i*3+1];
-			fout[(i<<2)+2] = fin[i*3+2];
-			fout[(i<<2)+3] = 255;
-		}
-		break;
 	case PF_BGR_24:
 		for (i = 0; i < image.width * image.height; i++ )
 		{
@@ -1277,8 +1292,14 @@ qboolean Image_Decompress( const byte *data )
 			fout[(i<<2)+3] = 255;
 		}
 		break;
-	case PF_RGBA_32:
-		Q_memcpy( fout, fin, size );
+	case PF_RGB_24:
+		for (i = 0; i < image.width * image.height; i++ )
+		{
+			fout[(i<<2)+0] = fin[i*3+0];
+			fout[(i<<2)+1] = fin[i*3+1];
+			fout[(i<<2)+2] = fin[i*3+2];
+			fout[(i<<2)+3] = 255;
+		}
 		break;
 	case PF_BGRA_32:
 		for( i = 0; i < image.width * image.height; i++ )
@@ -1288,6 +1309,10 @@ qboolean Image_Decompress( const byte *data )
 			fout[i*4+2] = fin[i*4+0];
 			fout[i*4+3] = fin[i*4+3];
 		}
+		break;
+	case PF_RGBA_32:
+		// fast default case
+		Q_memcpy( fout, fin, size );
 		break;
 	default: return false;
 	}
@@ -1371,7 +1396,6 @@ qboolean Image_RemapInternal( rgbdata_t *pic, int topColor, int bottomColor )
 		return false;
 	}
 
-	// just change palette and decompress to RGBA buffer
 	// g-cont. preview images has a swapped top and bottom colors. I don't know why.
 	Image_PaletteHueReplace( pic->palette, topColor, SUIT_HUE_START, SUIT_HUE_END );
 	Image_PaletteHueReplace( pic->palette, bottomColor, PLATE_HUE_START, PLATE_HUE_END );
@@ -1518,7 +1542,7 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uin
 	{
 		// clear any force flags
 		image.force_flags = 0;
-		return false;	// no operation specfied
+		return false; // no operation specfied
 	}
 
 	if( flags & IMAGE_MAKE_LUMA )
@@ -1541,20 +1565,15 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uin
 
 	if( filter ) Image_ApplyFilter( pic, filter->filter, filter->factor, filter->bias, filter->flags, filter->blendFunc );
 
-	// quantize image
-	if( flags & IMAGE_QUANTIZE ) pic = Image_Quantize( pic );
-
-	// NOTE: flip and resample algorythms can't difference palette size
-	if( flags & IMAGE_PALTO24 ) Image_ConvertPalTo24bit( pic );
 	out = Image_FlipInternal( pic->buffer, &pic->width, &pic->height, pic->type, flags );
 	if( pic->buffer != out ) Q_memcpy( pic->buffer, image.tempbuffer, pic->size );
 
-	if(( flags & IMAGE_RESAMPLE && width > 0 && height > 0 ) || flags & IMAGE_ROUND || flags & IMAGE_ROUNDFILLER )
+	if(( flags & IMAGE_RESAMPLE && width > 0 && height > 0 ) || ( flags & IMAGE_ROUND ) || ( flags & IMAGE_ROUNDFILLER ))
 	{
-		int	w, h;
 		qboolean	resampled = false;
+		int	w, h;
 
-		if( flags & IMAGE_ROUND || flags & IMAGE_ROUNDFILLER )
+		if(( flags & IMAGE_ROUND ) || ( flags & IMAGE_ROUNDFILLER ))
 		{
 			w = pic->width;
 			h = pic->height;
@@ -1591,8 +1610,17 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uin
 			Mem_Free( pic->buffer );		// free original image buffer
 			pic->buffer = Image_Copy( pic->size );	// unzone buffer (don't touch image.tempbuffer)
 		}
-		else result = false; // not a resampled or filled
+		else
+		{
+			// not a resampled or filled
+			result = false;
+		}
 	}
+
+	// quantize image
+	if( flags & IMAGE_QUANTIZE ) pic = Image_Quantize( pic );
+	if( flags & IMAGE_PALTO24 ) Image_ConvertPalTo24bit( pic );
+
 	*pix = pic;
 
 	// clear any force flags

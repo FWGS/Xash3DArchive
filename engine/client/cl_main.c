@@ -1434,7 +1434,11 @@ void CL_ReadPackets( void )
 
 	cl.lerpFrac = CL_LerpPoint();
 	cl.thirdperson = clgame.dllFuncs.CL_IsThirdPerson();
-
+#if 0
+	// keep cheat cvars are unchanged
+	if( cl.maxclients > 1 && cls.state == ca_active && host.developer <= 1 )
+		Cvar_SetCheatState();
+#endif
 	// singleplayer never has connection timeout
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))
 		return;

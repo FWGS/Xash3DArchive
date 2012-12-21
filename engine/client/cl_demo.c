@@ -651,7 +651,6 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 	long	curpos = 0;
 	float	fElapsedTime = 0.0f;
 	qboolean	swallowmessages = true;
-	qboolean	forceskip = false;
 	byte	*userbuf = NULL;
 	size_t	size;
 	byte	cmd;

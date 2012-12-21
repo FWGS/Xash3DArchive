@@ -359,6 +359,7 @@ void Key_Bind_f( void )
 	}
 
 	b = Key_StringToKeynum( Cmd_Argv( 1 ));
+
 	if( b == -1 )
 	{
 		Msg( "\"%s\" isn't a valid key\n", Cmd_Argv( 1 ));
@@ -375,11 +376,13 @@ void Key_Bind_f( void )
 	
 	// copy the rest of the command line
 	cmd[0] = 0; // start out with a null string
+
 	for( i = 2; i < c; i++ )
 	{
 		Q_strcat( cmd, Cmd_Argv( i ));
 		if( i != ( c - 1 )) Q_strcat( cmd, " " );
 	}
+
 	Key_SetBinding( b, cmd );
 }
 
@@ -403,7 +406,6 @@ void Key_WriteBindings( file_t *f )
 			FS_Printf( f, "bind %s \"%s\"\n", Key_KeynumToString(i), keys[i].binding );
 	}
 }
-
 
 /*
 ============
@@ -446,7 +448,7 @@ void Key_Init( void )
 	Cmd_AddCommand( "bindlist", Key_Bindlist_f, "display current key bindings" );
 	Cmd_AddCommand( "makehelp", Key_EnumCmds_f, "write help.txt that contains all console cvars and cmds" ); 
 
-	// setup hardcode binding. "unbindall" from config.cfg will be reset it
+	// setup default binding. "unbindall" from config.cfg will be reset it
 	for( kn = keynames; kn->name; kn++ ) Key_SetBinding( kn->keynum, kn->binding ); 
 }
 

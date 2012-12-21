@@ -36,6 +36,8 @@ int		bmodel_version;		// global stuff to detect bsp version
 char		modelname[64];		// short model name (without path and ext)
 convar_t		*mod_studiocache;
 convar_t		*mod_allow_materials;
+static char	mod_wadnames[64][32];	// 64 wad names stored
+static int	mod_numwads;
 		
 model_t		*loadmodel;
 model_t		*worldmodel;
@@ -190,7 +192,7 @@ void Mod_Modellist_f( void )
 Mod_SetupHulls
 ================
 */
-void Mod_SetupHulls( float mins[4][3], float maxs[4][3] )
+void Mod_SetupHulls( vec3_t mins[MAX_MAP_HULLS], vec3_t maxs[MAX_MAP_HULLS] )
 {
 	Q_memcpy( mins, cm_hullmins, sizeof( cm_hullmins ));
 	Q_memcpy( maxs, cm_hullmaxs, sizeof( cm_hullmaxs ));
@@ -214,7 +216,7 @@ byte *Mod_CompressVis( const byte *in, size_t *size )
 	}
 	
 	dest_p = visdata;
-	visrow = (worldmodel->numleafs + 7)>>3;
+	visrow = (worldmodel->numleafs + 7) >> 3;
 	
 	for( j = 0; j < visrow; j++ )
 	{
@@ -253,7 +255,7 @@ byte *Mod_DecompressVis( const byte *in )
 		return NULL;
 	}
 
-	row = (worldmodel->numleafs + 7)>>3;	
+	row = (worldmodel->numleafs + 7) >> 3;	
 	out = visdata;
 
 	if( !in )
@@ -575,8 +577,8 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 		for( j = 0; j < 3; j++ )
 		{
 			// spread the mins / maxs by a pixel
-			out->mins[j] = in->mins[j] - 1;
-			out->maxs[j] = in->maxs[j] + 1;
+			out->mins[j] = in->mins[j] - 1.0f;
+			out->maxs[j] = in->maxs[j] + 1.0f;
 			out->origin[j] = in->origin[j];
 		}
 
@@ -778,7 +780,23 @@ load_wad_textures:
 			else
 			{
 				// okay, loading it from wad
-				tx->gl_texturenum = GL_LoadTexture( texname, NULL, 0, 0, filter );
+				qboolean	fullpath_loaded = false;
+
+				// check wads in reverse order
+				for( j = mod_numwads - 1; j >= 0; j-- )
+				{
+					char	*texpath = va( "%s.wad/%s", mod_wadnames[j], texname );
+
+					if( FS_FileExists( texpath, false ))
+					{
+						tx->gl_texturenum = GL_LoadTexture( texpath, NULL, 0, 0, filter );
+						fullpath_loaded = true;
+						break;
+					}
+				}
+
+				if( !fullpath_loaded ) // probably this never happens
+					tx->gl_texturenum = GL_LoadTexture( texname, NULL, 0, 0, filter );
 
 				if( !tx->gl_texturenum && load_external )
 				{
@@ -833,7 +851,20 @@ load_wad_textures:
 				// NOTE: we can't loading it from wad as normal because _luma texture doesn't exist
 				// and not be loaded. But original texture is already loaded and can't be modified
 				// So load original texture manually and convert it to luma
-				if( !load_external_luma ) src = FS_LoadFile( va( "%s.mip", tx->name ), &srcSize, false );
+				if( !load_external_luma )
+				{
+					// check wads in reverse order
+					for( j = mod_numwads - 1; j >= 0; j-- )
+					{
+						char	*texpath = va( "%s.wad/%s.mip", mod_wadnames[j], tx->name );
+
+						if( FS_FileExists( texpath, false ))
+						{
+							src = FS_LoadFile( texpath, &srcSize, false );
+							break;
+						}
+					}
+				}
 
 				// okay, loading it from wad or hi-res version
 				tx->fb_texturenum = GL_LoadTexture( texname, src, srcSize, TF_NOMIPMAP|TF_MAKELUMA, NULL );
@@ -1168,6 +1199,7 @@ static void Mod_CalcSurfaceBounds( msurface_t *surf, mextrasurf_t *info )
 		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
 		AddPointToBounds( v->position, info->mins, info->maxs );
 	}
+
 	VectorAverage( info->mins, info->maxs, info->origin );
 }
 
@@ -1361,12 +1393,12 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
 		s += surf->light_s * LM_SAMPLE_SIZE;
 		s += LM_SAMPLE_SIZE >> 1;
-		s /= BLOCK_WIDTH * LM_SAMPLE_SIZE;
+		s /= BLOCK_SIZE * LM_SAMPLE_SIZE;
 
 		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
 		t += surf->light_t * LM_SAMPLE_SIZE;
 		t += LM_SAMPLE_SIZE >> 1;
-		t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE;
+		t /= BLOCK_SIZE * LM_SAMPLE_SIZE;
 
 		mesh->lmcoords[i][0] = s;
 		mesh->lmcoords[i][1] = t;
@@ -1409,8 +1441,8 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 	{
 		m = subdivideSize * floor((( mins[i] + maxs[i] ) * 0.5f ) / subdivideSize + 0.5f );
 
-		if( maxs[i] - m < 8 ) continue;
-		if( m - mins[i] < 8 ) continue;
+		if( maxs[i] - m < 8.0f ) continue;
+		if( m - mins[i] < 8.0f ) continue;
 
 		// cut it
 		for( j = 0, v = verts + i; j < numVerts; j++, v += 3 )
@@ -1519,12 +1551,12 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
 		s += surf->light_s * LM_SAMPLE_SIZE;
 		s += LM_SAMPLE_SIZE >> 1;
-		s /= BLOCK_WIDTH * LM_SAMPLE_SIZE;
+		s /= BLOCK_SIZE * LM_SAMPLE_SIZE;
 
 		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
 		t += surf->light_t * LM_SAMPLE_SIZE;
 		t += LM_SAMPLE_SIZE >> 1;
-		t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE;
+		t /= BLOCK_SIZE * LM_SAMPLE_SIZE;
 
 		mesh->lmcoords[i+1][0] = s;
 		mesh->lmcoords[i+1][1] = t;
@@ -1661,7 +1693,7 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 		numVerts += poly->numVerts;
 	}
 
-	// release the old q2_polys crap
+	// release the old polys crap
 	for( poly = info->mesh; poly; poly = next )
 	{
 		next = poly->next;
@@ -1862,8 +1894,8 @@ static void Mod_LoadVertexes( const dlump_t *l )
 	for( i = 0; i < 3; i++ )
 	{
 		// spread the mins / maxs by a pixel
-		world.mins[i] -= 1;
-		world.maxs[i] += 1;
+		world.mins[i] -= 1.0f;
+		world.maxs[i] += 1.0f;
 	}
 }
 
@@ -2014,7 +2046,7 @@ static void Mod_LoadLeafs( const dlump_t *l )
 	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadLeafs: funny lump size\n" );
 
 	count = l->filelen / sizeof( *in );
-	if( count < 1 ) Host_Error( "Map %s with no leafs\n", loadmodel->name );
+	if( count < 1 ) Host_Error( "Map %s has no leafs\n", loadmodel->name );
 	out = (mleaf_t *)Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
 
 	loadmodel->leafs = out;
@@ -2072,7 +2104,7 @@ static void Mod_LoadPlanes( const dlump_t *l )
 	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadPlanes: funny lump size\n" );
 	count = l->filelen / sizeof( *in );
 
-	if( count < 1 ) Host_Error( "Map %s with no planes\n", loadmodel->name );
+	if( count < 1 ) Host_Error( "Map %s has no planes\n", loadmodel->name );
 	out = (mplane_t *)Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
 
 	loadmodel->planes = out;
@@ -2122,10 +2154,59 @@ Mod_LoadEntities
 */
 static void Mod_LoadEntities( const dlump_t *l )
 {
+	char	*pfile;
+	string	keyname;
+	char	token[2048];
+
 	// make sure what we really has terminator
 	loadmodel->entities = Mem_Alloc( loadmodel->mempool, l->filelen + 1 );
 	Q_memcpy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
-	if( world.loading ) world.entdatasize = l->filelen;
+	if( !world.loading ) return;
+
+	world.entdatasize = l->filelen;
+	pfile = (char *)loadmodel->entities;
+	mod_numwads = 0;
+
+	// parse all the wads for loading textures in right ordering
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
+	{
+		if( token[0] != '{' )
+			Host_Error( "Mod_LoadEntities: found %s when expecting {\n", token );
+
+		while( 1 )
+		{
+			// parse key
+			if(( pfile = COM_ParseFile( pfile, token )) == NULL )
+				Host_Error( "Mod_LoadEntities: EOF without closing brace\n" );
+			if( token[0] == '}' ) break; // end of desc
+
+			Q_strncpy( keyname, token, sizeof( keyname ));
+
+			// parse value	
+			if(( pfile = COM_ParseFile( pfile, token )) == NULL ) 
+				Host_Error( "Mod_LoadEntities: EOF without closing brace\n" );
+
+			if( token[0] == '}' )
+				Host_Error( "Mod_LoadEntities: closing brace without data\n" );
+
+			if( !Q_stricmp( keyname, "wad" ))
+			{
+				char	*path = token;
+				string	wadpath;
+
+				// parse wad pathes
+				while( path )
+				{
+					char *end = Q_strchr( path, ';' );
+					if( !end ) break;
+					Q_strncpy( wadpath, path, (end - path) + 1 );
+					FS_FileBase( wadpath, mod_wadnames[mod_numwads++] );					
+					path += (end - path) + 1; // move pointer
+				}
+				return;	// all done
+			}
+		}
+	}
 }
 
 /*
@@ -2391,10 +2472,10 @@ void Mod_CalcPHS( void )
 	timestart = Sys_DoubleTime();
 
 	// NOTE: first leaf is skipped becuase is a outside leaf. Now all leafs have shift up by 1.
-	// and last leaf (which equal worldmodel->numleafs) has no visdata! Add extra one leaf
+	// and last leaf (which equal worldmodel->numleafs) has no visdata! Add one extra leaf
 	// to avoid this situation.
 	num = worldmodel->numleafs + 1;
-	rowwords = (num + 31)>>5;
+	rowwords = (num + 31) >> 5;
 	rowbytes = rowwords * 4;
 
 	// typically PHS reqiured more room because RLE fails on multiple 1 not 0
@@ -2548,6 +2629,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	{
 	case 28:	// get support for quake1 beta
 		i = Q1BSP_VERSION;
+		sample_size = 16;
 		break;
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
@@ -2851,6 +2933,11 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean force )
 
 	// now replacement table is invalidate
 	Q_memset( com_models, 0, sizeof( com_models ));
+
+	// update the lightmap blocksize
+	if( host.features & ENGINE_LARGE_LIGHTMAPS )
+		world.block_size = BLOCK_SIZE_MAX;
+	else world.block_size = BLOCK_SIZE_DEFAULT;
 
 	if( !Q_stricmp( cm_models[0].name, name ) && !force )
 	{

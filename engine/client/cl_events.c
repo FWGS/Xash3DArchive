@@ -349,6 +349,7 @@ void CL_ParseEvent( sizebuf_t *msg )
 	for( i = 0 ; i < num_events; i++ )
 	{
 		event_index = BF_ReadUBitLong( msg, MAX_EVENT_BITS );
+		Q_memset( &args, 0, sizeof( args ));
 		has_update = false;
 
 		if( BF_ReadOneBit( msg ))

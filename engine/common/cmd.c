@@ -165,6 +165,7 @@ void Cbuf_Execute( void )
 		text = (char *)cmd_text.data;
 
 		quotes = 0;
+
 		for( i = 0; i < cmd_text.cursize; i++ )
 		{
 			if( text[i] == '"' ) quotes++;
@@ -183,7 +184,6 @@ void Cbuf_Execute( void )
 		// delete the text from the command buffer and move remaining commands down
 		// this is necessary because commands (exec) can insert data at the
 		// beginning of the text buffer
-
 		if( i == cmd_text.cursize )
 		{
 			cmd_text.cursize = 0;
@@ -461,8 +461,8 @@ will point into this temporary buffer.
 */
 void Cmd_TokenizeString( char *text )
 {
-	int	i;
 	char	cmd_token[MAX_CMD_BUFFER];
+	int	i;
 
 	// clear the args from the last string
 	for( i = 0; i < cmd_argc; i++ )

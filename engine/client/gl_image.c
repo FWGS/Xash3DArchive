@@ -560,7 +560,8 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int *samples )
 		case 1: format = GL_COMPRESSED_LUMINANCE_ARB; break;
 		case 2: format = GL_COMPRESSED_LUMINANCE_ALPHA_ARB; break;
 		case 3: format = GL_COMPRESSED_RGB_ARB; break;
-		case 4: format = GL_COMPRESSED_RGBA_ARB; break;
+		case 4:
+		default: format = GL_COMPRESSED_RGBA_ARB; break;
 		}
 
 		if( tex->flags & TF_INTENSITY )
@@ -1762,8 +1763,25 @@ static rgbdata_t *R_InitAttenTexture3D( texFlags_t *flags )
 static rgbdata_t *R_InitDlightTexture( texFlags_t *flags )
 {
 	// solid color texture
-	r_image.width = BLOCK_WIDTH; 
-	r_image.height = BLOCK_HEIGHT;
+	r_image.width = BLOCK_SIZE_DEFAULT; 
+	r_image.height = BLOCK_SIZE_DEFAULT;
+	r_image.flags = IMAGE_HAS_COLOR;
+	r_image.type = PF_RGBA_32;
+	r_image.size = r_image.width * r_image.height * 4;
+	r_image.buffer = data2D;
+
+	Q_memset( data2D, 0x00, r_image.size );
+
+	*flags = TF_NOPICMIP|TF_UNCOMPRESSED|TF_NOMIPMAP;
+
+	return &r_image;
+}
+
+static rgbdata_t *R_InitDlightTexture2( texFlags_t *flags )
+{
+	// solid color texture
+	r_image.width = BLOCK_SIZE_MAX; 
+	r_image.height = BLOCK_SIZE_MAX;
 	r_image.flags = IMAGE_HAS_COLOR;
 	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
@@ -1932,6 +1950,7 @@ static void R_InitBuiltinTextures( void )
 	{ "*particle2", &tr.particleTexture2, R_InitParticleTexture2, TEX_SYSTEM },
 	{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture, TEX_NOMIP },	// force linear filter
 	{ "*dlight", &tr.dlightTexture, R_InitDlightTexture, TEX_LIGHTMAP },
+	{ "*dlight2", &tr.dlightTexture2, R_InitDlightTexture2, TEX_LIGHTMAP },
 	{ "*atten", &tr.attenuationTexture, R_InitAttenuationTexture, TEX_SYSTEM },
 	{ "*atten2", &tr.attenuationTexture2, R_InitAttenuationTexture2, TEX_SYSTEM },
 	{ "*atten3", &tr.attenuationTexture3, R_InitAttenuationTexture3, TEX_SYSTEM },

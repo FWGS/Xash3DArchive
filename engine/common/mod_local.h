@@ -73,6 +73,7 @@ typedef struct
 	qboolean		sky_sphere;	// true when quake sky-sphere is used
 	qboolean		has_mirrors;	// one or more brush models contain reflective textures
 	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
+	int		block_size;	// lightmap blocksize
 
 	vec3_t		mins;		// real accuracy world bounds
 	vec3_t		maxs;
@@ -91,7 +92,7 @@ void Mod_Init( void );
 void Mod_ClearAll( void );
 void Mod_Shutdown( void );
 void Mod_PrintBSPFileSizes( void );
-void Mod_SetupHulls( float mins[4][3], float maxs[4][3] );
+void Mod_SetupHulls( vec3_t mins[MAX_MAP_HULLS], vec3_t maxs[MAX_MAP_HULLS] );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );
 void Mod_LoadWorld( const char *name, uint *checksum, qboolean force );

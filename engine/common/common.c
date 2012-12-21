@@ -39,7 +39,6 @@ char *COM_ParseFile( char *data, char *token )
 	
 	if( !data )
 		return NULL;
-		
 // skip whitespace
 skipwhite:
 	while(( c = ((byte)*data)) <= ' ' )
@@ -231,6 +230,7 @@ char *COM_MemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, i
 		*filePos = i;
 		return pBuffer;
 	}
+
 	return NULL;
 }
 
@@ -378,7 +378,7 @@ pfnCvar_RegisterVariable
 */
 cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags )
 {
-	return (cvar_t *)Cvar_Get( szName, szValue, flags|CVAR_CLIENTDLL, "" );
+	return (cvar_t *)Cvar_Get( szName, szValue, flags|CVAR_CLIENTDLL, "client cvar" );
 }
 
 /*

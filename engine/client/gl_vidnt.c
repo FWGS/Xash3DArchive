@@ -784,16 +784,16 @@ void VID_StartupGamma( void )
 		GL_BuildGammaTable();
 
 		// validate base gamma
-		if( !memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
+		if( !Q_memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
 		{
 			// all ok, previous gamma is valid
 			MsgDev( D_NOTE, "VID_StartupGamma: validate screen gamma - ok\n" );
 		}
-		else if( !memcmp( glState.gammaRamp, glState.stateRamp, sizeof( glState.stateRamp )))
+		else if( !Q_memcmp( glState.gammaRamp, glState.stateRamp, sizeof( glState.stateRamp )))
 		{
 			// screen gamma is equal to render gamma (probably previous instance crashed)
 			// run additional check to make sure for it
-			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
+			if( Q_memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
 			{
 				// yes, current gamma it's totally wrong, restore it from gamma.dat
 				MsgDev( D_NOTE, "VID_StartupGamma: restore original gamma after crash\n" );
@@ -806,11 +806,11 @@ void VID_StartupGamma( void )
 				MsgDev( D_NOTE, "VID_StartupGamma: validate screen gamma - disabled\n" ); 
 			}
 		}
-		else if( !memcmp( glState.gammaRamp, savedGamma, sizeof( glState.stateRamp )))
+		else if( !Q_memcmp( glState.gammaRamp, savedGamma, sizeof( glState.stateRamp )))
 		{
 			// saved gamma is equal render gamma, probably gamma.dat wroted after crash
 			// run additional check to make sure it
-			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
+			if( Q_memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
 			{
 				// yes, saved gamma it's totally wrong, get origianl gamma from screen
 				MsgDev( D_NOTE, "VID_StartupGamma: merge gamma.dat after crash\n" );

@@ -369,7 +369,7 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 				BF_WriteOneBit( msg, 1 );
 				BF_WriteUBitLong( msg, info->packet_index, MAX_ENTITY_BITS );
 
-				if( !memcmp( &nullargs, &info->args, sizeof( event_args_t )))
+				if( !Q_memcmp( &nullargs, &info->args, sizeof( event_args_t )))
 				{
 					BF_WriteOneBit( msg, 0 );
 				}

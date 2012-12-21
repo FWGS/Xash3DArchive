@@ -361,7 +361,7 @@ static void MemoryFreeLibrary( void *hInstance )
 
 void *MemoryLoadLibrary( const char *name )
 {
-	MEMORYMODULE	*result;
+	MEMORYMODULE	*result = NULL;
 	PIMAGE_DOS_HEADER	dos_header;
 	PIMAGE_NT_HEADERS	old_header;
 	byte		*code, *headers;
@@ -798,6 +798,7 @@ void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolea
 			return NULL;
 		}
 	}
+
 	MsgDev( D_NOTE, "Sys_LoadLibrary: Loading %s - ok\n", dllname );
 
 	return hInst;
@@ -816,8 +817,8 @@ void *Com_GetProcAddress( void *hInstance, const char *name )
 		return NULL;
 
 	if( hInst->custom_loader )
-		return MemoryGetProcAddress( hInst->hInstance, name );
-	return GetProcAddress( hInst->hInstance, name );
+		return (void *)MemoryGetProcAddress( hInst->hInstance, name );
+	return (void *)GetProcAddress( hInst->hInstance, name );
 }
 
 void Com_FreeLibrary( void *hInstance )

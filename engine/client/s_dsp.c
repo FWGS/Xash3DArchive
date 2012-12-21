@@ -123,8 +123,6 @@ _inline int avg_filter( int  M, int *a, int L, int *b, int *w, int x )
 	case 1:  return y >> 1;
 	case 0:  return y;
 	}
-
-	return y;		// current output sample
 }
 
 // IIR filter, cannonical form

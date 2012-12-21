@@ -164,7 +164,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 	// cut shortestMatch to the amount common with s
 	for( i = 0; matchbuf[i]; i++ )
 	{
-		if(Q_tolower( completedname[i] ) != Q_tolower( matchbuf[i] ))
+		if( Q_tolower( completedname[i] ) != Q_tolower( matchbuf[i] ))
 			completedname[i] = 0;
 	}
 	return true;
@@ -662,6 +662,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 	}
 
 	t = FS_Search( "maps/*.bsp", false, onlyingamedir );
+
 	if( !t && onlyingamedir )
 	{
 		// mod doesn't contain any maps (probably this is a bot)
@@ -669,6 +670,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 	}
 
 	buffer = Mem_Alloc( host.mempool, t->numfilenames * 2 * sizeof( result ));
+
 	for( i = 0; i < t->numfilenames; i++ )
 	{
 		char		*ents = NULL, *pfile;

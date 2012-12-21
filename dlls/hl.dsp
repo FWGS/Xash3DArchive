@@ -45,7 +45,6 @@ RSC=rc.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
 # ADD CPP /nologo /G5 /MT /W3 /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /Fr /YX /FD /c
-# SUBTRACT CPP /Z<none>
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -289,6 +288,10 @@ SOURCE=.\globals.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\glock.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\gman.cpp
 # End Source File
 # Begin Source File
@@ -330,10 +333,6 @@ SOURCE=.\healthkit.cpp
 # Begin Source File
 
 SOURCE=.\hgrunt.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\hl_wpn_glock.cpp
 # End Source File
 # Begin Source File
 

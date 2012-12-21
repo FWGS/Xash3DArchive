@@ -450,6 +450,7 @@ fs_offset_t AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset,
 			result += blockread;
 			length -= blockread;
 		}
+
 		return result;
 	}
 }
@@ -488,8 +489,8 @@ void AVI_CloseVideo( movie_state_t *Avi )
 
 void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, int quiet )
 {
-	AVISTREAMINFO	stream_info;
 	BITMAPINFOHEADER	bmih;
+	AVISTREAMINFO	stream_info;
 	long		opened_streams = 0;
 	LONG		hr;
 

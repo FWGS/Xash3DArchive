@@ -21,17 +21,17 @@ GNU General Public License for more details.
 
 typedef struct
 {
-	int		allocated[BLOCK_WIDTH];
+	int		allocated[BLOCK_SIZE_MAX];
 	int		current_lightmap_texture;
 	msurface_t	*dynamic_surfaces;
 	msurface_t	*lightmap_surfaces[MAX_LIGHTMAPS];
-	byte		lightmap_buffer[BLOCK_WIDTH*BLOCK_HEIGHT*4];
+	byte		lightmap_buffer[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*4];
 } gllightmapstate_t;
 
 static vec2_t		world_orthocenter;
 static vec2_t		world_orthohalf;
 static byte		visbytes[MAX_MAP_LEAFS/8];
-static uint		r_blocklights[BLOCK_WIDTH*BLOCK_HEIGHT*3];
+static uint		r_blocklights[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*3];
 static glpoly_t		*fullbright_polys[MAX_TEXTURES];
 static qboolean		draw_fullbrights = false;
 static mextrasurf_t		*detail_surfaces[MAX_TEXTURES];
@@ -183,13 +183,13 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 			s -= warpface->texturemins[0];
 			s += warpface->light_s * LM_SAMPLE_SIZE;
 			s += LM_SAMPLE_SIZE >> 1;
-			s /= BLOCK_WIDTH * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
+			s /= BLOCK_SIZE * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
 
 			t = DotProduct( verts, warpface->texinfo->vecs[1] ) + warpface->texinfo->vecs[1][3];
 			t -= warpface->texturemins[1];
 			t += warpface->light_t * LM_SAMPLE_SIZE;
 			t += LM_SAMPLE_SIZE >> 1;
-			t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
+			t /= BLOCK_SIZE * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
 
 			poly->verts[i+1][5] = s;
 			poly->verts[i+1][6] = t;
@@ -351,13 +351,13 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 		s -= fa->texturemins[0];
 		s += fa->light_s * LM_SAMPLE_SIZE;
 		s += LM_SAMPLE_SIZE >> 1;
-		s /= BLOCK_WIDTH * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
+		s /= BLOCK_SIZE * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
 
 		t = DotProduct( vec, fa->texinfo->vecs[1] ) + fa->texinfo->vecs[1][3];
 		t -= fa->texturemins[1];
 		t += fa->light_t * LM_SAMPLE_SIZE;
 		t += LM_SAMPLE_SIZE >> 1;
-		t /= BLOCK_HEIGHT * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
+		t /= BLOCK_SIZE * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
 
 		poly->verts[i][5] = s;
 		poly->verts[i][6] = t;
@@ -529,9 +529,9 @@ static int LM_AllocBlock( int w, int h, int *x, int *y )
 	int	i, j;
 	int	best, best2;
 
-	best = BLOCK_HEIGHT;
+	best = BLOCK_SIZE;
 
-	for( i = 0; i < BLOCK_WIDTH - w; i++ )
+	for( i = 0; i < BLOCK_SIZE - w; i++ )
 	{
 		best2 = 0;
 
@@ -551,7 +551,7 @@ static int LM_AllocBlock( int w, int h, int *x, int *y )
 		}
 	}
 
-	if( best + h > BLOCK_HEIGHT )
+	if( best + h > BLOCK_SIZE )
 		return false;
 
 	for( i = 0; i < w; i++ )
@@ -568,15 +568,17 @@ static void LM_UploadBlock( qboolean dynamic )
 	{
 		int	height = 0;
 
-		for( i = 0; i < BLOCK_WIDTH; i++ )
+		for( i = 0; i < BLOCK_SIZE; i++ )
 		{
 			if( gl_lms.allocated[i] > height )
 				height = gl_lms.allocated[i];
 		}
 
-		GL_Bind( GL_TEXTURE0, tr.dlightTexture );
+		if( host.features & ENGINE_LARGE_LIGHTMAPS )
+			GL_Bind( GL_TEXTURE0, tr.dlightTexture2 );
+		else GL_Bind( GL_TEXTURE0, tr.dlightTexture );
 
-		pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_WIDTH, height, GL_RGBA, GL_UNSIGNED_BYTE,
+		pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_SIZE, height, GL_RGBA, GL_UNSIGNED_BYTE,
 		gl_lms.lightmap_buffer );
 	}
 	else
@@ -590,8 +592,8 @@ static void LM_UploadBlock( qboolean dynamic )
 		Q_memset( &r_lightmap, 0, sizeof( r_lightmap ));
 		Q_snprintf( lmName, sizeof( lmName ), "*lightmap%i", i );
 
-		r_lightmap.width = BLOCK_WIDTH;
-		r_lightmap.height = BLOCK_HEIGHT;
+		r_lightmap.width = BLOCK_SIZE;
+		r_lightmap.height = BLOCK_SIZE;
 		r_lightmap.type = PF_RGBA_32;
 		r_lightmap.size = r_lightmap.width * r_lightmap.height * 4;
 		r_lightmap.flags = ( world.version == Q1BSP_VERSION ) ? 0 : IMAGE_HAS_COLOR;
@@ -830,7 +832,9 @@ void R_BlendLightmaps( void )
 	{
 		LM_InitBlock();
 
-		GL_Bind( GL_TEXTURE0, tr.dlightTexture );
+		if( host.features & ENGINE_LARGE_LIGHTMAPS )
+			GL_Bind( GL_TEXTURE0, tr.dlightTexture2 );
+		else GL_Bind( GL_TEXTURE0, tr.dlightTexture );
 
 		newsurf = gl_lms.dynamic_surfaces;
 
@@ -846,9 +850,9 @@ void R_BlendLightmaps( void )
 			if( LM_AllocBlock( smax, tmax, &info->dlight_s, &info->dlight_t ))
 			{
 				base = gl_lms.lightmap_buffer;
-				base += ( info->dlight_t * BLOCK_WIDTH + info->dlight_s ) * 4;
+				base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
 
-				R_BuildLightMap( surf, base, BLOCK_WIDTH * 4 );
+				R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
 			}
 			else
 			{
@@ -865,8 +869,8 @@ void R_BlendLightmaps( void )
 						info = SURF_INFO( drawsurf, RI.currentmodel );
 
 						DrawGLPolyChain( drawsurf->polys,
-						( drawsurf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_WIDTH ), 
-						( drawsurf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_HEIGHT ));
+						( drawsurf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ), 
+						( drawsurf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
 					}
 				}
 
@@ -882,9 +886,9 @@ void R_BlendLightmaps( void )
 					Host_Error( "AllocBlock: full\n" );
 
 				base = gl_lms.lightmap_buffer;
-				base += ( info->dlight_t * BLOCK_WIDTH + info->dlight_s ) * 4;
+				base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
 
-				R_BuildLightMap( surf, base, BLOCK_WIDTH * 4 );
+				R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
 			}
 		}
 
@@ -898,8 +902,8 @@ void R_BlendLightmaps( void )
 				info = SURF_INFO( surf, RI.currentmodel );
 
 				DrawGLPolyChain( surf->polys,
-				( surf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_WIDTH ),
-				( surf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_HEIGHT ));
+				( surf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ),
+				( surf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
 			}
 		}
 	}
@@ -1994,10 +1998,10 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 	surf->lightmaptexturenum = gl_lms.current_lightmap_texture;
 
 	base = gl_lms.lightmap_buffer;
-	base += ( surf->light_t * BLOCK_WIDTH + surf->light_s ) * 4;
+	base += ( surf->light_t * BLOCK_SIZE + surf->light_s ) * 4;
 
 	R_SetCacheState( surf );
-	R_BuildLightMap( surf, base, BLOCK_WIDTH * 4 );
+	R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
 }
 
 /*

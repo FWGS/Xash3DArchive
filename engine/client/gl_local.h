@@ -26,8 +26,9 @@ GNU General Public License for more details.
 
 extern byte	*r_temppool;
 
-#define BLOCK_WIDTH		128	// lightmap block width
-#define BLOCK_HEIGHT	128	// lightmap block height
+#define BLOCK_SIZE		world.block_size	// lightmap blocksize
+#define BLOCK_SIZE_DEFAULT	128		// for keep backward compatibility
+#define BLOCK_SIZE_MAX	256
 
 #define MAX_TEXTURES	4096
 #define MAX_DETAIL_TEXTURES	256
@@ -183,6 +184,7 @@ typedef struct
 	int		alphaskyTexture;	// quake1 alpha-sky layer
 	int		lightmapTextures[MAX_LIGHTMAPS];
 	int		dlightTexture;	// custom dlight texture
+	int		dlightTexture2;	// big dlight texture (for big lightmaps)
 	int		attenuationTexture;	// normal attenuation
 	int		attenuationTexture2;// dark attenuation
 	int		attenuationTexture3;// bright attenuation
@@ -577,7 +579,7 @@ typedef struct
 	qboolean		wideScreen;
 
 	int		activeTMU;
-	GLuint		currentTextures[MAX_TEXTURE_UNITS];
+	GLint		currentTextures[MAX_TEXTURE_UNITS];
 	GLuint		currentTextureTargets[MAX_TEXTURE_UNITS];
 	GLboolean		texIdentityMatrix[MAX_TEXTURE_UNITS];
 	GLint		genSTEnabled[MAX_TEXTURE_UNITS];	// 0 - disabled, OR 1 - S, OR 2 - T, OR 4 - R

@@ -273,7 +273,6 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent )
 	sv_client_t	*cl, *current = svs.clients;
 	qboolean		reliable = false;
 	qboolean		specproxy = false;
-	float		*viewOrg = NULL;
 	int		numsends = 0;
 	mleaf_t		*leaf;
 
@@ -556,7 +555,6 @@ void SV_WriteEntityPatch( const char *filename )
 	dheader_t		*header;
 	int		ver = -1, lumpofs = 0, lumplen = 0;
 	byte		buf[MAX_SYSPATH]; // 1 kb
-	qboolean		result = false;
 	file_t		*f;
 			
 	f = FS_Open( va( "maps/%s.bsp", filename ), "rb", false );
@@ -618,7 +616,6 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 	string		bspfilename, entfilename;
 	int		ver = -1, lumpofs = 0, lumplen = 0;
 	byte		buf[MAX_SYSPATH]; // 1 kb
-	qboolean		result = false;
 	size_t		ft1, ft2;
 	file_t		*f;
 
@@ -2209,18 +2206,6 @@ void pfnTraceSphere( const float *v1, const float *v2, int fNoMonsters, float ra
 
 /*
 =============
-pfnBoxVisible
-
-unused but working
-=============
-*/
-static int pfnBoxVisible( const float *mins, const float *maxs, const byte *pset )
-{
-	return Mod_BoxVisible( mins, maxs, pset );
-}
-
-/*
-=============
 pfnGetAimVector
 
 NOTE: speed is unused
@@ -3607,7 +3592,6 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	event_state_t	*es;
 	event_args_t	args;
 	event_info_t	*ei = NULL;
-	float		*viewOrg = NULL;
 	int		j, slot, bestslot;
 	int		invokerIndex;
 	byte		*mask = NULL;
