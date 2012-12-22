@@ -21,7 +21,6 @@ GNU General Public License for more details.
 // precalculated bit masks for WriteUBitLong.
 // Using these tables instead of doing the calculations
 // gives a 33% speedup in WriteUBitLong.
-
 static dword	BitWriteMasks[32][33];
 static dword	ExtraMasks[32];
 
@@ -68,7 +67,6 @@ void BF_InitExt( sizebuf_t *bf, const char *pDebugName, void *pData, int nBytes,
 void BF_StartWriting( sizebuf_t *bf, void *pData, int nBytes, int iStartBit, int nBits )
 {
 	// make sure it's dword aligned and padded.
-//	Assert(( nBytes % 4 ) == 0 );
 	Assert(((dword)pData & 3 ) == 0 );
 
 	bf->pData = (byte *)pData;
@@ -137,14 +135,6 @@ void BF_WriteOneBit( sizebuf_t *bf, int nValue )
 
 void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, qboolean bCheckRange )
 {
-#ifdef _NETDEBUG
-	// make sure it doesn't overflow.
-	if( bCheckRange && numbits < 32 )
-	{
-		if( curData >= (dword)BIT( numbits ))
-			MsgDev( D_ERROR, "Write%s: out of range value!\n", bf->pDebugName );
-	}
-#endif
 	Assert( numbits >= 0 && numbits <= 32 );
 
 	// bounds checking..
@@ -200,20 +190,6 @@ void BF_WriteSBitLong( sizebuf_t *bf, int data, int numbits )
 	// (Some old code writes direct integers right into the buffer).
 	if( data < 0 )
 	{
-#ifdef _NETDEBUG
-	if( numbits < 32 )
-	{
-		// Make sure it doesn't overflow.
-		if( data < 0 )
-		{
-			Assert( data >= -BIT( numbits - 1 ));
-		}
-		else
-		{
-			Assert( data < BIT( numbits - 1 ));
-		}
-	}
-#endif
 		BF_WriteUBitLongExt( bf, (uint)( 0x80000000 + data ), numbits - 1, false );
 		BF_WriteOneBit( bf, 1 );
 	}

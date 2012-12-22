@@ -86,6 +86,9 @@ void Host_PrintEngineFeatures( void )
 
 	if( host.features & ENGINE_TRANSFORM_TRACE_AABB )
 		MsgDev( D_AICONSOLE, "^3EXT:^7 Transform trace AABB enabled\n" );
+
+	if( host.features & ENGINE_LARGE_LIGHTMAPS )
+		MsgDev( D_AICONSOLE, "^3EXT:^7 Large lightmaps enabled\n" );
 }
 
 /*
@@ -200,7 +203,10 @@ void Host_ChangeGame_f( void )
 	}
 	else
 	{
-		Host_NewInstance( Cmd_Argv( 1 ), va( "change game to '%s'", SI.games[i]->title ));
+		const char *arg1 = va( "%s%s", (host.type == HOST_NORMAL) ? "" : "#", Cmd_Argv( 1 ));
+		const char *arg2 = va( "change game to '%s'", SI.games[i]->title );
+
+		Host_NewInstance( arg1, arg2 );
 	}
 }
 
@@ -694,7 +700,6 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 		CloseHandle( host.hMutex );
 		host.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
 		if( host.developer < 3 ) host.developer = 3; // otherwise we see empty console
-		host.change_game = false;
 	}
 	else
 	{

@@ -4648,6 +4648,8 @@ void SV_UnloadProgs( void )
 	Cmd_ExecuteString( "@unlink\n", src_command );
 	Cmd_Unlink( CMD_EXTDLL );
 
+	Mod_ResetStudioAPI ();
+
 	Com_FreeLibrary( svgame.hInstance );
 	Mem_FreePool( &svgame.mempool );
 	Q_memset( &svgame, 0, sizeof( svgame ));

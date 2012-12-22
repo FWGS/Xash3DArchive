@@ -36,7 +36,7 @@ int		bmodel_version;		// global stuff to detect bsp version
 char		modelname[64];		// short model name (without path and ext)
 convar_t		*mod_studiocache;
 convar_t		*mod_allow_materials;
-static char	mod_wadnames[64][32];	// 64 wad names stored
+static char	mod_wadnames[128][32];	// 128 wad names stored
 static int	mod_numwads;
 		
 model_t		*loadmodel;
@@ -521,6 +521,7 @@ void Mod_Init( void )
 	Cmd_AddCommand( "mapstats", Mod_PrintBSPFileSizes_f, "show stats for currently loaded map" );
 	Cmd_AddCommand( "modellist", Mod_Modellist_f, "display loaded models list" );
 
+	Mod_ResetStudioAPI ();
 	Mod_InitStudioHull ();
 }
 
@@ -2202,6 +2203,7 @@ static void Mod_LoadEntities( const dlump_t *l )
 					Q_strncpy( wadpath, path, (end - path) + 1 );
 					FS_FileBase( wadpath, mod_wadnames[mod_numwads++] );					
 					path += (end - path) + 1; // move pointer
+					if( mod_numwads >= 128 ) break; // too many wads...
 				}
 				return;	// all done
 			}

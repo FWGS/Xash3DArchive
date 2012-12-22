@@ -27,6 +27,7 @@ GNU General Public License for more details.
 #include "client.h"
 
 #define DELTA_PATH		"delta.lst"
+
 static qboolean		delta_init = false;
  
 // list of all the struct names
@@ -485,7 +486,7 @@ void Delta_WriteTableField( sizebuf_t *msg, int tableIndex, const delta_t *pFiel
 	BF_WriteByte( msg, svc_deltatable );
 	BF_WriteUBitLong( msg, tableIndex, 4 );		// assume we support 16 network tables
 	BF_WriteUBitLong( msg, nameIndex, 8 );		// 255 fields by struct should be enough
-	BF_WriteUBitLong( msg, pField->flags, 8 );	// flags is full, expand to 10 bits ?
+	BF_WriteUBitLong( msg, pField->flags, 10 );	// flags are indicated various input types
 	BF_WriteUBitLong( msg, pField->bits - 1, 5 );	// max received value is 32 (32 bit)
 
 	// multipliers is null-compressed
@@ -520,7 +521,7 @@ void Delta_ParseTableField( sizebuf_t *msg )
 	nameIndex = BF_ReadUBitLong( msg, 8 );	// read field name index		
 	ASSERT( nameIndex >= 0 && nameIndex < dt->maxFields );
 	pName = dt->pInfo[nameIndex].name;
-	flags = BF_ReadUBitLong( msg, 8 );
+	flags = BF_ReadUBitLong( msg, 10 );
 	bits = BF_ReadUBitLong( msg, 5 ) + 1;
 
 	// read the multipliers
@@ -737,13 +738,7 @@ void Delta_InitFields( void )
 	delta_info_t	*dt;
 
 	afile = FS_LoadFile( DELTA_PATH, NULL, false );
-	if( !afile )
-	{
-		static string	errormsg;
-
-		Q_snprintf( errormsg, sizeof( errormsg ), "DELTA_Load: couldn't load file %s\n", DELTA_PATH );
-		Sys_Error( errormsg );
-	}
+	if( !afile ) Sys_Error( "DELTA_Load: couldn't load file %s\n", DELTA_PATH );
 
 	pfile = afile;
 
@@ -772,7 +767,7 @@ void Delta_InitFields( void )
 	}
 	Mem_Free( afile );
 
-	// adding some requrid fields fields that user may forget or don't know how to specified
+	// adding some required fields that user may forget or don't know how to specified
 	Delta_AddField( "event_t", "velocity[0]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
 	Delta_AddField( "event_t", "velocity[1]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
 	Delta_AddField( "event_t", "velocity[2]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );	
@@ -879,6 +874,8 @@ Delta_CompareField
 
 compare fields by offsets
 assume from and to is valid
+TODO: multiply timewindow by 100 and 1000 before comparing
+TODO: clamping and premultiply before comparing
 =====================
 */
 qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
@@ -957,6 +954,7 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
 Delta_ClampIntegerField
 
 prevent data to out of range
+TODO: add missed cases
 =====================
 */
 int Delta_ClampIntegerField( int iValue, qboolean bSigned, int bits )
@@ -1009,6 +1007,7 @@ Delta_WriteField
 
 write fields by offsets
 assume from and to is valid
+TODO: write path for signed\unsigned
 =====================
 */
 qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
@@ -1082,7 +1081,7 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 Delta_ReadField
 
 read fields by offsets
-assume from and to is valid
+assume 'from' and 'to' is valid
 =====================
 */
 qboolean Delta_ReadField( sizebuf_t *msg, delta_t *pField, void *from, void *to, float timebase )

@@ -53,8 +53,8 @@ typedef unsigned int	uint;
 typedef char		string[MAX_STRING];
 typedef long		fs_offset_t;
 typedef struct file_s	file_t;		// normal file
-typedef struct wfile_s	wfile_t;	// wad file
-typedef struct stream_s	stream_t;	// sound stream for background music playing
+typedef struct wfile_s	wfile_t;		// wad file
+typedef struct stream_s	stream_t;		// sound stream for background music playing
 
 typedef struct
 {
@@ -76,7 +76,6 @@ typedef enum
 {	
 	HOST_NORMAL,	// listen server, singleplayer
 	HOST_DEDICATED,
-	HOST_CREDITS	// easter egg
 } instance_t;
 
 #include "system.h"
@@ -460,7 +459,6 @@ typedef enum
 	IMAGE_HAS_LUMA	= BIT(4),		// image has luma pixels (q1-style maps)
 	IMAGE_SKYBOX	= BIT(5),		// only used by FS_SaveImage - for write right suffixes
 	IMAGE_QUAKESKY	= BIT(6),		// it's a quake sky double layered clouds (so keep it as 8 bit)
-	IMAGE_STATIC	= BIT(7),		// never trying to free this image (static memory)
 
 	// Image_Process manipulation flags
 	IMAGE_FLIP_X	= BIT(16),	// flip the image by width

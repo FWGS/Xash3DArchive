@@ -52,6 +52,7 @@ typedef struct
 	const int		size;
 } delta_field_t;
 
+// one field
 typedef struct delta_s
 {
 	const char	*name;

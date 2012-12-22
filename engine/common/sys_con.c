@@ -41,7 +41,6 @@ typedef struct
 	HWND		hwndButtonSubmit;
 	HBRUSH		hbrEditBackground;
 	HFONT		hfBufferFont;
-	HFONT		hfButtonFont;
 	HWND		hwndInputLine;
 	string		consoleText;
 	string		returnedText;
@@ -284,19 +283,7 @@ void Con_CreateConsole( void )
 	if( Sys_CheckParm( "-log" ) && host.developer != 0 )
 		s_wcd.log_active = true;
 
-	if( host.type == HOST_CREDITS )
-	{
-		CONSTYLE &= ~WS_VSCROLL;
-		rect.left = 0;
-		rect.right = 536;
-		rect.top = 0;
-		rect.bottom = 280;
-		Q_strncpy( FontName, "Arial", sizeof( FontName ));
-		Q_strncpy( s_wcd.title, "About", sizeof( s_wcd.title ));
-		s_wcd.log_active = false;
-		fontsize = 16;
-	}
-	else if( host.type != HOST_DEDICATED )
+	if( host.type == HOST_NORMAL )
 	{
 		rect.left = 0;
 		rect.right = 536;
@@ -316,6 +303,7 @@ void Con_CreateConsole( void )
 		Q_strncpy( FontName, "System", sizeof( FontName ));
 		Q_strncpy( s_wcd.title, "Xash Dedicated Server", sizeof( s_wcd.title ));
 		Q_strncpy( s_wcd.log_path, "dedicated.log", sizeof( s_wcd.log_path ));
+		s_wcd.log_active = true; // always make log
 		fontsize = 14;
 	}
 
@@ -419,7 +407,22 @@ void Con_DestroyConsole( void )
 	{
 		DeleteObject( s_wcd.hbrEditBackground );
                     DeleteObject( s_wcd.hfBufferFont );
-		
+
+		if( host.type == HOST_DEDICATED )
+		{
+			ShowWindow( s_wcd.hwndButtonSubmit, SW_HIDE );
+			DestroyWindow( s_wcd.hwndButtonSubmit );
+			s_wcd.hwndButtonSubmit = 0;
+
+			ShowWindow( s_wcd.hwndInputLine, SW_HIDE );
+			DestroyWindow( s_wcd.hwndInputLine );
+			s_wcd.hwndInputLine = 0;
+		}
+
+		ShowWindow( s_wcd.hwndBuffer, SW_HIDE );
+		DestroyWindow( s_wcd.hwndBuffer );
+		s_wcd.hwndBuffer = 0;
+
 		ShowWindow( s_wcd.hWnd, SW_HIDE );
 		DestroyWindow( s_wcd.hWnd );
 		s_wcd.hWnd = 0;

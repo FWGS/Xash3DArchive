@@ -90,9 +90,6 @@ void BF_WriteVec3Coord( sizebuf_t *bf, const float *fa );
 qboolean BF_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes );	// same as MSG_WriteData
 qboolean BF_WriteString( sizebuf_t *bf, const char *pStr );		// returns false if it overflows the buffer.
 
-// delta-write functions
-qboolean BF_WriteDeltaMovevars( sizebuf_t *sb, struct movevars_s *from, struct movevars_s *to );
-
 // helper functions
 _inline int BF_GetNumBytesWritten( sizebuf_t *bf ) { return BitByte( bf->iCurBit ); }
 _inline int BF_GetRealBytesWritten( sizebuf_t *bf ) { return bf->iCurBit >> 3; }	// unpadded
@@ -123,8 +120,5 @@ float BF_ReadFloat( sizebuf_t *bf );
 void BF_ReadVec3Coord( sizebuf_t *bf, vec3_t fa );
 qboolean BF_ReadBytes( sizebuf_t *bf, void *pOut, int nBytes );
 char *BF_ReadStringExt( sizebuf_t *bf, qboolean bLine );
-
-// delta-read functions
-void BF_ReadDeltaMovevars( sizebuf_t *sb, struct movevars_s *from, struct movevars_s *to );
 					
 #endif//NET_BUFFER_H

@@ -356,6 +356,7 @@ qboolean Sys_FreeLibrary( dll_info_t *dll )
 		return false;
 	}
 	else MsgDev( D_NOTE, "Sys_FreeLibrary: Unloading %s\n", dll->name );
+
 	FreeLibrary( dll->link );
 	dll->link = NULL;
 
@@ -465,6 +466,7 @@ void Sys_Error( const char *error, ... )
 		Con_ShowConsole( false );
 		MSGBOX( text );
 	}
+
 	Sys_Quit();
 }
 
@@ -477,8 +479,8 @@ same as Error
 */
 void Sys_Break( const char *error, ... )
 {
-	va_list		argptr;
-	char		text[MAX_SYSPATH];
+	va_list	argptr;
+	char	text[MAX_SYSPATH];
 
 	if( host.state == HOST_ERR_FATAL )
 		return; // don't multiple executes
@@ -507,6 +509,7 @@ void Sys_Break( const char *error, ... )
 		Con_ShowConsole( false );
 		MSGBOX( text );
 	}
+
 	Sys_Quit();
 }
 

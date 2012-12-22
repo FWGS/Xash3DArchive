@@ -40,7 +40,7 @@ typedef struct mstudiocache_s
 #define STUDIO_CACHEMASK		(STUDIO_CACHESIZE - 1)
 
 // trace global variables
-static sv_blending_interface_t	*pBlendAPI;
+static sv_blending_interface_t	*pBlendAPI = NULL;
 static studiohdr_t			*mod_studiohdr;
 static matrix3x4			studio_transform;
 static hull_t			cache_hull[MAXSTUDIOBONES];
@@ -197,6 +197,8 @@ void Mod_SetStudioHullPlane( mplane_t *pl, int bone, int axis, float offset )
 /*
 ====================
 HullForStudio
+
+NOTE: pEdict may be NULL
 ====================
 */
 hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t angles, vec3_t origin, vec3_t size, byte *pcontroller, byte *pblending, int *numhitboxes, edict_t *pEdict )
@@ -223,6 +225,8 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 
 	mod_studiohdr = Mod_Extradata( model );
 	if( !mod_studiohdr ) return NULL; // probably not a studiomodel
+
+	ASSERT( pBlendAPI != NULL );
 
 	VectorCopy( angles, angles2 );
 	angles2[PITCH] = -angles2[PITCH]; // stupid quake bug
@@ -735,6 +739,8 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *origin, 
 	if( mod_studiohdr->numattachments <= 0 )
 		return;
 
+	ASSERT( pBlendAPI != NULL );
+
 	if( mod_studiohdr->numattachments > MAXSTUDIOATTACHMENTS )
 	{
 		mod_studiohdr->numattachments = MAXSTUDIOATTACHMENTS; // reduce it
@@ -779,6 +785,8 @@ void Mod_GetBonePosition( const edict_t *e, int iBone, float *origin, float *ang
 	mod = Mod_Handle( e->v.modelindex );
 	mod_studiohdr = (studiohdr_t *)Mod_Extradata( mod );
 	if( !mod_studiohdr ) return;
+
+	ASSERT( pBlendAPI != NULL );
 
 	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, e->v.angles, e->v.origin,
 		e->v.controller, e->v.blending, e, iBone );
@@ -976,5 +984,17 @@ void Mod_InitStudioAPI( void )
 	}
 
 	// just restore pointer to builtin function
+	pBlendAPI = &gBlendAPI;
+}
+
+/*
+===============
+Mod_ResetStudioAPI
+
+Returns to default callbacks
+===============
+*/
+void Mod_ResetStudioAPI( void )
+{
 	pBlendAPI = &gBlendAPI;
 }
