@@ -34,6 +34,7 @@ convar_t	*gl_ignorehwgamma;
 convar_t	*gl_texture_anisotropy;
 convar_t	*gl_compress_textures;
 convar_t	*gl_luminance_textures;
+convar_t	*gl_keeptjunctions;
 convar_t	*gl_texture_lodbias;
 convar_t	*gl_showtextures;
 convar_t	*gl_swapInterval;
@@ -192,7 +193,7 @@ static dllfunc_t opengl_110funcs[] =
 { "glPointSize"          , (void**)&pglPointSize },
 { "glMatrixMode"         , (void **)&pglMatrixMode },
 { "glOrtho"              , (void **)&pglOrtho },
-{ "glRasterPos2f"        , (void **) &pglRasterPos2f },
+{ "glRasterPos2f"        , (void **)&pglRasterPos2f },
 { "glFrustum"            , (void **)&pglFrustum },
 { "glViewport"           , (void **)&pglViewport },
 { "glPushMatrix"         , (void **)&pglPushMatrix },
@@ -370,7 +371,7 @@ static dllfunc_t shaderobjectsfuncs[] =
 { "glGetInfoLogARB"               , (void **)&pglGetInfoLogARB },
 { "glGetAttachedObjectsARB"       , (void **)&pglGetAttachedObjectsARB },
 { "glGetUniformLocationARB"       , (void **)&pglGetUniformLocationARB },
-{ "glGetActiveUniformARB"         , (void **) &pglGetActiveUniformARB },
+{ "glGetActiveUniformARB"         , (void **)&pglGetActiveUniformARB },
 { "glGetUniformfvARB"             , (void **)&pglGetUniformfvARB },
 { "glGetUniformivARB"             , (void **)&pglGetUniformivARB },
 { "glGetShaderSourceARB"          , (void **)&pglGetShaderSourceARB },
@@ -478,6 +479,7 @@ qboolean GL_Support( int r_ext )
 	if( r_ext >= 0 && r_ext < GL_EXTCOUNT )
 		return glConfig.extension[r_ext] ? true : false;
 	MsgDev( D_ERROR, "GL_Support: invalid extension %d\n", r_ext );
+
 	return false;		
 }
 
@@ -608,7 +610,7 @@ GL_SetDefaultTexState
 */
 static void GL_SetDefaultTexState( void )
 {
-	int i;
+	int	i;
 
 	Q_memset( glState.currentTextures, -1, MAX_TEXTURE_UNITS * sizeof( *glState.currentTextures ));
 	Q_memset( glState.genSTEnabled, 0, MAX_TEXTURE_UNITS * sizeof( *glState.genSTEnabled ));
@@ -829,8 +831,10 @@ void VID_StartupGamma( void )
 			MsgDev( D_NOTE, "VID_StartupGamma: restore original gamma after crash\n" );
 			Q_memcpy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));			
 		}
+
 		Mem_Free( savedGamma );
 	}
+
 	vid_gamma->modified = true;
 }
 
@@ -893,7 +897,7 @@ qboolean GL_SetPixelformat( void )
 	{
 		if( PFD.dwFlags & PFD_GENERIC_ACCELERATED )
 		{
-			MsgDev( D_NOTE, "VID_ChoosePFD: usign Generic MCD acceleration\n" );
+			MsgDev( D_NOTE, "VID_ChoosePFD: using Generic MCD acceleration\n" );
 			glw_state.software = false;
 		}
 		else if( gl_allow_software->integer )
@@ -956,6 +960,7 @@ qboolean R_DescribeVIDMode( int width, int height )
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -969,7 +974,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	static string	wndname;
 	HWND		window;
 	
-	Q_strncpy( wndname, GI->title, sizeof( wndname ) - 1 );
+	Q_strncpy( wndname, GI->title, sizeof( wndname ));
 
 	// register the frame class
 	wc.style         = CS_OWNDC|CS_NOCLOSE;
@@ -1067,6 +1072,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 
 		UnregisterClass( WINDOW_NAME, host.hInst );
 		MsgDev( D_ERROR, "OpenGL driver not installed\n" );
+
 		return false;
 	}
 
@@ -1208,8 +1214,8 @@ Set the described video mode
 */
 qboolean VID_SetMode( void )
 {
-	rserr_t	err;
 	qboolean	fullscreen;
+	rserr_t	err;
 
 	fullscreen = vid_fullscreen->integer;
 	gl_swapInterval->modified = true;
@@ -1240,6 +1246,7 @@ qboolean VID_SetMode( void )
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -1255,7 +1262,7 @@ void VID_CheckChanges( void )
 	if( cl_allow_levelshots->modified )
           {
 		GL_FreeTexture( cls.loadingBar );
-		SCR_RegisterShaders(); // reload 'lambda' image
+		SCR_RegisterTextures(); // reload 'lambda' image
 		cl_allow_levelshots->modified = false;
           }
  
@@ -1328,7 +1335,7 @@ static void GL_SetDefaults( void )
 	pglDepthFunc( GL_LEQUAL );
 	pglDepthMask( GL_FALSE );
 
-	pglColor4f( 1, 1, 1, 1 );
+	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 
 	if( glState.stencilEnabled )
 	{
@@ -1339,7 +1346,7 @@ static void GL_SetDefaults( void )
 	}
 
 	pglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-	pglPolygonOffset( -1, -2 );
+	pglPolygonOffset( -1.0f, -2.0f );
 
 	// properly disable multitexturing at startup
 	for( i = glConfig.max_texture_units - 1; i > 0; i-- )
@@ -1459,6 +1466,7 @@ void GL_InitCommands( void )
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_GLCONFIG, "compress textures to safe video memory" ); 
 	gl_luminance_textures = Cvar_Get( "gl_luminance_textures", "0", CVAR_GLCONFIG, "force all textures to luminance" ); 
+	gl_keeptjunctions = Cvar_Get( "gl_keeptjunctions", "1", CVAR_ARCHIVE, "disable to reduce vertexes count but removing tjuncs causes blinking pixels" ); 
 	gl_allow_static = Cvar_Get( "gl_allow_static", "0", CVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
 	gl_allow_mirrors = Cvar_Get( "gl_allow_mirrors", "1", CVAR_ARCHIVE, "allow to draw mirror surfaces" );
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures (type values from 1 to 13)" );
@@ -1656,7 +1664,7 @@ qboolean R_Init( void )
 	if( glw_state.initialized )
 		return true;
 
-	// give initial openGL configuration
+	// give initial OpenGL configuration
 	Cbuf_AddText( "exec opengl.cfg\n" );
 
 	GL_InitCommands();

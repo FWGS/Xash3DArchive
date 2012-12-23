@@ -426,7 +426,7 @@ qboolean SV_StepDirection( edict_t *ent, float yaw, float dist )
 	float	cSin, cCos;
 	vec3_t	move;
 
-	yaw = yaw * M_PI * 2 / 360.0f;
+	yaw = yaw * M_PI2 / 360.0f;
 	SinCos( yaw, &cSin, &cCos );
 	VectorSet( move, cCos * dist, cSin * dist, 0.0f );
 

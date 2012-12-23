@@ -186,4 +186,4 @@ void VGUI_InitCursors( void );
 void VGUI_CursorSelect( Cursor *cursor );
 void VGUI_ActivateCurrentCursor( void );
 
-#endif//FONT_CACHE_H
+#endif//VGUI_MAIN_H

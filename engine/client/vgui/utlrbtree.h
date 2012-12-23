@@ -1286,4 +1286,4 @@ I CUtlRBTree<T, I>::Find( T const &search ) const
 	return current;
 }
 
-#endif // UTLRBTREE_H
+#endif//UTLRBTREE_H

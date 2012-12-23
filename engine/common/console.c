@@ -1983,6 +1983,12 @@ void Con_VidInit( void )
 	Con_LoadConchars();
 }
 
+void Con_InvalidateFonts( void )
+{
+	Q_memset( con.chars, 0, sizeof( con.chars ));
+	con.curFont = con.lastUsedFont = NULL;
+}
+
 /*
 =========
 Cmd_AutoComplete

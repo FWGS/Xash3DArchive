@@ -627,7 +627,7 @@ void R_DecalSurface( msurface_t *surf, decalinfo_t *decalinfo )
 	// we in restore mode
 	if( cls.state == ca_connected )
 	{
-		// NOTE: we may has the decal on this surface that come from another level.
+		// NOTE: we may have the decal on this surface that come from another level.
 		// check duplicate with same position and texture
 		while( decal != NULL )
 		{

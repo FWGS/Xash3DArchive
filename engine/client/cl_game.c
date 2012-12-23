@@ -30,7 +30,7 @@ GNU General Public License for more details.
 #include "vgui_draw.h"
 #include "sound.h"		// SND_STOP_LOOPING
 
-#define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channel)
+#define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channels)
 #define TEXT_MSGNAME	"TextMessage%i"
 
 char			cl_textbuffer[MAX_TEXTCHANNELS][512];
@@ -84,9 +84,9 @@ static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3 and higher
 { "HUD_DirectorMessage", (void **)&clgame.dllFuncs.pfnDirectorMessage },
 { "HUD_VoiceStatus", (void **)&clgame.dllFuncs.pfnVoiceStatus },
 { "HUD_ChatInputPosition", (void **)&clgame.dllFuncs.pfnChatInputPosition },
-{ "HUD_GetRenderInterface", (void **)&clgame.dllFuncs.pfnGetRenderInterface },
+{ "HUD_GetRenderInterface", (void **)&clgame.dllFuncs.pfnGetRenderInterface },	// Xash3D ext
 { "HUD_GetPlayerTeam", (void **)&clgame.dllFuncs.pfnGetPlayerTeam },
-{ "HUD_ClipMoveToEntity", (void **)&clgame.dllFuncs.pfnClipMoveToEntity },
+{ "HUD_ClipMoveToEntity", (void **)&clgame.dllFuncs.pfnClipMoveToEntity },	// Xash3D ext
 { NULL, NULL }
 };
 
@@ -288,7 +288,7 @@ adjust text by x pos
 */
 static int CL_AdjustXPos( float x, int width, int totalWidth )
 {
-	int xPos;
+	int	xPos;
 
 	if( x == -1 )
 	{
@@ -297,7 +297,7 @@ static int CL_AdjustXPos( float x, int width, int totalWidth )
 	else
 	{
 		if ( x < 0 )
-			xPos = (1.0 + x) * clgame.scrInfo.iWidth - totalWidth;	// Alight right
+			xPos = (1.0f + x) * clgame.scrInfo.iWidth - totalWidth;	// Alight right
 		else // align left
 			xPos = x * clgame.scrInfo.iWidth;
 	}
@@ -319,7 +319,7 @@ adjust text by y pos
 */
 static int CL_AdjustYPos( float y, int height )
 {
-	int yPos;
+	int	yPos;
 
 	if( y == -1 ) // centered?
 	{
@@ -329,7 +329,7 @@ static int CL_AdjustYPos( float y, int height )
 	{
 		// Alight bottom?
 		if( y < 0 )
-			yPos = (1.0 + y) * clgame.scrInfo.iHeight - height; // Alight bottom
+			yPos = (1.0f + y) * clgame.scrInfo.iHeight - height; // Alight bottom
 		else // align top
 			yPos = y * clgame.scrInfo.iHeight;
 	}
@@ -496,6 +496,7 @@ static qboolean SPR_Scissor( float *x, float *y, float *width, float *height, fl
 		*v1 -= (*y + *height - (clgame.ds.scissor_y + clgame.ds.scissor_height)) * dvdy;
 		*height = clgame.ds.scissor_y + clgame.ds.scissor_height - *y;
 	}
+
 	return true;
 }
 
@@ -566,7 +567,7 @@ CL_DrawCenterPrint
 called each frame
 =============
 */
-static void CL_DrawCenterPrint( void )
+void CL_DrawCenterPrint( void )
 {
 	char	*pText;
 	int	i, j, x, y;
@@ -754,19 +755,6 @@ void CL_ParseTextMessage( sizebuf_t *msg )
 	// NOTE: a "HudText" message contain only 'string' with message name, so we
 	// don't needs to use MSG_ routines here, just directly write msgname into netbuffer
 	CL_DispatchUserMessage( "HudText", Q_strlen( text->pName ) + 1, (void *)text->pName );
-}
-
-/*
-====================
-CL_BadMessage
-
-Default method to invoke host error
-====================
-*/
-int CL_BadMessage( const char *pszName, int iSize, void *pbuf )
-{
-	Host_Error( "svc_bad\n" );
-	return 0;
 }
 
 /*
@@ -1705,6 +1693,13 @@ void pfnDrawSetTextColor( float r, float g, float b )
 	clgame.ds.textColor[3] = (byte)0xFF;
 }
 
+/*
+=============
+pfnDrawConsoleStringLen
+
+compute string length in screen pixels
+=============
+*/
 void pfnDrawConsoleStringLen( const char *pText, int *length, int *height )
 {
 	Con_SetFont( con_fontsize->integer );
@@ -1922,7 +1917,7 @@ void pfnCalcShake( void )
 		// compute random shake extents (the shake will settle down from this)
 		for( i = 0; i < 3; i++ )
 			clgame.shake.offset[i] = Com_RandomFloat( -clgame.shake.amplitude, clgame.shake.amplitude );
-		clgame.shake.angle = Com_RandomFloat( -clgame.shake.amplitude * 0.25, clgame.shake.amplitude * 0.25 );
+		clgame.shake.angle = Com_RandomFloat( -clgame.shake.amplitude * 0.25f, clgame.shake.amplitude * 0.25f );
 	}
 
 	// ramp down amplitude over duration (fraction goes from 1 to 0 linearly with slope 1/duration)
@@ -2881,17 +2876,11 @@ void TriRenderMode( int mode )
 	switch( mode )
 	{
 	case kRenderNormal:
-	default:
-		pglDisable( GL_BLEND );
+	default:	pglDisable( GL_BLEND );
 		pglDisable( GL_ALPHA_TEST );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransColor:
-		pglEnable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		break;
 	case kRenderTransAlpha:
 	case kRenderTransTexture:
 		// NOTE: TriAPI doesn't have 'solid' mode
@@ -2901,11 +2890,6 @@ void TriRenderMode( int mode )
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderGlow:
-		pglEnable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		break;
 	case kRenderTransAdd:
 		pglEnable( GL_BLEND );
 		pglDisable( GL_ALPHA_TEST );
@@ -3332,7 +3316,7 @@ void NetAPI_CancelRequest( int context )
 	{
 		if( clgame.net_requests[i].resp.context == context )
 		{
-			Msg( "Request with context %i cancelled\n", context );
+			MsgDev( D_NOTE, "Request with context %i cancelled\n", context );
 			Q_memset( &clgame.net_requests[i], 0, sizeof( net_request_t ));
 			break;
 		}

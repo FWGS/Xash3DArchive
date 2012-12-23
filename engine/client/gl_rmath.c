@@ -103,7 +103,7 @@ Matrix4x4_CreateProjection
 NOTE: produce quake style world orientation
 ================
 */
-void Matrix4x4_CreateProjection(matrix4x4 out, float xMax, float xMin, float yMax, float yMin, float zNear, float zFar)
+void Matrix4x4_CreateProjection( matrix4x4 out, float xMax, float xMin, float yMax, float yMin, float zNear, float zFar )
 {
 	out[0][0] = ( 2.0f * zNear ) / ( xMax - xMin );
 	out[1][1] = ( 2.0f * zNear ) / ( yMax - yMin );
@@ -118,7 +118,7 @@ void Matrix4x4_CreateProjection(matrix4x4 out, float xMax, float xMin, float yMa
 	out[2][3] = -( 2.0f * zFar * zNear ) / ( zFar - zNear );
 }
 
-void Matrix4x4_CreateOrtho(matrix4x4 out, float xLeft, float xRight, float yBottom, float yTop, float zNear, float zFar)
+void Matrix4x4_CreateOrtho( matrix4x4 out, float xLeft, float xRight, float yBottom, float yTop, float zNear, float zFar )
 {
 	out[0][0] = 2.0f / (xRight - xLeft);
 	out[1][1] = 2.0f / (yTop - yBottom);

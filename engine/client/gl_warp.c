@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "wadfile.h"
 
 #define MAX_CLIP_VERTS	64 // skybox clip vertices
-#define TURBSCALE		( 256.0f / ( 2 * M_PI ))
+#define TURBSCALE		( 256.0f / ( M_PI2 ))
 static float		speedscale;
 static const char*		r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" };
 static const int		r_skyTexOrder[6] = { 0, 2, 1, 3, 4, 5 };
@@ -259,8 +259,8 @@ void MakeSkyVec( float s, float t, int axis )
 	}
 
 	// avoid bilerp seam
-	s = (s + 1) * 0.5f;
-	t = (t + 1) * 0.5f;
+	s = (s + 1.0f) * 0.5f;
+	t = (t + 1.0f) * 0.5f;
 
 	if( s < 1.0f / 512.0f )
 		s = 1.0f / 512.0f;
@@ -288,8 +288,8 @@ void R_ClearSkyBox( void )
 
 	for( i = 0; i < 6; i++ )
 	{
-		RI.skyMins[0][i] = RI.skyMins[1][i] = 9999999;
-		RI.skyMaxs[0][i] = RI.skyMaxs[1][i] = -9999999;
+		RI.skyMins[0][i] = RI.skyMins[1][i] = 9999999.0f;
+		RI.skyMaxs[0][i] = RI.skyMaxs[1][i] = -9999999.0f;
 	}
 }
 
@@ -312,8 +312,8 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 		// HACK: force full sky to draw when it has angle
 		for( i = 0; i < 6; i++ )
 		{
-			RI.skyMins[0][i] = RI.skyMins[1][i] = -1;
-			RI.skyMaxs[0][i] = RI.skyMaxs[1][i] = 1;
+			RI.skyMins[0][i] = RI.skyMins[1][i] = -1.0f;
+			RI.skyMaxs[0][i] = RI.skyMaxs[1][i] = 1.0f;
 		}
 	}
 
@@ -605,8 +605,8 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull )
 		{
 			if( waveHeight )
 			{
-				nv = v[2] + waveHeight + ( waveHeight * sin(v[0] * 0.02 + cl.time)
-					* sin(v[1] * 0.02 + cl.time) * sin(v[2] * 0.02 + cl.time));
+				nv = v[2] + waveHeight + ( waveHeight * sin(v[0] * 0.02f + cl.time)
+					* sin(v[1] * 0.02 + cl.time) * sin(v[2] * 0.02f + cl.time));
 				nv -= waveHeight;
 			}
 			else nv = v[2];
@@ -655,16 +655,16 @@ void EmitSkyPolys( msurface_t *fa )
 		for( i = 0, v = p->verts[0]; i < p->numverts; i++, v += VERTEXSIZE )
 		{
 			VectorSubtract( v, RI.vieworg, dir );
-			dir[2] *= 3; // flatten the sphere
+			dir[2] *= 3.0f; // flatten the sphere
 
 			length = VectorLength( dir );
-			length = 6 * 63 / length;
+			length = 6.0f * 63.0f / length;
 
 			dir[0] *= length;
 			dir[1] *= length;
 
-			s = ( speedscale + dir[0] ) * (1.0f / 128);
-			t = ( speedscale + dir[1] ) * (1.0f / 128);
+			s = ( speedscale + dir[0] ) * (1.0f / 128.0f);
+			t = ( speedscale + dir[1] ) * (1.0f / 128.0f);
 
 			pglTexCoord2f( s, t );
 			pglVertex3fv( v );
@@ -684,7 +684,7 @@ void R_DrawSkyChain( msurface_t *s )
 
 	GL_Bind( GL_TEXTURE0, tr.solidskyTexture );
 
-	speedscale = cl.time * 8;
+	speedscale = cl.time * 8.0f;
 	speedscale -= (int)speedscale & ~127;
 
 	for( fa = s; fa; fa = fa->texturechain )
@@ -693,7 +693,7 @@ void R_DrawSkyChain( msurface_t *s )
 	pglEnable( GL_BLEND );
 	GL_Bind( GL_TEXTURE0, tr.alphaskyTexture );
 
-	speedscale = cl.time * 16;
+	speedscale = cl.time * 16.0f;
 	speedscale -= (int)speedscale & ~127;
 
 	for( fa = s; fa; fa = fa->texturechain )
@@ -715,7 +715,7 @@ void EmitSkyLayers( msurface_t *fa )
 {
 	GL_Bind( GL_TEXTURE0, tr.solidskyTexture );
 
-	speedscale = cl.time * 8;
+	speedscale = cl.time * 8.0f;
 	speedscale -= (int)speedscale & ~127;
 
 	EmitSkyPolys( fa );
@@ -723,7 +723,7 @@ void EmitSkyLayers( msurface_t *fa )
 	pglEnable( GL_BLEND );
 	GL_Bind( GL_TEXTURE0, tr.alphaskyTexture );
 
-	speedscale = cl.time * 16;
+	speedscale = cl.time * 16.0f;
 	speedscale -= (int)speedscale & ~127;
 
 	EmitSkyPolys( fa );

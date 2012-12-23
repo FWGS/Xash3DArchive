@@ -81,6 +81,17 @@ const char *svc_strings[256] =
 	"svc_unused50",
 	"svc_director",
 	"svc_studiodecal",
+	"svc_unused53",
+	"svc_unused54",
+	"svc_unused55",
+	"svc_unused56",
+	"svc_querycvarvalue",
+	"svc_querycvarvalue2",
+	"svc_unused59",
+	"svc_unused60",
+	"svc_unused61",
+	"svc_unused62",
+	"svc_unused63",
 };
 
 typedef struct
@@ -405,8 +416,7 @@ void CL_ParseParticles( sizebuf_t *msg )
 ==================
 CL_ParseStaticEntity
 
-UDNONE: we need a client implementation of save\restore for use it not in multiplayer only
-wait for XashXT when it should be done
+static client entity
 ==================
 */
 void CL_ParseStaticEntity( sizebuf_t *msg )

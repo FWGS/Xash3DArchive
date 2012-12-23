@@ -669,8 +669,8 @@ byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int out
 	{
 		for( y = 0; y < outHeight; y++, out += outWidth )
 		{
-			inRow1 = in + inWidth * (int)(((float)y + 0.25) * inHeight/outHeight);
-			inRow2 = in + inWidth * (int)(((float)y + 0.75) * inHeight/outHeight);
+			inRow1 = in + inWidth * (int)(((float)y + 0.25f) * inHeight/outHeight);
+			inRow2 = in + inWidth * (int)(((float)y + 0.75f) * inHeight/outHeight);
 
 			for( x = 0; x < outWidth; x++ )
 			{
@@ -679,11 +679,12 @@ byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int out
 				pix3 = (byte *)inRow2 + p1[x];
 				pix4 = (byte *)inRow2 + p2[x];
 
-				normal[0] = (pix1[0] * (1.0/127) - 1.0) + (pix2[0] * (1.0/127) - 1.0) + (pix3[0] * (1.0/127) - 1.0) + (pix4[0] * (1.0/127) - 1.0);
-				normal[1] = (pix1[1] * (1.0/127) - 1.0) + (pix2[1] * (1.0/127) - 1.0) + (pix3[1] * (1.0/127) - 1.0) + (pix4[1] * (1.0/127) - 1.0);
-				normal[2] = (pix1[2] * (1.0/127) - 1.0) + (pix2[2] * (1.0/127) - 1.0) + (pix3[2] * (1.0/127) - 1.0) + (pix4[2] * (1.0/127) - 1.0);
+				normal[0] = (pix1[0] * (1.0f/127) - 1.0f) + (pix2[0] * (1.0f/127) - 1.0f) + (pix3[0] * (1.0f/127) - 1.0f) + (pix4[0] * (1.0f/127) - 1.0f);
+				normal[1] = (pix1[1] * (1.0f/127) - 1.0f) + (pix2[1] * (1.0f/127) - 1.0f) + (pix3[1] * (1.0f/127) - 1.0f) + (pix4[1] * (1.0f/127) - 1.0f);
+				normal[2] = (pix1[2] * (1.0f/127) - 1.0f) + (pix2[2] * (1.0f/127) - 1.0f) + (pix3[2] * (1.0f/127) - 1.0f) + (pix4[2] * (1.0f/127) - 1.0f);
 
-				if( !VectorNormalizeLength( normal )) VectorSet( normal, 0.0, 0.0, 1.0 );
+				if( !VectorNormalizeLength( normal ))
+					VectorSet( normal, 0.0f, 0.0f, 1.0f );
 
 				((byte *)(out+x))[0] = (byte)(128 + 127 * normal[0]);
 				((byte *)(out+x))[1] = (byte)(128 + 127 * normal[1]);
@@ -696,8 +697,8 @@ byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int out
 	{
 		for( y = 0; y < outHeight; y++, out += outWidth )
 		{
-			inRow1 = in + inWidth * (int)(((float)y + 0.25) * inHeight/outHeight);
-			inRow2 = in + inWidth * (int)(((float)y + 0.75) * inHeight/outHeight);
+			inRow1 = in + inWidth * (int)(((float)y + 0.25f) * inHeight/outHeight);
+			inRow2 = in + inWidth * (int)(((float)y + 0.75f) * inHeight/outHeight);
 
 			for( x = 0; x < outWidth; x++ )
 			{
@@ -729,10 +730,7 @@ byte *GL_ApplyGamma( const byte *source, int pixels, qboolean isNormalMap )
 	byte	*out = (byte *)source;
 	int	i;
 
-	if( isNormalMap )
-	{
-	}
-	else
+	if( !isNormalMap )
 	{
 		for( i = 0; i < pixels; i++, in += 4 )
 		{
@@ -766,9 +764,9 @@ static void GL_BuildMipMap( byte *in, int width, int height, qboolean isNormalMa
 		{
 			for( x = 0; x < width; x += 8, in += 8, out += 4 )
 			{
-				normal[0] = (in[0] * (1.0/127) - 1.0) + (in[4] * (1.0/127) - 1.0) + (in[width+0] * (1.0/127) - 1.0) + (in[width+4] * (1.0/127) - 1.0);
-				normal[1] = (in[1] * (1.0/127) - 1.0) + (in[5] * (1.0/127) - 1.0) + (in[width+1] * (1.0/127) - 1.0) + (in[width+5] * (1.0/127) - 1.0);
-				normal[2] = (in[2] * (1.0/127) - 1.0) + (in[6] * (1.0/127) - 1.0) + (in[width+2] * (1.0/127) - 1.0) + (in[width+6] * (1.0/127) - 1.0);
+				normal[0] = (in[0] * (1.0f/127) - 1.0f) + (in[4] * (1.0f/127) - 1.0f) + (in[width+0] * (1.0f/127) - 1.0f) + (in[width+4] * (1.0f/127) - 1.0f);
+				normal[1] = (in[1] * (1.0f/127) - 1.0f) + (in[5] * (1.0f/127) - 1.0f) + (in[width+1] * (1.0f/127) - 1.0f) + (in[width+5] * (1.0f/127) - 1.0f);
+				normal[2] = (in[2] * (1.0f/127) - 1.0f) + (in[6] * (1.0f/127) - 1.0f) + (in[width+2] * (1.0f/127) - 1.0f) + (in[width+6] * (1.0f/127) - 1.0f);
 
 				if( !VectorNormalizeLength( normal ))
 					VectorSet( normal, 0.0f, 0.0f, 1.0f );
@@ -812,7 +810,7 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 	if( tex->flags & TF_NOMIPMAP )
 		return;
 
-	if( GL_Support( GL_SGIS_MIPMAPS_EXT ))
+	if( GL_Support( GL_SGIS_MIPMAPS_EXT ) && !( tex->flags & TF_NORMALMAP ))
 	{
 		pglHint( GL_GENERATE_MIPMAP_HINT_SGIS, GL_NICEST );
 		pglTexParameteri( glTarget, GL_GENERATE_MIPMAP_SGIS, GL_TRUE );
@@ -2003,9 +2001,9 @@ void R_InitImages( void )
 	for( i = 0; i < 256; i++ )
 	{
 		f = (float)i;
-		r_luminanceTable[i][0] = f * 0.299;
-		r_luminanceTable[i][1] = f * 0.587;
-		r_luminanceTable[i][2] = f * 0.114;
+		r_luminanceTable[i][0] = f * 0.299f;
+		r_luminanceTable[i][1] = f * 0.587f;
+		r_luminanceTable[i][2] = f * 0.114f;
 	}
 
 	// set texture parameters

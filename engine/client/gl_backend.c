@@ -325,6 +325,7 @@ void GL_SetRenderMode( int mode )
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 		break;
 	case kRenderTransColor:
+	case kRenderTransTexture:
 		pglEnable( GL_BLEND );
 		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -335,18 +336,7 @@ void GL_SetRenderMode( int mode )
 		pglEnable( GL_ALPHA_TEST );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
-	case kRenderTransTexture:
-		pglEnable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		break;
 	case kRenderGlow:
-		pglEnable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		break;
 	case kRenderTransAdd:
 		pglEnable( GL_BLEND );
 		pglDisable( GL_ALPHA_TEST );
@@ -405,7 +395,7 @@ void VID_ImageAdjustGamma( byte *in, uint width, uint height )
 	// rebuild the gamma table	
 	for( i = 0; i < 256; i++ )
 	{
-		if ( g == 1.0f ) r_gammaTable[i] = i;
+		if( g == 1.0f ) r_gammaTable[i] = i;
 		else r_gammaTable[i] = bound( 0, 255 * pow((i + 0.5) / 255.5f, g ) + 0.5f, 255 );
 	}
 
@@ -550,7 +540,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 	FS_StripExtension( basename );
 	FS_DefaultExtension( basename, ".tga" );
 
-	// write image as dds packet
+	// write image as 6 sides
 	result = FS_SaveImage( basename, r_shot );
 	FS_FreeImage( r_shot );
 	FS_FreeImage( r_side );
@@ -572,49 +562,66 @@ void R_ShowTextures( void )
 {
 	gltexture_t	*image;
 	float		x, y, w, h;
-	int		i, j, base_w, base_h;
+	int		i, j, k, base_w, base_h;
+	int		total, start, end;
+	rgba_t		color = { 192, 192, 192, 255 };
+	int		charHeight, numTries = 0;
+	static qboolean	showHelp = true;
+	string		shortname;
 
 	if( !gl_showtextures->integer )
 		return;
 
-	if( gl_showtextures->integer == TEX_DETAIL )
-		pglClearColor( 1.0f, 0.0f, 0.5f, 1.0f );
+	if( showHelp )
+	{
+		CL_CenterPrint( "use '<-' and '->' keys for view all the textures", 0.25f );
+		showHelp = false;
+	}
 
 	pglClear( GL_COLOR_BUFFER_BIT );
 	pglFinish();
 
-	switch( gl_showtextures->integer )
-	{
-	case TEX_LIGHTMAP:
-	case TEX_VGUI:
-	case TEX_DETAIL:
-	case TEX_CUSTOM:
-	case TEX_DEPTHMAP:
-		// draw lightmaps as big images
-		base_w = 5;
-		base_h = 4;
-		break;
-	default:
-		base_w = 16;
-		base_h = 12;
-		break;	
-	}
+	base_w = 8;
+	base_h = 6;
+
+rebuild_page:
+	total = base_w * base_h;
+	start = total * (gl_showtextures->integer - 1);
+	end = total * gl_showtextures->integer;
+	if( end > MAX_TEXTURES ) end = MAX_TEXTURES;
+
+	w = glState.width / base_w;
+	h = glState.height / base_h;
+
+	Con_DrawStringLen( NULL, NULL, &charHeight );
 
 	for( i = j = 0; i < MAX_TEXTURES; i++ )
 	{
 		image = R_GetTexture( i );
-		if( !image->texnum ) continue;
+		if( j == start ) break; // found start
+		if( pglIsTexture( image->texnum )) j++;
+	}
 
-		if( image->texType != gl_showtextures->integer )
+	if( i == MAX_TEXTURES && gl_showtextures->integer != 1 )
+	{
+		// bad case, rewind to one and try again
+		Cvar_SetFloat( "r_showtextures", max( 1, gl_showtextures->integer - 1 ));
+		if( ++numTries < 2 ) goto rebuild_page;	// to prevent infinite loop
+	}
+
+	for( k = 0; i < MAX_TEXTURES; i++ )
+	{
+		if( j == end ) break; // page is full
+
+		image = R_GetTexture( i );
+		if( !pglIsTexture( image->texnum ))
 			continue;
 
-		w = glState.width / base_w;
-		h = glState.height / base_h;
-		x = j % base_w * w;
-		y = j / base_w * h;
+		x = k % base_w * w;
+		y = k / base_w * h;
 
 		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-		GL_Bind( GL_TEXTURE0, i );
+		GL_Bind( GL_TEXTURE0, i ); // NOTE: don't use image->texnum here, because skybox has a 'wrong' indexes
 
 		if( image->texType == TEX_DEPTHMAP )
 		{
@@ -639,8 +646,12 @@ void R_ShowTextures( void )
 			pglTexParameteri( image->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY );
                     }
 
-		j++;
+		FS_FileBase( image->name, shortname );
+		Con_DrawString( x + 1, y + h - charHeight, shortname, color );
+		j++, k++;
 	}
+
+	CL_DrawCenterPrint ();
 	pglFinish();
 }
 

@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "client.h"
 #include "net_encode.h"
 
+#define dem_unknown		0	// unknown command
 #define dem_norewind	1	// startup message
 #define dem_read		2	// it's a normal network packet
 #define dem_jumptime	3	// move the demostart time value forward by this amount
@@ -689,10 +690,7 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 
 		// HACKHACK: changelevel issues
 		if( demo.framecount <= 10 && ( fElapsedTime - f ) > host.frametime )
-		{
-//			Msg( "cmd %s, f %g, fElapsedTime %f, starttime %f\n", demo_cmd[cmd], f, fElapsedTime, demo.starttime );
 			demo.starttime = CL_GetDemoPlaybackClock();
-		}
 
 		// not ready for a message yet, put it back on the file.
 		if( cmd != dem_norewind && cmd != dem_stop && bSkipMessage )

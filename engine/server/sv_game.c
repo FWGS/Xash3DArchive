@@ -1721,7 +1721,7 @@ int pfnWalkMove( edict_t *ent, float yaw, float dist, int iMode )
 	if(!( ent->v.flags & ( FL_FLY|FL_SWIM|FL_ONGROUND )))
 		return false;
 
-	yaw = yaw * M_PI * 2.0f / 360.0f;
+	yaw = yaw * M_PI2 / 360.0f;
 	VectorSet( move, cos( yaw ) * dist, sin( yaw ) * dist, 0.0f );
 
 	switch( iMode )

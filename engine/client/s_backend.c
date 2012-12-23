@@ -426,6 +426,7 @@ int SNDDMA_GetSoundtime( void )
 			S_StopAllSounds();
 		}
 	}
+
 	oldsamplepos = samplepos;
 
 	return (buffers * fullsamples + samplepos / 2);
@@ -455,7 +456,7 @@ void SNDDMA_BeginPainting( void )
 	if( dwStatus & DSBSTATUS_BUFFERLOST )
 		pDSBuf->lpVtbl->Restore( pDSBuf );
 	
-	if(!( dwStatus & DSBSTATUS_PLAYING ))
+	if( !( dwStatus & DSBSTATUS_PLAYING ))
 		pDSBuf->lpVtbl->Play( pDSBuf, 0, 0, DSBPLAY_LOOPING );
 
 	// lock the dsound buffer
@@ -474,6 +475,7 @@ void SNDDMA_BeginPainting( void )
 
 		if( ++reps > 2 ) return;
 	}
+
 	dma.buffer = (byte *)pbuf;
 }
 

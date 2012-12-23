@@ -87,11 +87,9 @@ bool FontCache::GetTextureForChar( Font *font, char ch, int *textureID, float **
 
 	// set the cache info
 	cacheitem.page = page;
-	
-	double adjust =  0.0f; // the 0.5 texel offset is done in CMatSystemTexture::SetMaterial()
 
-	cacheitem.texCoords[0] = (float)((double)drawX / ((double)twide + adjust));
-	cacheitem.texCoords[1] = (float)((double)drawY / ((double)ttall + adjust));
+	cacheitem.texCoords[0] = (float)((double)drawX / ((double)twide));
+	cacheitem.texCoords[1] = (float)((double)drawY / ((double)ttall));
 	cacheitem.texCoords[2] = (float)((double)(drawX + fontWide) / (double)twide);
 	cacheitem.texCoords[3] = (float)((double)(drawY + fontTall) / (double)ttall);
 

@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "mod_local.h"
 #include "mathlib.h"
-
+			
 typedef struct
 {
 	int		allocated[BLOCK_SIZE_MAX];
@@ -28,6 +28,7 @@ typedef struct
 	byte		lightmap_buffer[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*4];
 } gllightmapstate_t;
 
+static int		nColinElim; // stats
 static vec2_t		world_orthocenter;
 static vec2_t		world_orthohalf;
 static byte		visbytes[MAX_MAP_LEAFS/8];
@@ -36,8 +37,8 @@ static glpoly_t		*fullbright_polys[MAX_TEXTURES];
 static qboolean		draw_fullbrights = false;
 static mextrasurf_t		*detail_surfaces[MAX_TEXTURES];
 static qboolean		draw_details = false;
-static gllightmapstate_t	gl_lms;
 static msurface_t		*skychain = NULL;
+static gllightmapstate_t	gl_lms;
 
 static void LM_UploadBlock( int lightmapnum );
 
@@ -62,8 +63,8 @@ static void BoundPoly( int numverts, float *verts, vec3_t mins, vec3_t maxs )
 	int	i, j;
 	float	*v;
 
-	mins[0] = mins[1] = mins[2] = 9999;
-	maxs[0] = maxs[1] = maxs[2] = -9999;
+	mins[0] = mins[1] = mins[2] = 99999.0f;
+	maxs[0] = maxs[1] = maxs[2] = -99999.0f;
 
 	for( i = 0, v = verts; i < numverts; i++ )
 	{
@@ -362,6 +363,44 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 		poly->verts[i][5] = s;
 		poly->verts[i][6] = t;
 	}
+
+	// remove co-linear points - Ed
+	if( !gl_keeptjunctions->integer && !( fa->flags & SURF_UNDERWATER ))
+	{
+		for( i = 0; i < lnumverts; i++ )
+		{
+			vec3_t	v1, v2;
+			float	*prev, *this, *next;
+
+			prev = poly->verts[(i + lnumverts - 1) % lnumverts];
+			next = poly->verts[(i + 1) % lnumverts];
+			this = poly->verts[i];
+
+			VectorSubtract( this, prev, v1 );
+			VectorNormalize( v1 );
+			VectorSubtract( next, prev, v2 );
+			VectorNormalize( v2 );
+
+			// skip co-linear points
+			if(( fabs( v1[0] - v2[0] ) <= 0.001f) && (fabs( v1[1] - v2[1] ) <= 0.001f) && (fabs( v1[2] - v2[2] ) <= 0.001f))
+			{
+				int	j, k;
+
+				for( j = i + 1; j < lnumverts; j++ )
+				{
+					for( k = 0; k < VERTEXSIZE; k++ )
+						poly->verts[j-1][k] = poly->verts[j][k];
+				}
+
+				// retry next vertex next time, which is now current vertex
+				lnumverts--;
+				nColinElim++;
+				i--;
+			}
+		}
+	}
+
+	poly->numverts = lnumverts;
 }
 
 /*
@@ -380,8 +419,8 @@ texture_t *R_TextureAnimation( texture_t *base, int surfacenum )
 	if( base->anim_total < 0 )
 	{
 		reletive = abs( surfacenum ) % abs( base->anim_total );
-
 		count = 0;
+
 		while( base->anim_min > reletive || base->anim_max <= reletive )
 		{
 			base = base->anim_next;
@@ -406,8 +445,8 @@ texture_t *R_TextureAnimation( texture_t *base, int surfacenum )
 	else speed = 20;
 
 	reletive = (int)(cl.time * speed) % base->anim_total;
-
 	count = 0;	
+
 	while( base->anim_min > reletive || base->anim_max <= reletive )
 	{
 		base = base->anim_next;
@@ -578,8 +617,7 @@ static void LM_UploadBlock( qboolean dynamic )
 			GL_Bind( GL_TEXTURE0, tr.dlightTexture2 );
 		else GL_Bind( GL_TEXTURE0, tr.dlightTexture );
 
-		pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_SIZE, height, GL_RGBA, GL_UNSIGNED_BYTE,
-		gl_lms.lightmap_buffer );
+		pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_SIZE, height, GL_RGBA, GL_UNSIGNED_BYTE, gl_lms.lightmap_buffer );
 	}
 	else
 	{
@@ -1626,7 +1664,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 
 	// find which side of the node we are on
 	dot = PlaneDiff( tr.modelorg, node->plane );
-	side = (dot >= 0) ? 0 : 1;
+	side = (dot >= 0.0f) ? 0 : 1;
 
 	// recurse down the children, front side first
 	R_RecursiveWorldNode( node->children[side], clipflags );
@@ -2093,6 +2131,7 @@ void GL_BuildLightmaps( void )
 	gl_lms.current_lightmap_texture = 0;
 	tr.num_mirror_entities = 0;
 	tr.num_mirrors_used = 0;
+	nColinElim = 0;
 
 	// setup all the lightstyles
 	R_AnimateLight();
@@ -2138,4 +2177,7 @@ void GL_BuildLightmaps( void )
 		// build lightmaps on the client-side
 		clgame.drawFuncs.GL_BuildLightmaps( );
 	}
+
+	if( !gl_keeptjunctions->integer )
+		MsgDev( D_INFO, "Eliminate %i vertexes\n", nColinElim );
 }

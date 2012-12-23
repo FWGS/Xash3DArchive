@@ -306,14 +306,10 @@ SCR_AddDirtyPoint
 */
 void SCR_AddDirtyPoint( int x, int y )
 {
-	if( x < scr_dirty.x1 )
-		scr_dirty.x1 = x;
-	if( x > scr_dirty.x2 )
-		scr_dirty.x2 = x;
-	if( y < scr_dirty.y1 )
-		scr_dirty.y1 = y;
-	if( y > scr_dirty.y2 )
-		scr_dirty.y2 = y;
+	if( x < scr_dirty.x1 ) scr_dirty.x1 = x;
+	if( x > scr_dirty.x2 ) scr_dirty.x2 = x;
+	if( y < scr_dirty.y1 ) scr_dirty.y1 = y;
+	if( y > scr_dirty.y2 ) scr_dirty.y2 = y;
 }
 
 /*
@@ -439,7 +435,7 @@ void SCR_UpdateScreen( void )
 	V_PostRender();
 }
 
-static void SCR_LoadCreditsFont( void )
+void SCR_LoadCreditsFont( void )
 {
 	int	fontWidth;
 
@@ -480,7 +476,7 @@ static void SCR_LoadCreditsFont( void )
 	}
 }
 
-static void SCR_InstallParticlePalette( void )
+void SCR_InstallParticlePalette( void )
 {
 	rgbdata_t	*pic;
 	int	i;
@@ -514,7 +510,7 @@ static void SCR_InstallParticlePalette( void )
 	}
 }
 
-void SCR_RegisterShaders( void )
+void SCR_RegisterTextures( void )
 {
 	cls.fillImage = GL_LoadTexture( "*white", NULL, 0, TF_IMAGE, NULL ); // used for FillRGBA
 	cls.particleImage = GL_LoadTexture( "*particle", NULL, 0, TF_IMAGE, NULL );
@@ -616,7 +612,7 @@ void SCR_Init( void )
 
 	SCR_LoadCreditsFont ();
 	SCR_InstallParticlePalette ();
-	SCR_RegisterShaders ();
+	SCR_RegisterTextures ();
 	SCR_InitCinematic();
 	SCR_VidInit();
 

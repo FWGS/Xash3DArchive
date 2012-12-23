@@ -109,6 +109,8 @@ qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 	{
 		kbutton_t	*mlook, *jlook;
 		qboolean	mlook_active = false, jlook_active = false;
+		string	mapname, maptitle;
+		int	maxEntities;
 
 		mlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_mlook" );
 		jlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_jlook" );
@@ -124,10 +126,29 @@ qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 		R_ShutdownImages();
 		FS_LoadGameInfo( (bReset) ? host.gamefolder : gamefolder );
 		R_InitImages();
+
+		// save parms
+		maxEntities = clgame.maxEntities;
+		Q_strncpy( mapname, clgame.mapname, MAX_STRING );
+		Q_strncpy( maptitle, clgame.maptitle, MAX_STRING );
+
 		if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
 			Host_Error( "can't initialize client.dll\n" );
-		SCR_RegisterShaders();
-		SCR_VidInit();
+
+		// restore parms
+		clgame.maxEntities = maxEntities;
+		Q_strncpy( clgame.mapname, mapname, MAX_STRING );
+		Q_strncpy( clgame.maptitle, maptitle, MAX_STRING );
+
+		// invalidate fonts so we can reloading them again
+		Q_memset( &cls.creditsFont, 0, sizeof( cls.creditsFont ));
+		SCR_InstallParticlePalette();
+		SCR_LoadCreditsFont();
+		Con_InvalidateFonts();
+
+		SCR_RegisterTextures ();
+		CL_FreeEdicts ();
+		SCR_VidInit ();
 
 		if( cls.key_dest == key_game ) // restore mouse state
 			clgame.dllFuncs.IN_ActivateMouse();
@@ -137,6 +158,7 @@ qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 		if( jlook_active ) Cmd_ExecuteString( "+jlook\n", src_command );
 		return true;
 	}
+
 	return false;
 }
 
@@ -286,6 +308,7 @@ void CL_CreateCmd( void )
 	cmd.lerp_msec = bound( 0, cmd.lerp_msec, 250 ); 
 
 	V_ProcessOverviewCmds( &cmd );
+	V_ProcessShowTexturesCmds( &cmd );
 
 	if( cl.background || gl_overview->integer )
 	{
@@ -308,7 +331,7 @@ void CL_WriteUsercmd( sizebuf_t *msg, int from, int to )
 	usercmd_t	nullcmd;
 	usercmd_t	*f, *t;
 
-	ASSERT( from == -1 || ( from >= 0 && from < MULTIPLAYER_BACKUP ) );
+	ASSERT( from == -1 || ( from >= 0 && from < MULTIPLAYER_BACKUP ));
 	ASSERT( to >= 0 && to < MULTIPLAYER_BACKUP );
 
 	if( from == -1 )
@@ -1034,7 +1057,10 @@ void CL_ParseNETInfoMessage( netadr_t from, sizebuf_t *msg )
 				if(!( nr->flags & FNETAPI_MULTIPLE_RESPONSE ))
 					Q_memset( nr, 0, sizeof( *nr )); // done
 			}
-			else Q_memset( nr, 0, sizeof( *nr )); 
+			else
+			{
+				Q_memset( nr, 0, sizeof( *nr )); 
+			}
 			return;
 		}
 	}
@@ -1058,6 +1084,7 @@ void CL_PrepSound( void )
 		sndcount++; // total num sounds
 
 	S_BeginRegistration();
+
 	for( i = 0; i < MAX_SOUNDS && cl.sound_precache[i+1][0]; i++ )
 	{
 		cl.sound_index[i+1] = S_RegisterSound( cl.sound_precache[i+1] );
