@@ -679,9 +679,9 @@ byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int out
 				pix3 = (byte *)inRow2 + p1[x];
 				pix4 = (byte *)inRow2 + p2[x];
 
-				normal[0] = (pix1[0] * (1.0f/127) - 1.0f) + (pix2[0] * (1.0f/127) - 1.0f) + (pix3[0] * (1.0f/127) - 1.0f) + (pix4[0] * (1.0f/127) - 1.0f);
-				normal[1] = (pix1[1] * (1.0f/127) - 1.0f) + (pix2[1] * (1.0f/127) - 1.0f) + (pix3[1] * (1.0f/127) - 1.0f) + (pix4[1] * (1.0f/127) - 1.0f);
-				normal[2] = (pix1[2] * (1.0f/127) - 1.0f) + (pix2[2] * (1.0f/127) - 1.0f) + (pix3[2] * (1.0f/127) - 1.0f) + (pix4[2] * (1.0f/127) - 1.0f);
+				normal[0] = (pix1[0] * (1.0f/127.0f) - 1.0f) + (pix2[0] * (1.0f/127.0f) - 1.0f) + (pix3[0] * (1.0f/127.0f) - 1.0f) + (pix4[0] * (1.0f/127.0f) - 1.0f);
+				normal[1] = (pix1[1] * (1.0f/127.0f) - 1.0f) + (pix2[1] * (1.0f/127.0f) - 1.0f) + (pix3[1] * (1.0f/127.0f) - 1.0f) + (pix4[1] * (1.0f/127.0f) - 1.0f);
+				normal[2] = (pix1[2] * (1.0f/127.0f) - 1.0f) + (pix2[2] * (1.0f/127.0f) - 1.0f) + (pix3[2] * (1.0f/127.0f) - 1.0f) + (pix4[2] * (1.0f/127.0f) - 1.0f);
 
 				if( !VectorNormalizeLength( normal ))
 					VectorSet( normal, 0.0f, 0.0f, 1.0f );
@@ -764,9 +764,9 @@ static void GL_BuildMipMap( byte *in, int width, int height, qboolean isNormalMa
 		{
 			for( x = 0; x < width; x += 8, in += 8, out += 4 )
 			{
-				normal[0] = (in[0] * (1.0f/127) - 1.0f) + (in[4] * (1.0f/127) - 1.0f) + (in[width+0] * (1.0f/127) - 1.0f) + (in[width+4] * (1.0f/127) - 1.0f);
-				normal[1] = (in[1] * (1.0f/127) - 1.0f) + (in[5] * (1.0f/127) - 1.0f) + (in[width+1] * (1.0f/127) - 1.0f) + (in[width+5] * (1.0f/127) - 1.0f);
-				normal[2] = (in[2] * (1.0f/127) - 1.0f) + (in[6] * (1.0f/127) - 1.0f) + (in[width+2] * (1.0f/127) - 1.0f) + (in[width+6] * (1.0f/127) - 1.0f);
+				normal[0] = (in[0] * (1.0f/127.0f) - 1.0f) + (in[4] * (1.0f/127.0f) - 1.0f) + (in[width+0] * (1.0f/127.0f) - 1.0f) + (in[width+4] * (1.0f/127.0f) - 1.0f);
+				normal[1] = (in[1] * (1.0f/127.0f) - 1.0f) + (in[5] * (1.0f/127.0f) - 1.0f) + (in[width+1] * (1.0f/127.0f) - 1.0f) + (in[width+5] * (1.0f/127.0f) - 1.0f);
+				normal[2] = (in[2] * (1.0f/127.0f) - 1.0f) + (in[6] * (1.0f/127.0f) - 1.0f) + (in[width+2] * (1.0f/127.0f) - 1.0f) + (in[width+6] * (1.0f/127.0f) - 1.0f);
 
 				if( !VectorNormalizeLength( normal ))
 					VectorSet( normal, 0.0f, 0.0f, 1.0f );

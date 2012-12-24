@@ -597,8 +597,10 @@ qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delt
 			pField->flags |= DT_INTEGER;
 		else if( !Q_strcmp( token, "DT_ANGLE" ))
 			pField->flags |= DT_ANGLE;
-		else if( !Q_strncmp( token, "DT_TIMEWINDOW", 13 ))
-			pField->flags |= DT_TIMEWINDOW;
+		else if( !Q_strcmp( token, "DT_TIMEWINDOW_8" ))
+			pField->flags |= DT_TIMEWINDOW_8;
+		else if( !Q_strcmp( token, "DT_TIMEWINDOW_BIG" ))
+			pField->flags |= DT_TIMEWINDOW_BIG;
 		else if( !Q_strcmp( token, "DT_STRING" ))
 			pField->flags |= DT_STRING;
 		else if( !Q_strcmp( token, "DT_SIGNED" ))
@@ -870,16 +872,96 @@ void Delta_Shutdown( void )
 
 /*
 =====================
+Delta_ClampIntegerField
+
+prevent data to out of range
+=====================
+*/
+int Delta_ClampIntegerField( int iValue, qboolean bSigned, int bits )
+{
+	switch( bits )
+	{
+	case 1:
+		iValue = bound( 0, (byte)iValue, 1 );
+		break;
+	case 2:
+		if( bSigned ) iValue = bound( -1, (short)iValue, 2 );
+		else iValue = bound( 0, (word)iValue, 3 );
+		break;
+	case 3:
+		if( bSigned ) iValue = bound( -3, (short)iValue, 4 );
+		else iValue = bound( 0, (word)iValue, 7 );
+		break;
+	case 4:
+		if( bSigned ) iValue = bound( -7, (short)iValue, 8 );
+		else iValue = bound( 0, (word)iValue, 15 );
+		break;
+	case 5:
+		if( bSigned ) iValue = bound( -15, (short)iValue, 16 );
+		else iValue = bound( 0, (word)iValue, 31 );
+		break;
+	case 6:
+		if( bSigned ) iValue = bound( -31, (short)iValue, 32 );
+		else iValue = bound( 0, (word)iValue, 63 );
+		break;
+	case 7:
+		if( bSigned ) iValue = bound( -63, (short)iValue, 64 );
+		else iValue = bound( 0, (word)iValue, 127 );
+		break;
+	case 8:
+		if( bSigned ) iValue = bound( -127, (short)iValue, 128 );
+		else iValue = bound( 0, (word)iValue, 255 );
+		break;
+	case 9:
+		if( bSigned ) iValue = bound( -255, (short)iValue, 256 );
+		else iValue = bound( 0, (word)iValue, 511 );
+		break;
+	case 10:
+		if( bSigned ) iValue = bound( -511, (short)iValue, 512 );
+		else iValue = bound( 0, (word)iValue, 1023 );
+		break;
+	case 11:
+		if( bSigned ) iValue = bound( -1023, (short)iValue, 1024 );
+		else iValue = bound( 0, (word)iValue, 2047 );
+		break;
+	case 12:
+		if( bSigned ) iValue = bound( -2047, (short)iValue, 2048 );
+		else iValue = bound( 0, (word)iValue, 4095 );
+		break;
+	case 13:
+		if( bSigned ) iValue = bound( -4095, (short)iValue, 4096 );
+		else iValue = bound( 0, (word)iValue, 8191 );
+		break;
+	case 14:
+		if( bSigned ) iValue = bound( -8191, (short)iValue, 8192 );
+		else iValue = bound( 0, (word)iValue, 16383 );
+		break;
+	case 15:
+		if( bSigned ) iValue = bound( -16383, (short)iValue, 16384 );
+		else iValue = bound( 0, (word)iValue, 32767 );
+		break;
+	case 16:
+		if( bSigned ) iValue = bound( -32767, (short)iValue, 32768 );
+		else iValue = bound( 0, (word)iValue, 65535 );
+		break;
+	}
+
+	return iValue; // clamped;
+} 
+
+/*
+=====================
 Delta_CompareField
 
 compare fields by offsets
 assume from and to is valid
-TODO: multiply timewindow by 100 and 1000 before comparing
-TODO: clamping and premultiply before comparing
+TESTTEST: clamp all fields and multiply by specified value before comparing
 =====================
 */
-qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
+qboolean Delta_CompareField( delta_t *pField, void *from, void *to, float timebase )
 {
+	qboolean	bSigned = ( pField->flags & DT_SIGNED ) ? true : false;
+	float	val_a, val_b;
 	int	fromF, toF;
 
 	ASSERT( pField );
@@ -903,6 +985,11 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
 			fromF = *(byte *)((byte *)from + pField->offset );
 			toF = *(byte *)((byte *)to + pField->offset );
 		}
+
+		fromF = Delta_ClampIntegerField( fromF, bSigned, pField->bits );
+		toF = Delta_ClampIntegerField( toF, bSigned, pField->bits );
+		fromF *= pField->multiplier;
+		toF *= pField->multiplier;
 	}
 	else if( pField->flags & DT_SHORT )
 	{
@@ -916,6 +1003,11 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
 			fromF = *(word *)((byte *)from + pField->offset );
 			toF = *(word *)((byte *)to + pField->offset );
 		}
+
+		fromF = Delta_ClampIntegerField( fromF, bSigned, pField->bits );
+		toF = Delta_ClampIntegerField( toF, bSigned, pField->bits );
+		fromF *= pField->multiplier;
+		toF *= pField->multiplier;
 	}
 	else if( pField->flags & DT_INTEGER )
 	{
@@ -929,12 +1021,35 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
 			fromF = *(uint *)((byte *)from + pField->offset );
 			toF = *(uint *)((byte *)to + pField->offset );
 		}
+
+		fromF = Delta_ClampIntegerField( fromF, bSigned, pField->bits );
+		toF = Delta_ClampIntegerField( toF, bSigned, pField->bits );
+		fromF *= pField->multiplier;
+		toF *= pField->multiplier;
 	}
-	else if( pField->flags & ( DT_FLOAT|DT_ANGLE|DT_TIMEWINDOW ))
+	else if( pField->flags & ( DT_FLOAT|DT_ANGLE ))
 	{
 		// don't convert floats to integers
 		fromF = *((int *)((byte *)from + pField->offset ));
 		toF = *((int *)((byte *)to + pField->offset ));
+	}
+	else if( pField->flags & DT_TIMEWINDOW_8 )
+	{
+		val_a = (*(float *)((byte *)from + pField->offset )) * 100.0f;
+		val_b = (*(float *)((byte *)to + pField->offset )) * 100.0f;
+		val_a -= (timebase * 100.0f);
+		val_b -= (timebase * 100.0f);
+		fromF = *((int *)&val_a);
+		toF = *((int *)&val_b);
+	}
+	else if( pField->flags & DT_TIMEWINDOW_BIG )
+	{
+		val_a = (*(float *)((byte *)from + pField->offset )) * 1000.0f;
+		val_b = (*(float *)((byte *)to + pField->offset )) * 1000.0f;
+		val_a -= (timebase * 1000.0f);
+		val_b -= (timebase * 1000.0f);
+		fromF = *((int *)&val_a);
+		toF = *((int *)&val_b);
 	}
 	else if( pField->flags & DT_STRING )
 	{
@@ -951,63 +1066,10 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to )
 
 /*
 =====================
-Delta_ClampIntegerField
-
-prevent data to out of range
-TODO: add missed cases
-=====================
-*/
-int Delta_ClampIntegerField( int iValue, qboolean bSigned, int bits )
-{
-	switch( bits )
-	{
-	case 8:
-		if( bSigned ) iValue = bound( -127, (short)iValue, 128 );
-		else iValue = bound( 0, (word)iValue, 255 );
-		break;
-	case 9:
-		if( bSigned ) iValue = bound( -255, (short)iValue, 256 );
-		else iValue = bound( 0, (word)iValue, 511 );
-		break;
-	case 10:
-		if( bSigned ) iValue = bound( -511, (short)iValue, 511 );
-		else iValue = bound( 0, (word)iValue, 1023 );
-		break;
-	case 11:
-		if( bSigned ) iValue = bound( -1023, (short)iValue, 1023 );
-		else iValue = bound( 0, (word)iValue, 2047 );
-		break;
-	case 12:
-		if( bSigned ) iValue = bound( -2047, (short)iValue, 2047 );
-		else iValue = bound( 0, (word)iValue, 4095 );
-		break;
-	case 13:
-		if( bSigned ) iValue = bound( -4095, (short)iValue, 4095 );
-		else iValue = bound( 0, (word)iValue, 8191 );
-		break;
-	case 14:
-		if( bSigned ) iValue = bound( -8191, (short)iValue, 8191 );
-		else iValue = bound( 0, (word)iValue, 16383 );
-		break;
-	case 15:
-		if( bSigned ) iValue = bound( -16383, (short)iValue, 16383 );
-		else iValue = bound( 0, (word)iValue, 32767 );
-		break;
-	case 16:
-		if( bSigned ) iValue = bound( -32767, (short)iValue, 32767 );
-		else iValue = bound( 0, (word)iValue, 65535 );
-		break;
-	}
-	return iValue; // clamped;
-} 
-
-/*
-=====================
 Delta_WriteField
 
 write fields by offsets
 assume from and to is valid
-TODO: write path for signed\unsigned
 =====================
 */
 qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to, float timebase )
@@ -1017,7 +1079,7 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 	uint		iValue;
 	const char	*pStr;
 
-	if( Delta_CompareField( pField, from, to ))
+	if( Delta_CompareField( pField, from, to, timebase ))
 	{
 		BF_WriteOneBit( msg, 0 );	// unchanged
 		return false;
@@ -1060,11 +1122,19 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 		// result may be wrong on client-side
 		BF_WriteBitAngle( msg, flAngle, pField->bits );
 	}
-	else if( pField->flags & DT_TIMEWINDOW )
+	else if( pField->flags & DT_TIMEWINDOW_8 )
 	{
 		flValue = *(float *)((byte *)to + pField->offset );
-		flTime = ( timebase - flValue );
-		iValue = (uint)( flTime * 1000 );
+		flTime = (timebase * 100.0f) - (flValue * 100.0f);
+		iValue = (uint)flTime;
+
+		BF_WriteBitLong( msg, iValue, pField->bits, bSigned );
+	}
+	else if( pField->flags & DT_TIMEWINDOW_BIG )
+	{
+		flValue = *(float *)((byte *)to + pField->offset );
+		flTime = (timebase * 1000.0f) - (flValue * 1000.0f);
+		iValue = (uint)flTime;
 
 		BF_WriteBitLong( msg, iValue, pField->bits, bSigned );
 	}
@@ -1162,7 +1232,21 @@ qboolean Delta_ReadField( sizebuf_t *msg, delta_t *pField, void *from, void *to,
 		}
 		*(float *)((byte *)to + pField->offset ) = flAngle;
 	}
-	else if( pField->flags & DT_TIMEWINDOW )
+	else if( pField->flags & DT_TIMEWINDOW_8 )
+	{
+		if( bChanged )
+		{
+			iValue = BF_ReadBitLong( msg, pField->bits, bSigned );
+			flValue = (float)((int)(iValue * 0.01f ));
+			flTime = timebase + flValue;
+		}
+		else
+		{
+			flTime = *(float *)((byte *)from + pField->offset );
+		}
+		*(float *)((byte *)to + pField->offset ) = flTime;
+	}
+	else if( pField->flags & DT_TIMEWINDOW_BIG )
 	{
 		if( bChanged )
 		{

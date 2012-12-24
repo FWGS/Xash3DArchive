@@ -1,3 +1,22 @@
+build 2148
+
+Engine: implement support of new BSP format that called BSP31
+Engine: added new feature - big lightmaps 256x256 instead of 128x128. This is used for new BSP format 31
+Render: new texture viewer implemented (navigate pages with arrow keys)
+Engine: added cvar gl_keeptjunctions from Quake (removes a collinear points, economy some vertexes)
+Sound: test thing: release sentence sounds after playing
+Engine: rewrited code for anti (_-=ZhekA=-_) system
+Console: don't moving cursor if autocomplete was failed on second or all next arguments
+Engine: release all elements of client game cvar (was potential memory leak)
+Engine: allow change game for dedicated servers
+Server: added default case for Studio Blending Interface while server is not loaded (e.g. remote connection). Was here a potential crashpoint.
+Engine: parse "wad" field from entity string and use wad ordering for loading textures that may have matched names but placed in different wads
+Network: change protocol to 47. Old demos will stop working.
+Network: rewrite delta-comparing code. In theory this may reduce a network traffic
+Server: fix crash for fast switching between singleplayer and multiplayer
+Server: optimize MOVETYPE_COMPOUND code
+Server: added missed flag FL_FAKECLIENT for bots
+
 build 2112
 
 Engine: fix bug with ambient sounds that won't writes into demo
