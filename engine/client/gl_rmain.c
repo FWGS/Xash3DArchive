@@ -796,8 +796,11 @@ static void R_SetupFrame( void )
 	// sort opaque entities by model type to avoid drawing model shadows under alpha-surfaces
 	qsort( tr.solid_entities, tr.num_solid_entities, sizeof( cl_entity_t* ), R_SolidEntityCompare );
 
-	// sort translucents entities by rendermode and distance
-	qsort( tr.trans_entities, tr.num_trans_entities, sizeof( cl_entity_t* ), R_TransEntityCompare );
+	if( !gl_nosort->integer )
+	{
+		// sort translucents entities by rendermode and distance
+		qsort( tr.trans_entities, tr.num_trans_entities, sizeof( cl_entity_t* ), R_TransEntityCompare );
+	}
 
 	// current viewleaf
 	if( RI.drawWorld )

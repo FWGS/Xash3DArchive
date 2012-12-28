@@ -1479,7 +1479,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 		if( R_CullSurface( psurf, 0 ))
 			continue;
 
-		if( need_sort )
+		if( need_sort && !gl_nosort->integer )
 		{
 			world.draw_surfaces[num_sorted] = psurf;
 			num_sorted++;
@@ -1492,7 +1492,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 		}
 	}
 
-	if( need_sort )
+	if( need_sort && !gl_nosort->integer )
 		qsort( world.draw_surfaces, num_sorted, sizeof( msurface_t* ), R_SurfaceCompare );
 
 	// draw sorted translucent surfaces

@@ -633,6 +633,7 @@ extern convar_t	*gl_allow_mirrors;
 extern convar_t	*gl_picmip;
 extern convar_t	*gl_skymip;
 extern convar_t	*gl_finish;
+extern convar_t	*gl_nosort;
 extern convar_t	*gl_clear;
 extern convar_t	*gl_test;		// cvar to testify new effects
 
