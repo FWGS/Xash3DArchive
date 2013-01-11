@@ -524,6 +524,12 @@ void CL_ParseSoundFade( sizebuf_t *msg )
 	S_FadeClientVolume( fadePercent, fadeOutSeconds, holdTime, fadeInSeconds );
 }
 
+/*
+==================
+CL_ParseCustomization
+
+==================
+*/
 void CL_ParseCustomization( sizebuf_t *msg )
 {
 	// TODO: ???

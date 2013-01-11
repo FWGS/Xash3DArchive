@@ -1,3 +1,7 @@
+build 2153
+
+Render: added cvar "gl_nosort" that disables sorting of translucent surfaces
+
 build 2148
 
 Engine: implement support of new BSP format that called BSP31

@@ -1877,8 +1877,8 @@ SV_SendRes_f
 */
 void SV_SendRes_f( sv_client_t *cl )
 {
-	sizebuf_t	msg;
-	byte	buffer[65535];	// g-cont. what about stack??
+	sizebuf_t		msg;
+	static byte	buffer[65535];
 
 	if( cl->state != cs_connected )
 	{

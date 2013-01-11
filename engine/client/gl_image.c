@@ -299,10 +299,11 @@ void R_SetTextureParameters( void )
 	if( GL_Support( GL_ANISOTROPY_EXT ))
 	{
 		if( gl_texture_anisotropy->value > glConfig.max_texture_anisotropy )
-			Cvar_SetFloat( "r_anisotropy", glConfig.max_texture_anisotropy );
+			Cvar_SetFloat( "gl_anisotropy", glConfig.max_texture_anisotropy );
 		else if( gl_texture_anisotropy->value < 1.0f )
-			Cvar_SetFloat( "r_anisotropy", 1.0f );
+			Cvar_SetFloat( "gl_anisotropy", 1.0f );
 	}
+
 	gl_texture_anisotropy->modified = false;
 
 	if( GL_Support( GL_TEXTURE_LODBIAS ))
@@ -312,6 +313,7 @@ void R_SetTextureParameters( void )
 		else if( gl_texture_lodbias->value < -glConfig.max_texture_lodbias )
 			Cvar_SetFloat( "r_texture_lodbias", -glConfig.max_texture_lodbias );
 	}
+
 	gl_texture_lodbias->modified = false;
 
 	// change all the existing mipmapped texture objects
