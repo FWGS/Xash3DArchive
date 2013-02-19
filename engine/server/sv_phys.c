@@ -548,7 +548,7 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 
 		allFraction += trace.fraction;
 
-		if( trace.startsolid )
+		if( trace.allsolid )
 		{	
 			// entity is trapped in another solid
 			VectorClear( ent->v.velocity );

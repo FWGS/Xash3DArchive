@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include "library.h"
 #include "beamdef.h"
 #include "particledef.h"
+#include "entity_types.h"
 
 #define IsLiquidContents( cnt )	( cnt == CONTENTS_WATER || cnt == CONTENTS_SLIME || cnt == CONTENTS_LAVA )
 
@@ -417,6 +418,9 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 		return true; // done
 
 	clent->curstate.entityType = entityType;
+
+	if( entityType == ET_FRAGMENTED )
+		r_stats.c_client_ents++;
 
 	if( R_FollowEntity( clent ))
 	{

@@ -104,7 +104,7 @@ Sound: set s_cull to zero as default
 Input: fix problems with call WC_SYSMENU instead of user-defined command when ALT is pressed
 Console: add a new command that called "mapstats" and works like bspinfo.exe
 Physic: added new meta-type SOLID_CUSTOM that could be traced in game dlls with physic API
-Pmove: get to work PM_CheckStuck on a servder-sdie
+Pmove: get to work PM_CheckStuck on a server-side
 Server: added a new cvar that called a "sv_validate_changelevel" for skip any checks with changelevel problems
 Server: make check for recursive changelevel (and ignore it)
 Server: fix the problem with non-sended events when a player sight cross-line contents

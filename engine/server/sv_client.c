@@ -111,6 +111,7 @@ void SV_DirectConnect( netadr_t from )
 	{
 		Netchan_OutOfBandPrint( NS_SERVER, from, "print\nServer uses protocol version %i.\n", PROTOCOL_VERSION );
 		MsgDev( D_ERROR, "SV_DirectConnect: rejected connect from version %i\n", version );
+		Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
 		return;
 	}
 
@@ -130,6 +131,7 @@ void SV_DirectConnect( netadr_t from )
 			if( !NET_IsLocalAddress( from ) && ( host.realtime - cl->lastconnect ) < sv_reconnect_limit->value )
 			{
 				MsgDev( D_INFO, "%s:reconnect rejected : too soon\n", NET_AdrToString( from ));
+				Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
 				return;
 			}
 			break;
@@ -151,6 +153,7 @@ void SV_DirectConnect( netadr_t from )
 		if( i == MAX_CHALLENGES )
 		{
 			Netchan_OutOfBandPrint( NS_SERVER, from, "print\nNo or bad challenge for address.\n" );
+			Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
 			return;
 		}
 
@@ -194,6 +197,7 @@ void SV_DirectConnect( netadr_t from )
 	{
 		Netchan_OutOfBandPrint( NS_SERVER, from, "print\nServer is full.\n" );
 		MsgDev( D_INFO, "SV_DirectConnect: rejected a connection.\n" );
+		Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
 		return;
 	}
 
@@ -221,6 +225,10 @@ gotnewcl:
 	newcl->userid = g_userid++;	// create unique userid
 	newcl->authentication_method = 2;
 
+	// initailize netchan here because SV_DropClient will clear network buffer
+	Netchan_Setup( NS_SERVER, &newcl->netchan, from, qport );
+	BF_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
+
 	// get the game a chance to reject this connection or modify the userinfo
 	if( !( SV_ClientConnect( ent, userinfo )))
 	{
@@ -229,6 +237,7 @@ gotnewcl:
 		else Netchan_OutOfBandPrint( NS_SERVER, from, "print\nConnection refused.\n" );
 
 		MsgDev( D_ERROR, "SV_DirectConnect: game rejected a connection.\n");
+		Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
 		SV_DropClient( newcl );
 		return;
 	}
@@ -238,9 +247,6 @@ gotnewcl:
 
 	// send the connect packet to the client
 	Netchan_OutOfBandPrint( NS_SERVER, from, "client_connect" );
-
-	Netchan_Setup( NS_SERVER, &newcl->netchan, from, qport );
-	BF_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
 
 	newcl->state = cs_connected;
 	newcl->cl_updaterate = 0.05;	// 20 fps as default
@@ -268,6 +274,8 @@ Disconnect client callback
 void SV_DisconnectClient( edict_t *pClient )
 {
 	if( !pClient ) return;
+
+	svgame.dllFuncs.pfnClientDisconnect( pClient );
 
 	// don't send to other clients
 	pClient->v.modelindex = 0;

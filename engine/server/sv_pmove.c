@@ -627,7 +627,7 @@ static void SV_SetupPMove( playermove_t *pmove, sv_client_t *cl, usercmd_t *ucmd
 	VectorCopy( clent->v.velocity, pmove->velocity );
 	VectorCopy( clent->v.basevelocity, pmove->basevelocity );
 	VectorCopy( clent->v.view_ofs, pmove->view_ofs );
-	VectorClear( pmove->movedir );
+	VectorCopy( clent->v.movedir, pmove->movedir );
 	pmove->flDuckTime = clent->v.flDuckTime;
 	pmove->bInDuck = clent->v.bInDuck;
 	pmove->usehull = (clent->v.flags & FL_DUCKING) ? 1 : 0; // reset hull
@@ -700,18 +700,21 @@ static void SV_FinishPMove( playermove_t *pmove, sv_client_t *cl )
 	VectorCopy( pmove->velocity, clent->v.velocity );
 	VectorCopy( pmove->basevelocity, clent->v.basevelocity );
 	VectorCopy( pmove->punchangle, clent->v.punchangle );
+	VectorCopy( pmove->movedir, clent->v.movedir );
+	clent->v.flTimeStepSound = pmove->flTimeStepSound;
 	clent->v.flFallVelocity = pmove->flFallVelocity;
-	clent->v.oldbuttons = pmove->oldbuttons;
+	clent->v.oldbuttons = pmove->cmd.buttons;
 	clent->v.waterlevel = pmove->waterlevel;
 	clent->v.watertype = pmove->watertype;
-	clent->v.flTimeStepSound = pmove->flTimeStepSound;
+	clent->v.maxspeed = pmove->clientmaxspeed;
 	clent->v.flDuckTime = pmove->flDuckTime;
 	clent->v.flSwimTime = pmove->flSwimTime;
 	clent->v.iStepLeft = pmove->iStepLeft;
 	clent->v.movetype = pmove->movetype;
 	clent->v.friction = pmove->friction;
+	clent->v.deadflag = pmove->deadflag;
+	clent->v.effects = pmove->effects;
 	clent->v.bInDuck = pmove->bInDuck;
-	clent->v.gravity = pmove->gravity;
 	clent->v.flags = pmove->flags;
 
 	// copy back user variables

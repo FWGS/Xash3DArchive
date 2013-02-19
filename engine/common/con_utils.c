@@ -64,7 +64,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 	for( i = 0, nummaps = 0; i < t->numfilenames; i++ )
 	{
 		char		entfilename[CS_SIZE];
-		int		ver = -1, lumpofs = 0, lumplen = 0;
+		int		ver = -1, mapver = -1, lumpofs = 0, lumplen = 0;
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 		char		*ents = NULL, *pfile;
 		qboolean		gearbox = false;
@@ -132,6 +132,12 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 						// get the message contents
 						pfile = COM_ParseFile( pfile, message );
 					}
+					else if(!Q_strcmp( token, "mapversion" ))
+					{
+						// get the message contents
+						pfile = COM_ParseFile( pfile, token );
+						mapver = Q_atoi( token );
+					}
 				}
 				Mem_Free( ents );
 			}
@@ -143,7 +149,8 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 		switch( ver )
 		{
 		case Q1BSP_VERSION:
-			Q_strncpy( buf, "Quake", sizeof( buf ));
+			if( mapver == 220 ) Q_strncpy( buf, "Half-Life Alpha", sizeof( buf ));
+			else Q_strncpy( buf, "Quake", sizeof( buf ));
 			break;
 		case HLBSP_VERSION:
 			if( gearbox ) Q_strncpy( buf, "Blue-Shift", sizeof( buf ));
@@ -154,6 +161,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			break;
 		default:	Q_strncpy( buf, "??", sizeof( buf )); break;
 		}
+
 		Msg( "%16s (%s) ^3%s^7\n", matchbuf, buf, message );
 		nummaps++;
 	}

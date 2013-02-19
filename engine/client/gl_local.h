@@ -241,6 +241,8 @@ typedef struct
 	uint		c_particle_count;
 
 	uint		c_mirror_passes;
+
+	uint		c_client_ents;	// entities that moved to client
 } ref_speeds_t;
 
 extern ref_speeds_t		r_stats;
@@ -253,8 +255,8 @@ extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
 extern dlight_t		cl_elights[MAX_ELIGHTS];
-#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_child_entities)
-#define r_numStatics	(tr.num_static_entities)
+#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_child_entities + tr.num_static_entities)
+#define r_numStatics	(r_stats.c_client_ents)
 
 extern struct beam_s	*cl_active_beams;
 extern struct beam_s	*cl_free_beams;

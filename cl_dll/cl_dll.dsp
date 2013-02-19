@@ -155,7 +155,7 @@ SOURCE=.\hl\hl_weapons.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\dlls\wpn_shared\hl_wpn_glock.cpp
+SOURCE=..\dlls\glock.cpp
 # End Source File
 # Begin Source File
 

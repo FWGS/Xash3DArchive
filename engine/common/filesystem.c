@@ -873,7 +873,7 @@ int FS_CheckNastyPath( const char *path, qboolean isgamedir )
 
 	// Windows and UNIXes: don't allow absolute paths
 	if( path[0] == '/' && !fs_ext_path ) return 2; // attempt to go outside the game directory
-
+#if 0
 	// all: don't allow . characters before the last slash (it should only be used in filenames, not path elements),
 	// this catches all imaginable cases of ./, ../, .../, etc
 	if( Q_strchr( path, '.' ) && !fs_ext_path )
@@ -881,7 +881,7 @@ int FS_CheckNastyPath( const char *path, qboolean isgamedir )
 		if( isgamedir ) return 2; // gamedir is entirely path elements, so simply forbid . entirely
 		if( Q_strchr( path, '.' ) < Q_strrchr( path, '/' )) return 2; // possible attempt to go outside the game directory
 	}
-
+#endif
 	// all: forbid trailing slash on gamedir
 	if( isgamedir && !fs_ext_path && path[Q_strlen( path )-1] == '/' ) return 2;
 
@@ -890,7 +890,7 @@ int FS_CheckNastyPath( const char *path, qboolean isgamedir )
 
 	// after all these checks we're pretty sure it's a / separated filename
 	// and won't do much if any harm
-	return false;
+	return 0;
 }
 
 /*
@@ -1558,13 +1558,12 @@ void FS_Init( void )
 
 		for( i = 0; i < dirs.numstrings; i++ )
 		{
-			const char *ext = FS_FileExtension( dirs.strings[i] );
-
-			if( Q_stricmp( ext, "" ) || (!Q_stricmp( dirs.strings[i], ".." ) && !fs_ext_path ))
+			if( !FS_SysFolderExists( dirs.strings[i] ) || (!Q_stricmp( dirs.strings[i], ".." ) && !fs_ext_path ))
 				continue;
 
 			if( !SI.games[SI.numgames] )
 				SI.games[SI.numgames] = (gameinfo_t *)Mem_Alloc( fs_mempool, sizeof( gameinfo_t ));
+
 			if( FS_ParseGameInfo( dirs.strings[i], SI.games[SI.numgames] ))
 				SI.numgames++; // added
 		}

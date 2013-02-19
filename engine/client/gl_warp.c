@@ -682,6 +682,7 @@ void R_DrawSkyChain( msurface_t *s )
 {
 	msurface_t	*fa;
 
+	GL_SetRenderMode( kRenderNormal );
 	GL_Bind( GL_TEXTURE0, tr.solidskyTexture );
 
 	speedscale = cl.time * 8.0f;
@@ -690,7 +691,7 @@ void R_DrawSkyChain( msurface_t *s )
 	for( fa = s; fa; fa = fa->texturechain )
 		EmitSkyPolys( fa );
 
-	pglEnable( GL_BLEND );
+	GL_SetRenderMode( kRenderTransTexture );
 	GL_Bind( GL_TEXTURE0, tr.alphaskyTexture );
 
 	speedscale = cl.time * 16.0f;
@@ -713,6 +714,7 @@ will have them chained together.
 */
 void EmitSkyLayers( msurface_t *fa )
 {
+	GL_SetRenderMode( kRenderNormal );
 	GL_Bind( GL_TEXTURE0, tr.solidskyTexture );
 
 	speedscale = cl.time * 8.0f;
@@ -720,7 +722,7 @@ void EmitSkyLayers( msurface_t *fa )
 
 	EmitSkyPolys( fa );
 
-	pglEnable( GL_BLEND );
+	GL_SetRenderMode( kRenderTransTexture );
 	GL_Bind( GL_TEXTURE0, tr.alphaskyTexture );
 
 	speedscale = cl.time * 16.0f;

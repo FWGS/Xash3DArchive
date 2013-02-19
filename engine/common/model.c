@@ -2205,9 +2205,11 @@ static void Mod_LoadEntities( const dlump_t *l )
 					path += (end - path) + 1; // move pointer
 					if( mod_numwads >= 128 ) break; // too many wads...
 				}
-				return;	// all done
 			}
+			else if( !Q_stricmp( keyname, "mapversion" ))
+				world.mapversion = Q_atoi( token );
 		}
+		return;	// all done
 	}
 }
 
@@ -2661,7 +2663,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 
 	// swap all the lumps
 	mod_base = (byte *)header;
-	loadmodel->mempool = Mem_AllocPool( va( "sv: ^2%s^7", loadmodel->name ));
+	loadmodel->mempool = Mem_AllocPool( va( "^2%s^7", loadmodel->name ));
 
 	// load into heap
 	if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && (header->lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
@@ -2676,6 +2678,10 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		Mod_LoadEntities( &header->lumps[LUMP_ENTITIES] );
 		Mod_LoadPlanes( &header->lumps[LUMP_PLANES] );
 	}
+
+	// Half-Life: alpha version has BSP version 29 and map version 220
+	if( world.version <= 29 && world.mapversion == 220 )
+		world.version = bmodel_version = HLBSP_VERSION;
 
 	Mod_LoadVertexes( &header->lumps[LUMP_VERTEXES] );
 	Mod_LoadEdges( &header->lumps[LUMP_EDGES] );

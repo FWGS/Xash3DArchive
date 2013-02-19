@@ -1480,9 +1480,9 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 
 	R_GetLightSpot( plight->lightspot );	// shadow stuff
 
-	plight->lightcolor[0] = ambient.r * (1.0f / 255.0f);
-	plight->lightcolor[1] = ambient.g * (1.0f / 255.0f);
-	plight->lightcolor[2] = ambient.b * (1.0f / 255.0f);
+	plight->lightcolor[0] = lightinfo->color[0] = ambient.r * (1.0f / 255.0f);
+	plight->lightcolor[1] = lightinfo->color[1] = ambient.g * (1.0f / 255.0f);
+	plight->lightcolor[2] = lightinfo->color[2] = ambient.b * (1.0f / 255.0f);
 
 	VectorCopy( plight->lightcolor, lightinfo->color );
 	lightinfo->shadelight = (ambient.r + ambient.g + ambient.b) / 3;
@@ -1640,12 +1640,18 @@ void R_StudioSetupLighting( alight_t *lightinfo )
 	studiolight_t	*plight;
 	int		i;
 
-	if( !m_pStudioHeader ) return;
+	if( !m_pStudioHeader || !lightinfo )
+		return;
 
 	plight = &g_studiolight; 
 
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )
 		Matrix3x4_VectorIRotate( g_lighttransform[i], lightinfo->plightvec, plight->blightvec[i] );
+
+	// copy custom alight color in case of mod-maker changed it
+	plight->lightcolor[0] = lightinfo->color[0];
+	plight->lightcolor[1] = lightinfo->color[1];
+	plight->lightcolor[2] = lightinfo->color[2];
 
 	R_StudioGetShadowImpactAndDir();
 }
