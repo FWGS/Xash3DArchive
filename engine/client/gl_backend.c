@@ -377,7 +377,7 @@ const envmap_t r_envMapInfo[6] =
 {{  0,  90,   0}, 0 },
 {{  0, 270, 180}, 0 },
 {{-90, 180, -90}, 0 },
-{{ 90, 180,  90}, 0 }
+{{ 90,   0,  90}, 0 }
 };
 
 /*
@@ -498,10 +498,13 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 	r_side = Mem_Alloc( r_temppool, sizeof( rgbdata_t ));
 
 	// use client vieworg
-	if( !vieworg ) vieworg = r_lastRefdef.vieworg;
+	if( !vieworg ) vieworg = cl.refdef.vieworg;
 
 	for( i = 0; i < 6; i++ )
 	{
+		// go into 3d mode
+		R_Set2DMode( false );
+
 		if( skyshot )
 		{
 			R_DrawCubemapView( vieworg, r_skyBoxInfo[i].angles, size );

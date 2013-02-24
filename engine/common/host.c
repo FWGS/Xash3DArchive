@@ -688,6 +688,7 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	{
 		// check for duplicate dedicated server
 		host.hMutex = CreateMutex( NULL, 0, "Xash Dedicated Server" );
+
 		if( !host.hMutex )
 		{
 			MSGBOX( "Dedicated server already running" );

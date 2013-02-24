@@ -106,7 +106,7 @@ void CL_DuplicateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomco
 	byte		paletteBackup[768];
 	byte		*raw, *pal;
 
-	// save of the real texture index
+	// save off the real texture index
 	index = ptexture->index;
 	glt = R_GetTexture( index );
 	Q_snprintf( texname, sizeof( texname ), "#%i_%s", RI.currententity->curstate.number, glt->name + 1 );
@@ -219,7 +219,7 @@ void CL_AllocRemapInfo( int topcolor, int bottomcolor )
 			CL_FreeRemapInfo( clgame.remap_info[i] );
 			clgame.remap_info[i] = NULL;
 		}
-		return; // missed or hided model, ignore it
+		return; // missed or hide model, ignore it
 	}
 
 	// model doesn't contains remap textures
@@ -240,7 +240,7 @@ void CL_AllocRemapInfo( int topcolor, int bottomcolor )
 	src = (mstudiotexture_t *)(((byte *)phdr) + phdr->textureindex);
 	dst = (clgame.remap_info[i] ? clgame.remap_info[i]->ptexture : NULL); 
 
-	// NOTE: we must copy all the structures 'mstudiotexture_t' for easy acces when model is rendering
+	// NOTE: we must copy all the structures 'mstudiotexture_t' for easy access when model is rendering
 	if( !CL_CmpStudioTextures( phdr->numtextures, src, dst ) || clgame.remap_info[i]->model != RI.currentmodel )
 	{
 		// this code catches studiomodel change with another studiomodel with remap textures

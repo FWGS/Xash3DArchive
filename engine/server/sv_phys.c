@@ -1040,6 +1040,13 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		Matrix4x4_VectorTransform( end_l, temp, org2 );
 		VectorSubtract( org2, org, lmove );
 
+		if( check->v.movetype == MOVETYPE_PUSHSTEP && lmove[2] < 0.0f )
+		{
+			// pushable sliding
+			check->v.flags &= ~FL_ONGROUND;
+			lmove[2] = 0.0f;
+		}
+
 		// try moving the contacted entity 
 		pusher->v.solid = SOLID_NOT;
 		SV_PushEntity( check, lmove, amove, &block );
@@ -1080,15 +1087,16 @@ void SV_Physics_Pusher( edict_t *ent )
 {
 	float	oldtime, oldtime2;
 	float	thinktime, movetime;
+	vec3_t	last_origin;
 	edict_t	*pBlocker;
 
 	pBlocker = NULL;
 	oldtime = ent->v.ltime;
 	thinktime = ent->v.nextthink;
 
-	if( thinktime < ent->v.ltime + host.frametime )
+	if( thinktime < oldtime + host.frametime )
 	{
-		movetime = thinktime - ent->v.ltime;
+		movetime = thinktime - oldtime;
 		if( movetime < 0.0f ) movetime = 0.0f;
 	}
 	else movetime = host.frametime;
@@ -1108,7 +1116,7 @@ void SV_Physics_Pusher( edict_t *ent )
 					// reset the local time to what it was before we rotated
 					ent->v.ltime = oldtime;
 					pBlocker = SV_PushMove( ent, movetime );
-					if( ent->v.ltime < oldtime2 )
+					if( oldtime2 < ent->v.ltime )
 						ent->v.ltime = oldtime2;
 				}
 			}
@@ -1129,10 +1137,23 @@ void SV_Physics_Pusher( edict_t *ent )
 
 	if( thinktime > oldtime && (( ent->v.flags & FL_ALWAYSTHINK ) || thinktime <= ent->v.ltime ))
 	{
+		float	diff;
+
+		VectorCopy( ent->v.origin, last_origin );
 		ent->v.nextthink = 0.0f;
 		svgame.globals->time = sv.time;
 		svgame.dllFuncs.pfnThink( ent );
 		if( ent->free ) return;
+
+		diff = fabs( ent->v.origin[2] - last_origin[2] );
+
+		// TESTTEST: remove time glitches to prevent stuck in the trains
+		if( diff > 0.0f && diff <= 0.5f )
+		{
+			Msg( "restore valid origin from %g to %g( %s )\n", ent->v.origin[2], last_origin[2], SV_ClassName( ent ));
+			VectorCopy( last_origin, ent->v.origin );
+			SV_LinkEdict( ent, false );
+		}
 	}
 }
 
@@ -1155,7 +1176,7 @@ void SV_Physics_Follow( edict_t *ent )
 
 	if( !SV_IsValidEdict( parent ))
 	{
-		MsgDev( D_ERROR, "%s have MOVETYPE_FOLLOW with no corresponding ent!", SV_ClassName( ent ));
+		MsgDev( D_ERROR, "%s have MOVETYPE_FOLLOW with no corresponding ent!\n", SV_ClassName( ent ));
 		ent->v.movetype = MOVETYPE_NONE;
 		return;
 	}

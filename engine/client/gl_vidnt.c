@@ -90,6 +90,7 @@ ref_globals_t	tr;
 glconfig_t	glConfig;
 glstate_t		glState;
 glwstate_t	glw_state;
+uint		num_instances;
 
 typedef enum
 {
@@ -746,6 +747,27 @@ static int VID_ChoosePFD( PIXELFORMATDESCRIPTOR *pfd, int colorBits, int alphaBi
 	return pixelFormat;
 }
 
+BOOL CALLBACK pfnEnumWnd( HWND hwnd, LPARAM lParam )
+{
+	string	wndname;
+
+	if( GetClassName( hwnd, wndname, sizeof( wndname ) - 1 ))
+	{
+		if( !Q_strcmp( wndname, WINDOW_NAME ))
+			num_instances++;
+	}
+	return true;
+}
+
+uint VID_EnumerateInstances( void )
+{
+	num_instances = 0;
+
+	if( EnumWindows( &pfnEnumWnd, 0 ))
+		return num_instances;
+	return 1;
+}
+
 void VID_StartupGamma( void )
 {
 	size_t	gamma_size;
@@ -841,7 +863,12 @@ void VID_StartupGamma( void )
 
 void VID_RestoreGamma( void )
 {
-	if( !glw_state.hDC || !glConfig.deviceSupportsGamma ) return;
+	if( !glw_state.hDC || !glConfig.deviceSupportsGamma )
+		return;
+
+	// don't touch gamma if multiple instances was running
+	if( VID_EnumerateInstances( ) > 1 ) return;
+
 	SetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
 }
 

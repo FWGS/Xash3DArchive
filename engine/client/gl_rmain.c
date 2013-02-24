@@ -1264,6 +1264,7 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	{
 		if( clgame.drawFuncs.GL_RenderFrame( fd, drawWorld ))
 		{
+			RI.drawWorld = drawWorld;
 			tr.fResetVis = true;
 			return;
 		}
@@ -1334,6 +1335,12 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 {
 	ref_params_t *fd;
 
+	if( clgame.drawFuncs.R_DrawCubemapView != NULL )
+	{
+		if( clgame.drawFuncs.R_DrawCubemapView( origin, angles, size ))
+			return;
+	}
+
 	fd = &RI.refdef;
 	*fd = r_lastRefdef;
 	fd->time = 0;
@@ -1345,8 +1352,6 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 	VectorCopy( origin, fd->vieworg );
 	VectorCopy( angles, fd->viewangles );
 	VectorCopy( fd->vieworg, RI.pvsorigin );
-
-	R_Set2DMode( false );
 		
 	// setup scissor
 	RI.scissor[0] = fd->viewport[0];
@@ -1538,6 +1543,56 @@ static int GL_LoadTextureNoFilter( const char *name, const byte *buf, size_t siz
 	return GL_LoadTexture( name, buf, size, flags, NULL );	
 }
 
+/*
+=========
+R_GetFilesList
+
+release prev search on a next call
+=========
+*/
+static char **R_GetFilesList( const char *pattern, int *numFiles, int gamedironly )
+{
+	static search_t	*t = NULL;
+
+	if( t ) Mem_Free( t ); // release prev search
+
+	t = FS_Search( pattern, true, gamedironly );
+
+	if( !t )
+	{
+		if( numFiles )
+			*numFiles = 0;
+		return NULL;
+	}
+
+	if( numFiles )
+		*numFiles = t->numfilenames;
+
+	return t->filenames;
+}
+
+/*
+=========
+R_MemAlloc
+
+=========
+*/
+static void *R_MemAlloc( size_t cb, const char *filename, const int fileline )
+{
+	return _Mem_Alloc( cls.mempool, cb, filename, fileline );
+}
+
+/*
+=========
+R_MemFree
+
+=========
+*/
+static void R_MemFree( void *mem, const char *filename, const int fileline )
+{
+	_Mem_Free( mem, filename, fileline );
+}
+
 static render_api_t gRenderAPI =
 {
 	GL_RenderGetParm,
@@ -1580,6 +1635,9 @@ static render_api_t gRenderAPI =
 	GL_TexGen,
 	R_EntityRemoveDecals,
 	R_DecalSetupVerts,
+	R_GetFilesList,
+	R_MemAlloc,
+	R_MemFree,
 };
 
 /*

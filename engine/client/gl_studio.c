@@ -217,18 +217,19 @@ R_StudioExtractBbox
 Extract bbox from current sequence
 ================
 */
-int R_StudioExtractBbox( studiohdr_t *phdr, int sequence, float *mins, float *maxs )
+void R_StudioExtractBbox( studiohdr_t *phdr, int sequence, float *mins, float *maxs )
 {
 	mstudioseqdesc_t	*pseqdesc;
 
-	if( !phdr || sequence == -1 )
-		return 0;
+	ASSERT( phdr != NULL );
+
+	// check sequence range
+	if( sequence < 0 || sequence >= phdr->numseq )
+		sequence = 0;
 
 	pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 	VectorCopy( pseqdesc[sequence].bbmin, mins );
 	VectorCopy( pseqdesc[sequence].bbmax, maxs );
-
-	return 1;
 }
 
 /*
@@ -244,8 +245,7 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
 	vec3_t	vectors[3], angles, p1, p2;
 	int	i, seq = e->curstate.sequence;
 
-	if( !R_StudioExtractBbox( m_pStudioHeader, seq, tmp_mins, tmp_maxs ))
-		return false;
+	R_StudioExtractBbox( m_pStudioHeader, seq, tmp_mins, tmp_maxs );
 
 	// copy original bbox
 	VectorCopy( m_pStudioHeader->bbmin, studio_mins );
