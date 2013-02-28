@@ -1268,7 +1268,7 @@ void R_DrawTextureChains( void )
 		}
 		else
 		{
-			if(( s->flags & SURF_DRAWTURB ) && RI.refdef.movevars->wateralpha < 1.0f )
+			if(( s->flags & SURF_DRAWTURB ) && cl.refdef.movevars->wateralpha < 1.0f )
 				continue;	// draw translucent water later
 
 			for( ; s != NULL; s = s->texturechain )
@@ -1295,7 +1295,7 @@ void R_DrawWaterSurfaces( void )
 		return;
 
 	// non-transparent water is already drawed
-	if( RI.refdef.movevars->wateralpha >= 1.0f )
+	if( cl.refdef.movevars->wateralpha >= 1.0f )
 		return;
 
 	// go back to the world matrix
@@ -1306,7 +1306,7 @@ void R_DrawWaterSurfaces( void )
 	pglDisable( GL_ALPHA_TEST );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-	pglColor4f( 1.0f, 1.0f, 1.0f, RI.refdef.movevars->wateralpha );
+	pglColor4f( 1.0f, 1.0f, 1.0f, cl.refdef.movevars->wateralpha );
 
 	for( i = 0; i < cl.worldmodel->numtextures; i++ )
 	{

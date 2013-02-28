@@ -1788,12 +1788,16 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 		const char *model = Info_ValueForKey( cl->userinfo, "model" );
 
 		// apply custom playermodel
-		if( Q_strlen( model ) && Q_stricmp( model, "player" ))
+		if( !GI->nomodels && Q_strlen( model ) && Q_stricmp( model, "player" ))
 		{
 			const char *path = va( "models/player/%s/%s.mdl", model, model );
-			Mod_RegisterModel( path, SV_ModelIndex( path )); // register model
-			SV_SetModel( ent, path );
-			cl->modelindex = ent->v.modelindex;
+			if( FS_FileExists( path, false ))
+			{
+				Mod_RegisterModel( path, SV_ModelIndex( path )); // register model
+				SV_SetModel( ent, path );
+				cl->modelindex = ent->v.modelindex;
+			}
+			else cl->modelindex = 0;
 		}
 		else cl->modelindex = 0;
 	}

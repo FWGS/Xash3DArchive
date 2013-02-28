@@ -342,6 +342,7 @@ typedef struct
 	void	*(*KB_Find)( const char *name );
 	void	(*CAM_Think)( void );		// camera stuff
 	int	(*CL_IsThirdPerson)( void );
+	void	(*CL_CameraOffset)( float *ofs );
 	void	(*CL_CreateMove)( float frametime, usercmd_t *cmd, int active );
 	void	(*IN_ActivateMouse)( void );
 	void	(*IN_DeactivateMouse)( void );

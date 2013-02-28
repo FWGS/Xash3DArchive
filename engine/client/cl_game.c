@@ -66,6 +66,7 @@ static dllfunc_t cdll_exports[] =
 { "Demo_ReadBuffer", (void **)&clgame.dllFuncs.pfnDemo_ReadBuffer },
 { "CAM_Think", (void **)&clgame.dllFuncs.CAM_Think },
 { "CL_IsThirdPerson", (void **)&clgame.dllFuncs.CL_IsThirdPerson },
+{ "CL_CameraOffset", (void **)&clgame.dllFuncs.CL_CameraOffset },
 { "CL_CreateMove", (void **)&clgame.dllFuncs.CL_CreateMove },
 { "IN_ActivateMouse", (void **)&clgame.dllFuncs.IN_ActivateMouse },
 { "IN_DeactivateMouse", (void **)&clgame.dllFuncs.IN_DeactivateMouse },

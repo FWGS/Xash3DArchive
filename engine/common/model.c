@@ -2844,6 +2844,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	byte	*buf;
 	char	tempname[64];
 	qboolean	loaded;
+	int	i, j;
 
 	if( !mod )
 	{
@@ -2856,9 +2857,25 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	if( mod->mempool || mod->name[0] == '*' )
 		return mod;
 
-	// store modelname to show error
-	Q_strncpy( tempname, mod->name, sizeof( tempname ));
-	COM_FixSlashes( tempname );
+	// fix slashes and kill whitespaces
+	for( i = j = 0; i < sizeof( tempname ); i++ )
+	{
+		if( mod->name[i] == '\\' )
+		{
+			// convert slashes
+			tempname[j++] = '/';
+		}
+		else if( mod->name[i] > ' ' )
+		{
+			// kill whitespaces (Zion WarCry issues)
+			tempname[j++] = mod->name[i];
+		}
+		else if( mod->name[i] == '\0' )
+		{
+			tempname[j] = '\0';
+			break; // end of string
+		}
+	}
 
 	buf = FS_LoadFile( tempname, NULL, false );
 

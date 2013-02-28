@@ -41,6 +41,9 @@ typedef struct
 	char		size[64];		// displayed mod size
 
 	int		gamemode;
+	int		nomodels;		// can't select playermodel
+
+	int		reserved[8];	// for potential expansions with backward compatibility
 } GAMEINFO;
 
 #endif//GAMEINFO_H

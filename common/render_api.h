@@ -169,13 +169,6 @@ typedef struct render_api_s
 // ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 26
 	void		(*R_EntityRemoveDecals)( struct model_s *mod ); // remove all the decals from specified entity (BSP only)
 	float		*(*R_DecalSetupVerts)( struct decal_s *pDecal, struct msurface_s *surf, int texture, int *outCount );
-
-	// find in files
-	char 		**(*GetFilesList)( const char *pattern, int *numFiles, int gamedironly );
-
-	// engine memory manager (permanent safe pool)
-	void*		(*MemAlloc)( size_t cb, const char *filename, const int fileline );
-	void		(*MemFree)( void *mem, const char *filename, const int fileline );
 } render_api_t;
 
 // render callbacks

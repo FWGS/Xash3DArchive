@@ -939,7 +939,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	if( R_SpriteOccluded( e, origin, &alpha, &scale ))
 		return; // sprite culled
-
 	r_stats.c_sprite_models_drawn++;
 
 	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )

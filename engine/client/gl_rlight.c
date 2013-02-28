@@ -332,7 +332,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	model_t		*pmodel;
 	mnode_t		*pnodes;
 
-	if( !RI.refdef.movevars )
+	if( !cl.refdef.movevars )
 	{
 		ambientLight->r = 255;
 		ambientLight->g = 255;
@@ -343,9 +343,9 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	// set to full bright if no light data
 	if( !cl.worldmodel || !cl.worldmodel->lightdata )
 	{
-		ambientLight->r = TextureToTexGamma( RI.refdef.movevars->skycolor_r );
-		ambientLight->g = TextureToTexGamma( RI.refdef.movevars->skycolor_g );
-		ambientLight->b = TextureToTexGamma( RI.refdef.movevars->skycolor_b );
+		ambientLight->r = TextureToTexGamma( cl.refdef.movevars->skycolor_r );
+		ambientLight->g = TextureToTexGamma( cl.refdef.movevars->skycolor_g );
+		ambientLight->b = TextureToTexGamma( cl.refdef.movevars->skycolor_b );
 		return;
 	}
 

@@ -179,6 +179,7 @@ typedef struct gameinfo_s
 
 	int		gamemode;
 	qboolean		secure;		// prevent to console acess
+	qboolean		nomodels;		// don't let player to choose model (use player.mdl always)
 
 	char		sp_entity[32];	// e.g. info_player_start
 	char		mp_entity[32];	// e.g. info_player_deathmatch

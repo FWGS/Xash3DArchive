@@ -1036,6 +1036,9 @@ static qboolean FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	if( GameInfo->secure )
 		FS_Printf( f, "secure\t\t\"%i\"\n", GameInfo->secure );
 
+	if( GameInfo->nomodels )
+		FS_Printf( f, "nomodels\t\t\"%i\"\n", GameInfo->nomodels );
+
 	for( i = 0; i < 4; i++ )
 	{
 		float	*min, *max;
@@ -1225,6 +1228,11 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		{
 			pfile = COM_ParseFile( pfile, token );
 			GameInfo->secure = Q_atoi( token );
+		}
+		else if( !Q_stricmp( token, "nomodels" ))
+		{
+			pfile = COM_ParseFile( pfile, token );
+			GameInfo->nomodels = Q_atoi( token );
 		}
 	}
 
@@ -1425,6 +1433,11 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		{
 			pfile = COM_ParseFile( pfile, token );
 			GameInfo->secure = Q_atoi( token );
+		}
+		else if( !Q_stricmp( token, "nomodels" ))
+		{
+			pfile = COM_ParseFile( pfile, token );
+			GameInfo->nomodels = Q_atoi( token );
 		}
 		else if( !Q_strnicmp( token, "hull", 4 ))
 		{

@@ -1408,10 +1408,10 @@ void R_StudioGetShadowImpactAndDir( void )
 	float		angle;
 	vec3_t		skyAngles, origin, end;
 
-	if( !RI.refdef.movevars ) return; // e.g. in menu
+	if( !cl.refdef.movevars ) return; // e.g. in menu
 
 	// convert skyvec into angles then back into vector to avoid 0 0 0 direction
-	VectorAngles( (float *)&RI.refdef.movevars->skyvec_x, skyAngles );
+	VectorAngles( (float *)&cl.refdef.movevars->skyvec_x, skyAngles );
 	angle = skyAngles[YAW] / 180 * M_PI;
 
 	Matrix3x4_OriginFromMatrix( g_bonestransform[0], origin );
@@ -1460,12 +1460,12 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
 
 	// setup light dir
-	if( RI.refdef.movevars )
+	if( cl.refdef.movevars )
 	{
 		// pre-defined light vector
-		plight->lightvec[0] = RI.refdef.movevars->skyvec_x;
-		plight->lightvec[1] = RI.refdef.movevars->skyvec_y;
-		plight->lightvec[2] = RI.refdef.movevars->skyvec_z;
+		plight->lightvec[0] = cl.refdef.movevars->skyvec_x;
+		plight->lightvec[1] = cl.refdef.movevars->skyvec_y;
+		plight->lightvec[2] = cl.refdef.movevars->skyvec_z;
 	}
 	else VectorSet( plight->lightvec, 0.0f, 0.0f, -1.0f );
 
@@ -2384,9 +2384,21 @@ static model_t *R_StudioSetupPlayerModel( int index )
 		info = &cl.players[index];
 	}
 
+	// set to invisible, skip
 	if( !info->model[0] ) return NULL;
-	if( !Q_stricmp( info->model, "player" )) Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
-	else Q_snprintf( modelpath, sizeof( modelpath ), "models/player/%s/%s.mdl", info->model, info->model );
+
+	if( GI->nomodels || !Q_stricmp( info->model, "player" ))
+	{
+		Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
+	}
+	else
+	{
+		Q_snprintf( modelpath, sizeof( modelpath ), "models/player/%s/%s.mdl", info->model, info->model );
+
+		// replace with default if missed
+		if( !FS_FileExists( modelpath, false ))
+			Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
+	}
 
 	if( !FS_FileExists( modelpath, false ))
 		return NULL;

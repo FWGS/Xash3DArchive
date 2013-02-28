@@ -414,8 +414,11 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 	if( clent->curstate.effects & EF_NODRAW )
 		return false; // done
 
-	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0.0f )
-		return true; // done
+	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.rendermode != kRenderTransAlpha )
+	{
+		if( clent->curstate.renderamt <= 0.0f )
+			return true; // invisible
+	}
 
 	clent->curstate.entityType = entityType;
 
@@ -516,7 +519,7 @@ R_GetFarClip
 static float R_GetFarClip( void )
 {
 	if( cl.worldmodel && RI.drawWorld )
-		return RI.refdef.movevars->zmax * 1.5f;
+		return cl.refdef.movevars->zmax * 1.5f;
 	return 2048.0f;
 }
 
@@ -780,12 +783,33 @@ R_SetupFrame
 */
 static void R_SetupFrame( void )
 {
+	vec3_t	viewOrg, viewAng;
+
+	if( RP_NORMALPASS() && cl.thirdperson )
+	{
+		vec3_t	cam_ofs, vpn;
+
+		clgame.dllFuncs.CL_CameraOffset( cam_ofs );
+
+		viewAng[PITCH] = cam_ofs[PITCH];
+		viewAng[YAW] = cam_ofs[YAW];
+		viewAng[ROLL] = 0;
+
+		AngleVectors( viewAng, vpn, NULL, NULL );
+		VectorMA( RI.refdef.vieworg, -cam_ofs[ROLL], vpn, viewOrg );
+	}
+	else
+	{
+		VectorCopy( RI.refdef.vieworg, viewOrg );
+		VectorCopy( RI.refdef.viewangles, viewAng );
+	}
+
 	// build the transformation matrix for the given view angles
-	VectorCopy( RI.refdef.vieworg, RI.vieworg );
-	AngleVectors( RI.refdef.viewangles, RI.vforward, RI.vright, RI.vup );
+	VectorCopy( viewOrg, RI.vieworg );
+	AngleVectors( viewAng, RI.vforward, RI.vright, RI.vup );
 
 	// setup viewplane dist
-	RI.viewplanedist = DotProduct( RI.refdef.vieworg, RI.vforward );
+	RI.viewplanedist = DotProduct( RI.vieworg, RI.vforward );
 
 	if( !r_lockcull->integer )
 	{
@@ -809,7 +833,7 @@ static void R_SetupFrame( void )
 	// current viewleaf
 	if( RI.drawWorld )
 	{
-		RI.waveHeight = RI.refdef.movevars->waveHeight * 2.0f;	// set global waveheight
+		RI.waveHeight = cl.refdef.movevars->waveHeight * 2.0f;	// set global waveheight
 		RI.isSkyVisible = false; // unknown at this moment
 
 		if(!( RI.params & RP_OLDVIEWLEAF ))
@@ -1543,56 +1567,6 @@ static int GL_LoadTextureNoFilter( const char *name, const byte *buf, size_t siz
 	return GL_LoadTexture( name, buf, size, flags, NULL );	
 }
 
-/*
-=========
-R_GetFilesList
-
-release prev search on a next call
-=========
-*/
-static char **R_GetFilesList( const char *pattern, int *numFiles, int gamedironly )
-{
-	static search_t	*t = NULL;
-
-	if( t ) Mem_Free( t ); // release prev search
-
-	t = FS_Search( pattern, true, gamedironly );
-
-	if( !t )
-	{
-		if( numFiles )
-			*numFiles = 0;
-		return NULL;
-	}
-
-	if( numFiles )
-		*numFiles = t->numfilenames;
-
-	return t->filenames;
-}
-
-/*
-=========
-R_MemAlloc
-
-=========
-*/
-static void *R_MemAlloc( size_t cb, const char *filename, const int fileline )
-{
-	return _Mem_Alloc( cls.mempool, cb, filename, fileline );
-}
-
-/*
-=========
-R_MemFree
-
-=========
-*/
-static void R_MemFree( void *mem, const char *filename, const int fileline )
-{
-	_Mem_Free( mem, filename, fileline );
-}
-
 static render_api_t gRenderAPI =
 {
 	GL_RenderGetParm,
@@ -1635,9 +1609,6 @@ static render_api_t gRenderAPI =
 	GL_TexGen,
 	R_EntityRemoveDecals,
 	R_DecalSetupVerts,
-	R_GetFilesList,
-	R_MemAlloc,
-	R_MemFree,
 };
 
 /*
@@ -1649,6 +1620,9 @@ Initialize client external rendering
 */
 qboolean R_InitRenderAPI( void )
 {
+	// make sure what render functions is cleared
+	Q_memset( &clgame.drawFuncs, 0, sizeof( clgame.drawFuncs ));
+
 	if( clgame.dllFuncs.pfnGetRenderInterface )
 	{
 		if( clgame.dllFuncs.pfnGetRenderInterface( CL_RENDER_INTERFACE_VERSION, &gRenderAPI, &clgame.drawFuncs ))

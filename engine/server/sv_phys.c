@@ -473,6 +473,29 @@ qboolean SV_CheckWater( edict_t *ent )
 }
 
 /*
+=============
+SV_CheckMover
+
+test thing (applies the friction to pushables while standing on moving platform)
+=============
+*/
+qboolean SV_CheckMover( edict_t *ent )
+{
+	edict_t	*gnd = ent->v.groundentity;
+
+	if( !SV_IsValidEdict( gnd ))
+		return false;
+
+	if( gnd->v.movetype != MOVETYPE_PUSH )
+		return false;
+
+	if( VectorIsNull( gnd->v.velocity ) && VectorIsNull( gnd->v.avelocity ))
+		return false;
+
+	return true;
+}
+
+/*
 ==================
 SV_ClipVelocity
 
@@ -841,7 +864,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	sv_pushed_t	*p, *pushed_p;
 	edict_t		*check;	
 
-	if( sv.state == ss_loading || VectorIsNull( pusher->v.velocity ))
+	if( svgame.globals->changelevel || VectorIsNull( pusher->v.velocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -959,7 +982,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	vec3_t		org, org2, temp;
 	edict_t		*check;
 
-	if( sv.state == ss_loading || VectorIsNull( pusher->v.avelocity ))
+	if( svgame.globals->changelevel || VectorIsNull( pusher->v.avelocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -1032,7 +1055,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		pushed_p++;
 
 		// calculate destination position
-		if( check->v.movetype == MOVETYPE_PUSHSTEP )
+		if( check->v.movetype == MOVETYPE_PUSHSTEP || check->v.movetype == MOVETYPE_STEP )
 			VectorAverage( check->v.absmin, check->v.absmax, org );
 		else VectorCopy( check->v.origin, org );
 
@@ -1040,17 +1063,21 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		Matrix4x4_VectorTransform( end_l, temp, org2 );
 		VectorSubtract( org2, org, lmove );
 
-		if( check->v.movetype == MOVETYPE_PUSHSTEP && lmove[2] < 0.0f )
+		// i can't clear FL_ONGROUND in all cases because many bad things may be happen
+		if( check->v.movetype != MOVETYPE_WALK )
 		{
-			// pushable sliding
-			check->v.flags &= ~FL_ONGROUND;
-			lmove[2] = 0.0f;
-		}
+			if( lmove[2] != 0.0f ) check->v.flags &= ~FL_ONGROUND;
+			if( lmove[2] < 0.0f ) lmove[2] = 0.0f;	// let's the free falling
+                    }
 
 		// try moving the contacted entity 
 		pusher->v.solid = SOLID_NOT;
 		SV_PushEntity( check, lmove, amove, &block );
 		pusher->v.solid = oldsolid;
+
+		// pushed entity blocked by wall
+		if( block && check->v.movetype != MOVETYPE_WALK )
+			check->v.flags &= ~FL_ONGROUND;
 
 		// if it is still inside the pusher, block
 		if( SV_TestEntityPosition( check, NULL ) && block )
@@ -1087,7 +1114,6 @@ void SV_Physics_Pusher( edict_t *ent )
 {
 	float	oldtime, oldtime2;
 	float	thinktime, movetime;
-	vec3_t	last_origin;
 	edict_t	*pBlocker;
 
 	pBlocker = NULL;
@@ -1103,9 +1129,9 @@ void SV_Physics_Pusher( edict_t *ent )
 
 	if( movetime )
 	{
-		if( VectorLength2( ent->v.avelocity ) > STOP_EPSILON )
+		if( !VectorIsNull( ent->v.avelocity ))
 		{
-			if( VectorLength2( ent->v.velocity ) > STOP_EPSILON )
+			if( !VectorIsNull( ent->v.velocity ))
 			{
 				pBlocker = SV_PushRotate( ent, movetime );
 
@@ -1137,23 +1163,10 @@ void SV_Physics_Pusher( edict_t *ent )
 
 	if( thinktime > oldtime && (( ent->v.flags & FL_ALWAYSTHINK ) || thinktime <= ent->v.ltime ))
 	{
-		float	diff;
-
-		VectorCopy( ent->v.origin, last_origin );
 		ent->v.nextthink = 0.0f;
 		svgame.globals->time = sv.time;
 		svgame.dllFuncs.pfnThink( ent );
 		if( ent->free ) return;
-
-		diff = fabs( ent->v.origin[2] - last_origin[2] );
-
-		// TESTTEST: remove time glitches to prevent stuck in the trains
-		if( diff > 0.0f && diff <= 0.5f )
-		{
-			Msg( "restore valid origin from %g to %g( %s )\n", ent->v.origin[2], last_origin[2], SV_ClassName( ent ));
-			VectorCopy( last_origin, ent->v.origin );
-			SV_LinkEdict( ent, false );
-		}
 	}
 }
 
@@ -1523,6 +1536,7 @@ void SV_Physics_Step( edict_t *ent )
 {
 	qboolean	inwater;
 	qboolean	wasonground;
+	qboolean	wasonmover;
 	vec3_t	mins, maxs;
 	vec3_t	point;
 	trace_t	trace;
@@ -1532,6 +1546,7 @@ void SV_Physics_Step( edict_t *ent )
 	SV_CheckVelocity( ent );
 
 	wasonground = (ent->v.flags & FL_ONGROUND);
+	wasonmover = SV_CheckMover( ent );
 	inwater = SV_CheckWater( ent );
 
 	if( ent->v.flags & FL_FLOAT && ent->v.waterlevel > 0 )
@@ -1552,7 +1567,7 @@ void SV_Physics_Step( edict_t *ent )
 	{
 		ent->v.flags &= ~FL_ONGROUND;
 
-		if( wasonground && ( ent->v.health > 0 || SV_CheckBottom( ent, MOVE_NORMAL )))
+		if(( wasonground || wasonmover ) && ( ent->v.health > 0 || SV_CheckBottom( ent, MOVE_NORMAL )))
 		{
 			float	*vel = ent->v.velocity;
 			float	control, speed, newspeed;
@@ -1564,6 +1579,7 @@ void SV_Physics_Step( edict_t *ent )
 			{
 				friction = sv_friction->value * ent->v.friction;	// factor
 				ent->v.friction = 1.0f; // g-cont. ???
+				if( wasonmover ) friction *= 0.5f; // add a little friction
 
 				control = (speed < sv_stopspeed->value) ? sv_stopspeed->value : speed;
 				newspeed = speed - (host.frametime * control * friction);
