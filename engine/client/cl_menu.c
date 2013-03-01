@@ -233,7 +233,9 @@ static void UI_ConvertGameInfo( GAMEINFO *out, gameinfo_t *in )
 	Q_strncpy( out->date, in->date, sizeof( out->date ));
 
 	out->gamemode = in->gamemode;
-	out->nomodels = in->nomodels;
+
+	if( in->nomodels )
+		out->flags |= GFL_NOMODELS;
 }
 
 static qboolean PIC_Scissor( float *x, float *y, float *width, float *height, float *u0, float *v0, float *u1, float *v1 )

@@ -63,12 +63,5 @@ int GetMenuAPI( UI_FUNCTIONS *pFunctionTable, ui_enginefuncs_t* pEngfuncsFromEng
 
 	gpGlobals = pGlobals;
 
-	if( (int)CVAR_GET_FLOAT( "build" ) < 2213 )
-	{
-		Con_Printf( "^1Error:^7 using too old engine version. menu.dll will not loaded.\n" );
-		Con_Printf( "^1Error:^7 you need at least engine build 2213 or above.\n" );
-		return FALSE;
-	}
-
 	return TRUE;
 }

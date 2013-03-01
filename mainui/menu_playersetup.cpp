@@ -147,7 +147,7 @@ static void UI_PlayerSetup_GetConfig( void )
 		}
 	}
 
-	if( gMenu.m_gameinfo.nomodels )
+	if( gMenu.m_gameinfo.flags & GFL_NOMODELS )
 		uiPlayerSetup.model.curValue = 0.0f; // force to default
 
 	strcpy( uiPlayerSetup.currentModel, uiPlayerSetup.models[(int)uiPlayerSetup.model.curValue] );
@@ -346,7 +346,7 @@ static void UI_PlayerSetup_Init( void )
 	if( !stricmp( gMenu.m_gameinfo.gamefolder, "hlrally" ))
 		game_hlRally = TRUE;
 
-	if( gMenu.m_gameinfo.nomodels )
+	if( gMenu.m_gameinfo.flags & GFL_NOMODELS )
 		addFlags |= QMF_INACTIVE;
 
 	uiPlayerSetup.menu.vidInitFunc = UI_PlayerSetup_Init;
@@ -479,7 +479,7 @@ static void UI_PlayerSetup_Init( void )
 		UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.view );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.name );
 
-	if( !gMenu.m_gameinfo.nomodels )
+	if( !gMenu.m_gameinfo.flags & GFL_NOMODELS )
 	{
 		UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.model );
 		UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.topColor );

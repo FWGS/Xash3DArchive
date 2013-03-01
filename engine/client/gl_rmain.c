@@ -414,11 +414,8 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 	if( clent->curstate.effects & EF_NODRAW )
 		return false; // done
 
-	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.rendermode != kRenderTransAlpha )
-	{
-		if( clent->curstate.renderamt <= 0.0f )
-			return true; // invisible
-	}
+	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0.0f )
+		return true; // invisible
 
 	clent->curstate.entityType = entityType;
 

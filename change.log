@@ -1,3 +1,20 @@
+build 2113
+
+Engine: added option "nomodels" for liblist.gam (disallow user to choose playermodel)
+Client: a new callback for render interface who called R_DrawCubemapView. This fixes cmd "envshot" for XashXT
+Client: store screenshots into root of folder "scrshots" instead of "scrshots\mapname"
+Client: engine using callback CL_CameraOffset now
+Client: fix angles for cmd "envshot"
+Render: rename a miss cvar "r_anisotropy" to real name "gl_anisotropy"
+Render: now "r_speeds 4" displays an actual count of "real" static entities that was created by call of MAKE_STATIC function
+Render: fix bug with blinking Quake Sky while autosave in progress
+Render: keep actual hardware gamma for multiple instances of application
+Engine: get support for Half-Life alpha maps (that has version 29)
+Engine: kill the whitespaces in the modelpath (Zion Warcry issues)
+Server: fix the client rejection mechanism
+Server: using the pfnClientDisconnect callback
+Server: some changes in physics code (for MOVETYPE_PUSH)
+
 build 2153
 
 Render: added cvar "gl_nosort" that disables sorting of translucent surfaces

@@ -1067,7 +1067,8 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 		if( check->v.movetype != MOVETYPE_WALK )
 		{
 			if( lmove[2] != 0.0f ) check->v.flags &= ~FL_ONGROUND;
-			if( lmove[2] < 0.0f ) lmove[2] = 0.0f;	// let's the free falling
+			if( lmove[2] < 0.0f && !pusher->v.dmg )
+				lmove[2] = 0.0f; // let's the free falling
                     }
 
 		// try moving the contacted entity 
