@@ -14,6 +14,7 @@ Engine: kill the whitespaces in the modelpath (Zion Warcry issues)
 Server: fix the client rejection mechanism
 Server: using the pfnClientDisconnect callback
 Server: some changes in physics code (for MOVETYPE_PUSH)
+Client: change decal_t structure to match with GoldSrc hw decal structure (Warning! any old XashXT version is no longer supported with this version)
 
 build 2153
 

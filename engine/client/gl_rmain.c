@@ -370,7 +370,7 @@ int R_ComputeFxBlend( cl_entity_t *e )
 		break;	
 	}
 
-	if( RI.currentmodel->type != mod_brush )
+	if( e->model->type != mod_brush )
 	{
 		// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
 		if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
@@ -413,6 +413,8 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 
 	if( clent->curstate.effects & EF_NODRAW )
 		return false; // done
+
+	clent->curstate.renderamt = R_ComputeFxBlend( clent );
 
 	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0.0f )
 		return true; // invisible
@@ -1099,8 +1101,6 @@ void R_DrawEntitiesOnList( void )
 		ASSERT( RI.currententity != NULL );
 		ASSERT( RI.currententity->model != NULL );
 
-		RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
-
 		switch( RI.currentmodel->type )
 		{
 		case mod_brush:
@@ -1146,8 +1146,6 @@ void R_DrawEntitiesOnList( void )
 	
 		ASSERT( RI.currententity != NULL );
 		ASSERT( RI.currententity->model != NULL );
-
-		RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
 
 		switch( RI.currentmodel->type )
 		{

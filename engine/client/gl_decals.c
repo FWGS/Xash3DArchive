@@ -27,8 +27,6 @@ GNU General Public License for more details.
 // empirically determined constants for minimizing overalpping decals
 #define MAX_OVERLAP_DECALS		6
 #define DECAL_OVERLAP_DIST		8
-#define FLOAT_TO_SHORT( x )		(short)(x * 32)
-#define SHORT_TO_FLOAT( x )		((float)x * (1.0f/32.0f))
 
 // clip edges
 #define LEFT_EDGE			0
@@ -196,8 +194,8 @@ void R_SetupDecalTextureSpaceBasis( decal_t *pDecal, msurface_t *surf, int textu
 	// world height of decal = ptexture->height / pDecal->scale
 	// scale is inverse, scales world space to decal u/v space [0,1]
 	// OPTIMIZE: Get rid of these divides
-	decalWorldScale[0] = (float)pDecal->scale / width;
-	decalWorldScale[1] = (float)pDecal->scale / height;
+	decalWorldScale[0] = pDecal->scale / width;
+	decalWorldScale[1] = pDecal->scale / height;
 	
 	VectorScale( textureSpaceBasis[0], decalWorldScale[0], textureSpaceBasis[0] );
 	VectorScale( textureSpaceBasis[1], decalWorldScale[1], textureSpaceBasis[1] );
@@ -212,8 +210,8 @@ void R_SetupDecalVertsForMSurface( decal_t *pDecal, msurface_t *surf,	vec3_t tex
 	for( i = 0, v = surf->polys->verts[0]; i < surf->polys->numverts; i++, v += VERTEXSIZE, verts += VERTEXSIZE )
 	{
 		VectorCopy( v, verts ); // copy model space coordinates
-		verts[3] = DotProduct( verts, textureSpaceBasis[0] ) - SHORT_TO_FLOAT( pDecal->dx ) + 0.5f;
-		verts[4] = DotProduct( verts, textureSpaceBasis[1] ) - SHORT_TO_FLOAT( pDecal->dy ) + 0.5f;
+		verts[3] = DotProduct( verts, textureSpaceBasis[0] ) - pDecal->dx * surf->texinfo->texture->width + 0.5f;
+		verts[4] = DotProduct( verts, textureSpaceBasis[1] ) - pDecal->dy * surf->texinfo->texture->height + 0.5f;
 		verts[5] = verts[6] = 0.0f;
 	}
 }
@@ -226,8 +224,8 @@ void R_SetupDecalClip( decal_t *pDecal, msurface_t *surf, int texture, vec3_t te
 	// Generate texture coordinates for each vertex in decal s,t space
 	// probably should pre-generate this, store it and use it for decal-decal collisions
 	// as in R_DecalsIntersect()
-	pDecal->dx = FLOAT_TO_SHORT( DotProduct( pDecal->position, textureSpaceBasis[0] ));
-	pDecal->dy = FLOAT_TO_SHORT( DotProduct( pDecal->position, textureSpaceBasis[1] ));
+	pDecal->dx = DotProduct( pDecal->position, textureSpaceBasis[0] ) / surf->texinfo->texture->width;
+	pDecal->dy = DotProduct( pDecal->position, textureSpaceBasis[1] ) / surf->texinfo->texture->height;
 }
 
 // Quick and dirty sutherland Hodgman clipper
@@ -505,15 +503,15 @@ static decal_t *R_DecalIntersect( decalinfo_t *decalinfo, msurface_t *surf, int 
 			// this decal's (pDecal's) [0,0,1,1] clip space, just like we would if we were
 			// clipping a triangle into pDecal's clip space.
 			Vector2Set( vDecalMin,
-				DotProduct( testPosition[0], testBasis[0] ) - SHORT_TO_FLOAT( pDecal->dx ) + 0.5f,
-				DotProduct( testPosition[1], testBasis[1] ) - SHORT_TO_FLOAT( pDecal->dy ) + 0.5f );
+				DotProduct( testPosition[0], testBasis[0] ) - pDecal->dx * surf->texinfo->texture->width + 0.5f,
+				DotProduct( testPosition[1], testBasis[1] ) - pDecal->dy * surf->texinfo->texture->height + 0.5f );
 
 			VectorAdd( decalinfo->m_Position, decalExtents[0], testPosition[0] );
 			VectorAdd( decalinfo->m_Position, decalExtents[1], testPosition[1] );
 
 			Vector2Set( vDecalMax,
-				DotProduct( testPosition[0], testBasis[0] ) - SHORT_TO_FLOAT( pDecal->dx ) + 0.5f,
-				DotProduct( testPosition[1], testBasis[1] ) - SHORT_TO_FLOAT( pDecal->dy ) + 0.5f );	
+				DotProduct( testPosition[0], testBasis[0] ) - pDecal->dx * surf->texinfo->texture->width + 0.5f,
+				DotProduct( testPosition[1], testBasis[1] ) - pDecal->dy * surf->texinfo->texture->height + 0.5f );	
 
 			// Now figure out the part of the projection that intersects pDecal's
 			// clip box [0,0,1,1].
@@ -593,8 +591,8 @@ static void R_DecalCreate( decalinfo_t *decalinfo, msurface_t *surf, float x, fl
 	if( pdecal->flags & FDECAL_USESAXIS )
 		VectorCopy( decalinfo->m_SAxis, pdecal->saxis );
 
-	pdecal->dx = FLOAT_TO_SHORT( x );
-	pdecal->dy = FLOAT_TO_SHORT( y );
+	pdecal->dx = x / surf->texinfo->texture->width;
+	pdecal->dy = y / surf->texinfo->texture->height;
 	pdecal->texture = decalinfo->m_iTexture;
 
 	// set scaling

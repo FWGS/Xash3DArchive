@@ -101,7 +101,8 @@ static void UI_Background_Ownerdraw( void *self )
 	menuCommon_s	*item = (menuCommon_s *)self;
 
 	// map has background
-	if( CVAR_GET_FLOAT( "sv_background" )) return;
+	if( CVAR_GET_FLOAT( "sv_background" ))
+		return;
 
 	UI_DrawBackground_Callback( self );
 

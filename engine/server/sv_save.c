@@ -1622,7 +1622,8 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	// restore camera view here
 	pent = pSaveData->pTable[bound( 0, (word)header.viewentity, pSaveData->tableCount )].pent;
 
-	if( SV_IsValidEdict( pent ))
+	// don't go camera across the levels
+	if( SV_IsValidEdict( pent ) && !svgame.globals->changelevel )
 		sv.viewentity = NUM_FOR_EDICT( pent );
 	else sv.viewentity = 0;
 

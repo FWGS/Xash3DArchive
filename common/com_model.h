@@ -126,10 +126,10 @@ struct decal_s
 {
 	decal_t		*pnext;		// linked list for each surface
 	msurface_t	*psurface;	// Surface id for persistence / unlinking
-	short		dx;		// Offsets into surface texture 
-	short		dy;		// (in texture coordinates, so we don't need floats)
+	float		dx;		// Offsets into surface texture 
+	float		dy;		// (in texture coordinates, so we don't need floats)
+	float		scale;		// Pixel scale
 	short		texture;		// Decal texture
-	byte		scale;		// Pixel scale
 	byte		flags;		// Decal flags  FDECAL_*
 
 	short		entityIndex;	// Entity this is attached to

@@ -422,7 +422,7 @@ pfnPIC_Draw
 */
 void pfnPIC_Draw( int x, int y, int width, int height, const wrect_t *prc )
 {
-	GL_SetRenderMode( kRenderTransTexture );
+	GL_SetRenderMode( kRenderNormal );
 	PIC_DrawGeneric( x, y, width, height, prc );
 }
 
