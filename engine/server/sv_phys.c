@@ -782,7 +782,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 	{
 		VectorCopy( trace.endpos, ent->v.origin );
 
-		if( apush[YAW] && ( ent->v.flags & FL_CLIENT ))
+		if( sv.state == ss_active && apush[YAW] && ( ent->v.flags & FL_CLIENT ))
 		{
 			ent->v.avelocity[1] += apush[1];
 			ent->v.fixangle = 2;
