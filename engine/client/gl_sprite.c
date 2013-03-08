@@ -923,9 +923,9 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	
 		parent = CL_GetEntityByIndex( e->curstate.aiment );
 
-		if( parent && parent->model && parent->model->type == mod_studio )
+		if( parent && parent->model )
 		{
-			if( e->curstate.body > 0 )
+			if( parent->model->type == mod_studio && e->curstate.body > 0 )
 			{
 				int num = bound( 1, e->curstate.body, MAXSTUDIOATTACHMENTS );
 				VectorCopy( parent->attachment[num-1], origin );
