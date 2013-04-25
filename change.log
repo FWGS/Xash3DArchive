@@ -1,4 +1,10 @@
-build 2113
+build 2271
+
+Client: fix message TE_GLOWSPRITE. The gaussgun in Xash Mod is properly worked now.
+Client: restore studio check for missed models and ignore them instead of call the Sys_Error
+Server: fix crash in Gunman Chronicles (scorcher issues)
+
+build 2223
 
 Engine: added option "nomodels" for liblist.gam (disallow user to choose playermodel)
 Client: a new callback for render interface who called R_DrawCubemapView. This fixes cmd "envshot" for XashXT
@@ -10,11 +16,9 @@ Render: now "r_speeds 4" displays an actual count of "real" static entities that
 Render: fix bug with blinking Quake Sky while autosave in progress
 Render: keep actual hardware gamma for multiple instances of application
 Engine: get support for Half-Life alpha maps (that has version 29)
-Engine: kill the whitespaces in the modelpath (Zion Warcry issues)
 Server: fix the client rejection mechanism
 Server: using the pfnClientDisconnect callback
 Server: some changes in physics code (for MOVETYPE_PUSH)
-Client: change decal_t structure to match with GoldSrc hw decal structure (Warning! any old XashXT version is no longer supported with this version)
 
 build 2153
 
@@ -110,9 +114,8 @@ Client: write experimental code for interpolate bmodels movement (pev->animtime 
 GameUI: allow scissor for enginefunc pfnDrawCharacter
 Network: protocol changed. replace obsolete message svc_frame with message svc_restoresound
 Client: remove pieces that stuck in the walls for TE_BREAKMODEL message
-Render: added new internal texture that called a "*grayCube" without quotes
 Render: fix mode r_lighting_extended 1 for prevent permanently black lighting in some cases
-Render: global fog update. get the uniform color for all the underwater objects
+Render: global fog update. get the uniform color for all the underwater objects (thx n00b)
 Render: fix issues with conveyor HD-textures (it can moves slower than physical conveyor speed)
 Render: added support for HD-textures for normal sprite frames (non-HUD sprites)
 Render: sorting meshes for studiomodel surfaces (draw "adiitive" surfaces at end of the list)
@@ -139,7 +142,7 @@ Client: get walk animation support for 'wrong' player models that uses different
 Server: ignore savegame during intermission (used for Quake remake)
 Render: merge mirrors with same plane into one pass (perfomance option)
 Render: fix errors in function GL_CleanupTextureUnits (it was cause problems in XashXT)
-Render: allow decals on 'Solid" surfaces (grates, ladders etc)
+Render: allow decals on 'Solid" surfaces: grates, ladders etc (thx n00b)
 Render: rewrite "r_lighting_extended 2" mode
 Render: add optional texture sorting for models with Additive and Transparent textures (r_studio_sort_textures cvar)
 Engine: makes AABB transform trace an option for switchable engine features

@@ -9,7 +9,6 @@ xash_sdk\cl_dll\
 xash_sdk\cl_dll\hl\
 xash_sdk\common\
 xash_sdk\dlls\
-xash_sdk\dlls\wpn_shared
 xash_sdk\game_shared\
 xash_sdk\game_launch\
 xash_sdk\engine\

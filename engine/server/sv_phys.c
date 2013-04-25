@@ -886,7 +886,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	pushed_p++;
 	
 	// move the pusher to it's final position
-	SV_LinearMove( pusher, movetime, 0.0f );//pusher->v.friction );
+	SV_LinearMove( pusher, movetime, 0.0f );
 	SV_LinkEdict( pusher, false );
 	pusher->v.ltime += movetime;
 	oldsolid = pusher->v.solid;

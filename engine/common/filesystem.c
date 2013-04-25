@@ -2868,7 +2868,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 						{
 							// build path: wadname/lumpname.ext
 							Q_snprintf( temp2, sizeof(temp2), "%s/%s", wadfolder, temp );
-							FS_DefaultExtension( temp2, va(".%s", W_ExtFromType( wad->lumps[i].type ))); // make ext
+							FS_DefaultExtension( temp2, va(".%s", W_ExtFromType( wad->lumps[i].type )));
 							stringlistappend( &resultlist, temp2 );
 						}
 					}

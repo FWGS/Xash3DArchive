@@ -2201,7 +2201,7 @@ static void Mod_LoadEntities( const dlump_t *l )
 					char *end = Q_strchr( path, ';' );
 					if( !end ) break;
 					Q_strncpy( wadpath, path, (end - path) + 1 );
-					FS_FileBase( wadpath, mod_wadnames[mod_numwads++] );					
+					FS_FileBase( wadpath, mod_wadnames[mod_numwads++] );
 					path += (end - path) + 1; // move pointer
 					if( mod_numwads >= 128 ) break; // too many wads...
 				}
@@ -2844,7 +2844,6 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	byte	*buf;
 	char	tempname[64];
 	qboolean	loaded;
-	int	i, j;
 
 	if( !mod )
 	{
@@ -2857,25 +2856,9 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	if( mod->mempool || mod->name[0] == '*' )
 		return mod;
 
-	// fix slashes and kill whitespaces
-	for( i = j = 0; i < sizeof( tempname ); i++ )
-	{
-		if( mod->name[i] == '\\' )
-		{
-			// convert slashes
-			tempname[j++] = '/';
-		}
-		else if( mod->name[i] > ' ' )
-		{
-			// kill whitespaces (Zion WarCry issues)
-			tempname[j++] = mod->name[i];
-		}
-		else if( mod->name[i] == '\0' )
-		{
-			tempname[j] = '\0';
-			break; // end of string
-		}
-	}
+	// store modelname to show error
+	Q_strncpy( tempname, mod->name, sizeof( tempname ));
+	COM_FixSlashes( tempname );
 
 	buf = FS_LoadFile( tempname, NULL, false );
 

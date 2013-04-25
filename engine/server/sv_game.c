@@ -2051,6 +2051,7 @@ static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edi
 	if( !ptr ) return;
 
 	trace = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
+	if( !SV_IsValidEdict( trace.ent )) trace.ent = svgame.edicts;
 	SV_ConvertTrace( ptr, &trace );
 }
 
