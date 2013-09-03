@@ -236,6 +236,29 @@ void GL_MultiTexCoord2f( GLenum texture, GLfloat s, GLfloat t )
 
 /*
 =================
+GL_TextureTarget
+=================
+*/
+void GL_TextureTarget( uint target )
+{
+	if( glState.activeTMU < 0 || glState.activeTMU >= glConfig.max_texture_units )
+	{
+		MsgDev( D_ERROR, "GL_TextureTarget: bad tmu state %i\n", glState.activeTMU );
+		return; 
+	}
+
+	if( glState.currentTextureTargets[glState.activeTMU] != target )
+	{
+		if( glState.currentTextureTargets[glState.activeTMU] != GL_NONE )
+			pglDisable( glState.currentTextureTargets[glState.activeTMU] );
+		glState.currentTextureTargets[glState.activeTMU] = target;
+		if( target != GL_NONE )
+			pglEnable( glState.currentTextureTargets[glState.activeTMU] );
+	}
+}
+
+/*
+=================
 GL_TexGen
 =================
 */
@@ -635,11 +658,17 @@ rebuild_page:
 		pglBegin( GL_QUADS );
 		pglTexCoord2f( 0, 0 );
 		pglVertex2f( x, y );
-		pglTexCoord2f( 1, 0 );
+		if( image->flags & TF_TEXTURE_RECTANGLE )
+			pglTexCoord2f( image->width, 0 );
+		else pglTexCoord2f( 1, 0 );
 		pglVertex2f( x + w, y );
-		pglTexCoord2f( 1, 1 );
+		if( image->flags & TF_TEXTURE_RECTANGLE )
+			pglTexCoord2f( image->width, image->height );
+		else pglTexCoord2f( 1, 1 );
 		pglVertex2f( x + w, y + h );
-		pglTexCoord2f( 0, 1 );
+		if( image->flags & TF_TEXTURE_RECTANGLE )
+			pglTexCoord2f( 0, image->height );
+		else pglTexCoord2f( 0, 1 );
 		pglVertex2f( x, y + h );
 		pglEnd();
 

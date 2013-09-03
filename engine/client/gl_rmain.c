@@ -1444,6 +1444,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return glt->flags;
 	case PARM_FEATURES:
 		return host.features;
+	case PARM_ACTIVE_TMU:
+		return glState.activeTMU;
 	}
 	return 0;
 }
@@ -1562,6 +1564,11 @@ static int GL_LoadTextureNoFilter( const char *name, const byte *buf, size_t siz
 	return GL_LoadTexture( name, buf, size, flags, NULL );	
 }
 
+static void GL_StoreEfrags( efrag_t **ppefrag )
+{
+	R_StoreEfrags( ppefrag, tr.framecount );
+}
+
 static render_api_t gRenderAPI =
 {
 	GL_RenderGetParm,
@@ -1575,7 +1582,7 @@ static render_api_t gRenderAPI =
 	R_SetCurrentEntity,
 	R_SetCurrentModel,
 	GL_SetWorldviewProjectionMatrix,
-	R_StoreEfrags,
+	GL_StoreEfrags,
 	GL_FindTexture,
 	GL_TextureName,
 	GL_LoadTextureNoFilter,
@@ -1604,6 +1611,9 @@ static render_api_t gRenderAPI =
 	GL_TexGen,
 	R_EntityRemoveDecals,
 	R_DecalSetupVerts,
+	R_StoreEfrags,
+	GL_TextureTarget,
+	R_StudioGetTexture,	// moved here to avoid incompatibility with official expanded interface of IEngineStduio (HLSDK Update at 30.08.2013)
 };
 
 /*

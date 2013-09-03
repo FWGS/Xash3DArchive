@@ -190,9 +190,11 @@ typedef struct
 	int		attenuationTexture3;// bright attenuation
 	int		attenuationTexture3D;// 3D attenuation
 	int		attenuationStubTexture;
+	int		blankbumpTexture;
 	int		normalizeTexture;
 	int		dlightCubeTexture;	// dynamic cubemap
 	int		grayCubeTexture;
+	int		whiteCubeTexture;
 	int		skyboxTextures[6];	// skybox sides
 	int		mirrorTextures[MAX_MIRRORS];
 	int		num_mirrors_used;	// used mirror textures
@@ -279,6 +281,7 @@ void GL_LoadIdentityTexMatrix( void );
 void GL_DisableAllTexGens( void );
 void GL_SetRenderMode( int mode );
 void GL_FrontFace( GLenum front );
+void GL_TextureTarget( uint target );
 void GL_Cull( GLenum cull );
 void R_ShowTextures( void );
 
@@ -337,7 +340,7 @@ void R_FindMirrors( const ref_params_t *fd );
 //
 // gl_refrag.c
 //
-void R_StoreEfrags( efrag_t **ppefrag );
+void R_StoreEfrags( efrag_t **ppefrag, int framecount );
 
 //
 // gl_rlight.c
@@ -420,6 +423,7 @@ void R_DrawSpriteModel( cl_entity_t *e );
 //
 void R_StudioInit( void );
 void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded );
+struct mstudiotex_s *R_StudioGetTexture( cl_entity_t *e );
 void R_DrawStudioModel( cl_entity_t *e );
 
 //

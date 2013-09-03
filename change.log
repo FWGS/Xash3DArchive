@@ -1,3 +1,13 @@
+build 2402
+
+Engine: added new feature flag for compensate stupid quake bug
+Client: update the render interface, added usefully function GL_TextureTarget
+Render: get support for GL_RECTANGLE textures
+Client: fix playerangles in event receive (Paranoia bug with decals)
+Render: fixed mipmap generation for normalmaps (TF_NORMALMAP)
+Render: added two built-in textures: *blankbump and *whiteCube (self-explanatory names)
+Engine: made better check for Half-Life alpha maps (version 29 with colored lighting)
+
 build 2271
 
 Client: fix message TE_GLOWSPRITE. The gaussgun in Xash Mod is properly worked now.

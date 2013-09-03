@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static const char *uiCreditsDefault[] = 
 {
 	"",
-	"Copyright XashXT Group 2011 (C)",
+	"Copyright XashXT Group 2013 (C)",
 	0
 };
 

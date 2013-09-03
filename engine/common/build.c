@@ -48,6 +48,6 @@ int Q_buildnum( void )
 
 	return b;
 #else
-	return 2271;
+	return 2402;
 #endif
 }

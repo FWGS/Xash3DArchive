@@ -229,7 +229,9 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 	ASSERT( pBlendAPI != NULL );
 
 	VectorCopy( angles, angles2 );
-	angles2[PITCH] = -angles2[PITCH]; // stupid quake bug
+
+	if( !( host.features & ENGINE_COMPENSATE_QUAKE_BUG ))
+		angles2[PITCH] = -angles2[PITCH]; // stupid quake bug
 
 	pBlendAPI->SV_StudioSetupBones( model, frame, sequence, angles2, origin, pcontroller, pblending, pEdict, -1 );
 	phitbox = (mstudiobbox_t *)((byte *)mod_studiohdr + mod_studiohdr->hitboxindex);
@@ -753,7 +755,9 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *origin, 
 	pAtt = (mstudioattachment_t *)((byte *)mod_studiohdr + mod_studiohdr->attachmentindex);
 
 	VectorCopy( e->v.angles, angles2 );
-	angles2[PITCH] = -angles2[PITCH];
+
+	if( !( host.features & ENGINE_COMPENSATE_QUAKE_BUG ))
+		angles2[PITCH] = -angles2[PITCH];
 
 	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, angles2, e->v.origin,
 		e->v.controller, e->v.blending, e, pAtt[iAttachment].bone );

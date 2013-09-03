@@ -558,8 +558,8 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 		}
 	}
 
-	// stupid Half-Life bug
-	angles[PITCH] = -angles[PITCH];
+	if( !( host.features & ENGINE_COMPENSATE_QUAKE_BUG ))
+		angles[PITCH] = -angles[PITCH]; // stupid quake bug
 
 	// don't rotate clients, only aim
 	if( e->player ) angles[PITCH] = 0.0f;

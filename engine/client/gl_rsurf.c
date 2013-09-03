@@ -1654,7 +1654,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 
 		// deal with model fragments in this leaf
 		if( pleaf->efrags )
-			R_StoreEfrags( &pleaf->efrags );
+			R_StoreEfrags( &pleaf->efrags, tr.framecount );
 
 		r_stats.c_world_leafs++;
 		return;
@@ -1747,7 +1747,7 @@ static void R_DrawTopViewLeaf( mleaf_t *pleaf, uint clipflags )
 
 	// deal with model fragments in this leaf
 	if( pleaf->efrags )
-		R_StoreEfrags( &pleaf->efrags );
+		R_StoreEfrags( &pleaf->efrags, tr.framecount );
 
 	r_stats.c_world_leafs++;
 }

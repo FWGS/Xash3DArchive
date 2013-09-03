@@ -54,6 +54,8 @@ const char *GL_Target( GLenum target )
 		return "3D";
 	case GL_TEXTURE_CUBE_MAP_ARB:
 		return "Cube";
+	case GL_TEXTURE_RECTANGLE_EXT:
+		return "Rect";
 	}
 	return "??";
 }
@@ -439,6 +441,9 @@ void R_TextureList_f( void )
 		case GL_TEXTURE_CUBE_MAP_ARB:
 			Msg( "CUBE " );
 			break;
+		case GL_TEXTURE_RECTANGLE_EXT:
+			Msg( "RECT " );
+			break;
 		default:
 			Msg( "???? " );
 			break;
@@ -520,10 +525,21 @@ void GL_RoundImageDimensions( word *width, word *height, texFlags_t flags, qbool
 	}
 	else
 	{
-		while( scaledWidth > glConfig.max_2d_texture_size || scaledHeight > glConfig.max_2d_texture_size )
+		if( flags & TF_TEXTURE_RECTANGLE )
 		{
-			scaledWidth >>= 1;
-			scaledHeight >>= 1;
+			while( scaledWidth > glConfig.max_2d_rectangle_size || scaledHeight > glConfig.max_2d_rectangle_size )
+			{
+				scaledWidth >>= 1;
+				scaledHeight >>= 1;
+			}
+		}
+		else
+		{
+			while( scaledWidth > glConfig.max_2d_texture_size || scaledHeight > glConfig.max_2d_texture_size )
+			{
+				scaledWidth >>= 1;
+				scaledHeight >>= 1;
+			}
 		}
 	}
 
@@ -958,7 +974,8 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		inFormat = GL_DEPTH_COMPONENT;
 		dataType = GL_UNSIGNED_BYTE;
 	}
-	else if( pic->flags & IMAGE_CUBEMAP )
+
+	if( pic->flags & IMAGE_CUBEMAP )
 	{
 		if( GL_Support( GL_TEXTURECUBEMAP_EXT ))
 		{		
@@ -983,6 +1000,12 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	{
 		// determine target
 		tex->target = glTarget = GL_TEXTURE_1D;
+	}
+	else if( tex->flags & TF_TEXTURE_RECTANGLE )
+	{
+		if( glConfig.max_2d_rectangle_size )
+			tex->target = glTarget = glConfig.texRectangle;
+		// or leave as GL_TEXTURE_2D
 	}
 	else if( tex->flags & TF_TEXTURE_3D )
 	{
@@ -1051,10 +1074,12 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		}
 		else
 		{
-			if( GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
+			if( GL_Support( GL_SGIS_MIPMAPS_EXT ) && !( tex->flags & TF_NORMALMAP ))
+				GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 			if( subImage ) pglTexSubImage2D( tex->target, 0, 0, 0, tex->width, tex->height, inFormat, dataType, data );
 			else pglTexImage2D( tex->target, 0, outFormat, tex->width, tex->height, 0, inFormat, dataType, data );
-			if( !GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
+			if( !GL_Support( GL_SGIS_MIPMAPS_EXT ) || ( tex->flags & TF_NORMALMAP ))
+				GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 		}
 
 		if( numSides > 1 ) buf += offset;
@@ -1641,6 +1666,34 @@ static rgbdata_t *R_InitBlackTexture( texFlags_t *flags )
 
 /*
 ==================
+R_InitBlankBumpTexture
+==================
+*/
+static rgbdata_t *R_InitBlankBumpTexture( texFlags_t *flags )
+{
+	int	i;
+
+	// default normalmap texture
+	for( i = 0; i < 256; i++ )
+	{
+		data2D[i*4+0] = 127;
+		data2D[i*4+1] = 127;
+		data2D[i*4+2] = 255;
+	}
+
+	*flags = TF_NORMALMAP|TF_UNCOMPRESSED;
+
+	r_image.buffer = data2D;
+	r_image.width = r_image.height = 16;
+	r_image.size = r_image.width * r_image.height * 4;
+	r_image.flags = IMAGE_HAS_COLOR;
+	r_image.type = PF_RGBA_32;
+
+	return &r_image;
+}
+
+/*
+==================
 R_InitAttenuationTexture
 ==================
 */
@@ -1925,6 +1978,33 @@ static rgbdata_t *R_InitGrayCubemap( texFlags_t *flags )
 
 /*
 ==================
+R_InitWhiteCubemap
+==================
+*/
+static rgbdata_t *R_InitWhiteCubemap( texFlags_t *flags )
+{
+	int	size = 4;
+	byte	*dataCM = data2D;
+
+	if( !GL_Support( GL_TEXTURECUBEMAP_EXT ))
+		return NULL;
+
+	// white cubemap - just stub for pointlights
+	Q_memset( dataCM, 0xFF, size * size * 6 * 4 );
+
+	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
+
+	r_image.width = r_image.height = size;
+	r_image.size = r_image.width * r_image.height * 4 * 6;
+	r_image.flags |= (IMAGE_CUBEMAP|IMAGE_HAS_COLOR); // yes it's cubemap
+	r_image.buffer = data2D;
+	r_image.type = PF_RGBA_32;
+
+	return &r_image;
+}
+
+/*
+==================
 R_InitBuiltinTextures
 ==================
 */
@@ -1956,8 +2036,10 @@ static void R_InitBuiltinTextures( void )
 	{ "*atten3", &tr.attenuationTexture3, R_InitAttenuationTexture3, TEX_SYSTEM },
 	{ "*attnno", &tr.attenuationStubTexture, R_InitAttenuationTextureNoAtten, TEX_SYSTEM },
 	{ "*normalize", &tr.normalizeTexture, R_InitNormalizeCubemap, TEX_CUBEMAP },
+	{ "*blankbump", &tr.blankbumpTexture, R_InitBlankBumpTexture, TEX_SYSTEM },
 	{ "*lightCube", &tr.dlightCubeTexture, R_InitDlightCubemap, TEX_CUBEMAP },
 	{ "*grayCube", &tr.grayCubeTexture, R_InitGrayCubemap, TEX_CUBEMAP },
+	{ "*whiteCube", &tr.whiteCubeTexture, R_InitWhiteCubemap, TEX_CUBEMAP },
 	{ "*atten3D", &tr.attenuationTexture3D, R_InitAttenTexture3D, TEX_SYSTEM },
 	{ "*sky", &tr.skyTexture, R_InitSkyTexture, TEX_SYSTEM },
 	{ NULL, NULL, NULL }

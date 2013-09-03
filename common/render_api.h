@@ -46,6 +46,7 @@ GNU General Public License for more details.
 #define PARM_TEX_TEXNUM	18
 #define PARM_TEX_FLAGS	19
 #define PARM_FEATURES	20	// same as movevars->features
+#define PARM_ACTIVE_TMU	21	// for debug
 
 enum
 {
@@ -82,6 +83,7 @@ typedef enum
 	TF_BORDER		= (1<<19),
 	TF_TEXTURE_3D	= (1<<20),	// this is GL_TEXTURE_3D
 	TF_FLOAT		= (1<<21),	// use GL_FLOAT instead of GL_UNSIGNED_BYTE
+	TF_TEXTURE_RECTANGLE= (1<<22),	// this is GL_TEXTURE_RECTANGLE
 } texFlags_t;
 
 typedef struct beam_s BEAM;
@@ -169,6 +171,9 @@ typedef struct render_api_s
 // ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 26
 	void		(*R_EntityRemoveDecals)( struct model_s *mod ); // remove all the decals from specified entity (BSP only)
 	float		*(*R_DecalSetupVerts)( struct decal_s *pDecal, struct msurface_s *surf, int texture, int *outCount );
+	void		(*R_StoreEfragsExt)( struct efrag_s **ppefrag, int framecount ); // store efrags for static entities
+	void		(*GL_TextureTarget)( unsigned int target ); // change texture unit mode without bind texture
+	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );	// moved here to avoid incompatibility with IEngineStudio official iface
 } render_api_t;
 
 // render callbacks
