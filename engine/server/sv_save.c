@@ -98,7 +98,8 @@ typedef struct
 typedef struct
 {
 	int	index;
-	char	style[64];
+	char	style[256];
+	float	time;
 } SAVE_LIGHTSTYLE;
 
 static TYPEDESCRIPTION gGameHeader[] =
@@ -144,7 +145,8 @@ static TYPEDESCRIPTION gAdjacency[] =
 static TYPEDESCRIPTION gLightStyle[] =
 {
 	DEFINE_FIELD( SAVE_LIGHTSTYLE, index, FIELD_INTEGER ),
-	DEFINE_ARRAY( SAVE_LIGHTSTYLE, style, FIELD_CHARACTER, 64 ),
+	DEFINE_ARRAY( SAVE_LIGHTSTYLE, style, FIELD_CHARACTER, 256 ),
+	DEFINE_FIELD( SAVE_LIGHTSTYLE, time, FIELD_FLOAT ),
 };
 
 static TYPEDESCRIPTION gEntityTable[] =
@@ -845,6 +847,7 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 		if( sv.lightstyles[i].pattern[0] )
 		{
 			light.index = i;
+			light.time = sv.lightstyles[i].time;
 			Q_strncpy( light.style, sv.lightstyles[i].pattern, sizeof( light.style ));
 			svgame.dllFuncs.pfnSaveWriteFields( pSaveData, "LIGHTSTYLE", &light, gLightStyle, ARRAYSIZE( gLightStyle ));
 		}
@@ -974,7 +977,7 @@ void SV_ParseSaveTables( SAVERESTOREDATA *pSaveData, SAVE_HEADER *pHeader, int s
 	for( i = 0; i < pHeader->lightStyleCount; i++ )
 	{
 		svgame.dllFuncs.pfnSaveReadFields( pSaveData, "LIGHTSTYLE", &light, gLightStyle, ARRAYSIZE( gLightStyle ));
-		if( setupLightstyles ) SV_SetLightStyle( light.index, light.style );
+		if( setupLightstyles ) SV_SetLightStyle( light.index, light.style, light.time );
 	}
 }
 

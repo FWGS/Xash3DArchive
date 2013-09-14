@@ -174,6 +174,7 @@ typedef struct render_api_s
 	void		(*R_StoreEfragsExt)( struct efrag_s **ppefrag, int framecount ); // store efrags for static entities
 	void		(*GL_TextureTarget)( unsigned int target ); // change texture unit mode without bind texture
 	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );	// moved here to avoid incompatibility with IEngineStudio official iface
+	const struct ref_overview_s *( *GetOverviewParms )( void );
 } render_api_t;
 
 // render callbacks

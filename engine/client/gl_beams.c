@@ -1568,10 +1568,10 @@ void CL_DrawBeams( int fTrans )
 	{
 		RI.currentbeam = cl_custombeams[i];
 
-		if( fTrans && RI.currentbeam->curstate.renderfx & FBEAM_SOLID )
+		if( fTrans && ((RI.currentbeam->curstate.rendermode & 0xF0) & FBEAM_SOLID ))
 			continue;
 
-		if( !fTrans && !( RI.currentbeam->curstate.renderfx & FBEAM_SOLID ))
+		if( !fTrans && !((RI.currentbeam->curstate.rendermode & 0xF0) & FBEAM_SOLID ))
 			continue;
 
 		CL_DrawCustomBeam( RI.currentbeam );

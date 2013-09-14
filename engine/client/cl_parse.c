@@ -764,11 +764,13 @@ void CL_ParseLightStyle( sizebuf_t *msg )
 {
 	int		style;
 	const char	*s;
+	float		f;
 
 	style = BF_ReadByte( msg );
 	s = BF_ReadString( msg );
+	f = BF_ReadFloat( msg );
 
-	CL_SetLightstyle( style, s );
+	CL_SetLightstyle( style, s, f );
 }
 
 /*

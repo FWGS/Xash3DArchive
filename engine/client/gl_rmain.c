@@ -1296,7 +1296,7 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	RI.clipFlags = 15;
 	RI.drawWorld = drawWorld;
 	RI.thirdPerson = cl.thirdperson;
-	RI.drawOrtho = gl_overview->integer;
+	RI.drawOrtho = (RI.drawWorld) ? gl_overview->integer : 0;
 
 	GL_BackendStartFrame();
 
@@ -1569,6 +1569,11 @@ static void GL_StoreEfrags( efrag_t **ppefrag )
 	R_StoreEfrags( ppefrag, tr.framecount );
 }
 
+static const ref_overview_t *GL_GetOverviewParms( void )
+{
+	return &clgame.overView;
+}
+
 static render_api_t gRenderAPI =
 {
 	GL_RenderGetParm,
@@ -1614,6 +1619,7 @@ static render_api_t gRenderAPI =
 	R_StoreEfrags,
 	GL_TextureTarget,
 	R_StudioGetTexture,	// moved here to avoid incompatibility with official expanded interface of IEngineStduio (HLSDK Update at 30.08.2013)
+	GL_GetOverviewParms,
 };
 
 /*

@@ -2359,7 +2359,7 @@ void pfnLightStyle( int style, const char* val )
 	if( style >= MAX_LIGHTSTYLES )
 		Host_Error( "SV_LightStyle: style: %i >= %d", style, MAX_LIGHTSTYLES );
 
-	SV_SetLightStyle( style, val ); // set correct style
+	SV_SetLightStyle( style, val, 0.0f ); // set correct style
 }
 
 /*

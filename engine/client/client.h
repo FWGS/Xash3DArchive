@@ -283,21 +283,6 @@ typedef struct
 	model_t		*model;		// for catch model changes
 } remap_info_t;
 
-// same as ref_params but for overview mode
-typedef struct
-{
-	vec3_t		origin;
-	qboolean		rotated;
-
-	float		xLeft;
-	float		xRight;
-	float		xTop;
-	float		xBottom;
-	float		zFar;
-	float		zNear;
-	float		flZoom;
-} ref_overview_t;
-
 typedef struct
 {
 	net_response_t		resp;
@@ -556,7 +541,7 @@ extern convar_t	*hltv;
 
 //=============================================================================
 
-void CL_SetLightstyle( int style, const char* s );
+void CL_SetLightstyle( int style, const char* s, float f );
 void CL_RunLightStyles( void );
 
 void CL_AddEntities( void );

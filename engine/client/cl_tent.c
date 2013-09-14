@@ -2295,7 +2295,7 @@ void CL_ClearLightStyles( void )
 	Q_memset( cl.lightstyles, 0, sizeof( cl.lightstyles ));
 }
 
-void CL_SetLightstyle( int style, const char *s )
+void CL_SetLightstyle( int style, const char *s, float f )
 {
 	int		i, k;
 	lightstyle_t	*ls;
@@ -2309,15 +2309,16 @@ void CL_SetLightstyle( int style, const char *s )
 	Q_strncpy( ls->pattern, s, sizeof( ls->pattern ));
 
 	ls->length = Q_strlen( s );
+	ls->time = f; // set local time
 
 	for( i = 0; i < ls->length; i++ )
 		ls->map[i] = (float)(s[i] - 'a');
 
-	ls->interp = true;
+	ls->interp = (ls->length <= 1) ? false : true;
 
 	// check for allow interpolate
 	// NOTE: fast flickering styles looks ugly when interpolation is running
-	for( k = 0; k < ls->length; k++ )
+	for( k = 0; k < (ls->length - 1); k++ )
 	{
 		val1 = ls->map[(k+0) % ls->length];
 		val2 = ls->map[(k+1) % ls->length];

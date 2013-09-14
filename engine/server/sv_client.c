@@ -1438,6 +1438,7 @@ void SV_WriteLightstyles_f( sv_client_t *cl )
 			BF_WriteByte( &cl->netchan.message, svc_lightstyle );
 			BF_WriteByte( &cl->netchan.message, start );
 			BF_WriteString( &cl->netchan.message, sv.lightstyles[start].pattern );
+			BF_WriteFloat( &cl->netchan.message, sv.lightstyles[start].time );
 		}
 		start++;
 	}

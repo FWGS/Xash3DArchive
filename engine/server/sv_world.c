@@ -31,8 +31,6 @@ typedef struct moveclip_s
 	int		flags;		// trace flags
 } moveclip_t;
 
-static int		sv_lastofs;	// lightstyles code use this
-
 /*
 ===============================================================================
 
@@ -414,8 +412,10 @@ void SV_ClearWorld( void )
 
 	// clear lightstyles
 	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
+	{
 		sv.lightstyles[i].value = 256.0f;
-	sv_lastofs = -1;
+		sv.lightstyles[i].time = 0.0f;
+	}
 
 	Q_memset( sv_areanodes, 0, sizeof( sv_areanodes ));
 	sv_numareanodes = 0;
@@ -1537,13 +1537,11 @@ void SV_RunLightStyles( void )
 	lightstyle_t	*ls;
 
 	// run lightstyles animation
-	ofs = (sv.time * 10);
-
-	if( ofs == sv_lastofs ) return;
-	sv_lastofs = ofs;
-
 	for( i = 0, ls = sv.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
+		ls->time += host.frametime;
+		ofs = (ls->time * 10);
+
 		if( ls->length == 0 ) ls->value = 256.0f * sv_lighting_modulate->value; // disable this light
 		else if( ls->length == 1 ) ls->value = ls->map[0] * 22.0f * sv_lighting_modulate->value;
 		else ls->value = ls->map[ofs%ls->length] * 22.0f * sv_lighting_modulate->value;
@@ -1557,11 +1555,12 @@ SV_SetLightStyle
 needs to get correct working SV_LightPoint
 ==================
 */
-void SV_SetLightStyle( int style, const char* s )
+void SV_SetLightStyle( int style, const char* s, float f )
 {
 	int	j, k;
 
 	Q_strncpy( sv.lightstyles[style].pattern, s, sizeof( sv.lightstyles[0].pattern ));
+	sv.lightstyles[style].time = f;
 
 	j = Q_strlen( s );
 	sv.lightstyles[style].length = j;
@@ -1575,6 +1574,7 @@ void SV_SetLightStyle( int style, const char* s )
 	BF_WriteByte( &sv.reliable_datagram, svc_lightstyle );
 	BF_WriteByte( &sv.reliable_datagram, style );
 	BF_WriteString( &sv.reliable_datagram, sv.lightstyles[style].pattern );
+	BF_WriteFloat( &sv.reliable_datagram, sv.lightstyles[style].time );
 }
 
 /*
