@@ -621,6 +621,7 @@ int Con_DrawGenericString( int x, int y, const char *string, rgba_t setColor, qb
 		if( *s == '\n' )
 		{
 			s++;
+			if( !*s ) break; // at end the string
 			drawLen = 0; // begin new row
 			y += con.curFont->charHeight;
 		}

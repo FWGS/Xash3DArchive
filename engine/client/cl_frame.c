@@ -367,7 +367,6 @@ void CL_WeaponAnim( int iAnim, int body )
 
 		// save animtime
 		view->latched.prevanimtime = view->curstate.animtime;
-		view->syncbase = -0.01f; // back up to get 0'th frame animations
 		view->latched.sequencetime = 0.0f;
 	}
 
@@ -429,11 +428,7 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean n
 		for( i = 0; i < 2; i++ )
 			ent->latched.prevseqblending[i] = ent->curstate.blending[i];
 		ent->latched.prevsequence = ent->curstate.sequence; // save old sequence	
-		ent->syncbase = -0.01f; // back up to get 0'th frame animations
 	}
-
-	if( !ent->curstate.frame )
-		ent->syncbase = -0.01f; // back up to get 0'th frame animations
 
 	if( newstate->animtime != ent->curstate.animtime )
 	{

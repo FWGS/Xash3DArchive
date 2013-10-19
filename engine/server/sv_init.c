@@ -476,6 +476,11 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 		Cmd_ExecuteString( "latch\n", src_command );
 	else MsgDev( D_ERROR, "SV_SpawnServer: while 'maxplayers' was modified.\n" );
 
+	sv_maxclients->modified = false;
+	deathmatch->modified = false;
+	teamplay->modified = false;
+	coop->modified = false;
+
 	if( !svs.initialized )
 		return false;
 

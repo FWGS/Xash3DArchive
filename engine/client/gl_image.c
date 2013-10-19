@@ -143,10 +143,18 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 	{
 		pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 		pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		pglTexParameteri( tex->target, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB );
 		pglTexParameteri( tex->target, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL );
-		pglTexParameteri( tex->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY );
-	
+
+		if( tex->flags & TF_LUMINANCE )
+	          {
+			pglTexParameteri( tex->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_LUMINANCE );
+		}
+	          else
+	          {
+			pglTexParameteri( tex->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY );
+			pglTexParameteri( tex->target, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB );
+	          }
+
 		if( GL_Support( GL_ANISOTROPY_EXT ))
 			pglTexParameterf( tex->target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.0f );
 	}
@@ -950,8 +958,11 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 
 	if( tex->flags & TF_LUMINANCE )
 	{
-		GL_MakeLuminance( pic );
-		tex->flags &= ~TF_LUMINANCE;
+		if( !( tex->flags & TF_DEPTHMAP ))
+		{
+			GL_MakeLuminance( pic );
+			tex->flags &= ~TF_LUMINANCE;
+		}
 		pic->flags &= ~IMAGE_HAS_COLOR;
 	}
 

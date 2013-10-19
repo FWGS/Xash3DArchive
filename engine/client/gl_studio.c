@@ -2419,43 +2419,19 @@ static void R_StudioClientEvents( void )
 {
 	mstudioseqdesc_t	*pseqdesc;
 	mstudioevent_t	*pevent;
-	float		flEventFrame;
-	qboolean		bLooped = false;
 	cl_entity_t	*e = RI.currententity;
+	float		f, start;
 	int		i;
 
 	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->curstate.sequence;
 	pevent = (mstudioevent_t *)((byte *)m_pStudioHeader + pseqdesc->eventindex);
 
-	// curstate.frame not used for viewmodel animating
-	flEventFrame = e->latched.prevframe;
-
-	if( pseqdesc->numevents == 0 )
+	// no events for this animation or gamepaused
+	if( pseqdesc->numevents == 0 || cl.time == cl.oldtime )
 		return;
 
-	if( e->syncbase == -0.01f )
-		flEventFrame = 0.0f;
-
-	// stalled?
-	if( flEventFrame == e->syncbase )
-		return;
-
-	//Msg( "(seq %d cycle %.3f ) evframe %.3f prevevframe %.3f (time %.3f)\n", e->curstate.sequence, e->latched.prevframe, flEventFrame, e->syncbase, RI.refdef.time );
-
-	// check for looping
-	if( flEventFrame <= e->syncbase )
-	{
-		if( e->syncbase - flEventFrame > 0.5f )
-		{
-			bLooped = true;
-		}
-		else
-		{
-			// things have backed up, which is bad since it'll probably result in a hitch in the animation playback
-			// but, don't play events again for the same time slice
-			return;
-		}
-	}
+	f = R_StudioEstimateFrame( e, pseqdesc ) + 0.01f;	// get start offset
+	start = f - e->curstate.framerate * host.frametime * pseqdesc->fps;
 
 	for( i = 0; i < pseqdesc->numevents; i++ )
 	{
@@ -2463,20 +2439,9 @@ static void R_StudioClientEvents( void )
 		if( pevent[i].event < EVENT_CLIENT )
 			continue;
 
-		// looped
-		if( bLooped )
-		{
-			if(( pevent[i].frame > e->syncbase || pevent[i].frame <= flEventFrame ))
-				clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
-		}
-		else
-		{
-			if(( pevent[i].frame > e->syncbase && pevent[i].frame <= flEventFrame ))
-				clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
-		}
+		if( (float)pevent[i].frame > start && f >= (float)pevent[i].frame )
+			clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
 	}
-
-	e->syncbase = flEventFrame;
 }
 
 /*

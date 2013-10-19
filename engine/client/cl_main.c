@@ -1812,6 +1812,7 @@ void CL_Shutdown( void )
 	SCR_Shutdown ();
 	CL_UnloadProgs ();
 
+	SCR_FreeCinematic (); // release AVI's *after* client.dll because custom renderer may use them
 	S_Shutdown ();
 	R_Shutdown ();
 }

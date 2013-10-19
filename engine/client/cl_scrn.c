@@ -635,7 +635,6 @@ void SCR_Shutdown( void )
 	Cmd_RemoveCommand( "skyname" );
 	Cmd_RemoveCommand( "viewpos" );
 	UI_SetActiveMenu( false );
-	SCR_FreeCinematic();
 
 	if( host.state != HOST_RESTART )
 		UI_UnloadProgs();
