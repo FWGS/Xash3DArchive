@@ -30,7 +30,7 @@ half-life implementation of saverestore system
 #define SAVEFILE_HEADER		(('V'<<24)+('L'<<16)+('A'<<8)+'V')	// little-endian "VALV"
 #define SAVEGAME_HEADER		(('V'<<24)+('A'<<16)+('S'<<8)+'J')	// little-endian "JSAV"
 #define SAVEGAME_VERSION		0x0065				// Version 0.65
-#define CLIENT_SAVEGAME_VERSION	0x0067				// Version 0.67
+#define CLIENT_SAVEGAME_VERSION	0x0068				// Version 0.68
 
 #define SAVE_AGED_COUNT		1
 #define SAVENAME_LENGTH		128				// matches with MAX_OSPATH
@@ -452,7 +452,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	if( flags & FDECAL_STUDIO )
 	{
 		// NOTE: studio decal trace start saved into impactPlaneNormal
-		SV_CreateStudioDecal( entry->position, entry->impactPlaneNormal, decalIndex, entityIndex, modelIndex, flags, &entry->studio_state );
+		SV_CreateStudioDecal( &sv.signon, entry->position, entry->impactPlaneNormal, decalIndex, entityIndex, modelIndex, flags, &entry->studio_state );
 		return;
 	}
 	else if( adjacent && entityIndex != 0 && !SV_IsValidEdict( pEdict ))
@@ -484,7 +484,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 			{
 				entityIndex = pfnIndexOfEdict( tr.ent );
 				if( entityIndex > 0 ) modelIndex = tr.ent->v.modelindex;
-				SV_CreateDecal( tr.endpos, decalIndex, entityIndex, modelIndex, flags );
+				SV_CreateDecal( &sv.signon, tr.endpos, decalIndex, entityIndex, modelIndex, flags, entry->scale );
 			}
 		}
 	}
@@ -492,7 +492,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	{
 		// global entity is exist on new level so we can apply decal in local space
 		// NOTE: this case also used for transition world decals
-		SV_CreateDecal( entry->position, decalIndex, entityIndex, modelIndex, flags );
+		SV_CreateDecal( &sv.signon, entry->position, decalIndex, entityIndex, modelIndex, flags, entry->scale );
 	}
 }
 
@@ -1100,6 +1100,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	{
 		vec3_t		localPos;
 		decallist_t	*entry;
+		word		decalScale;
 		byte		nameSize;
 
 		entry = &decalList[i];
@@ -1109,12 +1110,14 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 		else VectorCopy( entry->position, localPos );
 
 		nameSize = Q_strlen( entry->name ) + 1;
+		decalScale = (entry->scale * 4096);
 
 		FS_Write( pFile, localPos, sizeof( localPos ));
 		FS_Write( pFile, &nameSize, sizeof( nameSize ));
 		FS_Write( pFile, entry->name, nameSize ); 
 		FS_Write( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
 		FS_Write( pFile, &entry->flags, sizeof( entry->flags ));
+		FS_Write( pFile, &decalScale, sizeof( decalScale ));
 		FS_Write( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
 
 		if( entry->flags & FDECAL_STUDIO )
@@ -1275,6 +1278,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 		{
 			vec3_t		localPos;
 			decallist_t	*entry;
+			word		decalScale;
 			byte		nameSize;
 
 			entry = &decalList[i];
@@ -1284,11 +1288,14 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 			FS_Read( pFile, entry->name, nameSize ); 
 			FS_Read( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
 			FS_Read( pFile, &entry->flags, sizeof( entry->flags ));
+			FS_Read( pFile, &decalScale, sizeof( decalScale ));
 			FS_Read( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
 
 			if( pSaveData->fUseLandmark && ( entry->flags & FDECAL_USE_LANDMARK ))
 				VectorAdd( localPos, pSaveData->vecLandmarkOffset, entry->position );
 			else VectorCopy( localPos, entry->position );
+
+			entry->scale = ((float)decalScale / 4096.0f);
 
 			if( entry->flags & FDECAL_STUDIO )
 			{
@@ -1345,7 +1352,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 				FS_Read( pFile, &entry->renderfx, sizeof( entry->renderfx ));
 			}
 
-			SV_CreateStaticEntity( entry );
+			SV_CreateStaticEntity( &sv.signon, entry );
 		}
 	}
 

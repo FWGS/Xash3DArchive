@@ -112,6 +112,7 @@ char			g_nCachedBoneNames[MAXSTUDIOBONES][32];
 int			g_nCachedBones;		// number of bones in cache
 int			g_nStudioCount;		// for chrome update
 int			g_iRenderMode;		// currentmodel rendermode
+int			g_iBackFaceCull;
 vec3_t			studio_mins, studio_maxs;
 float			studio_radius;
 
@@ -1835,9 +1836,65 @@ mstudiotexture_t *R_StudioGetTexture( cl_entity_t *e )
 	return ptexture;
 }
 
+void R_StudioSetRenderamt( int iRenderamt )
+{
+	if( !RI.currententity ) return;
+
+	RI.currententity->curstate.renderamt = iRenderamt;
+	RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
+}
+
 /*
 ===============
-R_SolidEntityCompare
+R_StudioSetCullState
+
+sets true for enable backculling (for left-hand viewmodel)
+===============
+*/
+void R_StudioSetCullState( int iCull )
+{
+	g_iBackFaceCull = iCull;
+}
+
+/*
+===============
+R_StudioRenderShadow
+
+just a prefab for render shadow
+===============
+*/
+void R_StudioRenderShadow( int iSprite, float *p1, float *p2, float *p3, float *p4 )
+{
+	if( !p1 || !p2 || !p3 || !p4 )
+		return;
+
+	if( TriSpriteTexture( Mod_Handle( iSprite ), 0 ))
+	{
+		pglEnable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		pglColor4f( 0.0f, 0.0f, 0.0f, 1.0f ); // render only alpha
+
+		pglBegin( GL_QUADS );
+			pglTexCoord2f( 0.0f, 0.0f );
+			pglVertex3fv( p1 );
+			pglTexCoord2f( 0.0f, 1.0f );
+			pglVertex3fv( p2 );
+			pglTexCoord2f( 1.0f, 1.0f );
+			pglVertex3fv( p3 );
+			pglTexCoord2f( 1.0f, 0.0f );
+			pglVertex3fv( p4 );
+		pglEnd();
+
+		pglDisable( GL_BLEND );
+		pglDisable( GL_ALPHA_TEST );
+	}
+}
+
+/*
+===============
+R_StudioMeshCompare
 
 Sorting opaque entities by model type
 ===============
@@ -1970,6 +2027,12 @@ static void R_StudioDrawPoints( void )
 			GL_SetRenderMode( kRenderTransAdd );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 			pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+			pglDepthMask( GL_FALSE );
+		}
+		else if( g_nFaceFlags & STUDIO_NF_ALPHA )
+		{
+			GL_SetRenderMode( kRenderTransTexture );
+			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 			pglDepthMask( GL_FALSE );
 		}
 		else
@@ -2506,6 +2569,9 @@ static void R_StudioSetupRenderer( int rendermode )
 	// enable depthmask on studiomodels
 	if( glState.drawTrans && g_iRenderMode != kRenderTransAdd )
 		pglDepthMask( GL_TRUE );
+
+	if( g_iBackFaceCull )
+		GL_FrontFace( true );
 }
 
 /*
@@ -2524,6 +2590,10 @@ static void R_StudioRestoreRenderer( void )
 		pglDepthMask( GL_FALSE );
 	else pglDepthMask( GL_TRUE );
 
+	if( g_iBackFaceCull )
+		GL_FrontFace( false );
+
+	g_iBackFaceCull = false;
 	m_fDoRemap = false;
 }
 
@@ -3266,7 +3336,8 @@ void R_DrawViewModel( void )
 	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
 
 	// backface culling for left-handed weapons
-	if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
+	if( r_lefthand->integer == 1 || g_iBackFaceCull )
+		GL_FrontFace( !glState.frontFace );
 
 	pStudioDraw->StudioDrawModel( STUDIO_RENDER );
 
@@ -3274,7 +3345,8 @@ void R_DrawViewModel( void )
 	pglDepthRange( gldepthmin, gldepthmax );
 
 	// backface culling for left-handed weapons
-	if( r_lefthand->integer == 1 ) GL_FrontFace( !glState.frontFace );
+	if( r_lefthand->integer == 1 || g_iBackFaceCull )
+		GL_FrontFace( !glState.frontFace );
 
 	RI.currententity = NULL;
 	RI.currentmodel = NULL;
@@ -3583,7 +3655,9 @@ static engine_studio_api_t gStudioAPI =
 	pfnIsHardware,
 	GL_StudioDrawShadow,
 	GL_SetRenderMode,
-	R_StudioGetTexture,	// Xash3D
+	R_StudioSetRenderamt,
+	R_StudioSetCullState,
+	R_StudioRenderShadow,
 };
 
 static r_studio_interface_t gStudioDraw =
@@ -3608,8 +3682,15 @@ void CL_InitStudioAPI( void )
 	if( !clgame.dllFuncs.pfnGetStudioModelInterface )
 		return;
 
+	MsgDev( D_NOTE, "InitStudioAPI " );
+
 	if( clgame.dllFuncs.pfnGetStudioModelInterface( STUDIO_INTERFACE_VERSION, &pStudioDraw, &gStudioAPI ))
+	{
+		MsgDev( D_NOTE, "- ok\n" );
 		return;
+	}
+
+	MsgDev( D_NOTE, "- failed\n" );
 
 	// NOTE: we always return true even if game interface was not correct
 	// because we need Draw our StudioModels

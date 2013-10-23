@@ -27,8 +27,8 @@ GNU General Public License for more details.
 // empirically determined constants for minimizing overalpping decals
 #define MAX_OVERLAP_DECALS		6
 #define DECAL_OVERLAP_DIST		8
-#define FLOAT_TO_SHORT( x )		(short)(x * 32)
-#define SHORT_TO_FLOAT( x )		((float)x * (1.0f/32.0f))
+#define MIN_DECAL_SCALE		0.01f
+#define MAX_DECAL_SCALE		10.0f
 
 // clip edges
 #define LEFT_EDGE			0
@@ -212,8 +212,8 @@ void R_SetupDecalVertsForMSurface( decal_t *pDecal, msurface_t *surf,	vec3_t tex
 	for( i = 0, v = surf->polys->verts[0]; i < surf->polys->numverts; i++, v += VERTEXSIZE, verts += VERTEXSIZE )
 	{
 		VectorCopy( v, verts ); // copy model space coordinates
-		verts[3] = DotProduct( verts, textureSpaceBasis[0] ) - SHORT_TO_FLOAT( pDecal->dx ) + 0.5f;
-		verts[4] = DotProduct( verts, textureSpaceBasis[1] ) - SHORT_TO_FLOAT( pDecal->dy ) + 0.5f;
+		verts[3] = DotProduct( verts, textureSpaceBasis[0] ) - pDecal->dx + 0.5f;
+		verts[4] = DotProduct( verts, textureSpaceBasis[1] ) - pDecal->dy + 0.5f;
 		verts[5] = verts[6] = 0.0f;
 	}
 }
@@ -226,8 +226,8 @@ void R_SetupDecalClip( decal_t *pDecal, msurface_t *surf, int texture, vec3_t te
 	// Generate texture coordinates for each vertex in decal s,t space
 	// probably should pre-generate this, store it and use it for decal-decal collisions
 	// as in R_DecalsIntersect()
-	pDecal->dx = FLOAT_TO_SHORT( DotProduct( pDecal->position, textureSpaceBasis[0] ));
-	pDecal->dy = FLOAT_TO_SHORT( DotProduct( pDecal->position, textureSpaceBasis[1] ));
+	pDecal->dx = DotProduct( pDecal->position, textureSpaceBasis[0] );
+	pDecal->dy = DotProduct( pDecal->position, textureSpaceBasis[1] );
 }
 
 // Quick and dirty sutherland Hodgman clipper
@@ -505,15 +505,15 @@ static decal_t *R_DecalIntersect( decalinfo_t *decalinfo, msurface_t *surf, int 
 			// this decal's (pDecal's) [0,0,1,1] clip space, just like we would if we were
 			// clipping a triangle into pDecal's clip space.
 			Vector2Set( vDecalMin,
-				DotProduct( testPosition[0], testBasis[0] ) - SHORT_TO_FLOAT( pDecal->dx ) + 0.5f,
-				DotProduct( testPosition[1], testBasis[1] ) - SHORT_TO_FLOAT( pDecal->dy ) + 0.5f );
+				DotProduct( testPosition[0], testBasis[0] ) - pDecal->dx + 0.5f,
+				DotProduct( testPosition[1], testBasis[1] ) - pDecal->dy + 0.5f );
 
 			VectorAdd( decalinfo->m_Position, decalExtents[0], testPosition[0] );
 			VectorAdd( decalinfo->m_Position, decalExtents[1], testPosition[1] );
 
 			Vector2Set( vDecalMax,
-				DotProduct( testPosition[0], testBasis[0] ) - SHORT_TO_FLOAT( pDecal->dx ) + 0.5f,
-				DotProduct( testPosition[1], testBasis[1] ) - SHORT_TO_FLOAT( pDecal->dy ) + 0.5f );	
+				DotProduct( testPosition[0], testBasis[0] ) - pDecal->dx + 0.5f,
+				DotProduct( testPosition[1], testBasis[1] ) - pDecal->dy + 0.5f );	
 
 			// Now figure out the part of the projection that intersects pDecal's
 			// clip box [0,0,1,1].
@@ -593,8 +593,8 @@ static void R_DecalCreate( decalinfo_t *decalinfo, msurface_t *surf, float x, fl
 	if( pdecal->flags & FDECAL_USESAXIS )
 		VectorCopy( decalinfo->m_SAxis, pdecal->saxis );
 
-	pdecal->dx = FLOAT_TO_SHORT( x );
-	pdecal->dy = FLOAT_TO_SHORT( y );
+	pdecal->dx = x;
+	pdecal->dy = y;
 	pdecal->texture = decalinfo->m_iTexture;
 
 	// set scaling
@@ -758,7 +758,7 @@ static void R_DecalNode( model_t *model, mnode_t *node, decalinfo_t *decalinfo )
 }
 
 // Shoots a decal onto the surface of the BSP.  position is the center of the decal in world coords
-void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos, int flags, vec3_t saxis )
+void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos, int flags, vec3_t saxis, float scale )
 {
 	decalinfo_t	decalInfo;
 	hull_t		*hull;
@@ -795,7 +795,7 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	decalInfo.m_pModel = model;
 	hull = &model->hulls[0];	// always use #0 hull
 
-	if( ent )
+	if( ent && !( flags & FDECAL_LOCAL_SPACE ))
 	{
 		vec3_t	pos_l;
 	
@@ -811,7 +811,9 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 		{
 			VectorSubtract( pos, ent->origin, pos_l );
 		}
+
 		VectorCopy( pos_l, decalInfo.m_Position );
+		flags |= FDECAL_LOCAL_SPACE; // decal position moved into local space
 	}
 	else
 	{
@@ -842,7 +844,7 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	if(( height >> 1 ) > decalInfo.m_Size )
 		decalInfo.m_Size = height >> 1;
 
-	decalInfo.m_scale = 1.0f;
+	decalInfo.m_scale = bound( MIN_DECAL_SCALE, scale, MAX_DECAL_SCALE );
 
 	// compute the decal dimensions in world space
 	decalInfo.m_decalWidth = width / decalInfo.m_scale;
@@ -1128,6 +1130,7 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 
 			pList[total].depth = depth;
 			pList[total].flags = decal->flags;
+			pList[total].scale = decal->scale;
 			
 			R_DecalUnProject( decal, &pList[total] );
 			FS_FileBase( R_GetTexture( decal->texture )->name, pList[total].name );
@@ -1196,5 +1199,31 @@ void R_EntityRemoveDecals( model_t *mod )
 	{
 		for( p = psurf->pdecals; p; p = p->pnext )
 			R_DecalUnlink( p );
+	}
+}
+
+/*
+===============
+R_ClearAllDecals
+
+remove all decals from anything
+used for full decals restart 
+===============
+*/
+void R_ClearAllDecals( void )
+{
+	decal_t	*pdecal;
+	int	i;
+
+	// because gDecalCount may be zeroed after recach the decal limit
+	for( i = 0; i < MAX_RENDER_DECALS; i++ )
+	{
+		pdecal = &gDecalPool[i];
+		R_DecalUnlink( pdecal );
+	}
+
+	if( clgame.drawFuncs.R_ClearStudioDecals )
+	{
+		clgame.drawFuncs.R_ClearStudioDecals();
 	}
 }

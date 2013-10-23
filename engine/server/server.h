@@ -553,9 +553,6 @@ void SV_SetModel( edict_t *ent, const char *name );
 void SV_CopyTraceToGlobal( trace_t *trace );
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max );
 edict_t* SV_FindEntityByString( edict_t *pStartEdict, const char *pszField, const char *pszValue );
-void SV_CreateDecal( const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags );
-void SV_CreateStudioDecal( const float *origin, const float *start, int decalIndex, int entityIndex, int modelIndex,
-int flags, struct modelstate_s *state );
 void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, event_args_t *args );
@@ -572,15 +569,15 @@ sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, qboolean spawned_only );
 void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed );
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
-void SV_CreateStaticEntity( sv_static_entity_t *ent );
+void SV_CreateStaticEntity( struct sizebuf_s *msg, sv_static_entity_t *ent );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
 void SV_UpdateBaseVelocity( edict_t *ent );
 byte *pfnSetFatPVS( const float *org );
 byte *pfnSetFatPAS( const float *org );
 int pfnPrecacheModel( const char *s );
-int pfnDecalIndex( const char *m );
 int pfnNumberOfEntities( void );
+void SV_RestartStaticEnts( void );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 {

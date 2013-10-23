@@ -504,6 +504,7 @@ used by CS:CZ
 */
 void *pfnSequenceGet( const char *fileName, const char *entryName )
 {
+	Msg( "Sequence_Get: file %s, entry %s\n", fileName, entryName );
 	return NULL;
 }
 
@@ -516,6 +517,9 @@ used by CS:CZ
 */
 void *pfnSequencePickSentence( const char *groupName, int pickMethod, int *picked )
 {
+	Msg( "Sequence_PickSentence: group %s, pickMethod %i\n", groupName, pickMethod );
+	*picked = 0;
+
 	return NULL;
 }
 

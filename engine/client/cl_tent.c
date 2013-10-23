@@ -2593,7 +2593,19 @@ normal temporary decal
 */
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags )
 {
-	R_DecalShoot( textureIndex, entityIndex, modelIndex, pos, (flags|FDECAL_CLIPTEST), NULL );
+	R_DecalShoot( textureIndex, entityIndex, modelIndex, pos, (flags|FDECAL_CLIPTEST), NULL, 1.0f );
+}
+
+/*
+===============
+CL_FireCustomDecal
+
+custom temporary decal
+===============
+*/
+void CL_FireCustomDecal( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags, float scale )
+{
+	R_DecalShoot( textureIndex, entityIndex, modelIndex, pos, flags, NULL, scale );
 }
 
 /*
@@ -2605,7 +2617,7 @@ spray custom colored decal (clan logo etc)
 */
 void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos )
 {
-	R_DecalShoot( textureIndex, entityIndex, 0, pos, 0, NULL );
+	R_DecalShoot( textureIndex, entityIndex, 0, pos, 0, NULL, 1.0f );
 }
 
 /*

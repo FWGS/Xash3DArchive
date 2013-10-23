@@ -489,9 +489,11 @@ CL_ParseStaticDecal
 */
 void CL_ParseStaticDecal( sizebuf_t *msg )
 {
-	vec3_t	origin;
-	int	decalIndex, entityIndex, modelIndex;
-	int	flags;
+	vec3_t		origin;
+	int		decalIndex, entityIndex, modelIndex;
+	cl_entity_t	*ent = NULL;
+	float		scale;
+	int		flags;
 
 	BF_ReadVec3Coord( msg, origin );
 	decalIndex = BF_ReadWord( msg );
@@ -501,8 +503,9 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 		modelIndex = BF_ReadWord( msg );
 	else modelIndex = 0;
 	flags = BF_ReadByte( msg );
+	scale = (float)BF_ReadWord( msg ) / 4096.0f;
 
-	CL_DecalShoot( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, origin, flags );
+	CL_FireCustomDecal( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, origin, flags|FDECAL_CLIPTEST, scale );
 }
 
 /*
@@ -1103,8 +1106,8 @@ void CL_ParseStudioDecal( sizebuf_t *msg )
 
 	BF_ReadVec3Coord( msg, pos );
 	BF_ReadVec3Coord( msg, start );
-	decalIndex = BF_ReadShort( msg );
-	entityIndex = BF_ReadShort( msg );
+	decalIndex = BF_ReadWord( msg );
+	entityIndex = BF_ReadWord( msg );
 	flags = BF_ReadByte( msg );
 
 	state.sequence = BF_ReadShort( msg );
@@ -1115,14 +1118,9 @@ void CL_ParseStudioDecal( sizebuf_t *msg )
 	state.controller[1] = BF_ReadByte( msg );
 	state.controller[2] = BF_ReadByte( msg );
 	state.controller[3] = BF_ReadByte( msg );
-
-	if( cls.state == ca_connected )
-	{
-		// this message came on restore.
-		// read modelindex in case client models are not linked with entities
-		// because first client frame has not yet received
-		modelIndex = BF_ReadShort( msg );
-	}
+	modelIndex = BF_ReadWord( msg );
+	state.body = BF_ReadByte( msg );
+	state.skin = BF_ReadByte( msg );
 
 	if( clgame.drawFuncs.R_StudioDecalShoot != NULL )
 	{

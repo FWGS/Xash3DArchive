@@ -612,6 +612,7 @@ qboolean Host_NewGame( const char *mapName, qboolean loadGame );
 void Host_EndGame( const char *message, ... );
 void Host_AbortCurrentFrame( void );
 void Host_RestartAmbientSounds( void );
+void Host_RestartDecals( void );
 qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset );
 void Host_WriteServerConfig( const char *name );
 void Host_WriteOpenGLConfig( void );
@@ -661,6 +662,7 @@ void *Cache_Check( byte *mempool, struct cache_user_s *c );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 void pfnGetModelBounds( model_t *mod, float *mins, float *maxs );
 void pfnGetGameDir( char *szGetGameDir );
+int pfnDecalIndex( const char *m );
 int pfnGetModelType( model_t *mod );
 int pfnIsMapValid( char *filename );
 void Con_DPrintf( char *fmt, ... );
@@ -771,7 +773,13 @@ int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBu
 struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull, int ignore_pe );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
 void SV_StartMusic( const char *curtrack, const char *looptrack, fs_offset_t position );
+void SV_CreateDecal( struct sizebuf_s *msg, const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags, float scale );
+void SV_CreateStudioDecal( struct sizebuf_s *msg, const float *origin, const float *start, int decalIndex, int entityIndex, int modelIndex,
+int flags, struct modelstate_s *state );
+struct sizebuf_s *SV_GetReliableDatagram( void );
 int R_CreateDecalList( struct decallist_s *pList, qboolean changelevel );
+void R_ClearAllDecals( void );
+void R_ClearStaticEntities( void );
 qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *position );
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct cl_entity_s *CL_GetLocalPlayer( void );
@@ -828,10 +836,11 @@ void TrimSpace( const char *source, char *dest );
 void GL_FreeImage( const char *name );
 void VID_RestoreGamma( void );
 void UI_SetActiveMenu( qboolean fActive );
-struct cmd_s *Cmd_GetList( void );
+struct cmd_s *Cmd_GetFirstFunctionHandle( void );
+struct cmd_s *Cmd_GetNextFunctionHandle( struct cmd_s *cmd );
+struct cmdalias_s *Cmd_AliasGetList( void );
 char *Cmd_GetName( struct cmd_s *cmd );
 cvar_t *Cvar_GetList( void );
-char *Cvar_GetName( cvar_t *cvar );
 
 typedef struct autocomplete_list_s
 {

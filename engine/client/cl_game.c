@@ -2629,9 +2629,9 @@ pfnGetServerTime
 
 =============
 */
-float pfnGetServerTime( void )
+float pfnGetClientOldTime( void )
 {
-	return cl.mtime[0];
+	return cl.oldtime;
 }
 
 /*
@@ -2643,19 +2643,6 @@ pfnGetGravity
 float pfnGetGravity( void )
 {
 	return clgame.movevars.gravity;
-}
-
-/*
-=============
-pfnPrecacheSprite
-
-=============
-*/
-const model_t *pfnPrecacheSprite( HSPRITE hSprite )
-{
-	if( hSprite <= 0 || hSprite > ( MAX_IMAGES - 1 ))
-		return NULL; // bad image
-	return &clgame.sprites[hSprite];
 }
 
 /*
@@ -2706,24 +2693,24 @@ void pfnSPR_DrawGeneric( int frame, int x, int y, const wrect_t *prc, int blends
 
 /*
 =============
-pfnDrawLocalizedHudString
+pfnDrawString
 
 TODO: implement
 =============
 */
-int pfnDrawLocalizedHudString( int x, int y, const char* str, int r, int g, int b )
+int pfnDrawString( int x, int y, const char *str, int r, int g, int b )
 {
 	return 0;
 }
 
 /*
 =============
-pfnDrawLocalizedConsoleString
+pfnDrawStringReverse
 
 TODO: implement
 =============
 */
-int pfnDrawLocalizedConsoleString( int x, int y, const char* str )
+int pfnDrawStringReverse( int x, int y, const char *str, int r, int g, int b )
 {
 	return 0;
 }
@@ -2741,23 +2728,24 @@ const char *LocalPlayerInfo_ValueForKey( const char* key )
 
 /*
 =============
-pfnDrawText
+pfnVGUI2DrawCharacter
 
 TODO: implement
 =============
 */
-void pfnDrawText( int x, int y, const char* text, unsigned long font )
+int pfnVGUI2DrawCharacter( int x, int y, int ch, unsigned int font )
 {
+	return 0;
 }
 
 /*
 =============
-pfnDrawUnicodeCharacter
+pfnVGUI2DrawCharacterAdditive
 
 TODO: implement
 =============
 */
-int pfnDrawUnicodeCharacter( int x, int y, short number, int r, int g, int b, unsigned long hfont )
+int pfnVGUI2DrawCharacterAdditive( int x, int y, int ch, int r, int g, int b, unsigned int font )
 {
 	return 0;
 }
@@ -2776,11 +2764,11 @@ void *GetCareerGameInterface( void )
 
 /*
 =============
-pfnStartDynamicSound
+pfnPlaySoundVoiceByName
 
 =============
 */
-void pfnStartDynamicSound( char *filename, float volume, float pitch )
+void pfnPlaySoundVoiceByName( char *filename, float volume, int pitch )
 {
 	int hSound = S_RegisterSound( filename );
 	S_StartSound( NULL, cl.refdef.viewentity, CHAN_AUTO, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
@@ -2792,7 +2780,7 @@ pfnMP3_InitStream
 
 =============
 */
-void pfnMP3_InitStream( char *filename, int flags )
+void pfnMP3_InitStream( char *filename, int looping )
 {
 	if( !filename )
 	{
@@ -2800,8 +2788,7 @@ void pfnMP3_InitStream( char *filename, int flags )
 		return;
 	}
 
-	// g-cont. flag 1 is probably 'LOOP'
-	if( flags & 1 )
+	if( looping )
 	{
 		S_StartBackgroundTrack( filename, filename, 0 );
 	}
@@ -2813,22 +2800,11 @@ void pfnMP3_InitStream( char *filename, int flags )
 
 /*
 =============
-pfnSys_FloatTime
+pfnPlaySoundByNameAtPitch
 
 =============
 */
-float pfnSys_FloatTime( void )
-{
-	return (float)Sys_DoubleTime();
-}
-
-/*
-=============
-pfnStartDynamicSound2
-
-=============
-*/
-void pfnStartDynamicSound2( char *filename, float volume, float pitch )
+void pfnPlaySoundByNameAtPitch( char *filename, float volume, int pitch )
 {
 	int hSound = S_RegisterSound( filename );
 	S_StartSound( NULL, cl.refdef.viewentity, CHAN_STATIC, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
@@ -2836,11 +2812,11 @@ void pfnStartDynamicSound2( char *filename, float volume, float pitch )
 
 /*
 =============
-pfnFillRGBA2
+pfnFillRGBABlend
 
 =============
 */
-void pfnFillRGBA2( int x, int y, int width, int height, int r, int g, int b, int a )
+void pfnFillRGBABlend( int x, int y, int width, int height, int r, int g, int b, int a )
 {
 	r = bound( 0, r, 255 );
 	g = bound( 0, g, 255 );
@@ -2857,6 +2833,28 @@ void pfnFillRGBA2( int x, int y, int width, int height, int r, int g, int b, int
 
 	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
 	pglColor4ub( 255, 255, 255, 255 );
+}
+
+/*
+=============
+pfnGetAppID
+
+=============
+*/
+int pfnGetAppID( void )
+{
+	return 220; // standard Valve value
+}
+
+/*
+=============
+pfnVguiWrap2_GetMouseDelta
+
+TODO: implement
+=============
+*/
+void pfnVguiWrap2_GetMouseDelta( int *x, int *y )
+{
 }
 
 /*
@@ -3147,6 +3145,76 @@ void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 	pglFogf( GL_FOG_END, RI.fogEnd );
 	pglFogfv( GL_FOG_COLOR, RI.fogColor );
 	pglHint( GL_FOG_HINT, GL_NICEST );
+}
+
+/*
+=============
+TriGetMatrix
+
+very strange export
+=============
+*/
+void TriGetMatrix( const int pname, float *matrix )
+{
+	pglGetFloatv( pname, matrix );
+}
+
+/*
+=============
+TriBoxInPVS
+
+check box in pvs (absmin, absmax)
+=============
+*/
+int TriBoxInPVS( float *mins, float *maxs )
+{
+	return Mod_BoxVisible( mins, maxs, Mod_GetCurrentVis( ));
+}
+
+/*
+=============
+TriLightAtPoint
+
+NOTE: dlights are ignored
+=============
+*/
+void TriLightAtPoint( float *pos, float *value )
+{
+	color24	ambient;
+
+	if( !pos || !value )
+		return;
+
+	R_LightForPoint( pos, &ambient, false, false, 0.0f );
+
+	value[0] = (float)ambient.r * 255.0f;
+	value[1] = (float)ambient.g * 255.0f;
+	value[2] = (float)ambient.b * 255.0f;
+}
+
+/*
+=============
+TriColor4fRendermode
+
+Heavy legacy of Quake...
+=============
+*/
+void TriColor4fRendermode( float r, float g, float b, float a, int rendermode )
+{
+	if( rendermode == kRenderTransAlpha )
+		pglColor4f( r, g, b, a );
+	else pglColor4f( r * a, g * a, b * a, 1.0f );
+}
+
+/*
+=============
+TriForParams
+
+=============
+*/
+void TriFogParams( float flDensity, int iFogSkybox )
+{
+	// FIXME: implement
 }
 
 /*
@@ -3455,6 +3523,18 @@ float Voice_GetControlFloat( VoiceTweakControl iControl )
 	return 1.0f;
 }
 
+/*
+=================
+Voice_GetSpeakingVolume
+
+=================
+*/
+int Voice_GetSpeakingVolume( void )
+{
+	// TODO: implement
+	return 255;
+}
+
 // shared between client and server			
 triangleapi_t gTriApi =
 {
@@ -3473,6 +3553,11 @@ triangleapi_t gTriApi =
 	R_WorldToScreen,	// NOTE: XPROJECT, YPROJECT should be done in client.dll
 	TriFog,
 	R_ScreenToWorld,
+	TriGetMatrix,
+	TriBoxInPVS,
+	TriLightAtPoint,
+	TriColor4fRendermode,
+	TriFogParams,
 };
 
 static efx_api_t gEfxApi =
@@ -3610,6 +3695,7 @@ static IVoiceTweak gVoiceApi =
 	Voice_EndVoiceTweakMode,
 	Voice_SetControlFloat,
 	Voice_GetControlFloat,
+	Voice_GetSpeakingVolume,
 };
 
 // engine callbacks
@@ -3717,35 +3803,38 @@ static cl_enginefunc_t gEngfuncs =
 	pfnSetMousePos,
 	pfnSetMouseEnable,
 	Cvar_GetList,
-	Cmd_GetList,
-	Cvar_GetName,
+	Cmd_GetFirstFunctionHandle,
+	Cmd_GetNextFunctionHandle,
 	Cmd_GetName,
-	pfnGetServerTime,
+	pfnGetClientOldTime,
 	pfnGetGravity,
-	pfnPrecacheSprite,
+	Mod_Handle,
 	pfnEnableTexSort,
 	pfnSetLightmapColor,
 	pfnSetLightmapScale,
 	pfnSequenceGet,
 	pfnSPR_DrawGeneric,
 	pfnSequencePickSentence,
-	pfnDrawLocalizedHudString,
-	pfnDrawLocalizedConsoleString,
+	pfnDrawString,
+	pfnDrawStringReverse,
 	LocalPlayerInfo_ValueForKey,
-	pfnDrawText,
-	pfnDrawUnicodeCharacter,
+	pfnVGUI2DrawCharacter,
+	pfnVGUI2DrawCharacterAdditive,
 	Sound_GetApproxWavePlayLen,
 	GetCareerGameInterface,
 	Cvar_Set,
 	pfnIsCareerMatch,
-	pfnStartDynamicSound,
+	pfnPlaySoundVoiceByName,
 	pfnMP3_InitStream,
-	pfnSys_FloatTime,
+	Sys_DoubleTime,
 	pfnProcessTutorMessageDecayBuffer,
 	pfnConstructTutorMessageDecayBuffer,
 	pfnResetTutorMessageDecayData,
-	pfnStartDynamicSound2,
-	pfnFillRGBA2,
+	pfnPlaySoundByNameAtPitch,
+	pfnFillRGBABlend,
+	pfnGetAppID,
+	Cmd_AliasGetList,
+	pfnVguiWrap2_GetMouseDelta,
 };
 
 void CL_UnloadProgs( void )
@@ -3778,6 +3867,8 @@ qboolean CL_LoadProgs( const char *name )
 {
 	static playermove_t		gpMove;
 	const dllfunc_t		*func;
+	CL_EXPORT_FUNCS		F; // export 'F'
+	qboolean			critical_exports = true;
 
 	if( clgame.hInstance ) CL_UnloadProgs();
 
@@ -3803,24 +3894,58 @@ qboolean CL_LoadProgs( const char *name )
 	for( func = cdll_exports; func && func->name; func++ )
 		*func->func = NULL;
 
+	// trying to get single export named 'F'
+	if(( F = (void *)Com_GetProcAddress( clgame.hInstance, "F" )) != NULL )
+	{
+		MsgDev( D_NOTE, "CL_LoadProgs: found single callback export\n" );		
+
+		// trying to fill interface now
+		F( &clgame.dllFuncs );
+
+		// check critical functions again
+		for( func = cdll_exports; func && func->name; func++ )
+		{
+			if( func->func == NULL )
+				break; // BAH critical function was missed
+		}
+
+		// because all the exports are loaded through function 'F"
+		if( !func || !func->name )
+			critical_exports = false;
+	}
+
 	for( func = cdll_exports; func && func->name != NULL; func++ )
 	{
+		if( *func->func != NULL )
+			continue;	// already get through 'F'
+
 		// functions are cleared before all the extensions are evaluated
 		if(!( *func->func = (void *)Com_GetProcAddress( clgame.hInstance, func->name )))
 		{
           		MsgDev( D_NOTE, "CL_LoadProgs: failed to get address of %s proc\n", func->name );
-			Com_FreeLibrary( clgame.hInstance );
-			clgame.hInstance = NULL;
-			return false;
+
+			if( critical_exports )
+			{
+				Com_FreeLibrary( clgame.hInstance );
+				clgame.hInstance = NULL;
+				return false;
+			}
 		}
 	}
 
-	// clear new exports
-	for( func = cdll_new_exports; func && func->name; func++ )
-		*func->func = NULL;
+	// it may be loaded through 'F' so we don't need to clear them
+	if( critical_exports )
+	{
+		// clear new exports
+		for( func = cdll_new_exports; func && func->name; func++ )
+			*func->func = NULL;
+	}
 
 	for( func = cdll_new_exports; func && func->name != NULL; func++ )
 	{
+		if( *func->func != NULL )
+			continue;	// already get through 'F'
+
 		// functions are cleared before all the extensions are evaluated
 		// NOTE: new exports can be missed without stop the engine
 		if(!( *func->func = (void *)Com_GetProcAddress( clgame.hInstance, func->name )))

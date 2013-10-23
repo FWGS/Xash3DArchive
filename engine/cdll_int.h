@@ -28,6 +28,14 @@ extern "C" {
 
 #include "const.h"
 
+#define MAX_ALIAS_NAME	32
+
+typedef struct cmdalias_s
+{
+	struct cmdalias_s	*next;
+	char		name[MAX_ALIAS_NAME];
+	char		*value;
+} cmdalias_t;
 
 // this file is included by both the engine and the client-dll,
 // so make sure engine declarations aren't done twice
@@ -97,6 +105,8 @@ typedef struct hud_player_info_s
 	char		*model;
 	short		topcolor;
 	short		bottomcolor;
+
+	unsigned __int64	m_nSteamID;
 } hud_player_info_t;
 
 typedef struct cl_enginefuncs_s
@@ -250,75 +260,43 @@ typedef struct cl_enginefuncs_s
 	void	(*pfnSetMousePos)( int x, int y );
 	void	(*pfnSetMouseEnable)( qboolean fEnable );
 
-	struct cvar_s* (*pfnGetCvarList)( void );
-	struct cmd_s* (*pfnGetCmdList)( void );
-	char*	(*pfnCvarName)( struct cvar_s* cvar );
-	char*	(*pfnCmdName)( struct cmd_s* cmd );
+	// undocumented interface starts here
+	struct cvar_s*	(*pfnGetFirstCvarPtr)( void );
+	void*		(*pfnGetFirstCmdFunctionHandle)( void );
+	void*		(*pfnGetNextCmdFunctionHandle)( void *cmdhandle );
+	const char*	(*pfnGetCmdFunctionName)( void *cmdhandle );
+	float		(*pfnGetClientOldTime)( void );
+	float		(*pfnGetGravity)( void );
+	struct model_s*	(*pfnGetModelByIndex)( int index );
+	void		(*pfnSetFilterMode)( int mode ); // same as gl_texsort in original Quake
+	void		(*pfnSetFilterColor)( float red, float green, float blue );
+	void		(*pfnSetFilterBrightness)( float brightness );
+	void		*(*pfnSequenceGet)( const char *fileName, const char *entryName );
+	void		(*pfnSPR_DrawGeneric)( int frame, int x, int y, const wrect_t *prc, int blendsrc, int blenddst, int width, int height );
+	void		*(*pfnSequencePickSentence)( const char *groupName, int pickMethod, int *entryPicked );
+	int		(*pfnDrawString)( int x, int y, const char *str, int r, int g, int b );
+	int		(*pfnDrawStringReverse)( int x, int y, const char *str, int r, int g, int b );
+	const char	*(*LocalPlayerInfo_ValueForKey)( const char* key );
+	int		(*pfnVGUI2DrawCharacter)( int x, int y, int ch, unsigned int font );
+	int		(*pfnVGUI2DrawCharacterAdditive)( int x, int y, int ch, int r, int g, int b, unsigned int font );
+	unsigned int	(*pfnGetApproxWavePlayLen)( char *filename );
+	void*		(*GetCareerGameUI)( void );	// g-cont. !!!! potential crash-point!
+	void		(*Cvar_Set)( char *name, char *value );
+	int		(*pfnIsPlayingCareerMatch)( void );
+	void		(*pfnPlaySoundVoiceByName)( char *szSound, float volume, int pitch );
+	void		(*pfnPrimeMusicStream)( char *filename, int looping );
+	double		(*pfnSys_FloatTime)( void );
 
-	float	(*pfnGetServerTime)( void );
-	float	(*pfnGetGravity)( void );
+	// decay funcs
+	void		(*pfnProcessTutorMessageDecayBuffer)( int *buffer, int buflen );
+	void		(*pfnConstructTutorMessageDecayBuffer)( int *buffer, int buflen );
+	void		(*pfnResetTutorMessageDecayData)( void );
 
-	const struct model_s* (*pfnPrecacheSprite)( HSPRITE spr );
-
-	// Appears to modifies hidden cvar gl_texsort.
-	void	(*pfnEnableTexSort)( int enable );
-
-	// Colour scaling values for screen.  Only works when gl_texsort is active.
-	void	(*pfnSetLightmapColor)( float red, float green, float blue );
-
-	// Final scaling factor for screen.  Only works when gl_texsort is active.
-	void	(*pfnSetLightmapScale)( float scale );
-
-	// Seems to be a client entry point to the pfnSequenceGet function introduced for CS:CZ
-	void*	(*pfnSequenceGet)( const char *fileName, const char *entryName );
-
-	// Draws a sprite on the screen - parameters are likely incorrect.
-	void	(*pfnSPR_DrawGeneric)( int frame, int x, int y, const wrect_t *prc, int blendsrc, int blenddst, int u3, int u4 );
-
-	// Seems to be a client entry point to the pfnSequencePickSentence function introduced for CS:CZ
-	void*	(*pfnSequencePickSentence)( const char *groupName, int pickMethod, int *picked );
-
-	// localizes hud string, uses Legacy font from skin def
-	// also supports unicode strings
-	int	(*pfnDrawLocalizedHudString)( int x, int y, const char* str, int r, int g, int b );
-
-	// i can't get this to work for some reason, don't use this
-	int	(*pfnDrawLocalizedConsoleString)( int x, int y, const char* str );
-
-	// gets keyvalue for local player, useful for querying vgui menus or autohelp
-	const char *(*LocalPlayerInfo_ValueForKey)( const char* key );
-
-	void	(*pfnDrawText)( int x, int y, const char* text, unsigned long font );
-	int	(*pfnDrawUnicodeCharacter)( int x, int y, short number, int r, int g, int b, unsigned long hfont );
-
-	// Seems to be a client entry point to the pfnGetApproxWavePlayLen function introduced for CS:CZ
-	unsigned int (*pfnGetApproxWavePlayLen)( char *filename );
-
-	// for condition zero, returns interface from GameUI
-	void*	(*GetCareerGameInterface)( void );	// g-cont. !!!! potential crash-point!
-
-	// Sets cvar value - why is this needed when Cvar_SetValue already exists?
-	void	(*Cvar_Set)( char *name, char *value );
-
-	// Seems to be a client entry point to the pfnIsCareerMatch function introduced for CS:CZ
-	int	(*pfnIsCareerMatch)( void );
-
-	// passes pitch as param
-	void	(*pfnStartDynamicSound)( char *filename, float volume, float pitch );
-	void	(*pfnMP3_InitStream)( char *filename, int flags );
-
-	float	(*pfnSys_FloatTime)( void );
-
-	void	(*pfnProcessTutorMessageDecayBuffer)( int *buffer, int buflen );
-	void	(*pfnConstructTutorMessageDecayBuffer)( int *buffer, int buflen );
-	void	(*pfnResetTutorMessageDecayData)( void );
-
-	// Seems to be an exact copy of the previous StartDynamicSound function???
-	void	(*pfnStartDynamicSound2)( char *filename, float volume, float pitch );
-
-	// Same like pfnFillRGBA - with other mode (substractive)
-	void	(*pfnFillRGBA2)( int x, int y, int width, int height, int r, int g, int b, int a );
-
+	void		(*pfnPlaySoundByNameAtPitch)( char *szSound, float volume, int pitch );
+	void		(*pfnFillRGBABlend)( int x, int y, int width, int height, int r, int g, int b, int a );
+	int		(*pfnGetAppID)( void );
+	cmdalias_t	*(*pfnGetAliases)( void );
+	void		(*pfnVguiWrap2_GetMouseDelta)( int *x, int *y );
 } cl_enginefunc_t;
 
 #define CLDLL_INTERFACE_VERSION	7

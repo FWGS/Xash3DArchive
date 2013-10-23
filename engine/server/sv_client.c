@@ -1963,6 +1963,10 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 		{
 			// resend the ambient sounds for demo recording
 			Host_RestartAmbientSounds();
+			// resend all the decals for demo recording
+			Host_RestartDecals();
+			// resend all the static ents for demo recording
+			SV_RestartStaticEnts();
 		}
 	}
 }

@@ -135,6 +135,7 @@ GNU General Public License for more details.
 #define FDECAL_NOCLIP		0x10	// Decal is not clipped by containing polygon
 #define FDECAL_USESAXIS		0x20	// Uses the s axis field to determine orientation (footprints)
 #define FDECAL_STUDIO		0x40	// Indicates a studio decal
+#define FDECAL_LOCAL_SPACE		0x80	// decal is in local space (any decal after serialization)
 
 // Max number of history commands to send ( 2 by default ) in case of dropped packets
 #define NUM_BACKUP_COMMAND_BITS	4

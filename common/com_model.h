@@ -35,6 +35,7 @@ typedef vec_t		vec4_t[4];
 #define MIPLEVELS		4
 #define VERTEXSIZE		7
 #define MAXLIGHTMAPS	4
+#define MAXSTYLES		12		// BSP32 supports up to 12 styles per face
 #define NUM_AMBIENTS	4		// automatic ambient sounds
 
 // model types
@@ -126,12 +127,11 @@ struct decal_s
 {
 	decal_t		*pnext;		// linked list for each surface
 	msurface_t	*psurface;	// Surface id for persistence / unlinking
-	short		dx;		// Offsets into surface texture 
-	short		dy;		// (in texture coordinates, so we don't need floats)
+	float		dx;		// local texture coordinates
+	float		dy;		// 
+	float		scale;		// Pixel scale
 	short		texture;		// Decal texture
-	byte		scale;		// Pixel scale
 	byte		flags;		// Decal flags  FDECAL_*
-
 	short		entityIndex;	// Entity this is attached to
 // Xash3D added
 	vec3_t		position;		// location of the decal center in world space.
@@ -216,6 +216,8 @@ typedef struct mextrasurf_s
 	vec3_t		origin;		// surface origin
 	msurfmesh_t	*mesh;		// VBO\VA ready surface mesh. Not used by engine but can be used by mod-makers
 
+	byte		styles[MAXSTYLES];	// expansion for BSP32 (12 lightstyles per surface)
+	int		cached_light[MAXSTYLES];	// values currently used in lightmap
 	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
 
 	int		mirrortexturenum;	// gl texnum
@@ -223,7 +225,7 @@ typedef struct mextrasurf_s
 	struct mextrasurf_s	*mirrorchain;	// for gl_texsort drawing
 	struct mextrasurf_s	*detailchain;	// for detail textures drawing
 
-	int		reserved[7];	// just for future expansions or mod-makers
+	int		reserved[32];	// just for future expansions or mod-makers
 } mextrasurf_t;
 
 typedef struct hull_s
@@ -329,6 +331,8 @@ typedef struct auxvert_s
 #define MAX_SCOREBOARDNAME	32
 #define MAX_INFO_STRING	256
 
+#include "custom.h"
+
 typedef struct player_info_s
 {
 	int		userid;			// User id on server
@@ -352,6 +356,8 @@ typedef struct player_info_s
 	float		gaitframe;
 	float		gaityaw;
 	vec3_t		prevgaitorigin;
+
+	customization_t	customdata;
 } player_info_t;
 
 //

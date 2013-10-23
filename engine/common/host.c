@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include "mathlib.h"
 #include "input.h"
 #include "features.h"
+#include "render_api.h"	// decallist_t
 
 typedef void (*pfnChangeGame)( const char *progname );
 
@@ -381,6 +382,62 @@ void Host_RestartAmbientSounds( void )
 	{
 		SV_StartMusic( curtrack, looptrack, position );
 	}
+}
+
+/*
+=================
+Host_RestartDecals
+
+Write all the decals into demo
+=================
+*/
+void Host_RestartDecals( void )
+{
+	decallist_t	*entry;
+	int		decalIndex;
+	int		modelIndex;
+	sizebuf_t		*msg;
+	int		i;
+
+	if( !SV_Active( ))
+	{
+		return;
+	}
+
+	// g-cont. add space for studiodecals if present
+	host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS * 2 );
+	host.numdecals = R_CreateDecalList( host.decalList, false );
+
+	// remove decals from map
+	R_ClearAllDecals();
+
+	// write decals into reliable datagram
+	msg = SV_GetReliableDatagram();
+
+	// restore decals and write them into network message
+	for( i = 0; i < host.numdecals; i++ )
+	{
+		entry = &host.decalList[i];
+
+		decalIndex = pfnDecalIndex( entry->name );
+		modelIndex = pfnPEntityOfEntIndex( entry->entityIndex )->v.modelindex;
+
+		// BSP and studio decals has different messages
+		if( entry->flags & FDECAL_STUDIO )
+		{
+			// NOTE: studio decal trace start saved into impactPlaneNormal
+			SV_CreateStudioDecal( msg, entry->position, entry->impactPlaneNormal, decalIndex, entry->entityIndex,
+			modelIndex, entry->flags, &entry->studio_state );
+		}
+		else
+		{
+			SV_CreateDecal( msg, entry->position, decalIndex, entry->entityIndex, modelIndex, entry->flags, entry->scale );
+		}
+	}
+
+	Z_Free( host.decalList );
+	host.decalList = NULL;
+	host.numdecals = 0;
 }
 
 /*

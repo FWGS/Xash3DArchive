@@ -19,7 +19,16 @@ GNU General Public License for more details.
 #include "lightstyle.h"
 #include "dlight.h"
 
-#define CL_RENDER_INTERFACE_VERSION		26
+// changes for version 28
+// replace decal_t from software declaration to hardware (matched to normal HL)
+// mextrasurf_t->byte styles[12] added
+// mextrasurf_t->increased limit of reserved fields (up from 7 to 32)
+// replace R_StoreEfrags with him extended version
+// formed group for BSP decal manipulating
+// move misc functions at end of the interface
+// added new export for clearing studio decals
+
+#define CL_RENDER_INTERFACE_VERSION		28
 #define MAX_STUDIO_DECALS			4096	// + unused space of BSP decals
 
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
@@ -89,13 +98,15 @@ typedef enum
 typedef struct beam_s BEAM;
 typedef struct particle_s particle_t;
 
-// 10 bytes here
+// 12 bytes here
 typedef struct modelstate_s
 {
 	short		sequence;
 	short		frame;		// 10 bits multiple by 4, should be enough
 	byte		blending[2];
 	byte		controller[4];
+	byte		body;
+	byte		skin;
 } modelstate_t;
 
 typedef struct decallist_s
@@ -105,6 +116,7 @@ typedef struct decallist_s
 	short		entityIndex;
 	byte		depth;
 	byte		flags;
+	float		scale;
 
 	// this is the surface plane that we hit so that
 	// we can move certain decals across
@@ -130,7 +142,7 @@ typedef struct render_api_s
 	void		(*R_SetCurrentEntity)( struct cl_entity_s *ent ); // tell engine about both currententity and currentmodel
 	void		(*R_SetCurrentModel)( struct model_s *mod );	// change currentmodel but leave currententity unchanged
 	void		(*GL_SetWorldviewProjectionMatrix)( const float *glmatrix ); // update viewprojection matrix (tracers uses it)
-	void		(*R_StoreEfrags)( struct efrag_s **ppefrag );	// store efrags for static entities
+	void		(*R_StoreEfrags)( struct efrag_s **ppefrag, int framecount );// store efrags for static entities
 
 	// Texture tools
 	int		(*GL_FindTexture)( const char *name );
@@ -139,15 +151,10 @@ typedef struct render_api_s
 	int		(*GL_CreateTexture)( const char *name, int width, int height, const void *buffer, int flags ); 
 	void		(*GL_FreeTexture)( unsigned int texnum );
 
-	// Draw stuff (decals and particles are drawing by the engine)
+	// Decals manipulating (draw & remove)
 	void		(*DrawSingleDecal)( struct decal_s *pDecal, struct msurface_s *fa );
-	void		(*GL_DrawParticles)( const float *vieworg, const float *fwd, const float *rt, const float *up, unsigned int clipFlags );
-
-	// Misc renderer functions
-	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot );	// creates a cubemap or skybox into gfx\env folder
-	int		(*COM_CompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
-	void		(*Host_Error)( const char *error, ... ); // cause Host Error
-	int		(*SPR_LoadExt)( const char *szPicName, unsigned int texFlags ); // extended version of SPR_Load
+	float		*(*R_DecalSetupVerts)( struct decal_s *pDecal, struct msurface_s *surf, int texture, int *outCount );
+	void		(*R_EntityRemoveDecals)( struct model_s *mod ); // remove all the decals from specified entity (BSP only)
 
 	// AVIkit support
 	void		*(*AVI_LoadVideo)( const char *filename, int load_audio, int ignore_hwgamma );
@@ -167,14 +174,17 @@ typedef struct render_api_s
 	void		(*GL_TexMatrixIdentity)( void );
 	void		(*GL_CleanUpTextureUnits)( int last );	// pass 0 for clear all the texture units
 	void		(*GL_TexGen)( unsigned int coord, unsigned int mode );
-
-// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 26
-	void		(*R_EntityRemoveDecals)( struct model_s *mod ); // remove all the decals from specified entity (BSP only)
-	float		*(*R_DecalSetupVerts)( struct decal_s *pDecal, struct msurface_s *surf, int texture, int *outCount );
-	void		(*R_StoreEfragsExt)( struct efrag_s **ppefrag, int framecount ); // store efrags for static entities
 	void		(*GL_TextureTarget)( unsigned int target ); // change texture unit mode without bind texture
-	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );	// moved here to avoid incompatibility with IEngineStudio official iface
+
+	// Misc renderer functions
+	void		(*GL_DrawParticles)( const float *vieworg, const float *fwd, const float *rt, const float *up, unsigned int clipFlags );
+	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot ); // creates a cubemap or skybox into gfx\env folder
+	int		(*COM_CompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
+	void		(*Host_Error)( const char *error, ... ); // cause Host Error
+	int		(*SPR_LoadExt)( const char *szPicName, unsigned int texFlags ); // extended version of SPR_Load
+	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );
 	const struct ref_overview_s *( *GetOverviewParms )( void );
+// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 28
 } render_api_t;
 
 // render callbacks
@@ -191,6 +201,8 @@ typedef struct render_interface_s
 	void		(*R_StudioDecalShoot)( int decalTexture, struct cl_entity_s *ent, const float *start, const float *pos, int flags, modelstate_t *state );
 	// prepare studio decals for save
 	int		(*R_CreateStudioDecalList)( decallist_t *pList, int count, qboolean changelevel );
+	// clear decals by engine request (e.g. for demo recording or vid_restart)
+	void		(*R_ClearStudioDecals)( void );
 	// grab r_speeds message
 	qboolean		(*R_SpeedsMessage)( char *out, size_t size );
 	// replace with built-in R_DrawCubemapView for make skyshots or envshots
