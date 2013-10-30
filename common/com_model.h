@@ -35,7 +35,6 @@ typedef vec_t		vec4_t[4];
 #define MIPLEVELS		4
 #define VERTEXSIZE		7
 #define MAXLIGHTMAPS	4
-#define MAXSTYLES		12		// BSP32 supports up to 12 styles per face
 #define NUM_AMBIENTS	4		// automatic ambient sounds
 
 // model types
@@ -216,8 +215,6 @@ typedef struct mextrasurf_s
 	vec3_t		origin;		// surface origin
 	msurfmesh_t	*mesh;		// VBO\VA ready surface mesh. Not used by engine but can be used by mod-makers
 
-	byte		styles[MAXSTYLES];	// expansion for BSP32 (12 lightstyles per surface)
-	int		cached_light[MAXSTYLES];	// values currently used in lightmap
 	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
 
 	int		mirrortexturenum;	// gl texnum

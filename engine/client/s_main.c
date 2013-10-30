@@ -1661,8 +1661,10 @@ void S_Music_f( void )
 
 		for( i = 0; i < 2; i++ )
 		{
-			if( FS_FileExists( va( "media/%s.%s", intro, ext[i] ), false )
-				&& FS_FileExists( va( "media/%s.%s", main, ext[i] ), false ))
+			const char *intro_path = va( "media/%s.%s", intro, ext[i] );
+			const char *main_path = va( "media/%s.%s", main, ext[i] );
+
+			if( FS_FileExists( intro_path, false ) && FS_FileExists( main_path, false ))
 			{
 				// combined track with introduction and main loop theme
 				S_StartBackgroundTrack( intro, main, 0 );
@@ -1670,7 +1672,7 @@ void S_Music_f( void )
 			}
 			else if( FS_FileExists( va( "media/%s.%s", track, ext[i] ), false ))
 			{
-				// single looped theme
+				// single non-looped theme
 				S_StartBackgroundTrack( track, NULL, 0 );
 				break;
 			}

@@ -1041,7 +1041,7 @@ void MIX_PaintChannels( int endtime )
 		MIX_MixPaintbuffers( IPAINTBUFFER, IROOMBUFFER, IPAINTBUFFER, count, S_GetMasterVolume() );
 
 		// add music or soundtrack from movie (no dsp)
-		MIX_MixPaintbuffers( IPAINTBUFFER, ISTREAMBUFFER, IPAINTBUFFER, count, s_musicvolume->value );	
+		MIX_MixPaintbuffers( IPAINTBUFFER, ISTREAMBUFFER, IPAINTBUFFER, count, S_GetMusicVolume() );	
 
 		// clip all values > 16 bit down to 16 bit
 		MIX_CompressPaintbuffer( IPAINTBUFFER, count );

@@ -1614,6 +1614,8 @@ static render_api_t gRenderAPI =
 	pfnSPR_LoadExt,
 	R_StudioGetTexture,
 	GL_GetOverviewParms,
+	S_FadeMusicVolume,
+	Com_SetRandomSeed,
 };
 
 /*

@@ -25,6 +25,7 @@ GNU General Public License for more details.
 #include "pm_defs.h"
 #include "pm_movevars.h"
 #include "render_api.h"
+#include "cdll_exp.h"
 #include "screenfade.h"
 #include "protocol.h"
 #include "netchan.h"
@@ -68,6 +69,8 @@ typedef struct frame_s
 
 #define CL_UPDATE_MASK	(CL_UPDATE_BACKUP - 1)
 extern int CL_UPDATE_BACKUP;
+
+#define INVALID_HANDLE	0xFFFF		// for XashXT cache system
 
 // the client_t structure is wiped completely at every
 // server map change
@@ -295,61 +298,10 @@ typedef struct
 // new versions of client dlls have a sanigle export with all callbacks
 typedef void (*CL_EXPORT_FUNCS)( void *pv );
 
-// NOTE: ordering is important!
-typedef struct
-{
-	int	(*pfnInitialize)( cl_enginefunc_t *pEnginefuncs, int iVersion );
-	void	(*pfnInit)( void );
-	int	(*pfnVidInit)( void );
-	int	(*pfnRedraw)( float flTime, int intermission );
-	int	(*pfnUpdateClientData)( client_data_t *cdata, float flTime );
-	void	(*pfnReset)( void );
-	void	(*pfnPlayerMove)( struct playermove_s *ppmove, int server );
-	void	(*pfnPlayerMoveInit)( struct playermove_s *ppmove );
-	char	(*pfnPlayerMoveTexture)( char *name );
-	void	(*IN_ActivateMouse)( void );
-	void	(*IN_DeactivateMouse)( void );
-	void	(*IN_MouseEvent)( int mstate );
-	void	(*IN_ClearStates)( void );
-	void	(*IN_Accumulate)( void );
-	void	(*CL_CreateMove)( float frametime, usercmd_t *cmd, int active );
-	int	(*CL_IsThirdPerson)( void );
-	void	(*CL_CameraOffset)( float *ofs );
-	void	*(*KB_Find)( const char *name );
-	void	(*CAM_Think)( void );		// camera stuff
-	void	(*pfnCalcRefdef)( ref_params_t *pparams );
-	int	(*pfnAddEntity)( int type, cl_entity_t *ent, const char *modelname );
-	void	(*pfnCreateEntities)( void );
-	void	(*pfnDrawNormalTriangles)( void );
-	void	(*pfnDrawTransparentTriangles)( void );
-	void	(*pfnStudioEvent)( const struct mstudioevent_s *event, const cl_entity_t *entity );
-	void	(*pfnPostRunCmd)( local_state_t *from, local_state_t *to, usercmd_t *cmd, int runfuncs, double time, uint random_seed );
-	void	(*pfnShutdown)( void );
-	void	(*pfnTxferLocalOverrides)( entity_state_t *state, const clientdata_t *client );
-	void	(*pfnProcessPlayerState)( entity_state_t *dst, const entity_state_t *src );
-	void	(*pfnTxferPredictionData)( entity_state_t *ps, const entity_state_t *pps, clientdata_t *pcd, const clientdata_t *ppcd, weapon_data_t *wd, const weapon_data_t *pwd );
-	void	(*pfnDemo_ReadBuffer)( int size, byte *buffer );
-	int	(*pfnConnectionlessPacket)( const netadr_t *net_from, const char *args, char *buffer, int *size );
-	int	(*pfnGetHullBounds)( int hullnumber, float *mins, float *maxs );
-	void	(*pfnFrame)( double time );
-	int	(*pfnKey_Event)( int eventcode, int keynum, const char *pszCurrentBinding );
-	void	(*pfnTempEntUpdate)( double frametime, double client_time, double cl_gravity, struct tempent_s **ppTempEntFree, struct tempent_s **ppTempEntActive, int ( *Callback_AddVisibleEntity )( cl_entity_t *pEntity ), void ( *Callback_TempEntPlaySound )( struct tempent_s *pTemp, float damp ));
-	cl_entity_t *(*pfnGetUserEntity)( int index );
-	void	(*pfnVoiceStatus)( int entindex, qboolean bTalking );
-	void	(*pfnDirectorMessage)( int iSize, void *pbuf );
-	int	(*pfnGetStudioModelInterface)( int version, struct r_studio_interface_s **ppinterface, struct engine_studio_api_s *pstudio );
-	void	(*pfnChatInputPosition)( int *x, int *y );
-	int	(*pfnGetPlayerTeam)( int playerIndex );
-	void	*(*pfnGetClientFactory)( void );
-	// Xash3D extension
-	int	(*pfnGetRenderInterface)( int version, render_api_t *renderfuncs, render_interface_t *callback );
-	void	(*pfnClipMoveToEntity)( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *tr );
-} HUD_FUNCTIONS;
-
 typedef struct
 {
 	void		*hInstance;		// pointer to client.dll
-	HUD_FUNCTIONS	dllFuncs;			// dll exported funcs
+	cldll_func_t	dllFuncs;			// dll exported funcs
 	render_interface_t	drawFuncs;		// custom renderer support
 	byte		*mempool;			// client edicts pool
 	string		mapname;			// map name
@@ -814,6 +766,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 void S_StartSound( const vec3_t pos, int ent, int chan, sound_t sfx, float vol, float attn, int pitch, int flags );
 void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, float attn, int pitch, int flags );
 void S_FadeClientVolume( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
+void S_FadeMusicVolume( float fadePercent );
 void S_StartLocalSound( const char *name );
 void S_RenderFrame( struct ref_params_s *fd );
 void S_ExtraUpdate( void );

@@ -876,15 +876,13 @@ float *R_DecalSetupVerts( decal_t *pDecal, msurface_t *surf, int texture, int *o
 
 void DrawSingleDecal( decal_t *pDecal, msurface_t *fa )
 {
-	float		*v;
-	gltexture_t	*glt;
-	int		i, numVerts;
+	float	*v;
+	int	i, numVerts;
 
 	v = R_DecalSetupVerts( pDecal, fa, pDecal->texture, &numVerts );
 	if( !numVerts ) return;
 
 	GL_Bind( GL_TEXTURE0, pDecal->texture );
-	glt = R_GetTexture( pDecal->texture );
 
 	pglBegin( GL_POLYGON );
 

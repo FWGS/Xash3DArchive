@@ -84,7 +84,10 @@ void CL_ClearTempEnts( void )
 	if( !cl_tempents ) return;
 
 	for( i = 0; i < GI->max_tents - 1; i++ )
+	{
 		cl_tempents[i].next = &cl_tempents[i+1];
+		cl_tempents[i].entity.trivial_accept = INVALID_HANDLE;
+          }
 
 	cl_tempents[GI->max_tents-1].next = NULL;
 	cl_free_tents = cl_tempents;
@@ -115,10 +118,12 @@ void CL_PrepareTEnt( TEMPENTITY *pTemp, model_t *pmodel )
 {
 	int	frameCount = 0;
 	int	modelIndex = 0;
+	int	modelHandle = pTemp->entity.trivial_accept;
 
 	Q_memset( pTemp, 0, sizeof( *pTemp ));
 
 	// use these to set per-frame and termination conditions / actions
+	pTemp->entity.trivial_accept = modelHandle; // keep unchanged
 	pTemp->flags = FTENT_NONE;		
 	pTemp->die = cl.time + 0.75f;
 

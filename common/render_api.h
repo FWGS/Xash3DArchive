@@ -21,7 +21,6 @@ GNU General Public License for more details.
 
 // changes for version 28
 // replace decal_t from software declaration to hardware (matched to normal HL)
-// mextrasurf_t->byte styles[12] added
 // mextrasurf_t->increased limit of reserved fields (up from 7 to 32)
 // replace R_StoreEfrags with him extended version
 // formed group for BSP decal manipulating
@@ -184,6 +183,8 @@ typedef struct render_api_s
 	int		(*SPR_LoadExt)( const char *szPicName, unsigned int texFlags ); // extended version of SPR_Load
 	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );
 	const struct ref_overview_s *( *GetOverviewParms )( void );
+	void		(*S_FadeMusicVolume)( float fadePercent );	// fade background track (0-100 percents)
+	void		(*SetRandomSeed)( long lSeed );		// set custom seed for RANDOM_FLOAT\RANDOM_LONG for predictable random
 // ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 28
 } render_api_t;
 
