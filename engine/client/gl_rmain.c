@@ -1389,6 +1389,33 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 	r_oldviewleaf = r_viewleaf = NULL;		// force markleafs next frame
 }
 
+/*
+===============
+GL_LoadTextures
+
+override standart function
+for extended RenderAPI
+===============
+*/
+qboolean GL_LoadTextures( const void *in, model_t *out )
+{
+	qboolean	result = false;
+
+	if( clgame.drawFuncs.GL_LoadTextures != NULL )
+	{
+		world.use_worldpool = true;
+
+		result = clgame.drawFuncs.GL_LoadTextures( in, out, &tr.solidskyTexture, &tr.alphaskyTexture );
+
+		if( result && tr.solidskyTexture && tr.alphaskyTexture )
+			world.sky_sphere = true;
+
+		world.use_worldpool = false;
+	}
+
+	return result;
+}
+
 static int GL_RenderGetParm( int parm, int arg )
 {
 	gltexture_t *glt;
@@ -1418,7 +1445,11 @@ static int GL_RenderGetParm( int parm, int arg )
 	case PARM_SKY_SPHERE:
 		return world.sky_sphere;
 	case PARM_WORLD_VERSION:
+		if( cls.state != ca_active )
+			return bmodel_version;
 		return world.version;
+	case PARM_WORLD_LOADING:
+		return world.loading;
 	case PARM_WIDESCREEN:
 		return glState.wideScreen;
 	case PARM_FULLSCREEN:
@@ -1559,11 +1590,6 @@ static const char *GL_TextureName( unsigned int texnum )
 	return R_GetTexture( texnum )->name;	
 }
 
-static int GL_LoadTextureNoFilter( const char *name, const byte *buf, size_t size, int flags )
-{
-	return GL_LoadTexture( name, buf, size, flags, NULL );	
-}
-
 static const ref_overview_t *GL_GetOverviewParms( void )
 {
 	return &clgame.overView;
@@ -1585,8 +1611,9 @@ static render_api_t gRenderAPI =
 	R_StoreEfrags,
 	GL_FindTexture,
 	GL_TextureName,
-	GL_LoadTextureNoFilter,
+	GL_LoadTexture,
 	GL_CreateTexture,
+	GL_SetTextureType,
 	GL_FreeTexture,
 	DrawSingleDecal,
 	R_DecalSetupVerts,
@@ -1614,8 +1641,11 @@ static render_api_t gRenderAPI =
 	pfnSPR_LoadExt,
 	R_StudioGetTexture,
 	GL_GetOverviewParms,
+	R_InitSky,
+	R_FindTexFilter,
 	S_FadeMusicVolume,
 	Com_SetRandomSeed,
+	Mod_WadList,
 };
 
 /*

@@ -75,6 +75,7 @@ typedef struct
 	qboolean		has_mirrors;	// one or more brush models contain reflective textures
 	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
 	int		block_size;	// lightmap blocksize
+	qboolean		use_worldpool;	// Mod_Calloc temporare change from com_studiocache to use loadmodel->mempool
 
 	vec3_t		mins;		// real accuracy world bounds
 	vec3_t		maxs;
@@ -85,6 +86,7 @@ extern world_static_t	world;
 extern byte		*com_studiocache;
 extern model_t		*loadmodel;
 extern convar_t		*mod_studiocache;
+extern int		bmodel_version;	// only actual during loading
 
 //
 // model.c
@@ -117,6 +119,7 @@ byte *Mod_CompressVis( const byte *in, size_t *size );
 byte *Mod_DecompressVis( const byte *in );
 modtype_t Mod_GetType( int handle );
 model_t *Mod_Handle( int handle );
+struct wadlist_s *Mod_WadList( void );
 
 //
 // mod_studio.c

@@ -90,6 +90,9 @@ void Host_PrintEngineFeatures( void )
 
 	if( host.features & ENGINE_LARGE_LIGHTMAPS )
 		MsgDev( D_AICONSOLE, "^3EXT:^7 Large lightmaps enabled\n" );
+
+	if( host.features & ENGINE_COMPENSATE_QUAKE_BUG )
+		MsgDev( D_AICONSOLE, "^3EXT:^7 Compensate quake bug enabled\n" );
 }
 
 /*

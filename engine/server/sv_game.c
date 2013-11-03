@@ -2457,12 +2457,10 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 	{
 		svgame.msg_name = NULL;
 		svgame.msg_index = -msg_num; // this is a system message
+		svgame.msg_name = svc_strings[msg_num];
 
 		if( msg_num == svc_temp_entity )
-		{
-			svgame.msg_name = "TempEntity";
 			iSize = -1; // temp entity have variable size
-		}
 		else iSize = 0;
 	}
 	else
@@ -2516,6 +2514,7 @@ void pfnMessageEnd( void )
 	float		*org = NULL;
 
 	if( svgame.msg_name ) name = svgame.msg_name;
+
 	if( !svgame.msg_started ) Host_Error( "MessageEnd: called with no active message\n" );
 	svgame.msg_started = false;
 

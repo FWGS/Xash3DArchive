@@ -36,8 +36,7 @@ int		bmodel_version;		// global stuff to detect bsp version
 char		modelname[64];		// short model name (without path and ext)
 convar_t		*mod_studiocache;
 convar_t		*mod_allow_materials;
-static char	mod_wadnames[128][32];	// 128 wad names stored
-static int	mod_numwads;
+static wadlist_t	wadlist;
 		
 model_t		*loadmodel;
 model_t		*worldmodel;
@@ -533,6 +532,7 @@ void Mod_ClearAll( void )
 		Mod_FreeModel( &cm_models[i] );
 
 	Q_memset( cm_models, 0, sizeof( cm_models ));
+	world.use_worldpool = false; // reset by Host_Error
 	cm_nummodels = 0;
 }
 
@@ -642,6 +642,10 @@ static void Mod_LoadTextures( const dlump_t *l )
 	}
 
 	in = (void *)(mod_base + l->fileofs);
+
+	// texture loading is overrided?
+	if( GL_LoadTextures( in, loadmodel ))
+		return;
 
 	loadmodel->numtextures = in->nummiptex;
 	loadmodel->textures = (texture_t **)Mem_Alloc( loadmodel->mempool, loadmodel->numtextures * sizeof( texture_t* ));
@@ -784,9 +788,9 @@ load_wad_textures:
 				qboolean	fullpath_loaded = false;
 
 				// check wads in reverse order
-				for( j = mod_numwads - 1; j >= 0; j-- )
+				for( j = wadlist.count - 1; j >= 0; j-- )
 				{
-					char	*texpath = va( "%s.wad/%s", mod_wadnames[j], texname );
+					char	*texpath = va( "%s.wad/%s", wadlist.wadnames[j], texname );
 
 					if( FS_FileExists( texpath, false ))
 					{
@@ -855,9 +859,9 @@ load_wad_textures:
 				if( !load_external_luma )
 				{
 					// check wads in reverse order
-					for( j = mod_numwads - 1; j >= 0; j-- )
+					for( j = wadlist.count - 1; j >= 0; j-- )
 					{
-						char	*texpath = va( "%s.wad/%s.mip", mod_wadnames[j], tx->name );
+						char	*texpath = va( "%s.wad/%s.mip", wadlist.wadnames[j], tx->name );
 
 						if( FS_FileExists( texpath, false ))
 						{
@@ -2166,7 +2170,7 @@ static void Mod_LoadEntities( const dlump_t *l )
 
 	world.entdatasize = l->filelen;
 	pfile = (char *)loadmodel->entities;
-	mod_numwads = 0;
+	wadlist.count = 0;
 
 	// parse all the wads for loading textures in right ordering
 	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
@@ -2201,9 +2205,9 @@ static void Mod_LoadEntities( const dlump_t *l )
 					char *end = Q_strchr( path, ';' );
 					if( !end ) break;
 					Q_strncpy( wadpath, path, (end - path) + 1 );
-					FS_FileBase( wadpath, mod_wadnames[mod_numwads++] );
+					FS_FileBase( wadpath, wadlist.wadnames[wadlist.count++] );
 					path += (end - path) + 1; // move pointer
-					if( mod_numwads >= 128 ) break; // too many wads...
+					if( wadlist.count >= 256 ) break; // too many wads...
 				}
 			}
 			else if( !Q_stricmp( keyname, "mapversion" ))
@@ -3071,10 +3075,16 @@ Mod_Calloc
 */
 void *Mod_Calloc( int number, size_t size )
 {
-	cache_user_t *cu;
+	cache_user_t	*cu;
+	byte		*pool;
+
+	// IEngineStudio->Mem_Calloc may be used for loading worldtextures
+	if( world.use_worldpool )
+		pool = loadmodel->mempool;
+	else pool = com_studiocache;
 
 	if( number <= 0 || size <= 0 ) return NULL;
-	cu = (cache_user_t *)Mem_Alloc( com_studiocache, sizeof( cache_user_t ) + number * size );
+	cu = (cache_user_t *)Mem_Alloc( pool, sizeof( cache_user_t ) + number * size );
 	cu->data = (void *)cu; // make sure what cu->data is not NULL
 
 	return cu;
@@ -3172,4 +3182,9 @@ model_t *Mod_Handle( int handle )
 		return NULL;
 	}
 	return com_models[handle];
+}
+
+wadlist_t *Mod_WadList( void )
+{
+	return &wadlist;
 }

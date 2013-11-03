@@ -3214,7 +3214,7 @@ TriForParams
 */
 void TriFogParams( float flDensity, int iFogSkybox )
 {
-	// FIXME: implement
+	// TODO: implement
 }
 
 /*

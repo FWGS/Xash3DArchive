@@ -1,3 +1,35 @@
+build 2463
+
+Engine: reorganize data in texture_t. Release one variable for mod-makers
+Engine: change decal_t structure get compatibility with GoldSrc
+Engine: expanded mextrasurf_t reserved fields up 32
+Engine: update player_info_t (added customization_t like in SDK 2.3)
+Engine: increase local_state_t->weapondata up 64 slots
+Engine: update IVoiceTweak interface
+Engine: new lightstyle system with local time and custom interpolation
+Engine: fix bug with lightstyle save\restore (only first 64 symbols of pattern was saved)
+Engine: update r_efx_api_t interface
+Engine: update engine_studio_api_t, remove uncompatible function StudioGetTexture, added three new (thats came from CS:CZ)
+Engine: added ref_overview to support custom overview implementation
+Engine: render interface is outdated now. New render interface has version 30 (too much changed)
+Engine: update triangleapi_t interface
+Engine: update cl_dll interface (also added support for signle export that called 'F')
+Engine: a lttle update for enginefuncs_t (server interface)
+Client: fixed crash on shutdown when custom renderer uses AVI-files
+Engine: applaying scale for decals on brushmodels or world geometry
+Engine: update model_state_t thats keep info about studiomodels for studio decals. Include body and skin
+Engine: get support for custom studiocache on static and tempents
+Engine: write R_Srpite_WallPuff from pEfxAPI
+Client: fix bug with beam sorting (solid beams was drawing in translucent pass)
+Render: add special flag for decals thats indicated local space (any decal after first shoot)
+Render: apply emboss filter on studiomodel textures
+Render: rewrite client event system for studiomodels. Get more predictable results
+Network: write existing decals and static entities into new demo
+Network: protocol was changed to 48
+ImageLib: fix old bug with save non-aligned 8-bit bmp files
+Server: fix bug with reloading hl.dll when map was changed every time
+Server: a client part of save-file is outdated. New version is 0.68
+
 build 2402
 
 Engine: added new feature flag for compensate stupid quake bug

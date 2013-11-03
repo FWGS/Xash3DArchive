@@ -77,9 +77,9 @@ typedef struct texture_s
 	int		anim_min, anim_max;	// time for this frame min <=time< max
 	struct texture_s	*anim_next;	// in the animation sequence
 	struct texture_s	*alternate_anims;	// bmodels in frame 1 use these
-	int		fb_texturenum;	// auto-luma texturenum
-	int		dt_texturenum;	// detail-texture binding
-	unsigned int	unused[2];	// reserved 
+	unsigned short	fb_texturenum;	// auto-luma texturenum
+	unsigned short	dt_texturenum;	// detail-texture binding
+	unsigned int	unused[3];	// reserved 
 } texture_t;
 
 typedef struct

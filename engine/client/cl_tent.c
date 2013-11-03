@@ -1782,8 +1782,13 @@ Create a wallpuff
 */
 void CL_Sprite_WallPuff( TEMPENTITY *pTemp, float scale )
 {
-	// UNDONE: g-cont. i'm dont know what this doing
-	Msg( "CL_Sprite_WallPuff: %g\n", scale );
+	if( !pTemp ) return;
+
+	pTemp->entity.curstate.renderamt = 255;
+	pTemp->entity.curstate.rendermode = kRenderTransAlpha;
+	pTemp->entity.angles[ROLL] = Com_RandomLong( 0, 359 );
+	pTemp->entity.curstate.scale = scale;
+	pTemp->die = cl.time + 0.01f;
 }
 
 /*

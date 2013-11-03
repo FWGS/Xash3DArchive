@@ -3361,11 +3361,12 @@ load model texture with unique name
 */
 static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture_t *ptexture )
 {
-	size_t	size;
-	int	flags = 0;
-	qboolean	load_external = false;
-	char	texname[128], name[128], mdlname[128];
-	texture_t	*tx = NULL;
+	size_t		size;
+	int		flags = 0;
+	qboolean		load_external = false;
+	char		texname[128], name[128], mdlname[128];
+	imgfilter_t	*filter = NULL;
+	texture_t		*tx = NULL;
 	
 	if( ptexture->flags & STUDIO_NF_TRANSPARENT )
 		flags |= (TF_CLAMP|TF_NOMIPMAP);
@@ -3422,6 +3423,10 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	FS_FileBase( ptexture->name, name );
 	FS_StripExtension( mdlname );
 
+	// loading texture filter for studiomodel
+	if( !( ptexture->flags & STUDIO_NF_COLORMAP ))
+		filter = R_FindTexFilter( va( "%s.mdl/%s", mdlname, name )); // grab texture filter
+
 	// NOTE: colormaps must have the palette for properly work. Ignore it.
 	if( mod_allow_materials != NULL && mod_allow_materials->integer && !( ptexture->flags & STUDIO_NF_COLORMAP ))
 	{
@@ -3430,7 +3435,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		Q_snprintf( texname, sizeof( texname ), "materials/%s/%s.tga", mdlname, name );
 
 		if( FS_FileExists( texname, false ))
-			gl_texturenum = GL_LoadTexture( texname, NULL, 0, flags, NULL );
+			gl_texturenum = GL_LoadTexture( texname, NULL, 0, flags, filter );
 
 		if( gl_texturenum )
 		{
@@ -3447,7 +3452,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 
 		// build the texname
 		Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
-		ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags, NULL );
+		ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags, filter );
           }
           else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
   

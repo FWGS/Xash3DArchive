@@ -850,6 +850,7 @@ typedef struct autocomplete_list_s
 } autocomplete_list_t;
 
 extern autocomplete_list_t cmd_list[];
+extern const char *svc_strings[256];
 
 // soundlib shared exports
 qboolean S_Init( void );

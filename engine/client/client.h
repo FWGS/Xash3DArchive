@@ -614,7 +614,6 @@ _inline cl_entity_t *CL_EDICT_NUM( int n )
 //
 // cl_parse.c
 //
-extern const char *svc_strings[256];
 void CL_ParseServerMessage( sizebuf_t *msg );
 void CL_ParseTempEntity( sizebuf_t *msg );
 qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
