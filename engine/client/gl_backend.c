@@ -163,6 +163,13 @@ void GL_SelectTexture( GLenum texture )
 
 	// don't allow negative texture units
 	if((GLint)texture < 0 ) texture = 0;
+
+	if( texture >= GL_MaxTextureUnits( ))
+	{
+		MsgDev( D_ERROR, "GL_SelectTexture: bad tmu state %i\n", texture );
+		return; 
+	}
+
 	if( glState.activeTMU == texture )
 		return;
 
@@ -241,7 +248,7 @@ GL_TextureTarget
 */
 void GL_TextureTarget( uint target )
 {
-	if( glState.activeTMU < 0 || glState.activeTMU >= glConfig.max_texture_units )
+	if( glState.activeTMU < 0 || glState.activeTMU >= GL_MaxTextureUnits( ))
 	{
 		MsgDev( D_ERROR, "GL_TextureTarget: bad tmu state %i\n", glState.activeTMU );
 		return; 

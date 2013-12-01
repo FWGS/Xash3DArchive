@@ -171,13 +171,16 @@ static const char *R_DetailTextureForName( const char *name )
 void R_CreateDetailTexturesList( const char *filename )
 {
 	file_t		*detail_txt = NULL;
-	const char	*detail_name, *texname;
+	float		xScale, yScale;
+	const char	*detail_name;
+	texture_t		*tex;
+	rgbdata_t		*pic;
 	int		i;
 
 	for( i = 0; i < cl.worldmodel->numtextures; i++ )
 	{
-		texname = cl.worldmodel->textures[i]->name;
-		detail_name = R_DetailTextureForName( texname );
+		tex = cl.worldmodel->textures[i];
+		detail_name = R_DetailTextureForName( tex->name );
 		if( !detail_name ) continue;
 
 		// detailtexture detected
@@ -190,8 +193,18 @@ void R_CreateDetailTexturesList( const char *filename )
 				break;
 			}
 
+			pic = FS_LoadImage( va( "gfx/detail/%s", detail_name ), NULL, 0 );
+
+			if( pic )
+			{
+				xScale = (pic->width / tex->width) * gl_detailscale->value;
+				yScale = (pic->height / tex->height) * gl_detailscale->value;
+				FS_FreeImage( pic );
+			}
+			else xScale = yScale = 10.0f;
+
 			// store detailtexture description
-			FS_Printf( detail_txt, "%s detail/%s 10.0 10.0\n", texname, detail_name );
+			FS_Printf( detail_txt, "%s detail/%s %.2f %.2f\n", tex->name, detail_name, xScale, yScale );
 		}
 	}
 

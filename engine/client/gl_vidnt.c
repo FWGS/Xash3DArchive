@@ -37,6 +37,7 @@ convar_t	*gl_luminance_textures;
 convar_t	*gl_keeptjunctions;
 convar_t	*gl_texture_lodbias;
 convar_t	*gl_showtextures;
+convar_t	*gl_detailscale;
 convar_t	*gl_swapInterval;
 convar_t	*gl_check_errors;
 convar_t	*gl_allow_static;
@@ -483,6 +484,19 @@ qboolean GL_Support( int r_ext )
 	MsgDev( D_ERROR, "GL_Support: invalid extension %d\n", r_ext );
 
 	return false;		
+}
+
+
+/*
+=================
+GL_MaxTextureUnits
+=================
+*/
+int GL_MaxTextureUnits( void )
+{
+	if( GL_Support( GL_SHADER_GLSL100_EXT ))
+		return max( min( glConfig.max_texture_coords, glConfig.max_teximage_units ), MAX_TEXTURE_UNITS );
+	return glConfig.max_texture_units;
 }
 
 /*
@@ -1377,8 +1391,11 @@ static void GL_SetDefaults( void )
 	pglPolygonOffset( -1.0f, -2.0f );
 
 	// properly disable multitexturing at startup
-	for( i = glConfig.max_texture_units - 1; i > 0; i-- )
+	for( i = (MAX_TEXTURE_UNITS - 1); i > 0; i-- )
 	{
+		if( i >= GL_MaxTextureUnits( ))
+			continue;
+
 		GL_SelectTexture( i );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		pglDisable( GL_BLEND );
@@ -1431,6 +1448,11 @@ void R_RenderInfo_f( void )
 		Msg( "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT: %.1f\n", glConfig.max_texture_anisotropy );
 	if( glConfig.texRectangle )
 		Msg( "GL_MAX_RECTANGLE_TEXTURE_SIZE_NV: %i\n", glConfig.max_2d_rectangle_size );
+	if( GL_Support( GL_SHADER_GLSL100_EXT ))
+	{
+		Msg( "GL_MAX_TEXTURE_COORDS_ARB: %i\n", glConfig.max_texture_coords );
+		Msg( "GL_MAX_TEXTURE_IMAGE_UNITS_ARB: %i\n", glConfig.max_teximage_units );
+	}
 
 	Msg( "\n" );
 	Msg( "MODE: %i, %i x %i %s\n", vid_mode->integer, r_width->integer, r_height->integer );
@@ -1490,6 +1512,7 @@ void GL_InitCommands( void )
 	gl_check_errors = Cvar_Get( "gl_check_errors", "1", CVAR_ARCHIVE, "ignore video engine errors" );
 	gl_swapInterval = Cvar_Get( "gl_swapInterval", "0", CVAR_ARCHIVE,  "time beetween frames (in msec)" );
 	gl_extensions = Cvar_Get( "gl_extensions", "1", CVAR_GLCONFIG, "allow gl_extensions" );
+	gl_detailscale = Cvar_Get( "gl_detailscale", "4.0", CVAR_ARCHIVE, "default scale applies while auto-generate list of detail textures" );
 	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "2.0", CVAR_ARCHIVE, "textures anisotropic filter" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures" );
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_GLCONFIG, "compress textures to safe video memory" ); 
@@ -1549,7 +1572,7 @@ void GL_InitExtensions( void )
 		GL_CheckExtension( "GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "gl_drawrangeelments", GL_DRAW_RANGEELEMENTS_EXT );
 
 	// multitexture
-	glConfig.max_texture_units = 1;
+	glConfig.max_texture_units = glConfig.max_texture_coords = glConfig.max_teximage_units = 1;
 	GL_CheckExtension( "GL_ARB_multitexture", multitexturefuncs, "gl_arb_multitexture", GL_ARB_MULTITEXTURE );
 
 	if( GL_Support( GL_ARB_MULTITEXTURE ))
@@ -1625,6 +1648,7 @@ void GL_InitExtensions( void )
 	GL_CheckExtension( "GL_EXT_blend_subtract", blendequationfuncs, "gl_ext_customblend", GL_BLEND_SUBTRACT_EXT );
 
 	GL_CheckExtension( "glStencilOpSeparate", gl2separatestencilfuncs, "gl_separate_stencil", GL_SEPARATESTENCIL_EXT );
+
 	if( !GL_Support( GL_SEPARATESTENCIL_EXT ))
 		GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "gl_separate_stencil", GL_SEPARATESTENCIL_EXT );
 
@@ -1647,6 +1671,17 @@ void GL_InitExtensions( void )
 
 	// occlusion queries
 	GL_CheckExtension( "GL_ARB_occlusion_query", occlusionfunc, "gl_occlusion_queries", GL_OCCLUSION_QUERIES_EXT );
+
+	if( GL_Support( GL_SHADER_GLSL100_EXT ))
+	{
+		pglGetIntegerv( GL_MAX_TEXTURE_COORDS_ARB, &glConfig.max_texture_coords );
+		pglGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &glConfig.max_teximage_units );
+	}
+	else
+	{
+		// just get from multitexturing
+		glConfig.max_texture_coords = glConfig.max_teximage_units = glConfig.max_texture_units;
+	}
 
 	// rectangle textures support
 	if( Q_strstr( glConfig.extensions_string, "GL_NV_texture_rectangle" ))

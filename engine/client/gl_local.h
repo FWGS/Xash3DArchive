@@ -58,11 +58,13 @@ extern byte	*r_temppool;
 
 typedef struct gltexture_s
 {
-	char		name[128];	// game path, including extension
+	char		name[256];	// game path, including extension (can be store image programs)
 	word		srcWidth;		// keep unscaled sizes
 	word		srcHeight;
 	word		width;		// upload width\height
 	word		height;
+
+	uint		cacheframe;	// worldmodel->load_sequence
 
 	GLuint		target;		// glTarget
 	GLuint		texnum;		// gl texture binding
@@ -302,6 +304,7 @@ byte *GL_ResampleTexture( const byte *source, int in_w, int in_h, int out_w, int
 int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags );
 void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor );
 void GL_TexFilter( gltexture_t *tex, qboolean update );
+void R_FreeImage( gltexture_t *image );
 int GL_FindTexture( const char *name );
 void GL_FreeTexture( GLenum texnum );
 void GL_FreeImage( const char *name );
@@ -430,6 +433,7 @@ void GL_UpdateGammaRamp( void );
 qboolean GL_DeleteContext( void );
 qboolean GL_Support( int r_ext );
 void VID_CheckChanges( void );
+int GL_MaxTextureUnits( void );
 qboolean R_Init( void );
 void R_Shutdown( void );
 
@@ -525,7 +529,7 @@ enum
 	GL_TEXTURE1,
 	GL_TEXTURE2,
 	GL_TEXTURE3,		// g-cont. 4 units should be enough
-	MAX_TEXTURE_UNITS		// must be last
+	MAX_TEXTURE_UNITS = 32	// can't acess to all over units without GLSL or cg
 };
 
 typedef struct
@@ -539,6 +543,8 @@ typedef struct
 	byte		extension[GL_EXTCOUNT];
 
 	int		max_texture_units;
+	int		max_texture_coords;
+	int		max_teximage_units;
 	GLint		max_2d_texture_size;
 	GLint		max_2d_rectangle_size;
 	GLint		max_3d_texture_size;
@@ -614,6 +620,7 @@ extern convar_t	*gl_showtextures;
 extern convar_t	*gl_compress_textures;
 extern convar_t	*gl_luminance_textures;
 extern convar_t	*gl_keeptjunctions;
+extern convar_t	*gl_detailscale;
 extern convar_t	*gl_overview;	// draw map in overview mode
 extern convar_t	*gl_wireframe;
 extern convar_t	*gl_allow_static;

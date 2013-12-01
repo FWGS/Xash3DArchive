@@ -115,15 +115,16 @@ static decal_t *R_DecalAlloc( decal_t *pdecal )
 		// check for the odd possiblity of infinte loop
 		do 
 		{
-			gDecalCount++;
 			if( gDecalCount >= limit )
 				gDecalCount = 0;
-			pdecal = gDecalPool + gDecalCount; // reuse next decal
+
+			pdecal = &gDecalPool[gDecalCount]; // reuse next decal
+			gDecalCount++;
 			count++;
 		} while(( pdecal->flags & FDECAL_PERMANENT ) && count < limit );
 	}
 	
-	// If decal is already linked to a surface, unlink it.
+	// if decal is already linked to a surface, unlink it.
 	R_DecalUnlink( pdecal );
 
 	return pdecal;	
@@ -1033,12 +1034,8 @@ void DrawSurfaceDecals( msurface_t *fa )
 */
 static qboolean R_DecalUnProject( decal_t *pdecal, decallist_t *entry )
 {
-	cl_entity_t	*ent;
-		
 	if( !pdecal || !( pdecal->psurface ))
 		return false;
-
-	ent = CL_GetEntityByIndex( pdecal->entityIndex );
 
 	VectorCopy( pdecal->position, entry->position );
 	entry->entityIndex = pdecal->entityIndex;

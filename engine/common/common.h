@@ -777,6 +777,7 @@ void SV_CreateDecal( struct sizebuf_s *msg, const float *origin, int decalIndex,
 void SV_CreateStudioDecal( struct sizebuf_s *msg, const float *origin, const float *start, int decalIndex, int entityIndex, int modelIndex,
 int flags, struct modelstate_s *state );
 struct sizebuf_s *SV_GetReliableDatagram( void );
+qboolean SV_RestoreCustomDecal( struct decallist_s *entry, edict_t *pEdict, qboolean adjacent );
 int R_CreateDecalList( struct decallist_s *pList, qboolean changelevel );
 void R_ClearAllDecals( void );
 void R_ClearStaticEntities( void );

@@ -1477,6 +1477,9 @@ static int GL_RenderGetParm( int parm, int arg )
 		return host.features;
 	case PARM_ACTIVE_TMU:
 		return glState.activeTMU;
+	case PARM_TEX_CACHEFRAME:
+		glt = R_GetTexture( arg );
+		return glt->cacheframe;
 	}
 	return 0;
 }

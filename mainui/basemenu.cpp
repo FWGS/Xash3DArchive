@@ -1034,7 +1034,7 @@ void UI_UpdateMenu( float flTime )
                     
 		if( first )
 		{
-			BACKGROUND_TRACK( "gamestartup.mp3", "gamestartup.mp3" );
+			BACKGROUND_TRACK( "gamestartup", "gamestartup" );
 			first = FALSE;
 		}
 	}

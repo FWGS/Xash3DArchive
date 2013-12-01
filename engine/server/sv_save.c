@@ -441,13 +441,16 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	if( adjacent && ( flags & FDECAL_PERMANENT ))
 		return;
 
-	// NOTE: at this point all decal indexes is valid
-	decalIndex = pfnDecalIndex( entry->name );
-
 	// restore entity and model index
 	pEdict = pSaveData->pTable[entry->entityIndex].pent;
 	if( SV_IsValidEdict( pEdict )) modelIndex = pEdict->v.modelindex;
 	if( SV_IsValidEdict( pEdict )) entityIndex = NUM_FOR_EDICT( pEdict );
+
+	if( SV_RestoreCustomDecal( entry, pEdict, adjacent ))
+		return; // decal was sucessfully restored at the game-side
+
+	// NOTE: at this point all decal indexes is valid
+	decalIndex = pfnDecalIndex( entry->name );
 
 	if( flags & FDECAL_STUDIO )
 	{

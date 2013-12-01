@@ -671,10 +671,15 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 
 	t = FS_Search( "maps/*.bsp", false, onlyingamedir );
 
-	if( !t && onlyingamedir )
+	if( !t )
 	{
-		// mod doesn't contain any maps (probably this is a bot)
-		return Cmd_CheckMapsList_R( fRefresh, false );
+		if( onlyingamedir )
+		{
+			// mod doesn't contain any maps (probably this is a bot)
+			return Cmd_CheckMapsList_R( fRefresh, false );
+		}
+
+		return false;
 	}
 
 	buffer = Mem_Alloc( host.mempool, t->numfilenames * 2 * sizeof( result ));

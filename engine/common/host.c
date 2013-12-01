@@ -93,6 +93,9 @@ void Host_PrintEngineFeatures( void )
 
 	if( host.features & ENGINE_COMPENSATE_QUAKE_BUG )
 		MsgDev( D_AICONSOLE, "^3EXT:^7 Compensate quake bug enabled\n" );
+
+	if( host.features & ENGINE_ENABLE_IMAGE_PROGRAM )
+		MsgDev( D_AICONSOLE, "^3EXT:^7 Image program support enabled\n" );
 }
 
 /*
@@ -421,9 +424,13 @@ void Host_RestartDecals( void )
 	for( i = 0; i < host.numdecals; i++ )
 	{
 		entry = &host.decalList[i];
+		modelIndex = pfnPEntityOfEntIndex( entry->entityIndex )->v.modelindex;
+
+		// game override
+		if( SV_RestoreCustomDecal( entry, pfnPEntityOfEntIndex( entry->entityIndex ), false ))
+			continue;
 
 		decalIndex = pfnDecalIndex( entry->name );
-		modelIndex = pfnPEntityOfEntIndex( entry->entityIndex )->v.modelindex;
 
 		// BSP and studio decals has different messages
 		if( entry->flags & FDECAL_STUDIO )

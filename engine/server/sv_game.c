@@ -374,6 +374,19 @@ sizebuf_t *SV_GetReliableDatagram( void )
 	return &sv.reliable_datagram;
 }
 
+qboolean SV_RestoreCustomDecal( decallist_t *entry, edict_t *pEdict, qboolean adjacent )
+{
+	if( svgame.physFuncs.pfnRestoreDecal != NULL )
+	{
+		if( !pEdict ) pEdict = EDICT_NUM( entry->entityIndex );
+
+		// true if decal was sucessfully restored at the game-side
+		return svgame.physFuncs.pfnRestoreDecal( entry, pEdict, adjacent );
+	}
+
+	return false;
+}
+
 /*
 =======================
 SV_CreateDecal
@@ -3907,6 +3920,9 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 
 	// vis not set - fullvis enabled
 	if( !pset ) return 1;
+
+	if( ent->v.flags & FL_CUSTOMENTITY && ent->v.owner && ent->v.owner->v.flags & FL_CLIENT )
+		ent = ent->v.owner;	// upcast beams to my owner
 
 	if( ent->headnode < 0 )
 	{

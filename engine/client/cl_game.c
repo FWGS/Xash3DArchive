@@ -1972,7 +1972,7 @@ pfnIsSpectateOnly
 static int pfnIsSpectateOnly( void )
 {
 	cl_entity_t *pPlayer = CL_GetLocalPlayer();
-	return (pPlayer->curstate.spectator != 0);
+	return pPlayer ? (pPlayer->curstate.spectator != 0) : 0;
 }
 
 /*

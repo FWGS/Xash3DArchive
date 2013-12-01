@@ -56,6 +56,7 @@ GNU General Public License for more details.
 #define PARM_TEX_FLAGS	20
 #define PARM_FEATURES	21	// same as movevars->features
 #define PARM_ACTIVE_TMU	22	// for debug
+#define PARM_TEX_CACHEFRAME	23	// compare with worldmodel->needload
 
 enum
 {
@@ -108,10 +109,11 @@ typedef enum
 	TF_HAS_ALPHA	= (1<<16),	// image has alpha (used only for GL_CreateTexture)
 	TF_FORCE_COLOR	= (1<<17),	// force upload monochrome textures as RGB (detail textures)
 	TF_TEXTURE_1D	= (1<<18),	// this is GL_TEXTURE_1D
-	TF_BORDER		= (1<<19),
+	TF_BORDER		= (1<<19),	// zero clamp for projected textures
 	TF_TEXTURE_3D	= (1<<20),	// this is GL_TEXTURE_3D
 	TF_FLOAT		= (1<<21),	// use GL_FLOAT instead of GL_UNSIGNED_BYTE
 	TF_TEXTURE_RECTANGLE= (1<<22),	// this is GL_TEXTURE_RECTANGLE
+	TF_ALPHA_BORDER	= (1<<23),	// clamp to (0,0,0,255)
 } texFlags_t;
 
 typedef struct beam_s BEAM;

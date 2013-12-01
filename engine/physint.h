@@ -100,6 +100,8 @@ typedef struct physics_interface_s
 	string_t		(*pfnMakeString)( const char *szValue );
 	// read custom string (e.g. using user implementation of stringtable, not engine strings)
 	const char*	(*pfnGetString)( string_t iString );
+	// helper for restore custom decals that have custom message (e.g. Paranoia)
+	int		(*pfnRestoreDecal)( struct decallist_s *entry, edict_t *pEdict, qboolean adjacent );
 } physics_interface_t;
 
 #endif//PHYSINT_H
