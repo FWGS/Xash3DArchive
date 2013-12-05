@@ -114,6 +114,7 @@ typedef enum
 	TF_FLOAT		= (1<<21),	// use GL_FLOAT instead of GL_UNSIGNED_BYTE
 	TF_TEXTURE_RECTANGLE= (1<<22),	// this is GL_TEXTURE_RECTANGLE
 	TF_ALPHA_BORDER	= (1<<23),	// clamp to (0,0,0,255)
+	TF_IMAGE_PROGRAM	= (1<<24),	// enable image program support like in Doom3
 } texFlags_t;
 
 typedef struct beam_s BEAM;
@@ -218,6 +219,12 @@ typedef struct render_api_s
 	void		(*SetRandomSeed)( long lSeed );		// set custom seed for RANDOM_FLOAT\RANDOM_LONG for predictable random
 	wadlist_t		*(*COM_GetWadsList)( void );			// returns a wadlist for the given map
 // ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 30
+
+	// static allocations
+	void		*(*pfnMemAlloc)( size_t cb, const char *filename, const int fileline );
+	void		(*pfnMemFree)( void *mem, const char *filename, const int fileline );
+ 	// find in files
+	char		**(*pfnGetFilesList)( const char *pattern, int *numFiles, int gamedironly );
 } render_api_t;
 
 // render callbacks

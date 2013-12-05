@@ -1199,7 +1199,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	// set some image flags
 	Image_SetForceFlags( picFlags );
 
-	if( host.features & ENGINE_ENABLE_IMAGE_PROGRAM )
+	if( flags & TF_IMAGE_PROGRAM )
 	{
 		char	buffer[256], token[256];
 		char	*script;

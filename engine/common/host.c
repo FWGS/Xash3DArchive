@@ -93,9 +93,6 @@ void Host_PrintEngineFeatures( void )
 
 	if( host.features & ENGINE_COMPENSATE_QUAKE_BUG )
 		MsgDev( D_AICONSOLE, "^3EXT:^7 Compensate quake bug enabled\n" );
-
-	if( host.features & ENGINE_ENABLE_IMAGE_PROGRAM )
-		MsgDev( D_AICONSOLE, "^3EXT:^7 Image program support enabled\n" );
 }
 
 /*

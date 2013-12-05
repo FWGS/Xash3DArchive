@@ -1598,6 +1598,40 @@ static const ref_overview_t *GL_GetOverviewParms( void )
 	return &clgame.overView;
 }
 
+static void *R_Mem_Alloc( size_t cb, const char *filename, const int fileline )
+{
+	return _Mem_Alloc( cls.mempool, cb, filename, fileline );
+}
+
+static void R_Mem_Free( void *mem, const char *filename, const int fileline )
+{
+	_Mem_Free( mem, filename, fileline );
+}
+
+/*
+=========
+pfnGetFilesList
+
+=========
+*/
+static char **pfnGetFilesList( const char *pattern, int *numFiles, int gamedironly )
+{
+	static search_t	*t = NULL;
+
+	if( t ) Mem_Free( t ); // release prev search
+
+	t = FS_Search( pattern, true, gamedironly );
+
+	if( !t )
+	{
+		if( numFiles ) *numFiles = 0;
+		return NULL;
+	}
+
+	if( numFiles ) *numFiles = t->numfilenames;
+	return t->filenames;
+}
+	
 static render_api_t gRenderAPI =
 {
 	GL_RenderGetParm,
@@ -1649,6 +1683,9 @@ static render_api_t gRenderAPI =
 	S_FadeMusicVolume,
 	Com_SetRandomSeed,
 	Mod_WadList,
+	R_Mem_Alloc,
+	R_Mem_Free,
+	pfnGetFilesList,
 };
 
 /*
