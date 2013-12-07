@@ -156,33 +156,33 @@ void GL_LoadIdentityTexMatrix( void )
 GL_SelectTexture
 =================
 */
-void GL_SelectTexture( GLenum texture )
+void GL_SelectTexture( GLint tmu )
 {
 	if( !GL_Support( GL_ARB_MULTITEXTURE ))
 		return;
 
 	// don't allow negative texture units
-	if((GLint)texture < 0 ) texture = 0;
+	if( tmu < 0 ) return;
 
-	if( texture >= GL_MaxTextureUnits( ))
+	if( tmu >= GL_MaxTextureUnits( ))
 	{
-		MsgDev( D_ERROR, "GL_SelectTexture: bad tmu state %i\n", texture );
+		MsgDev( D_ERROR, "GL_SelectTexture: bad tmu state %i\n", tmu );
 		return; 
 	}
 
-	if( glState.activeTMU == texture )
+	if( glState.activeTMU == tmu )
 		return;
 
-	glState.activeTMU = texture;
+	glState.activeTMU = tmu;
 
 	if( pglActiveTextureARB )
 	{
-		pglActiveTextureARB( texture + GL_TEXTURE0_ARB );
-		pglClientActiveTextureARB( texture + GL_TEXTURE0_ARB );
+		pglActiveTextureARB( tmu + GL_TEXTURE0_ARB );
+		pglClientActiveTextureARB( tmu + GL_TEXTURE0_ARB );
 	}
 	else if( pglSelectTextureSGIS )
 	{
-		pglSelectTextureSGIS( texture + GL_TEXTURE0_SGIS );
+		pglSelectTextureSGIS( tmu + GL_TEXTURE0_SGIS );
 	}
 }
 
@@ -218,6 +218,7 @@ void GL_CleanUpTextureUnits( int last )
 			glState.currentTextures[i] = -1; // unbind texture
 		}
 
+		GL_SetTexCoordArrayMode( GL_NONE );
 		GL_LoadIdentityTexMatrix();
 		GL_DisableAllTexGens();
 		GL_SelectTexture( i - 1 );
@@ -297,7 +298,7 @@ void GL_TexGen( GLenum coord, GLenum mode )
 
 	if( mode )
 	{
-		if(!( glState.genSTEnabled[tmu] & bit ))
+		if( !( glState.genSTEnabled[tmu] & bit ))
 		{
 			pglEnable( gen );
 			glState.genSTEnabled[tmu] |= bit;
@@ -311,6 +312,34 @@ void GL_TexGen( GLenum coord, GLenum mode )
 			pglDisable( gen );
 			glState.genSTEnabled[tmu] &= ~bit;
 		}
+	}
+}
+
+/*
+=================
+GL_SetTexCoordArrayMode
+=================
+*/
+void GL_SetTexCoordArrayMode( GLenum mode )
+{
+	int	tmu = glState.activeTMU;
+	int	bit, cmode = glState.texCoordArrayMode[tmu];
+
+	if( mode == GL_TEXTURE_COORD_ARRAY )
+		bit = 1;
+	else if( mode == GL_TEXTURE_CUBE_MAP_ARB )
+		bit = 2;
+	else bit = 0;
+
+	if( cmode != bit )
+	{
+		if( cmode == 1 ) pglDisableClientState( GL_TEXTURE_COORD_ARRAY );
+		else if( cmode == 2 ) pglDisable( GL_TEXTURE_CUBE_MAP_ARB );
+
+		if( bit == 1 ) pglEnableClientState( GL_TEXTURE_COORD_ARRAY );
+		else if( bit == 2 ) pglEnable( GL_TEXTURE_CUBE_MAP_ARB );
+
+		glState.texCoordArrayMode[tmu] = bit;
 	}
 }
 

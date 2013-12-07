@@ -226,7 +226,7 @@ void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height,
 		Host_Error( "R_UploadStretchRaw: size %i exceeds hardware limits\n", rows );
 
 	tex = R_GetTexture( texture );
-	GL_Bind( GL_TEXTURE0, texture );
+	GL_Bind( GL_KEEP_UNIT, texture );
 	tex->width = cols;
 	tex->height = rows;
 

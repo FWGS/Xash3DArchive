@@ -27,8 +27,8 @@ GNU General Public License for more details.
 // move misc functions at end of the interface
 // added new export for clearing studio decals
 
-#define CL_RENDER_INTERFACE_VERSION		30
-#define MAX_STUDIO_DECALS			4096	// + unused space of BSP decals
+#define CL_RENDER_INTERFACE_VERSION	31
+#define MAX_STUDIO_DECALS		4096	// + unused space of BSP decals
 
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
 #define INFO_SURF( surf, mod )	(mod->surfaces + (surf - (mextrasurf_t *)mod->cache.data)) 
@@ -197,14 +197,19 @@ typedef struct render_api_s
 	int		(*AVI_IsActive)( void *Avi );
 
 	// glState related calls (must use this instead of normal gl-calls to prevent de-synchornize local states between engine and the client)
-	void		(*GL_Bind)( unsigned int tmu, unsigned int texnum );
-	void		(*GL_SelectTexture)( unsigned int texture );
+	void		(*GL_Bind)( int tmu, unsigned int texnum );
+	void		(*GL_SelectTexture)( int tmu );
 	void		(*GL_LoadTextureMatrix)( const float *glmatrix );
 	void		(*GL_TexMatrixIdentity)( void );
 	void		(*GL_CleanUpTextureUnits)( int last );	// pass 0 for clear all the texture units
 	void		(*GL_TexGen)( unsigned int coord, unsigned int mode );
 	void		(*GL_TextureTarget)( unsigned int target ); // change texture unit mode without bind texture
-
+	void		(*GL_TexCoordArrayMode)( unsigned int texmode );
+	void		(*GL_Reserved0)( void );	// for potential interface expansion without broken compatibility
+	void		(*GL_Reserved1)( void );
+	void		(*GL_Reserved2)( void );
+	void		(*GL_Reserved3)( void );
+		
 	// Misc renderer functions
 	void		(*GL_DrawParticles)( const float *vieworg, const float *fwd, const float *rt, const float *up, unsigned int clipFlags );
 	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot ); // creates a cubemap or skybox into gfx\env folder
@@ -218,13 +223,12 @@ typedef struct render_api_s
 	void		(*S_FadeMusicVolume)( float fadePercent );	// fade background track (0-100 percents)
 	void		(*SetRandomSeed)( long lSeed );		// set custom seed for RANDOM_FLOAT\RANDOM_LONG for predictable random
 	wadlist_t		*(*COM_GetWadsList)( void );			// returns a wadlist for the given map
-// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 30
-
 	// static allocations
 	void		*(*pfnMemAlloc)( size_t cb, const char *filename, const int fileline );
 	void		(*pfnMemFree)( void *mem, const char *filename, const int fileline );
  	// find in files
 	char		**(*pfnGetFilesList)( const char *pattern, int *numFiles, int gamedironly );
+	// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 31
 } render_api_t;
 
 // render callbacks

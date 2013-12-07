@@ -67,7 +67,7 @@ const char *GL_Target( GLenum target )
 GL_Bind
 =================
 */
-void GL_Bind( GLenum tmu, GLenum texnum )
+void GL_Bind( GLint tmu, GLenum texnum )
 {
 	gltexture_t	*texture;
 
@@ -75,7 +75,9 @@ void GL_Bind( GLenum tmu, GLenum texnum )
 	if( texnum <= 0 ) texnum = tr.defaultTexture;
 	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
 
-	GL_SelectTexture( tmu );
+	if( tmu != GL_KEEP_UNIT )
+		GL_SelectTexture( tmu );
+	else tmu = glState.activeTMU;
 
 	texture = &r_textures[texnum];
 
@@ -90,8 +92,8 @@ void GL_Bind( GLenum tmu, GLenum texnum )
 	if( glState.currentTextures[tmu] == texture->texnum )
 		return;
 
-	glState.currentTextures[tmu] = texture->texnum;
 	pglBindTexture( texture->target, texture->texnum );
+	glState.currentTextures[tmu] = texture->texnum;
 }
 
 /*

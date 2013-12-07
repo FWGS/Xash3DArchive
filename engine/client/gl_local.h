@@ -253,13 +253,14 @@ extern struct particle_s	*cl_free_trails;
 void GL_BackendStartFrame( void );
 void GL_BackendEndFrame( void );
 void GL_CleanUpTextureUnits( int last );
-void GL_Bind( GLenum tmu, GLenum texnum );
+void GL_Bind( GLint tmu, GLenum texnum );
 void GL_MultiTexCoord2f( GLenum texture, GLfloat s, GLfloat t );
+void GL_SetTexCoordArrayMode( GLenum mode );
 void GL_LoadTexMatrix( const matrix4x4 m );
 void GL_LoadTexMatrixExt( const float *glmatrix );
 void GL_LoadMatrix( const matrix4x4 source );
 void GL_TexGen( GLenum coord, GLenum mode );
-void GL_SelectTexture( GLenum texture );
+void GL_SelectTexture( GLint texture );
 void GL_LoadIdentityTexMatrix( void );
 void GL_DisableAllTexGens( void );
 void GL_SetRenderMode( int mode );
@@ -525,6 +526,7 @@ enum
 
 enum
 {
+	GL_KEEP_UNIT = -1,
 	GL_TEXTURE0 = 0,
 	GL_TEXTURE1,
 	GL_TEXTURE2,
@@ -577,6 +579,7 @@ typedef struct
 	GLuint		currentTextureTargets[MAX_TEXTURE_UNITS];
 	GLboolean		texIdentityMatrix[MAX_TEXTURE_UNITS];
 	GLint		genSTEnabled[MAX_TEXTURE_UNITS];	// 0 - disabled, OR 1 - S, OR 2 - T, OR 4 - R
+	GLint		texCoordArrayMode[MAX_TEXTURE_UNITS];	// 0 - disabled, 1 - enabled, 2 - cubemap
 
 	int		faceCull;
 	int		frontFace;
