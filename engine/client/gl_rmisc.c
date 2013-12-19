@@ -424,8 +424,17 @@ void R_NewMap( void )
 
 	R_ClearDecals(); // clear all level decals
 
-	GL_BuildLightmaps ();
-	R_SetupSky( cl.refdef.movevars->skyName );
+	// upload detailtextures
+	if( r_detailtextures->integer )
+	{
+		string	mapname, filepath;
+
+		Q_strncpy( mapname, cl.worldmodel->name, sizeof( mapname ));
+		FS_StripExtension( mapname );
+		Q_sprintf( filepath, "%s_detail.txt", mapname );
+
+		R_ParseDetailTextures( filepath );
+	}
 
 	// clear out efrags in case the level hasn't been reloaded
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
@@ -448,15 +457,7 @@ void R_NewMap( void )
  		tx->texturechain = NULL;
 	}
 
-	// upload detailtextures
-	if( r_detailtextures->integer )
-	{
-		string	mapname, filepath;
+	R_SetupSky( cl.refdef.movevars->skyName );
 
-		Q_strncpy( mapname, cl.worldmodel->name, sizeof( mapname ));
-		FS_StripExtension( mapname );
-		Q_sprintf( filepath, "%s_detail.txt", mapname );
-
-		R_ParseDetailTextures( filepath );
-	}
+	GL_BuildLightmaps ();
 }

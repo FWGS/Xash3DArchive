@@ -200,9 +200,10 @@ typedef struct msurfmesh_s
 	vec2_t		*stcoords;	// s\t coords array
 	vec2_t		*lmcoords;	// l\m coords array
 	vec3_t		*normals;		// normals array
-	vec4_t		*svectors;	// s-component, may be null (fourth component keep polarity of T vector)
+	vec3_t		tangent;		// shared for mesh
+	vec3_t		binormal;		// shared for mesh
 	byte		*colors;		// colors array for vertex lighting (filling 0xFF by default)
-	unsigned int	*indices;		// indices		
+	unsigned short	*indices;		// indices		
 
 	struct msurface_s	*surf;		// pointer to parent surface. Just for consistency
 	struct msurfmesh_s	*next;		// temporary chain of subdivided surfaces
@@ -221,6 +222,7 @@ typedef struct mextrasurf_s
 	float		mirrormatrix[4][4];
 	struct mextrasurf_s	*mirrorchain;	// for gl_texsort drawing
 	struct mextrasurf_s	*detailchain;	// for detail textures drawing
+	color24		*deluxemap;	// note: this is the actual deluxemap data for this surface
 
 	int		reserved[32];	// just for future expansions or mod-makers
 } mextrasurf_t;

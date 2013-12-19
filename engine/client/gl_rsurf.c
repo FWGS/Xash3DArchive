@@ -2040,6 +2040,10 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 
 	R_SetCacheState( surf );
 	R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
+
+	// moved here in case we need valid lightmap coords
+	if( host.features & ENGINE_BUILD_SURFMESHES )
+		Mod_BuildSurfacePolygons( surf, SURF_INFO( surf, loadmodel ));
 }
 
 /*
@@ -2080,6 +2084,8 @@ void GL_RebuildLightmaps( void )
 
 		if( m->name[0] == '*' || m->type != mod_brush )
 			continue;
+
+		loadmodel = m;
 
 		for( j = 0; j < m->numsurfaces; j++ )
 			GL_CreateSurfaceLightmap( m->surfaces + j );
@@ -2151,6 +2157,7 @@ void GL_BuildLightmaps( void )
 			// clearing all decal chains
 			m->surfaces[j].pdecals = NULL;
 			m->surfaces[j].visframe = 0;
+			loadmodel = m;
 
 			GL_CreateSurfaceLightmap( m->surfaces + j );
 

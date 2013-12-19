@@ -68,6 +68,7 @@ typedef struct
 	int		max_surfaces;	// max surfaces per submodel (for all models)
 	size_t		visdatasize;	// actual size of the visdata
 	size_t		litdatasize;	// actual size of the lightdata
+	size_t		vecdatasize;	// actual size of the deluxdata
 	size_t		entdatasize;	// actual size of the entity string
 	size_t		texdatasize;	// actual size of the textures lump
 	qboolean		loading;		// true if worldmodel is loading
@@ -76,6 +77,8 @@ typedef struct
 	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
 	int		block_size;	// lightmap blocksize
 	qboolean		use_worldpool;	// Mod_Calloc temporare change from com_studiocache to use loadmodel->mempool
+
+	color24		*deluxedata;	// deluxemap data pointer
 
 	vec3_t		mins;		// real accuracy world bounds
 	vec3_t		maxs;
@@ -114,6 +117,7 @@ byte *Mod_LeafPHS( mleaf_t *leaf, model_t *model );
 mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node );
 int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
 qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
+void Mod_BuildSurfacePolygons( msurface_t *surf, mextrasurf_t *info );
 void Mod_AmbientLevels( const vec3_t p, byte *pvolumes );
 byte *Mod_CompressVis( const byte *in, size_t *size );
 byte *Mod_DecompressVis( const byte *in );

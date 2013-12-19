@@ -177,7 +177,7 @@ void SCR_RSpeeds( void )
 		char	*p, *start, *end;
 		rgba_t	color;
 
-		x = scr_width->integer - 320;
+		x = scr_width->integer - 340;
 		y = 64;
 
 		Con_DrawStringLen( NULL, NULL, &height );

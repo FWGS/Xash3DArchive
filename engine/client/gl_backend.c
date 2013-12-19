@@ -715,6 +715,13 @@ rebuild_page:
                     }
 
 		FS_FileBase( image->name, shortname );
+		if( Q_strlen( shortname ) > 18 )
+		{
+			// cutoff too long names, it looks ugly
+			shortname[16] = '.';
+			shortname[17] = '.';
+			shortname[18] = '\0';
+		}
 		Con_DrawString( x + 1, y + h - charHeight, shortname, color );
 		j++, k++;
 	}

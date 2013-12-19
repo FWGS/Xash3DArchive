@@ -19,7 +19,7 @@ GNU General Public License for more details.
 // list of engine features that can be enabled through callback SV_CheckFeatures
 #define ENGINE_WRITE_LARGE_COORD	(1<<0)	// replace standard message WRITE_COORD with big message for support more than 8192 units in world	
 #define ENGINE_BUILD_SURFMESHES	(1<<1)	// bulid surface meshes that goes into mextrasurf->mesh. For mod makers and custom renderers
-#define ENGINE_BUILD_STVECTORS	(1<<2)	// build ST-vectors for surfmeshes. ENGINE_BUILD_SURFMESHES must be set!
+#define ENGINE_LOAD_DELUXEDATA	(1<<2)	// loading deluxemap for map (if present)
 #define ENGINE_TRANSFORM_TRACE_AABB	(1<<3)	// transform trace bbox into local space of rotating bmodels
 #define ENGINE_LARGE_LIGHTMAPS	(1<<4)	// change lightmap sizes from 128x128 to 256x256
 #define ENGINE_COMPENSATE_QUAKE_BUG	(1<<5)	// compensate stupid quake bug (inverse pitch) for mods where this bug is fixed

@@ -30,6 +30,9 @@ BRUSH MODELS
 #define HLBSP_VERSION	30	// half-life regular version
 #define XTBSP_VERSION	31	// extended lightmaps and expanded clipnodes limit
 
+#define DELUXEMAP_VERSION	1
+#define IDDELUXEMAPHEADER	(('T'<<24)+('I'<<16)+('L'<<8)+'Q') // little-endian "QLIT"
+
 // worldcraft predefined angles
 #define ANGLE_UP			-1
 #define ANGLE_DOWN			-2

@@ -1480,6 +1480,13 @@ static int GL_RenderGetParm( int parm, int arg )
 	case PARM_TEX_CACHEFRAME:
 		glt = R_GetTexture( arg );
 		return glt->cacheframe;
+	case PARM_MAP_HAS_DELUXE:
+		return (world.deluxedata != NULL);
+	case PARM_TEX_TYPE:
+		glt = R_GetTexture( arg );
+		return glt->texType;
+	case PARM_CACHEFRAME:
+		return world.load_sequence;
 	}
 	return 0;
 }
@@ -1500,6 +1507,13 @@ static void R_GetExtraParmsForTexture( int texture, byte *red, byte *green, byte
 	if( green ) *green = glt->fogParams[1];
 	if( blue ) *blue = glt->fogParams[2];
 	if( density ) *density = glt->fogParams[3];
+}
+
+static void GL_TextureUpdateCache( unsigned int texture )
+{
+	gltexture_t *glt = R_GetTexture( texture );
+	if( !glt || !glt->texnum ) return;
+	glt->cacheframe = world.load_sequence;
 }
 
 /*
@@ -1651,6 +1665,7 @@ static render_api_t gRenderAPI =
 	GL_LoadTexture,
 	GL_CreateTexture,
 	GL_SetTextureType,
+	GL_TextureUpdateCache,
 	GL_FreeTexture,
 	DrawSingleDecal,
 	R_DecalSetupVerts,

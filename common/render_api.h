@@ -27,7 +27,7 @@ GNU General Public License for more details.
 // move misc functions at end of the interface
 // added new export for clearing studio decals
 
-#define CL_RENDER_INTERFACE_VERSION	31
+#define CL_RENDER_INTERFACE_VERSION	32
 #define MAX_STUDIO_DECALS		4096	// + unused space of BSP decals
 
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
@@ -57,6 +57,9 @@ GNU General Public License for more details.
 #define PARM_FEATURES	21	// same as movevars->features
 #define PARM_ACTIVE_TMU	22	// for debug
 #define PARM_TEX_CACHEFRAME	23	// compare with worldmodel->needload
+#define PARM_MAP_HAS_DELUXE	24	// map has deluxedata
+#define PARM_TEX_TYPE	25
+#define PARM_CACHEFRAME	26
 
 enum
 {
@@ -115,6 +118,7 @@ typedef enum
 	TF_TEXTURE_RECTANGLE= (1<<22),	// this is GL_TEXTURE_RECTANGLE
 	TF_ALPHA_BORDER	= (1<<23),	// clamp to (0,0,0,255)
 	TF_IMAGE_PROGRAM	= (1<<24),	// enable image program support like in Doom3
+	TF_STATIC		= (1<<25),	// a marker for purge mechanism
 } texFlags_t;
 
 typedef struct beam_s BEAM;
@@ -178,6 +182,7 @@ typedef struct render_api_s
 	int		(*GL_LoadTexture)( const char *name, const byte *buf, size_t size, int flags, void *filter );
 	int		(*GL_CreateTexture)( const char *name, int width, int height, const void *buffer, int flags ); 
 	void		(*GL_SetTextureType)( unsigned int texnum, unsigned int type );
+	void		(*GL_TextureUpdateCache)( unsigned int texnum );
 	void		(*GL_FreeTexture)( unsigned int texnum );
 
 	// Decals manipulating (draw & remove)

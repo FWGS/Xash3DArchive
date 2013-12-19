@@ -2339,6 +2339,7 @@ void CL_SetLightstyle( int style, const char *s, float f )
 			break;
 		}
 	}
+	MsgDev( D_AICONSOLE, "Lightstyle %i (%s), interp %s\n", style, ls->pattern, ls->interp ? "Yes" : "No" );
 }
 
 /*
