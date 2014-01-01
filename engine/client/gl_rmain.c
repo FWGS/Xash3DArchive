@@ -1607,6 +1607,15 @@ static const char *GL_TextureName( unsigned int texnum )
 	return R_GetTexture( texnum )->name;	
 }
 
+static const byte *GL_TextureData( unsigned int texnum )
+{
+	rgbdata_t *pic = R_GetTexture( texnum )->original;
+
+	if( pic != NULL )
+		return pic->buffer;
+	return NULL;	
+}
+
 static const ref_overview_t *GL_GetOverviewParms( void )
 {
 	return &clgame.overView;
@@ -1662,6 +1671,7 @@ static render_api_t gRenderAPI =
 	R_StoreEfrags,
 	GL_FindTexture,
 	GL_TextureName,
+	GL_TextureData,
 	GL_LoadTexture,
 	GL_CreateTexture,
 	GL_SetTextureType,
@@ -1696,12 +1706,13 @@ static render_api_t gRenderAPI =
 	COM_CompareFileTime,
 	Host_Error,
 	pfnSPR_LoadExt,
+	Mod_TesselatePolygon,
 	R_StudioGetTexture,
 	GL_GetOverviewParms,
 	R_InitSky,
 	R_FindTexFilter,
 	S_FadeMusicVolume,
-	Com_SetRandomSeed,
+	COM_SetRandomSeed,
 	Mod_WadList,
 	R_Mem_Alloc,
 	R_Mem_Free,

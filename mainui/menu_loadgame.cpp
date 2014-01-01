@@ -221,6 +221,8 @@ static void UI_LoadGame_Callback( void *self, int event )
 			char	cmd[128];
 			sprintf( cmd, "load \"%s\"\n", uiLoadGame.saveName[uiLoadGame.savesList.curItem] );
 
+			BACKGROUND_TRACK( NULL, NULL );
+
 			CLIENT_COMMAND( FALSE, cmd );
 		}
 		break;

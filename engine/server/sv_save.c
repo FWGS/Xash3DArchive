@@ -456,7 +456,6 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	{
 		// NOTE: studio decal trace start saved into impactPlaneNormal
 		SV_CreateStudioDecal( &sv.signon, entry->position, entry->impactPlaneNormal, decalIndex, entityIndex, modelIndex, flags, &entry->studio_state );
-		return;
 	}
 	else if( adjacent && entityIndex != 0 && !SV_IsValidEdict( pEdict ))
 	{
@@ -1279,8 +1278,8 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 		// we can't use SaveRestore system here...
 		for( i = 0; i < decalCount; i++ )
 		{
-			vec3_t		localPos;
 			decallist_t	*entry;
+			vec3_t		localPos;
 			word		decalScale;
 			byte		nameSize;
 

@@ -2468,7 +2468,6 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 
 	if( msg_num < svc_lastmsg )
 	{
-		svgame.msg_name = NULL;
 		svgame.msg_index = -msg_num; // this is a system message
 		svgame.msg_name = svc_strings[msg_num];
 
@@ -2527,7 +2526,6 @@ void pfnMessageEnd( void )
 	float		*org = NULL;
 
 	if( svgame.msg_name ) name = svgame.msg_name;
-
 	if( !svgame.msg_started ) Host_Error( "MessageEnd: called with no active message\n" );
 	svgame.msg_started = false;
 
@@ -2700,10 +2698,11 @@ void pfnWriteString( const char *src )
 {
 	char	*dst, string[MAX_SYSPATH];
 	int	len = Q_strlen( src ) + 1;
+	int	rem = (255 - svgame.msg_realsize);
 
-	if( len >= MAX_SYSPATH )
+	if( len >= rem )
 	{
-		MsgDev( D_ERROR, "pfnWriteString: exceeds %i symbols\n", MAX_SYSPATH );
+		MsgDev( D_ERROR, "pfnWriteString: exceeds %i symbols\n", rem );
 		BF_WriteChar( &sv.multicast, 0 );
 		svgame.msg_realsize += 1; 
 		return;

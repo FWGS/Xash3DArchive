@@ -26,9 +26,9 @@ static int	r_textureMagFilter = GL_LINEAR;
 static gltexture_t	r_textures[MAX_TEXTURES];
 static gltexture_t	*r_texturesHashTable[TEXTURES_HASH_SIZE];
 static int	r_numTextures;
-static byte	*scaledImage = NULL;	// pointer to a scaled image
-static byte	data2D[512*512*4];		// intermediate texbuffer
-static rgbdata_t	r_image;			// generic pixelbuffer used for internal textures
+static byte	*scaledImage = NULL;			// pointer to a scaled image
+static byte	data2D[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*4];	// intermediate texbuffer
+static rgbdata_t	r_image;					// generic pixelbuffer used for internal textures
 
 // internal tables
 static vec3_t	r_luminanceTable[256];	// RGB to luminance
@@ -1188,7 +1188,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 		{
 			// prolonge registration
 			tex->cacheframe = world.load_sequence;
-			return tex->texnum;
+			return (tex - r_textures);
 		}
 	}
 
@@ -1304,7 +1304,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 			// prolonge registration
 			tex->cacheframe = world.load_sequence;
 			if( update ) break;
-			return tex->texnum;
+			return (tex - r_textures);
 		}
 	}
 
@@ -1356,7 +1356,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 		r_texturesHashTable[hash] = tex;
 	}
 
-	return tex->texnum;
+	return (tex - r_textures);
 }
 
 /*
@@ -1479,7 +1479,7 @@ int GL_FindTexture( const char *name )
 		{
 			// prolonge registration
 			tex->cacheframe = world.load_sequence;
-			return tex->texnum;
+			return (tex - r_textures);
 		}
 	}
 

@@ -27,7 +27,7 @@ GNU General Public License for more details.
 // move misc functions at end of the interface
 // added new export for clearing studio decals
 
-#define CL_RENDER_INTERFACE_VERSION	32
+#define CL_RENDER_INTERFACE_VERSION	34
 #define MAX_STUDIO_DECALS		4096	// + unused space of BSP decals
 
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
@@ -179,6 +179,7 @@ typedef struct render_api_s
 	// Texture tools
 	int		(*GL_FindTexture)( const char *name );
 	const char*	(*GL_TextureName)( unsigned int texnum );
+	const byte*	(*GL_TextureData)( unsigned int texnum ); // may be NULL
 	int		(*GL_LoadTexture)( const char *name, const byte *buf, size_t size, int flags, void *filter );
 	int		(*GL_CreateTexture)( const char *name, int width, int height, const void *buffer, int flags ); 
 	void		(*GL_SetTextureType)( unsigned int texnum, unsigned int type );
@@ -221,6 +222,7 @@ typedef struct render_api_s
 	int		(*COM_CompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
 	void		(*Host_Error)( const char *error, ... ); // cause Host Error
 	int		(*SPR_LoadExt)( const char *szPicName, unsigned int texFlags ); // extended version of SPR_Load
+	void		(*TessPolygon)( struct msurface_s *surf, struct model_s *mod, float tessSize );
 	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );
 	const struct ref_overview_s *( *GetOverviewParms )( void );
 	void		(*R_InitQuakeSky)( struct mip_s *mt, struct texture_s *tx );

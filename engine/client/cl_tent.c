@@ -2604,7 +2604,7 @@ normal temporary decal
 */
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags )
 {
-	R_DecalShoot( textureIndex, entityIndex, modelIndex, pos, (flags|FDECAL_CLIPTEST), NULL, 1.0f );
+	R_DecalShoot( textureIndex, entityIndex, modelIndex, pos, flags, NULL, 1.0f );
 }
 
 /*

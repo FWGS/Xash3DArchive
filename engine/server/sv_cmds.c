@@ -403,6 +403,12 @@ SV_AutoSave_f
 */
 void SV_AutoSave_f( void )
 {
+	if( Cmd_Argc() != 1 )
+	{
+		Msg( "Usage: autosave\n" );
+		return;
+	}
+
 	SV_SaveGame( "autosave" );
 }
 
@@ -586,7 +592,8 @@ SV_Kill_f
 */
 void SV_Kill_f( void )
 {
-	if( !SV_SetPlayer() || sv.background ) return;
+	if( !SV_SetPlayer() || sv.background )
+		return;
 
 	if( !svs.currentPlayer || !SV_IsValidEdict( svs.currentPlayer->edict ))
 		return;
@@ -692,7 +699,7 @@ void SV_ConSay_f( void )
 
 	if( Cmd_Argc() < 2 ) return;
 
-	if( !svs.clients )
+	if( !svs.clients || sv.background )
 	{
 		Msg( "^3no server running.\n" );
 		return;

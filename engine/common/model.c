@@ -1286,7 +1286,6 @@ Mod_BuildPolygon
 static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts, const float *verts )
 {
 	float		s, t;
-	word		index;
 	uint		bufSize;
 	mtexinfo_t	*texinfo = surf->texinfo;
 	int		i, numElems;
@@ -1334,11 +1333,11 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 	info->mesh = mesh;
 
 	// create indices
-	for( i = 0, index = 2; i < mesh->numElems; i += 3, index++ )
+	for( i = 0; i < mesh->numVerts - 2; i++ )
 	{
-		mesh->indices[i+0] = 0;
-		mesh->indices[i+1] = index - 1;
-		mesh->indices[i+2] = index;
+		mesh->indices[i*3+0] = 0;
+		mesh->indices[i*3+1] = i + 1;
+		mesh->indices[i*3+2] = i + 2;
 	}
 
 	// setup normal
@@ -1348,7 +1347,7 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 
 	VectorNormalize( normal ); // g-cont. this is even needed?
 
-	// clear colors (it can be used for pushable vertex lighting)
+	// clear colors (it can be used for vertex lighting)
 	Q_memset( mesh->colors, 0xFF, numVerts * sizeof( rgba_t ));
 	
 	for( i = 0; i < numVerts; i++, verts += 3 )
@@ -1388,20 +1387,19 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 Mod_SubdividePolygon
 =================
 */
-static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numVerts, float *verts )
+static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numVerts, float *verts, float tessSize )
 {
-	int		i, j, f, b, subdivideSize;
 	vec3_t		vTotal, nTotal, mins, maxs;
 	mtexinfo_t	*texinfo = surf->texinfo;
 	vec3_t		front[MAX_SIDE_VERTS], back[MAX_SIDE_VERTS];
 	float		*v, m, oneDivVerts, dist, dists[MAX_SIDE_VERTS];
+	qboolean		lightmap = (surf->flags & SURF_DRAWTILED) ? false : true;
 	vec2_t		totalST, totalLM;
+	float		s, t, scale;
+	int		i, j, f, b;
 	uint		bufSize;
 	byte		*buffer;
-	float		s, t;
 	msurfmesh_t	*mesh;
-
-	subdivideSize = 64.0f; // standard Q1 value
 
 	ClearBounds( mins, maxs );
 
@@ -1410,7 +1408,7 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 
 	for( i = 0; i < 3; i++ )
 	{
-		m = subdivideSize * floor((( mins[i] + maxs[i] ) * 0.5f ) / subdivideSize + 0.5f );
+		m = tessSize * (float)floor((( mins[i] + maxs[i] ) * 0.5f ) / tessSize + 0.5f );
 
 		if( maxs[i] - m < 8.0f ) continue;
 		if( m - mins[i] < 8.0f ) continue;
@@ -1439,10 +1437,10 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 				b++;
 			}
 			
-			if( dists[j] == 0 || dists[j+1] == 0 )
+			if( dists[j] == 0.0f || dists[j+1] == 0.0f )
 				continue;
 			
-			if(( dists[j] > 0 ) != ( dists[j+1] > 0 ))
+			if(( dists[j] > 0.0f ) != ( dists[j+1] > 0.0f ))
 			{
 				// clip point
 				dist = dists[j] / (dists[j] - dists[j+1]);
@@ -1453,8 +1451,8 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 			}
 		}
 
-		Mod_SubdividePolygon( info, surf, f, front[0] );
-		Mod_SubdividePolygon( info, surf, b, back[0] );
+		Mod_SubdividePolygon( info, surf, f, front[0], tessSize );
+		Mod_SubdividePolygon( info, surf, b, back[0], tessSize );
 		return;
 	}
 
@@ -1495,7 +1493,9 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 	totalST[0] = totalST[1] = 0;
 	totalLM[0] = totalLM[1] = 0;
 
-	// clear colors (it can be used for pushable vertex lighting)
+	scale = (1.0f / tessSize );
+
+	// clear colors (it can be used for vertex lighting)
 	Q_memset( mesh->colors, 0xFF, mesh->numVerts * sizeof( rgba_t ));
 
 	for( i = 0; i < numVerts; i++, verts += 3 )
@@ -1511,12 +1511,21 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 		VectorAdd( vTotal, mesh->vertices[i+1], vTotal );
  		VectorAdd( nTotal, mesh->normals[i+1], nTotal );
 
-		// texture coordinates
-		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3];
-		s /= texinfo->texture->width;
+		if( lightmap )
+		{
+			// texture coordinates
+			s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3];
+			s /= texinfo->texture->width;
 
-		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3];
-		t /= texinfo->texture->height;
+			t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3];
+			t /= texinfo->texture->height;
+		}
+		else
+		{
+			// texture coordinates
+			s = DotProduct( verts, texinfo->vecs[0] ) * scale;
+			t = DotProduct( verts, texinfo->vecs[1] ) * scale;
+		}
 
 		mesh->stcoords[i+1][0] = s;
 		mesh->stcoords[i+1][1] = t;
@@ -1524,16 +1533,23 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 		totalST[0] += s;
 		totalST[1] += t;
 
-		// lightmap texture coordinates
-		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
-		s += surf->light_s * LM_SAMPLE_SIZE;
-		s += LM_SAMPLE_SIZE >> 1;
-		s /= BLOCK_SIZE * LM_SAMPLE_SIZE;
+		if( lightmap )
+		{
+			// lightmap texture coordinates
+			s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
+			s += surf->light_s * LM_SAMPLE_SIZE;
+			s += LM_SAMPLE_SIZE >> 1;
+			s /= BLOCK_SIZE * LM_SAMPLE_SIZE;
 
-		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
-		t += surf->light_t * LM_SAMPLE_SIZE;
-		t += LM_SAMPLE_SIZE >> 1;
-		t /= BLOCK_SIZE * LM_SAMPLE_SIZE;
+			t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
+			t += surf->light_t * LM_SAMPLE_SIZE;
+			t += LM_SAMPLE_SIZE >> 1;
+			t /= BLOCK_SIZE * LM_SAMPLE_SIZE;
+		}
+		else
+		{
+			s = t = 0.0f;
+		}
 
 		mesh->lmcoords[i+1][0] = s;
 		mesh->lmcoords[i+1][1] = t;
@@ -1636,7 +1652,7 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 	// store vertex data
 	numElems = numVerts = 0;
 
-	// clear colors (it can be used for pushable vertex lighting)
+	// clear colors (it can be used for vertex lighting)
 	Q_memset( mesh->colors, 0xFF, numVerts * sizeof( rgba_t ));
 
 	for( poly = info->mesh; poly; poly = poly->next )
@@ -1720,13 +1736,73 @@ void Mod_BuildSurfacePolygons( msurface_t *surf, mextrasurf_t *info )
 	// subdivide water or sky sphere for Quake1 maps
 	if(( surf->flags & SURF_DRAWTURB && !( surf->flags & SURF_REFLECT )) || ( surf->flags & SURF_DRAWSKY && world.loading && world.sky_sphere ))
 	{
-		Mod_SubdividePolygon( info, surf, surf->numedges, verts[0] );
+		Mod_SubdividePolygon( info, surf, surf->numedges, verts[0], 64.0f );
 		Mod_ConvertSurface( info, surf );
 	}
 	else
 	{
 		Mod_BuildPolygon( info, surf, surf->numedges, verts[0] );
 	}
+
+	if( info->mesh ) return;	// all done
+
+	if( surf->texinfo && surf->texinfo->texture )
+		texname = surf->texinfo->texture->name;
+	else texname = "notexture";
+
+	MsgDev( D_ERROR, "BuildSurfMesh: surface %i (%s) failed to build surfmesh\n", surf - loadmodel->surfaces, texname );
+}
+
+/*
+=================
+Mod_TesselatePolygon
+
+tesselate specified polygon
+by user request
+=================
+*/
+void Mod_TesselatePolygon( msurface_t *surf, model_t *mod, float tessSize )
+{
+	mextrasurf_t	*info;
+	model_t		*old = loadmodel;
+	vec3_t		verts[MAX_SIDE_VERTS];
+	char		*texname;
+	int		i, e;
+	mvertex_t		*v;
+
+	if( !surf || !mod ) return; // bad arguments?
+
+	tessSize = bound( 8.0f, tessSize, 256.0f );
+	info = SURF_INFO( surf, mod );
+	loadmodel = mod;
+
+	// release old mesh
+	if( info->mesh )
+	{
+		Mem_Free( info->mesh );
+		info->mesh = NULL;
+	}
+
+	// convert edges back to a normal polygon
+	for( i = 0; i < surf->numedges; i++ )
+	{
+		if( i == MAX_SIDE_VERTS )
+		{
+			MsgDev( D_ERROR, "BuildSurfMesh: poly %i exceeded %i vertexes!\n", surf - loadmodel->surfaces, MAX_SIDE_VERTS );
+			break; // too big polygon ?
+		}
+
+		e = loadmodel->surfedges[surf->firstedge + i];
+		if( e > 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
+		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
+		VectorCopy( v->position, verts[i] );
+	}
+
+	Mod_SubdividePolygon( info, surf, surf->numedges, verts[0], tessSize );
+	Mod_ConvertSurface( info, surf );
+
+	// restore loadmodel value
+	loadmodel = old;
 
 	if( info->mesh ) return;	// all done
 
@@ -1751,9 +1827,9 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 	int		count;
 
 	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( dface_t ))
+	if( l->filelen % sizeof( *in ))
 		Host_Error( "Mod_LoadSurfaces: funny lump size in '%s'\n", loadmodel->name );
-	count = l->filelen / sizeof( dface_t );
+	count = l->filelen / sizeof( *in );
 
 	loadmodel->numsurfaces = count;
 	loadmodel->surfaces = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t ));
@@ -1820,7 +1896,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 				out->samples = loadmodel->lightdata + (in->lightofs / 3);
 			else out->samples = loadmodel->lightdata + in->lightofs;
 
-			// if deluxempa present setup it too
+			// if deluxemap is present setup it too
 			if( world.deluxedata )
 				info->deluxemap = world.deluxedata + (in->lightofs / 3);
 		}
@@ -1829,7 +1905,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			out->styles[j] = in->styles[j];
 
 		// build polygons for non-lightmapped surfaces
-		if( host.features & ENGINE_BUILD_SURFMESHES && (( out->flags & SURF_DRAWTILED ) || !loadmodel->lightdata ))
+		if( host.features & ENGINE_BUILD_SURFMESHES && (( out->flags & SURF_DRAWTILED ) || !out->samples ))
 			Mod_BuildSurfacePolygons( out, info );
 
 		if( out->flags & SURF_DRAWSKY && world.loading && world.sky_sphere )

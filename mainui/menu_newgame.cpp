@@ -81,6 +81,8 @@ static void UI_NewGame_StartGame( float skill )
 	CVAR_SET_FLOAT( "maxplayers", 1.0f );
 	CVAR_SET_FLOAT( "coop", 0.0f );
 
+	BACKGROUND_TRACK( NULL, NULL );
+
 	CLIENT_COMMAND( FALSE, "newgame\n" );
 }
 

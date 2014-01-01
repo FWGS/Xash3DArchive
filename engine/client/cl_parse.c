@@ -509,7 +509,7 @@ void CL_ParseStaticDecal( sizebuf_t *msg )
 	flags = BF_ReadByte( msg );
 	scale = (float)BF_ReadWord( msg ) / 4096.0f;
 
-	CL_FireCustomDecal( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, origin, flags|FDECAL_CLIPTEST, scale );
+	CL_FireCustomDecal( CL_DecalIndex( decalIndex ), entityIndex, modelIndex, origin, flags, scale );
 }
 
 /*

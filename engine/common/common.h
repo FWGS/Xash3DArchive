@@ -831,7 +831,7 @@ char *Cvar_Serverinfo( void );
 void Cmd_WriteVariables( file_t *f );
 qboolean Cmd_CheckMapsList( qboolean fRefresh );
 void Cmd_AutoComplete( char *complete_string );
-void Com_SetRandomSeed( long lSeed );
+void COM_SetRandomSeed( long lSeed );
 long Com_RandomLong( long lMin, long lMax );
 float Com_RandomFloat( float fMin, float fMax );
 void TrimSpace( const char *source, char *dest );

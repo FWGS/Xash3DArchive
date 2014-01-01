@@ -135,6 +135,8 @@ struct decal_s
 // Xash3D added
 	vec3_t		position;		// location of the decal center in world space.
 	vec3_t		saxis;		// direction of the s axis in world space
+	struct msurfmesh_s	*mesh;		// decal mesh in local space
+	int		reserved[4];	// for future expansions
 };
 
 typedef struct mleaf_s

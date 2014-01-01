@@ -28,7 +28,7 @@ GNU General Public License for more details.
 #define MAX_OVERLAP_DECALS		6
 #define DECAL_OVERLAP_DIST		8
 #define MIN_DECAL_SCALE		0.01f
-#define MAX_DECAL_SCALE		10.0f
+#define MAX_DECAL_SCALE		16.0f
 
 // clip edges
 #define LEFT_EDGE			0
@@ -92,9 +92,14 @@ static void R_DecalUnlink( decal_t *pdecal )
 		}
 	}
 
-	pdecal->psurface = NULL;
-}
+	if( pdecal->mesh )
+	{
+		Mem_Free( pdecal->mesh );
+	}
 
+	pdecal->psurface = NULL;
+	pdecal->mesh = NULL;
+}
 
 // Just reuse next decal in list
 // A decal that spans multiple surfaces will use multiple decal_t pool entries,
@@ -153,6 +158,8 @@ void R_DecalComputeBasis( msurface_t *surf, vec3_t pSAxis, vec3_t textureSpaceBa
 		VectorNegate( surf->plane->normal, surfaceNormal );
 	else VectorCopy( surf->plane->normal, surfaceNormal );
 
+	VectorCopy( surfaceNormal, textureSpaceBasis[2] );
+
 	if( pSAxis )
 	{
 		// T = S cross N
@@ -175,8 +182,6 @@ void R_DecalComputeBasis( msurface_t *surf, vec3_t pSAxis, vec3_t textureSpaceBa
 	// original Half-Life algorithm: get textureBasis from linked surface
 	VectorCopy( surf->texinfo->vecs[0], textureSpaceBasis[0] );
 	VectorCopy( surf->texinfo->vecs[1], textureSpaceBasis[1] );
-	VectorCopy( surfaceNormal, textureSpaceBasis[2] );
-
 	VectorNormalizeFast( textureSpaceBasis[0] );
 	VectorNormalizeFast( textureSpaceBasis[1] );
 }
@@ -258,7 +263,6 @@ int R_ClipInside( float *vert, int edge )
 	}
 	return 0;
 }
-
 
 void R_ClipIntersect( float *one, float *two, float *out, int edge )
 {
@@ -363,8 +367,8 @@ static int SHClip( float *vert, int vertCount, float *out, int edge )
 
 float *R_DoDecalSHClip( float *pInVerts, decal_t *pDecal, int nStartVerts, int *pVertCount )
 {
-	int	outCount;
 	float	*pOutVerts = g_DecalClipVerts[0];
+	int	outCount;
 
 	// clip the polygon to the decal texture space
 	outCount = SHClip( pInVerts, nStartVerts, g_DecalClipVerts2[0], LEFT_EDGE );
@@ -372,34 +376,8 @@ float *R_DoDecalSHClip( float *pInVerts, decal_t *pDecal, int nStartVerts, int *
 	outCount = SHClip( g_DecalClipVerts[0], outCount, g_DecalClipVerts2[0], TOP_EDGE );
 	outCount = SHClip( g_DecalClipVerts2[0], outCount, pOutVerts, BOTTOM_EDGE );
 
-	if( outCount ) 
-	{
-		if( pDecal->flags & FDECAL_CLIPTEST )
-		{
-			pDecal->flags &= ~FDECAL_CLIPTEST;	// we're doing the test
-			
-			// If there are exactly 4 verts and they are all 0,1 tex coords, then we've got an unclipped decal
-			// A more precise test would be to calculate the texture area and make sure it's one, but this
-			// should work as well.
-			if( outCount == 4 )
-			{
-				int	j, clipped = 0;
-				float	*v = pOutVerts;
-
-				for( j = 0; j < outCount && !clipped; j++, v += VERTEXSIZE )
-				{
-					if(( v[3] != 0.0f && v[3] != 1.0f ) || ( v[4] != 0.0f && v[4] != 1.0f ))
-						clipped = 1;
-				}
-
-				// We didn't need to clip this decal, it's a quad covering
-				// the full texture space, optimize subsequent frames.
-				if( !clipped ) pDecal->flags |= FDECAL_NOCLIP;
-			}
-		}
-	}
-	
-	*pVertCount = outCount;
+	if( pVertCount )
+		*pVertCount = outCount;
 
 	return pOutVerts;
 }
@@ -446,19 +424,6 @@ static void R_DecalVertsLight( float *v, msurface_t *surf, int vertCount )
 		v[5] = s;
 		v[6] = t;
 	}
-}
-
-static float *R_DecalVertsNoclip( decal_t *pdecal, msurface_t *surf, int texture )
-{
-	float	*vlist;
-	int	outCount;
-
-	// use the old code for now, and just cache them
-	vlist = R_DecalVertsClip( pdecal, surf, texture, &outCount );
-
-	R_DecalVertsLight( vlist, surf, 4 );
-
-	return vlist;
 }
 
 // Check for intersecting decals on this surface
@@ -543,6 +508,93 @@ static decal_t *R_DecalIntersect( decalinfo_t *decalinfo, msurface_t *surf, int 
 	return plast;
 }
 
+/*
+====================
+R_BuildMeshForDecal
+
+creates mesh for decal on first rendering
+====================
+*/
+msurfmesh_t *R_DecalCreateMesh( decalinfo_t *decalinfo, decal_t *pdecal, msurface_t *surf )
+{
+	float		*v;
+	uint		i, bufSize;
+	qboolean		createSTverts = false;
+	int		numVerts, numElems;
+	byte		*buffer;
+	msurfmesh_t	*mesh;
+
+	if( pdecal->mesh )
+	{
+		// already have mesh
+		return pdecal->mesh;
+	}
+
+	v = R_DecalSetupVerts( pdecal, surf, pdecal->texture, &numVerts );
+	if( !numVerts ) return NULL;	// probably this never happens
+
+	// allocate mesh
+	numElems = (numVerts - 2) * 3;
+
+	// mesh + ( vertex, normal, (st + lmst) ) * numVerts + elem * numElems;
+	bufSize = sizeof( msurfmesh_t ) + numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t ) + sizeof( vec4_t )) + numElems * sizeof( word );
+	bufSize += numVerts * sizeof( rgba_t );	// color array
+
+	buffer = Mem_Alloc( cls.mempool, bufSize );
+
+	mesh = (msurfmesh_t *)buffer;
+	buffer += sizeof( msurfmesh_t );
+	mesh->numVerts = numVerts;
+	mesh->numElems = numElems;
+
+	// setup pointers
+	mesh->vertices = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->stcoords = (vec2_t *)buffer;
+	buffer += numVerts * sizeof( vec2_t );
+	mesh->lmcoords = (vec2_t *)buffer;
+	buffer += numVerts * sizeof( vec2_t );
+	mesh->normals = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->colors = (byte *)buffer;
+	buffer += numVerts * sizeof( rgba_t );
+
+	mesh->indices = (word *)buffer;
+	buffer += numElems * sizeof( word );
+
+	mesh->surf = surf;	// NOTE: meshchains can be linked with one surface
+
+	// create indices
+	for( i = 0; i < mesh->numVerts - 2; i++ )
+	{
+		mesh->indices[i*3+0] = 0;
+		mesh->indices[i*3+1] = i + 1;
+		mesh->indices[i*3+2] = i + 2;
+	}
+
+	VectorCopy( decalinfo->m_Basis[0], mesh->tangent );
+	VectorCopy( decalinfo->m_Basis[1], mesh->binormal );
+
+	// clear colors (it can be used for vertex lighting)
+	Q_memset( mesh->colors, 0xFF, numVerts * sizeof( rgba_t ));
+
+	// fill the mesh
+	for( i = 0; i < numVerts; i++, v += VERTEXSIZE )
+	{
+		VectorCopy( v, mesh->vertices[i] );
+		VectorCopy( decalinfo->m_Basis[2], mesh->normals[i] );
+
+		mesh->stcoords[i][0] = v[3];
+		mesh->stcoords[i][1] = v[4];
+		mesh->lmcoords[i][0] = v[5];
+		mesh->lmcoords[i][1] = v[6];
+	}
+
+	pdecal->mesh = mesh;
+
+	return mesh;
+}
+
 // Add the decal to the surface's list of decals.
 static void R_AddDecalToSurface( decal_t *pdecal, msurface_t *surf, decalinfo_t *decalinfo )
 {
@@ -568,6 +620,10 @@ static void R_AddDecalToSurface( decal_t *pdecal, msurface_t *surf, decalinfo_t 
 	// at this point decal are linked with surface
 	// and will be culled, drawing and sorting
 	// together with surface
+
+	// build mesh for decal if allowed
+	if( host.features & ENGINE_BUILD_SURFMESHES )
+		pdecal->mesh = R_DecalCreateMesh( decalinfo, pdecal, surf );
 }
 
 static void R_DecalCreate( decalinfo_t *decalinfo, msurface_t *surf, float x, float y )
@@ -860,17 +916,33 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 float *R_DecalSetupVerts( decal_t *pDecal, msurface_t *surf, int texture, int *outCount )
 {
 	float	*v;
+	int	i, count;
 
-	if( pDecal->flags & FDECAL_NOCLIP )
+	if( pDecal->mesh )
 	{
-		v = R_DecalVertsNoclip( pDecal, surf, texture );
-		*outCount = 4;
+		count = pDecal->mesh->numVerts;
+
+		// if we have mesh so skip clipping and just copy vertexes out (perf)
+		for( i = 0, v = g_DecalClipVerts[0]; i < count; i++, v += VERTEXSIZE )
+		{
+			VectorCopy( pDecal->mesh->vertices[i], v );
+			v[3] = pDecal->mesh->stcoords[i][0];
+			v[4] = pDecal->mesh->stcoords[i][1];
+			v[5] = pDecal->mesh->lmcoords[i][0];
+			v[6] = pDecal->mesh->lmcoords[i][1];
+		}
+
+		// restore pointer
+		v = g_DecalClipVerts[0];
 	}
 	else
 	{
-		v = R_DecalVertsClip( pDecal, surf, texture, outCount );
-		if( outCount ) R_DecalVertsLight( v, surf, *outCount );
+		v = R_DecalVertsClip( pDecal, surf, texture, &count );
+		R_DecalVertsLight( v, surf, count );
 	}
+
+	if( outCount )
+		*outCount = count;
 
 	return v;
 }

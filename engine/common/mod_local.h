@@ -115,6 +115,7 @@ int Mod_PointLeafnum( const vec3_t p );
 byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model );
 byte *Mod_LeafPHS( mleaf_t *leaf, model_t *model );
 mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node );
+void Mod_TesselatePolygon( msurface_t *surf, model_t *mod, float tessSize );
 int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
 qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
 void Mod_BuildSurfacePolygons( msurface_t *surf, mextrasurf_t *info );

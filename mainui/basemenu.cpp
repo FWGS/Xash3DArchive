@@ -1034,7 +1034,9 @@ void UI_UpdateMenu( float flTime )
                     
 		if( first )
 		{
-			BACKGROUND_TRACK( "gamestartup", "gamestartup" );
+			// if game was launched with commandline e.g. +map or +load ignore the music
+			if( !CL_IsActive( ))
+				BACKGROUND_TRACK( "gamestartup", "gamestartup" );
 			first = FALSE;
 		}
 	}

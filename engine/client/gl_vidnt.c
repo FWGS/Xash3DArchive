@@ -486,7 +486,6 @@ qboolean GL_Support( int r_ext )
 	return false;		
 }
 
-
 /*
 =================
 GL_MaxTextureUnits

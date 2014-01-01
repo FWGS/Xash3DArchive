@@ -229,6 +229,8 @@ static void UI_Main_HazardCourse( void )
 	CVAR_SET_FLOAT( "pausable", 1.0f ); // singleplayer is always allowing pause
 	CVAR_SET_FLOAT( "coop", 0.0f );
 
+	BACKGROUND_TRACK( NULL, NULL );
+
 	CLIENT_COMMAND( FALSE, "hazardcourse\n" );
 }
 

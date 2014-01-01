@@ -100,6 +100,8 @@ static void UI_CreateGame_Begin( void )
 	CVAR_SET_STRING( "defaultmap", uiCreateGame.mapName[uiCreateGame.mapsList.curItem] );
 	CVAR_SET_FLOAT( "hltv", uiCreateGame.hltv.enabled );
 
+	BACKGROUND_TRACK( NULL, NULL );
+
 	// all done, start server
 	if( uiCreateGame.dedicatedServer.enabled )
 	{

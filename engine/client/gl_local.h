@@ -28,7 +28,7 @@ extern byte	*r_temppool;
 
 #define BLOCK_SIZE		world.block_size	// lightmap blocksize
 #define BLOCK_SIZE_DEFAULT	128		// for keep backward compatibility
-#define BLOCK_SIZE_MAX	256
+#define BLOCK_SIZE_MAX	1024
 
 #define MAX_TEXTURES	4096
 #define MAX_DETAIL_TEXTURES	256

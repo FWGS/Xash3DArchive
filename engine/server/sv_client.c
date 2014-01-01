@@ -117,8 +117,7 @@ void SV_DirectConnect( netadr_t from )
 
 	qport = Q_atoi( Cmd_Argv( 2 ));
 	challenge = Q_atoi( Cmd_Argv( 3 ));
-	Q_strncpy( userinfo, Cmd_Argv( 4 ), sizeof( userinfo ) - 1 );
-	userinfo[sizeof(userinfo) - 1] = 0;
+	Q_strncpy( userinfo, Cmd_Argv( 4 ), sizeof( userinfo ));
 
 	// quick reject
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )

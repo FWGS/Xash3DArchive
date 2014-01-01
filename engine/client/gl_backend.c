@@ -493,6 +493,8 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 			VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // scrshot gamma
 		break;
 	case VID_SNAPSHOT:
+		if( !gl_overview->integer )
+			VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // scrshot gamma
 		FS_AllowDirectPaths( true );
 		break;
 	case VID_LEVELSHOT:
