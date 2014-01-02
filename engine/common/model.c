@@ -1596,7 +1596,7 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 	msurfmesh_t	*poly, *next, *mesh;
 	float		*outSTcoords, *outLMcoords;
 	float		*outVerts, *outNorms;
-	word		numElems, numVerts;
+	int		numElems, numVerts;
 	word		*outIndexes;
 	int		i, bufSize;
 	byte		*buffer;
@@ -1615,10 +1615,15 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 	bufSize = sizeof( msurfmesh_t ) + numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t ) + sizeof( vec4_t )) + numElems * sizeof( word );
 	bufSize += numVerts * sizeof( rgba_t );	// color array
 
+	// unsigned short limit
+	if( numVerts >= 65536 ) Host_Error( "Mod_ConvertSurface: vertex count %i exceeds 65535\n", numVerts );
+	if( numElems >= 65536 ) Host_Error( "Mod_ConvertSurface: index count %i exceeds 65535\n", numElems );
+
 	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
 
 	mesh = (msurfmesh_t *)buffer;
 	buffer += sizeof( msurfmesh_t );
+
 	mesh->numVerts = numVerts;
 	mesh->numElems = numElems;
 
@@ -1661,12 +1666,11 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 		outIndexes = mesh->indices + numElems;
 		numElems += (poly->numVerts - 2) * 3;
 
-		for( i = 2; i < poly->numVerts; i++ )
+		for( i = 0; i < poly->numVerts - 2; i++ )
 		{
-			outIndexes[0] = numVerts;
-			outIndexes[1] = numVerts + i - 1;
-			outIndexes[2] = numVerts + i;
-			outIndexes += 3;
+			outIndexes[i*3+0] = numVerts;
+			outIndexes[i*3+1] = numVerts + i + 1;
+			outIndexes[i*3+2] = numVerts + i + 2;
 		}
 
 		for( i = 0; i < poly->numVerts; i++ )

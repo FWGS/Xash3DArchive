@@ -65,11 +65,9 @@ Studio models are position independent, so the cache manager can move them.
 #define STUDIO_NF_CHROME		0x0002
 #define STUDIO_NF_FULLBRIGHT		0x0004
 #define STUDIO_NF_COLORMAP		0x0008	// can changed by colormap command
-#define STUDIO_NF_ALPHA		0x0010	// rendering as semitransparent
+#define STUDIO_NF_ALPHA		0x0010	// rendering as transparent texture
 #define STUDIO_NF_ADDITIVE		0x0020	// rendering with additive mode
 #define STUDIO_NF_TRANSPARENT		0x0040	// use texture with alpha channel
-
-#define STUDIO_NF_QUAKESKIN		0x8000	// special hack for determine alias skins
 
 // motion flags
 #define STUDIO_X			0x0001
@@ -311,7 +309,8 @@ typedef struct
 typedef struct mstudiotex_s
 {
 	char		name[64];
-	int		flags;
+	unsigned short	flags;
+	unsigned short	unused;		// lower 16 bit is a user area
 	int		width;
 	int		height;
 	int		index;
