@@ -3428,7 +3428,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		filter = R_FindTexFilter( va( "%s.mdl/%s", mdlname, name )); // grab texture filter
 
 	// NOTE: colormaps must have the palette for properly work. Ignore it.
-	if( mod_allow_materials != NULL && mod_allow_materials->integer && !( ptexture->flags & STUDIO_NF_COLORMAP ))
+	if( Mod_AllowMaterials( ) && !( ptexture->flags & STUDIO_NF_COLORMAP ))
 	{
 		int	gl_texturenum = 0;
 

@@ -23,5 +23,6 @@ GNU General Public License for more details.
 #define ENGINE_TRANSFORM_TRACE_AABB	(1<<3)	// transform trace bbox into local space of rotating bmodels
 #define ENGINE_LARGE_LIGHTMAPS	(1<<4)	// change lightmap sizes from 128x128 to 256x256
 #define ENGINE_COMPENSATE_QUAKE_BUG	(1<<5)	// compensate stupid quake bug (inverse pitch) for mods where this bug is fixed
+#define ENGINE_DISABLE_HDTEXTURES	(1<<6)	// disable support of HD-textures in case custom renderer have separate way to load them
 
 #endif//FEATURES_H

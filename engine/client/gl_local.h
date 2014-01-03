@@ -346,7 +346,6 @@ void R_ClearScene( void );
 void R_LoadIdentity( void );
 void R_RenderScene( const ref_params_t *fd );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
-qboolean GL_LoadTextures( const void *in, model_t *out );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
 int R_ComputeFxBlend( cl_entity_t *e );

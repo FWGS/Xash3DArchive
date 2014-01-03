@@ -533,7 +533,6 @@ void Mod_ClearAll( void )
 		Mod_FreeModel( &cm_models[i] );
 
 	Q_memset( cm_models, 0, sizeof( cm_models ));
-	world.use_worldpool = false; // reset by Host_Error
 	cm_nummodels = 0;
 }
 
@@ -644,10 +643,6 @@ static void Mod_LoadTextures( const dlump_t *l )
 
 	in = (void *)(mod_base + l->fileofs);
 
-	// texture loading is overrided?
-	if( GL_LoadTextures( in, loadmodel ))
-		return;
-
 	loadmodel->numtextures = in->nummiptex;
 	loadmodel->textures = (texture_t **)Mem_Alloc( loadmodel->mempool, loadmodel->numtextures * sizeof( texture_t* ));
 
@@ -690,7 +685,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		// check for multi-layered sky texture
 		if( world.loading && !Q_strncmp( mt->name, "sky", 3 ) && mt->width == 256 && mt->height == 128 )
 		{	
-			if( mod_allow_materials != NULL && mod_allow_materials->integer )
+			if( Mod_AllowMaterials( ))
 			{
 				// build standard path: "materials/mapname/texname_solid.tga"
 				Q_snprintf( texname, sizeof( texname ), "materials/%s/%s_solid.tga", modelname, mt->name );
@@ -752,7 +747,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		}
 		else 
 		{
-			if( mod_allow_materials != NULL && mod_allow_materials->integer )
+			if( Mod_AllowMaterials( ))
 			{
 				if( mt->name[0] == '*' ) mt->name[0] = '!'; // replace unexpected symbol
 
@@ -3131,15 +3126,9 @@ Mod_Calloc
 void *Mod_Calloc( int number, size_t size )
 {
 	cache_user_t	*cu;
-	byte		*pool;
-
-	// IEngineStudio->Mem_Calloc may be used for loading worldtextures
-	if( world.use_worldpool )
-		pool = loadmodel->mempool;
-	else pool = com_studiocache;
 
 	if( number <= 0 || size <= 0 ) return NULL;
-	cu = (cache_user_t *)Mem_Alloc( pool, sizeof( cache_user_t ) + number * size );
+	cu = (cache_user_t *)Mem_Alloc( com_studiocache, sizeof( cache_user_t ) + number * size );
 	cu->data = (void *)cu; // make sure what cu->data is not NULL
 
 	return cu;

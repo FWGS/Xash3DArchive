@@ -679,6 +679,11 @@ movie_state_t *AVI_LoadVideo( const char *filename, qboolean load_audio, qboolea
 	return Avi;
 }
 
+movie_state_t *AVI_LoadVideoNoSound( const char *filename, qboolean ignore_hwgamma )
+{
+	return AVI_LoadVideo( filename, false, ignore_hwgamma );
+}
+
 void AVI_FreeVideo( movie_state_t *state )
 {
 	if( !state ) return;

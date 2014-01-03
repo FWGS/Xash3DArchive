@@ -47,6 +47,12 @@ GNU General Public License for more details.
 #define MODEL_HAS_ORIGIN		BIT( 1 )
 #define MODEL_LIQUID		BIT( 2 )	// model has only point hull
 
+typedef struct wadlist_s
+{
+	char		wadnames[256][32];
+	int		count;
+} wadlist_t;
+
 typedef struct leaflist_s
 {
 	int		count;
@@ -76,8 +82,6 @@ typedef struct
 	qboolean		has_mirrors;	// one or more brush models contain reflective textures
 	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
 	int		block_size;	// lightmap blocksize
-	qboolean		use_worldpool;	// Mod_Calloc temporare change from com_studiocache to use loadmodel->mempool
-
 	color24		*deluxedata;	// deluxemap data pointer
 
 	vec3_t		mins;		// real accuracy world bounds

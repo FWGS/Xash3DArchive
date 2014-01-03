@@ -27,7 +27,7 @@ GNU General Public License for more details.
 // move misc functions at end of the interface
 // added new export for clearing studio decals
 
-#define CL_RENDER_INTERFACE_VERSION	34
+#define CL_RENDER_INTERFACE_VERSION	35
 #define MAX_STUDIO_DECALS		4096	// + unused space of BSP decals
 
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
@@ -41,25 +41,25 @@ GNU General Public License for more details.
 #define PARM_TEX_SKYBOX	5	// second arg as skybox ordering num
 #define PARM_TEX_SKYTEXNUM	6	// skytexturenum for quake sky
 #define PARM_TEX_LIGHTMAP	7	// second arg as number 0 - 128
-#define PARM_SKY_SPHERE	8	// sky is quake sphere ?
-#define PARM_WORLD_VERSION	9	// return the version of bsp
-#define PARM_WORLD_LOADING	10	// usefully in callback GL_LoadTexture to determine world or external bmodel
-#define PARM_WIDESCREEN	11
-#define PARM_FULLSCREEN	12
-#define PARM_SCREEN_WIDTH	13
-#define PARM_SCREEN_HEIGHT	14
-#define PARM_MAP_HAS_MIRRORS	15	// current map has mirorrs
-#define PARM_CLIENT_INGAME	16
-#define PARM_MAX_ENTITIES	17
-#define PARM_TEX_TARGET	18
-#define PARM_TEX_TEXNUM	19
-#define PARM_TEX_FLAGS	20
-#define PARM_FEATURES	21	// same as movevars->features
-#define PARM_ACTIVE_TMU	22	// for debug
-#define PARM_TEX_CACHEFRAME	23	// compare with worldmodel->needload
-#define PARM_MAP_HAS_DELUXE	24	// map has deluxedata
-#define PARM_TEX_TYPE	25
-#define PARM_CACHEFRAME	26
+#define PARM_TEX_TARGET	8
+#define PARM_TEX_TEXNUM	9
+#define PARM_TEX_FLAGS	10
+#define PARM_TEX_TYPE	11
+#define PARM_TEX_CACHEFRAME	12	// compare with worldmodel->needload
+// reserved
+#define PARM_WORLD_VERSION	16	// return the version of bsp
+#define PARM_SKY_SPHERE	17	// sky is quake sphere ?
+#define PARM_MAP_HAS_MIRRORS	18	// current map has mirorrs
+#define PARM_MAP_HAS_DELUXE	19	// map has deluxedata
+#define PARM_MAX_ENTITIES	20
+#define PARM_WIDESCREEN	21
+#define PARM_FULLSCREEN	22
+#define PARM_SCREEN_WIDTH	23
+#define PARM_SCREEN_HEIGHT	24
+#define PARM_CLIENT_INGAME	25
+#define PARM_FEATURES	26	// same as movevars->features
+#define PARM_ACTIVE_TMU	27	// for debug
+#define PARM_CACHEFRAME	28
 
 enum
 {
@@ -114,21 +114,14 @@ typedef enum
 	TF_TEXTURE_1D	= (1<<18),	// this is GL_TEXTURE_1D
 	TF_BORDER		= (1<<19),	// zero clamp for projected textures
 	TF_TEXTURE_3D	= (1<<20),	// this is GL_TEXTURE_3D
-	TF_FLOAT		= (1<<21),	// use GL_FLOAT instead of GL_UNSIGNED_BYTE
+	TF_STATIC		= (1<<21),	// a marker for purge mechanism
 	TF_TEXTURE_RECTANGLE= (1<<22),	// this is GL_TEXTURE_RECTANGLE
-	TF_ALPHA_BORDER	= (1<<23),	// clamp to (0,0,0,255)
+	TF_ALPHA_BORDER	= (1<<23),	// clamp to (0,0,0,255) (probably no difference)
 	TF_IMAGE_PROGRAM	= (1<<24),	// enable image program support like in Doom3
-	TF_STATIC		= (1<<25),	// a marker for purge mechanism
 } texFlags_t;
 
 typedef struct beam_s BEAM;
 typedef struct particle_s particle_t;
-
-typedef struct wadlist_s
-{
-	char		wadnames[256][32];
-	int		count;
-} wadlist_t;
 
 // 12 bytes here
 typedef struct modelstate_s
@@ -180,10 +173,10 @@ typedef struct render_api_s
 	int		(*GL_FindTexture)( const char *name );
 	const char*	(*GL_TextureName)( unsigned int texnum );
 	const byte*	(*GL_TextureData)( unsigned int texnum ); // may be NULL
-	int		(*GL_LoadTexture)( const char *name, const byte *buf, size_t size, int flags, void *filter );
+	int		(*GL_LoadTexture)( const char *name, const byte *buf, size_t size, int flags );
 	int		(*GL_CreateTexture)( const char *name, int width, int height, const void *buffer, int flags ); 
 	void		(*GL_SetTextureType)( unsigned int texnum, unsigned int type );
-	void		(*GL_TextureUpdateCache)( unsigned int texnum );
+	void		(*GL_TextureCacheFrame)( unsigned int texnum );
 	void		(*GL_FreeTexture)( unsigned int texnum );
 
 	// Decals manipulating (draw & remove)
@@ -192,10 +185,8 @@ typedef struct render_api_s
 	void		(*R_EntityRemoveDecals)( struct model_s *mod ); // remove all the decals from specified entity (BSP only)
 
 	// AVIkit support
-	void		*(*AVI_LoadVideo)( const char *filename, int load_audio, int ignore_hwgamma );
+	void		*(*AVI_LoadVideo)( const char *filename, int ignore_hwgamma );
 	int		(*AVI_GetVideoInfo)( void *Avi, long *xres, long *yres, float *duration );
-	int		(*AVI_GetAudioInfo)( void *Avi, void *snd_info );
-	long		(*AVI_GetAudioChunk)( void *Avi, char *audiodata, long offset, long length );
 	long		(*AVI_GetVideoFrameNumber)( void *Avi, float time );
 	byte		*(*AVI_GetVideoFrame)( void *Avi, long frame );
 	void		(*AVI_UploadRawFrame)( int texture, int cols, int rows, int width, int height, const byte *data );
@@ -225,17 +216,14 @@ typedef struct render_api_s
 	void		(*TessPolygon)( struct msurface_s *surf, struct model_s *mod, float tessSize );
 	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );
 	const struct ref_overview_s *( *GetOverviewParms )( void );
-	void		(*R_InitQuakeSky)( struct mip_s *mt, struct texture_s *tx );
-	void		*(*R_FindTexFilter)( const char *texname );	// only for internal use by imagelib. No acess to private fields
 	void		(*S_FadeMusicVolume)( float fadePercent );	// fade background track (0-100 percents)
 	void		(*SetRandomSeed)( long lSeed );		// set custom seed for RANDOM_FLOAT\RANDOM_LONG for predictable random
-	wadlist_t		*(*COM_GetWadsList)( void );			// returns a wadlist for the given map
 	// static allocations
 	void		*(*pfnMemAlloc)( size_t cb, const char *filename, const int fileline );
 	void		(*pfnMemFree)( void *mem, const char *filename, const int fileline );
  	// find in files
 	char		**(*pfnGetFilesList)( const char *pattern, int *numFiles, int gamedironly );
-	// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 31
+	// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 35
 } render_api_t;
 
 // render callbacks
@@ -258,8 +246,6 @@ typedef struct render_interface_s
 	qboolean		(*R_SpeedsMessage)( char *out, size_t size );
 	// replace with built-in R_DrawCubemapView for make skyshots or envshots
 	qboolean		(*R_DrawCubemapView)( const float *origin, const float *angles, int size );
-	// custom texture loader for worldmodel and bsp-models (as a part of implementation Quake3 shader system)
-	qboolean		(*GL_LoadTextures)( const void *in, model_t *out, int *sky1, int *sky2 );
 } render_interface_t;
 
 #endif//RENDER_API_H

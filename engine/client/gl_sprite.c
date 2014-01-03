@@ -71,7 +71,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	else
 	{
 		// partially HD-textures support
-		if( mod_allow_materials != NULL && mod_allow_materials->integer && !Q_strcmp( group_suffix, "one" ))
+		if( Mod_AllowMaterials() && !Q_strcmp( group_suffix, "one" ))
 		{
 			Q_strncpy( sprname, mod->name, sizeof( sprname ));
 			FS_StripExtension( sprname );

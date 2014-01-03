@@ -901,9 +901,6 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 		return; 
 	}
 
-	if( tex->flags & TF_FLOAT )
-		dataType = GL_FLOAT;
-
 	mipLevel = 0;
 	w = tex->width;
 	h = tex->height;
@@ -1080,9 +1077,6 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		// determine target
 		tex->target = glTarget = GL_TEXTURE_3D;
 	}
-
-	if( tex->flags & TF_FLOAT )
-		dataType = GL_FLOAT;
 
 	pglBindTexture( tex->target, tex->texnum );
 
@@ -1392,9 +1386,6 @@ int GL_CreateTexture( const char *name, int width, int height, const void *buffe
 		r_empty.depth = r_empty.width;
 		r_empty.size = r_empty.width * r_empty.height * r_empty.depth * 4;
 	}
-
-	if( flags & TF_FLOAT )
-		r_empty.size *= 4;
 
 	texture = GL_LoadTextureInternal( name, &r_empty, flags, false );
 

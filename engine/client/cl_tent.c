@@ -2670,7 +2670,7 @@ int CL_DecalIndex( int id )
 	{
 		qboolean	load_external = false;
 
-		if( mod_allow_materials != NULL && mod_allow_materials->integer )
+		if( Mod_AllowMaterials( ))
 		{
 			char	decalname[64];
 			int	gl_texturenum = 0;
