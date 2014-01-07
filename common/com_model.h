@@ -200,10 +200,10 @@ typedef struct msurfmesh_s
 
 	vec3_t		*vertices;	// vertexes array
 	vec2_t		*stcoords;	// s\t coords array
-	vec2_t		*lmcoords;	// l\m coords array
-	vec3_t		*normals;		// normals array
-	vec3_t		tangent;		// shared for mesh
-	vec3_t		binormal;		// shared for mesh
+	vec2_t		*lmcoords;	// l\m coords array (unused for studio models)
+	vec3_t		*normals;		// normals array (identical for bsp polys, unique for studio models)
+	vec3_t		*tangent;		// tangent array (identical for bsp polys, unique for studio models)
+	vec3_t		*binormal;	// binormal array (identical for bsp polys, unique for studio models)
 	byte		*colors;		// colors array for vertex lighting (filling 0xFF by default)
 	unsigned short	*indices;		// indices		
 

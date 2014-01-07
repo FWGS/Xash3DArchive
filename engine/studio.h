@@ -68,6 +68,9 @@ Studio models are position independent, so the cache manager can move them.
 #define STUDIO_NF_ALPHA		0x0010	// rendering as transparent texture
 #define STUDIO_NF_ADDITIVE		0x0020	// rendering with additive mode
 #define STUDIO_NF_TRANSPARENT		0x0040	// use texture with alpha channel
+#define STUDIO_NF_NORMALMAP		0x0080	// indexed normalmap
+#define STUDIO_NF_HEIGHTMAP		0x0100	// heightmap that can be used for parallax or normalmap
+#define STUDIO_NF_GLOSSMAP		0x0200	// glossmap
 
 // motion flags
 #define STUDIO_X			0x0001
@@ -93,6 +96,7 @@ Studio models are position independent, so the cache manager can move them.
 
 // sequence flags
 #define STUDIO_LOOPING		0x0001
+#define STUDIO_STATIC		0x8000	// studiomodel is static
 
 // bone flags
 #define STUDIO_HAS_NORMALS		0x0001

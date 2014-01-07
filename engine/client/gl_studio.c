@@ -517,8 +517,8 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 	VectorCopy( e->origin, origin );
 	VectorCopy( e->angles, angles );
 
-	// interpolate monsters position
-	if( e->curstate.movetype == MOVETYPE_STEP ) 
+	// interpolate monsters position (moved into UpdateEntityFields by user request)
+	if( e->curstate.movetype == MOVETYPE_STEP && !( host.features & ENGINE_COMPUTE_STUDIO_LERP )) 
 	{
 		float	d, f = 0.0f;
 		int	i;
@@ -1699,7 +1699,7 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 		r = r_studio_lambert->value;
 		if( r < 1.0f ) r = 1.0f;
 		lightcos = (lightcos + ( r - 1.0f )) / r; // do modified hemispherical lighting
-		if( lightcos > 0.0f ) VectorMA( illum, -lightcos, plight->lightcolor, illum );
+		if( lightcos > 0.0f ) VectorMA( illum, lightcos, plight->lightcolor, illum );
 		
 		if( illum[0] <= 0.0f ) illum[0] = 0.0f;
 		if( illum[1] <= 0.0f ) illum[1] = 0.0f;
@@ -3371,6 +3371,9 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	if( ptexture->flags & STUDIO_NF_TRANSPARENT )
 		flags |= (TF_CLAMP|TF_NOMIPMAP);
 
+	if( ptexture->flags & STUDIO_NF_NORMALMAP )
+		flags |= (TF_NORMALMAP);
+
 	// store some textures for remapping
 	if( !Q_strnicmp( ptexture->name, "DM_Base", 7 ) || !Q_strnicmp( ptexture->name, "remap", 5 ))
 	{
@@ -3578,6 +3581,18 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 	loadmodel->numframes = R_StudioBodyVariations( loadmodel );
 	loadmodel->radius = RadiusFromBounds( loadmodel->mins, loadmodel->maxs );
 	loadmodel->flags = phdr->flags; // copy header flags
+
+	// check for static model
+	if( phdr->numseqgroups == 1 && phdr->numseq == 1 && phdr->numbones == 1 )
+	{
+		mstudioseqdesc_t	*pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
+
+		// HACKHACK: MilkShape created a default animations with 30 frames
+		// FIXME: analyze real frames for more predicatable results
+		// TODO: analyze all the sequences
+		if( pseqdesc->numframes == 1 || pseqdesc->numframes == 30 )
+			pseqdesc->flags |= STUDIO_STATIC;
+	}
 
 	if( loaded ) *loaded = true;
 }

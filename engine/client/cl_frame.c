@@ -155,16 +155,14 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 			{
 				qboolean	applyVel, applyAvel;
 
-				d = -1.0f;
-
 				applyVel = !VectorCompare( m_pGround->curstate.origin, m_pGround->prevstate.origin );
 				applyAvel = !VectorCompare( m_pGround->curstate.angles, m_pGround->prevstate.angles );
 
 				if( applyVel || applyAvel )
 				{
-					ent->origin[0] += ( m_pGround->curstate.origin[0] - m_pGround->prevstate.origin[0] ) * d;
-					ent->origin[1] += ( m_pGround->curstate.origin[1] - m_pGround->prevstate.origin[1] ) * d;
-//					ent->origin[2] += ( m_pGround->curstate.origin[2] - m_pGround->prevstate.origin[2] ) * d;
+					ent->origin[0] += ( m_pGround->curstate.origin[0] - m_pGround->prevstate.origin[0] ) * -1.0f;
+					ent->origin[1] += ( m_pGround->curstate.origin[1] - m_pGround->prevstate.origin[1] ) * -1.0f;
+//					ent->origin[2] += ( m_pGround->curstate.origin[2] - m_pGround->prevstate.origin[2] ) * -1.0f;
 					ent->latched.prevorigin[2] = ent->origin[2];
 				}
 
@@ -176,11 +174,31 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 
 						ang1 = m_pGround->curstate.angles[i];
 						ang2 = m_pGround->prevstate.angles[i];
-						f = ang1 - ang2;
-						if( d > 180.0f ) f -= 360.0f;
-						else if( d < -180.0f ) f += 360.0f;
-						ent->angles[i] += d * f;
+						d = ang1 - ang2;
+						if( d > 180.0f ) d -= 360.0f;
+						else if( d < -180.0f ) d += 360.0f;
+						ent->angles[i] += d * -1.0f;
 					}
+				}
+			}
+
+			// move code from StudioSetupTransform here
+			if( host.features & ENGINE_COMPUTE_STUDIO_LERP )
+			{
+				ent->origin[0] += ( ent->curstate.origin[0] - ent->latched.prevorigin[0] ) * f;
+				ent->origin[1] += ( ent->curstate.origin[1] - ent->latched.prevorigin[1] ) * f;
+				ent->origin[2] += ( ent->curstate.origin[2] - ent->latched.prevorigin[2] ) * f;
+
+				for( i = 0; i < 3; i++ )
+				{
+					float	ang1, ang2;
+
+					ang1 = ent->angles[i];
+					ang2 = ent->latched.prevangles[i];
+					d = ang1 - ang2;
+					if( d > 180.0f ) d -= 360.0f;
+					else if( d < -180.0f ) d += 360.0f;
+					ent->angles[i] += d * f;
 				}
 			}
 		}

@@ -24,5 +24,6 @@ GNU General Public License for more details.
 #define ENGINE_LARGE_LIGHTMAPS	(1<<4)	// change lightmap sizes from 128x128 to 256x256
 #define ENGINE_COMPENSATE_QUAKE_BUG	(1<<5)	// compensate stupid quake bug (inverse pitch) for mods where this bug is fixed
 #define ENGINE_DISABLE_HDTEXTURES	(1<<6)	// disable support of HD-textures in case custom renderer have separate way to load them
+#define ENGINE_COMPUTE_STUDIO_LERP	(1<<7)	// enable MOVETYPE_STEP lerping back in engine
 
 #endif//FEATURES_H

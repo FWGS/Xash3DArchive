@@ -1282,10 +1282,10 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 {
 	float		s, t;
 	uint		bufSize;
+	vec3_t		normal, tangent, binormal;
 	mtexinfo_t	*texinfo = surf->texinfo;
 	int		i, numElems;
 	byte		*buffer;
-	vec3_t		normal;
 	msurfmesh_t	*mesh;
 
 	// allocate mesh
@@ -1293,6 +1293,7 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 
 	// mesh + ( vertex, normal, (st + lmst) ) * numVerts + elem * numElems;
 	bufSize = sizeof( msurfmesh_t ) + numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t ) + sizeof( vec4_t )) + numElems * sizeof( word );
+	bufSize += numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t )); // tangent and binormal
 	bufSize += numVerts * sizeof( rgba_t );	// color array
 
 	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
@@ -1302,11 +1303,16 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 	mesh->numVerts = numVerts;
 	mesh->numElems = numElems;
 
-	// calc tangent and binormal
-	VectorCopy( surf->texinfo->vecs[0], mesh->tangent );
-	VectorCopy( surf->texinfo->vecs[1], mesh->binormal );
-	VectorNormalize( mesh->tangent );
-	VectorNormalize( mesh->binormal );
+	// calc tangent space
+	if( surf->flags & SURF_PLANEBACK )
+		VectorNegate( surf->plane->normal, normal );
+	else VectorCopy( surf->plane->normal, normal );
+	VectorCopy( surf->texinfo->vecs[0], tangent );
+	VectorNegate( surf->texinfo->vecs[1], binormal );
+
+	VectorNormalize( normal ); // g-cont. this is even needed?
+	VectorNormalize( tangent );
+	VectorNormalize( binormal );
 
 	// setup pointers
 	mesh->vertices = (vec3_t *)buffer;
@@ -1316,6 +1322,10 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 	mesh->lmcoords = (vec2_t *)buffer;
 	buffer += numVerts * sizeof( vec2_t );
 	mesh->normals = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->tangent = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->binormal = (vec3_t *)buffer;
 	buffer += numVerts * sizeof( vec3_t );
 	mesh->colors = (byte *)buffer;
 	buffer += numVerts * sizeof( rgba_t );
@@ -1335,13 +1345,6 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 		mesh->indices[i*3+2] = i + 2;
 	}
 
-	// setup normal
-	if( surf->flags & SURF_PLANEBACK )
-		VectorNegate( surf->plane->normal, normal );
-	else VectorCopy( surf->plane->normal, normal );
-
-	VectorNormalize( normal ); // g-cont. this is even needed?
-
 	// clear colors (it can be used for vertex lighting)
 	Q_memset( mesh->colors, 0xFF, numVerts * sizeof( rgba_t ));
 	
@@ -1349,6 +1352,8 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 	{
 		// vertex
 		VectorCopy( verts, mesh->vertices[i] );
+		VectorCopy( tangent, mesh->tangent[i] );
+		VectorCopy( binormal, mesh->binormal[i] );
 		VectorCopy( normal, mesh->normals[i] );
 
 		// texture coordinates
@@ -1384,11 +1389,12 @@ Mod_SubdividePolygon
 */
 static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numVerts, float *verts, float tessSize )
 {
-	vec3_t		vTotal, nTotal, mins, maxs;
-	mtexinfo_t	*texinfo = surf->texinfo;
+	vec3_t		vTotal, nTotal, tTotal, bTotal;
 	vec3_t		front[MAX_SIDE_VERTS], back[MAX_SIDE_VERTS];
 	float		*v, m, oneDivVerts, dist, dists[MAX_SIDE_VERTS];
 	qboolean		lightmap = (surf->flags & SURF_DRAWTILED) ? false : true;
+	vec3_t		normal, tangent, binormal, mins, maxs;
+	mtexinfo_t	*texinfo = surf->texinfo;
 	vec2_t		totalST, totalLM;
 	float		s, t, scale;
 	int		i, j, f, b;
@@ -1453,6 +1459,7 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 
 	// mesh + ( vertex, normal, (st + lmst) ) * ( numVerts + 2 );
 	bufSize = sizeof( msurfmesh_t ) + (( numVerts + 2 ) * (( sizeof( vec3_t ) + sizeof( vec3_t ) + sizeof( vec4_t ))));
+	bufSize += ( numVerts + 2 ) * ( sizeof( vec3_t ) + sizeof( vec3_t )); // tangent and binormal
 	bufSize += ( numVerts + 2 ) * sizeof( rgba_t );	// color array
 
 	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
@@ -1464,11 +1471,16 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 	mesh->numVerts = numVerts + 2;
 	mesh->numElems = numVerts * 3;
 
-	// calc tangent and binormal
-	VectorCopy( surf->texinfo->vecs[0], mesh->tangent );
-	VectorNegate( surf->texinfo->vecs[1], mesh->binormal );
-	VectorNormalize( mesh->tangent );
-	VectorNormalize( mesh->binormal );
+	// calc tangent space
+	if( surf->flags & SURF_PLANEBACK )
+		VectorNegate( surf->plane->normal, normal );
+	else VectorCopy( surf->plane->normal, normal );
+	VectorCopy( surf->texinfo->vecs[0], tangent );
+	VectorNegate( surf->texinfo->vecs[1], binormal );
+
+	VectorNormalize( normal ); // g-cont. this is even needed?
+	VectorNormalize( tangent );
+	VectorNormalize( binormal );
 
 	// setup pointers
 	mesh->vertices = (vec3_t *)buffer;
@@ -1479,11 +1491,17 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 	buffer += mesh->numVerts * sizeof( vec2_t );
 	mesh->normals = (vec3_t *)buffer;
 	buffer += mesh->numVerts * sizeof( vec3_t );
+	mesh->tangent = (vec3_t *)buffer;
+	buffer += mesh->numVerts * sizeof( vec3_t );
+	mesh->binormal = (vec3_t *)buffer;
+	buffer += mesh->numVerts * sizeof( vec3_t );
 	mesh->colors = (byte *)buffer;
 	buffer += mesh->numVerts * sizeof( rgba_t );
 
 	VectorClear( vTotal );
 	VectorClear( nTotal );
+	VectorClear( bTotal );
+	VectorClear( tTotal );
 
 	totalST[0] = totalST[1] = 0;
 	totalLM[0] = totalLM[1] = 0;
@@ -1497,14 +1515,14 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 	{
 		// vertex
 		VectorCopy( verts, mesh->vertices[i+1] );
-
-		// setup normal
-		if( surf->flags & SURF_PLANEBACK )
-			VectorNegate( surf->plane->normal, mesh->normals[i+1] );
-		else VectorCopy( surf->plane->normal, mesh->normals[i+1] );
+		VectorCopy( normal, mesh->normals[i+1] );
+		VectorCopy( tangent, mesh->tangent[i+1] );
+		VectorCopy( binormal, mesh->binormal[i+1] );
 
 		VectorAdd( vTotal, mesh->vertices[i+1], vTotal );
  		VectorAdd( nTotal, mesh->normals[i+1], nTotal );
+ 		VectorAdd( tTotal, mesh->tangent[i+1], tTotal );
+ 		VectorAdd( bTotal, mesh->binormal[i+1], bTotal );
 
 		if( lightmap )
 		{
@@ -1558,7 +1576,12 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 
 	VectorScale( vTotal, oneDivVerts, mesh->vertices[0] );
 	VectorScale( nTotal, oneDivVerts, mesh->normals[0] );
+	VectorScale( tTotal, oneDivVerts, mesh->tangent[0] );
+	VectorScale( bTotal, oneDivVerts, mesh->binormal[0] );
+
 	VectorNormalize( mesh->normals[0] );
+	VectorNormalize( mesh->tangent[0] );
+	VectorNormalize( mesh->binormal[0] );
 
 	// texture coordinates
 	mesh->stcoords[0][0] = totalST[0] * oneDivVerts;
@@ -1571,6 +1594,8 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 	// copy first vertex to last
 	VectorCopy( mesh->vertices[1], mesh->vertices[i+1] );
 	VectorCopy( mesh->normals[1], mesh->normals[i+1] );
+	VectorCopy( mesh->tangent[1], mesh->tangent[i+1] );
+	VectorCopy( mesh->binormal[1], mesh->binormal[i+1] );
 	Vector2Copy( mesh->stcoords[1], mesh->stcoords[i+1] );
 	Vector2Copy( mesh->lmcoords[1], mesh->lmcoords[i+1] );
 
@@ -1590,6 +1615,7 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 {
 	msurfmesh_t	*poly, *next, *mesh;
 	float		*outSTcoords, *outLMcoords;
+	float		*outTangent, *outBinorm;
 	float		*outVerts, *outNorms;
 	int		numElems, numVerts;
 	word		*outIndexes;
@@ -1608,6 +1634,7 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 
 	// mesh + ( vertex, normal, (st + lmst) ) * numVerts + elem * numElems;
 	bufSize = sizeof( msurfmesh_t ) + numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t ) + sizeof( vec4_t )) + numElems * sizeof( word );
+	bufSize += numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t )); // tangent and binormal
 	bufSize += numVerts * sizeof( rgba_t );	// color array
 
 	// unsigned short limit
@@ -1622,12 +1649,6 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 	mesh->numVerts = numVerts;
 	mesh->numElems = numElems;
 
-	// calc tangent and binormal
-	VectorCopy( surf->texinfo->vecs[0], mesh->tangent );
-	VectorNegate( surf->texinfo->vecs[1], mesh->binormal );
-	VectorNormalize( mesh->tangent );
-	VectorNormalize( mesh->binormal );
-
 	// setup pointers
 	mesh->vertices = (vec3_t *)buffer;
 	buffer += numVerts * sizeof( vec3_t );
@@ -1637,14 +1658,21 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 	buffer += numVerts * sizeof( vec2_t );
 	mesh->normals = (vec3_t *)buffer;
 	buffer += numVerts * sizeof( vec3_t );
+	mesh->tangent = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->binormal = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
 	mesh->colors = (byte *)buffer;
 	buffer += numVerts * sizeof( rgba_t );
+
 	mesh->indices = (word *)buffer;
 	buffer += numElems * sizeof( word );
 
 	// setup moving pointers
 	outVerts = (float *)mesh->vertices;
 	outNorms = (float *)mesh->normals;
+	outTangent = (float *)mesh->tangent;
+	outBinorm = (float *)mesh->binormal;
 	outSTcoords = (float *)mesh->stcoords;
 	outLMcoords = (float *)mesh->lmcoords;
 	outIndexes = (word *)mesh->indices;
@@ -1673,6 +1701,8 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 			// vertices
 			VectorCopy( poly->vertices[i], outVerts );
 			VectorCopy( poly->normals[i], outNorms );
+			VectorCopy( poly->tangent[i], outTangent );
+			VectorCopy( poly->binormal[i], outBinorm );
 
 			outSTcoords[0] = poly->stcoords[i][0];
 			outSTcoords[1] = poly->stcoords[i][1];
@@ -1681,6 +1711,8 @@ static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
 
 			outVerts += 3;
 			outNorms += 3;
+			outBinorm += 3;
+			outTangent += 3;
 			outSTcoords += 2;
 			outLMcoords += 2;
 		}

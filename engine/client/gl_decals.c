@@ -538,6 +538,7 @@ msurfmesh_t *R_DecalCreateMesh( decalinfo_t *decalinfo, decal_t *pdecal, msurfac
 
 	// mesh + ( vertex, normal, (st + lmst) ) * numVerts + elem * numElems;
 	bufSize = sizeof( msurfmesh_t ) + numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t ) + sizeof( vec4_t )) + numElems * sizeof( word );
+	bufSize += numVerts * ( sizeof( vec3_t ) + sizeof( vec3_t )); // tangent and binormal
 	bufSize += numVerts * sizeof( rgba_t );	// color array
 
 	buffer = Mem_Alloc( cls.mempool, bufSize );
@@ -556,6 +557,10 @@ msurfmesh_t *R_DecalCreateMesh( decalinfo_t *decalinfo, decal_t *pdecal, msurfac
 	buffer += numVerts * sizeof( vec2_t );
 	mesh->normals = (vec3_t *)buffer;
 	buffer += numVerts * sizeof( vec3_t );
+	mesh->tangent = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
+	mesh->binormal = (vec3_t *)buffer;
+	buffer += numVerts * sizeof( vec3_t );
 	mesh->colors = (byte *)buffer;
 	buffer += numVerts * sizeof( rgba_t );
 
@@ -572,9 +577,6 @@ msurfmesh_t *R_DecalCreateMesh( decalinfo_t *decalinfo, decal_t *pdecal, msurfac
 		mesh->indices[i*3+2] = i + 2;
 	}
 
-	VectorCopy( decalinfo->m_Basis[0], mesh->tangent );
-	VectorCopy( decalinfo->m_Basis[1], mesh->binormal );
-
 	// clear colors (it can be used for vertex lighting)
 	Q_memset( mesh->colors, 0xFF, numVerts * sizeof( rgba_t ));
 
@@ -582,6 +584,8 @@ msurfmesh_t *R_DecalCreateMesh( decalinfo_t *decalinfo, decal_t *pdecal, msurfac
 	for( i = 0; i < numVerts; i++, v += VERTEXSIZE )
 	{
 		VectorCopy( v, mesh->vertices[i] );
+		VectorCopy( decalinfo->m_Basis[0], mesh->tangent[i] );
+		VectorCopy( decalinfo->m_Basis[1], mesh->binormal[i] );
 		VectorCopy( decalinfo->m_Basis[2], mesh->normals[i] );
 
 		mesh->stcoords[i][0] = v[3];

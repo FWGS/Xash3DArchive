@@ -468,7 +468,9 @@ void R_TextureList_f( void )
 			break;
 		}
 
-		if( image->flags & TF_NOMIPMAP )
+		if( image->flags & TF_NORMALMAP )
+			Msg( "normal " );
+		else if( image->flags & TF_NOMIPMAP )
 			Msg( "linear " );
 		if( image->flags & TF_NEAREST )
 			Msg( "nearest" );
@@ -802,7 +804,7 @@ byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int out
 
 /*
 =================
-GL_ResampleTexture
+GL_ApplyGamma
 
 Assume input buffer is RGBA
 =================
@@ -901,6 +903,9 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 		return; 
 	}
 
+	// screen texture?
+	if( !buffer ) return;
+
 	mipLevel = 0;
 	w = tex->width;
 	h = tex->height;
@@ -978,7 +983,8 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	tex->fogParams[2] = pic->fogParams[2];
 	tex->fogParams[3] = pic->fogParams[3];
 
-	GL_RoundImageDimensions( &tex->width, &tex->height, tex->flags, false );
+	// NOTE: normalmaps must be power of two or software mip generator will stop working
+	GL_RoundImageDimensions( &tex->width, &tex->height, tex->flags, ( tex->flags & TF_NORMALMAP ));
 
 	if( s&3 )
 	{
@@ -1102,7 +1108,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 			Host_Error( "GL_UploadTexture: %s image buffer overflow\n", tex->name );
 
 		// copy or resample the texture
-		if(( tex->width == tex->srcWidth && tex->height == tex->srcHeight ) || ( tex->flags & TF_TEXTURE_3D ))
+		if(( tex->width == tex->srcWidth && tex->height == tex->srcHeight ) || ( tex->flags & ( TF_TEXTURE_1D|TF_TEXTURE_3D )))
 		{
 			data = buf;
 		}
@@ -1124,10 +1130,12 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		}
 		else if( glTarget == GL_TEXTURE_CUBE_MAP_ARB )
 		{
-			if( GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
+			if( GL_Support( GL_SGIS_MIPMAPS_EXT ) && !( tex->flags & TF_NORMALMAP ))
+				GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 			if( subImage ) pglTexSubImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + i, 0, 0, 0, tex->width, tex->height, inFormat, dataType, data );
 			else pglTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + i, 0, outFormat, tex->width, tex->height, 0, inFormat, dataType, data );
-			if( !GL_Support( GL_SGIS_MIPMAPS_EXT )) GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
+			if( !GL_Support( GL_SGIS_MIPMAPS_EXT ) || ( tex->flags & TF_NORMALMAP ))
+				GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 		}
 		else if( glTarget == GL_TEXTURE_3D )
 		{
