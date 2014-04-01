@@ -505,6 +505,40 @@ typedef float GLmatrix[16];
 #define GL_MAX_TEXTURE_IMAGE_UNITS_ARB		0x8872
 #define GL_FRAGMENT_SHADER_DERIVATIVE_HINT_ARB	0x8B8B
 
+#define GL_TEXTURE_RED_TYPE_ARB                   0x8C10
+#define GL_TEXTURE_GREEN_TYPE_ARB                 0x8C11
+#define GL_TEXTURE_BLUE_TYPE_ARB                  0x8C12
+#define GL_TEXTURE_ALPHA_TYPE_ARB                 0x8C13
+#define GL_TEXTURE_LUMINANCE_TYPE_ARB             0x8C14
+#define GL_TEXTURE_INTENSITY_TYPE_ARB             0x8C15
+#define GL_TEXTURE_DEPTH_TYPE_ARB                 0x8C16
+#define GL_UNSIGNED_NORMALIZED_ARB                0x8C17
+#define GL_RGBA32F_ARB                            0x8814
+#define GL_RGB32F_ARB                             0x8815
+#define GL_ALPHA32F_ARB                           0x8816
+#define GL_INTENSITY32F_ARB                       0x8817
+#define GL_LUMINANCE32F_ARB                       0x8818
+#define GL_LUMINANCE_ALPHA32F_ARB                 0x8819
+#define GL_RGBA16F_ARB                            0x881A
+#define GL_RGB16F_ARB                             0x881B
+#define GL_ALPHA16F_ARB                           0x881C
+#define GL_INTENSITY16F_ARB                       0x881D
+#define GL_LUMINANCE16F_ARB                       0x881E
+#define GL_LUMINANCE_ALPHA16F_ARB                 0x881F
+
+#define GL_RGBA_FLOAT32_ATI                       0x8814
+#define GL_RGB_FLOAT32_ATI                        0x8815
+#define GL_ALPHA_FLOAT32_ATI                      0x8816
+#define GL_INTENSITY_FLOAT32_ATI                  0x8817
+#define GL_LUMINANCE_FLOAT32_ATI                  0x8818
+#define GL_LUMINANCE_ALPHA_FLOAT32_ATI            0x8819
+#define GL_RGBA_FLOAT16_ATI                       0x881A
+#define GL_RGB_FLOAT16_ATI                        0x881B
+#define GL_ALPHA_FLOAT16_ATI                      0x881C
+#define GL_INTENSITY_FLOAT16_ATI                  0x881D
+#define GL_LUMINANCE_FLOAT16_ATI                  0x881E
+#define GL_LUMINANCE_ALPHA_FLOAT16_ATI            0x881F
+
 //GL_ARB_vertex_buffer_object
 #define GL_ARRAY_BUFFER_ARB			0x8892
 #define GL_ELEMENT_ARRAY_BUFFER_ARB		0x8893

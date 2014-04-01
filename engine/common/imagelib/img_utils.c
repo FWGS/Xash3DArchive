@@ -553,6 +553,17 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 			fin[i] = fin[i] < 224 ? fin[i] : 0;
 	}
 
+	// check for color
+	for( i = 0; i < 256; i++ )
+	{
+		col = (rgba_t *)image.d_currentpal[i];
+		if( col[0] != col[1] || col[1] != col[2] )
+		{
+			image.flags |= IMAGE_HAS_COLOR;
+			break;
+		}
+	}
+
 	while( pixels >= 8 )
 	{
 		iout[0] = image.d_currentpal[in[0]];
@@ -563,10 +574,6 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 		iout[5] = image.d_currentpal[in[5]];
 		iout[6] = image.d_currentpal[in[6]];
 		iout[7] = image.d_currentpal[in[7]];
-
-		col = (rgba_t *)iout;
-		if( col[0] != col[1] || col[1] != col[2] )
-			image.flags |= IMAGE_HAS_COLOR;
 
 		in += 8;
 		iout += 8;
@@ -595,6 +602,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 		iout[0] = image.d_currentpal[in[0]];
 
 	image.type = PF_RGBA_32;	// update image type;
+
 	return true;
 }
 

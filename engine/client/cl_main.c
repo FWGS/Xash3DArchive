@@ -1572,7 +1572,7 @@ void CL_Escape_f( void )
 	if( UI_CreditsActive( )) return;
 
 	if( cls.state == ca_cinematic )
-		SCR_StopCinematic();
+		SCR_NextMovie(); // jump to next movie
 	else UI_SetActiveMenu( true );
 }
 
@@ -1787,8 +1787,8 @@ void CL_Init( void )
 
 	cls.initialized = true;
 	cl.maxclients = 1; // allow to drawing player in menu
+	cls.demonum = -1;
 }
-
 
 /*
 ===============

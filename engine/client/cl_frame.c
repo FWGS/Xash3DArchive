@@ -369,7 +369,6 @@ Set new weapon animation
 void CL_WeaponAnim( int iAnim, int body )
 {
 	cl_entity_t	*view = &clgame.viewent;
-	static int	viewmodel = -1;
 
 	view->curstate.modelindex = cl.frame.local.client.viewmodel;
 

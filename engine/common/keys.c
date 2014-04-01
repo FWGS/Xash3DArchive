@@ -589,6 +589,8 @@ void Key_Event( int key, qboolean down )
 	{
 		kb = keys[key].binding;
 
+		if( cls.key_dest == key_game && ( key != K_ESCAPE ))
+			clgame.dllFuncs.pfnKey_Event( down, key, kb );
 		Key_AddKeyUpCommands( key, kb );
 		return;
 	}

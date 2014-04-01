@@ -101,6 +101,7 @@ extern int		bmodel_version;	// only actual during loading
 void Mod_Init( void );
 void Mod_ClearAll( void );
 void Mod_Shutdown( void );
+void Mod_ClearUserData( void );
 void Mod_PrintBSPFileSizes( void );
 void Mod_SetupHulls( vec3_t mins[MAX_MAP_HULLS], vec3_t maxs[MAX_MAP_HULLS] );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );

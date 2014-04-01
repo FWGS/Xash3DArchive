@@ -3846,6 +3846,7 @@ void CL_UnloadProgs( void )
 	CL_FreeViewBeams();
 	CL_FreeParticles();
 	CL_ClearAllRemaps();
+	Mod_ClearUserData();
 	VGui_Shutdown();
 
 	// NOTE: HLFX 0.5 has strange bug: hanging on exit if no map was loaded

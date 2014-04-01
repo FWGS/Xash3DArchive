@@ -199,7 +199,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 		}
 
 		// set texture anisotropy if available
-		if( GL_Support( GL_ANISOTROPY_EXT ))
+		if( GL_Support( GL_ANISOTROPY_EXT ) && !( tex->flags & TF_ALPHACONTRAST ))
 			pglTexParameterf( tex->target, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_texture_anisotropy->value );
 
 		// set texture LOD bias if available
@@ -441,6 +441,30 @@ void R_TextureList_f( void )
 		case GL_DEPTH_COMPONENT:
 			Msg( "DEPTH " );
 			break;			
+		case GL_LUMINANCE16F_ARB:
+			Msg( "L16F  " );
+			break;
+		case GL_LUMINANCE32F_ARB:
+			Msg( "L32F  " );
+			break;
+		case GL_LUMINANCE_ALPHA16F_ARB:
+			Msg( "LA16F " );
+			break;
+		case GL_LUMINANCE_ALPHA32F_ARB:
+			Msg( "LA32F " );
+			break;
+		case GL_RGB16F_ARB:
+			Msg( "RGB16F" );
+			break;
+		case GL_RGB32F_ARB:
+			Msg( "RGB32F" );
+			break;
+		case GL_RGBA16F_ARB:
+			Msg( "RGBA16F" );
+			break;
+		case GL_RGBA32F_ARB:
+			Msg( "RGBA32F" );
+			break;
 		default:
 			Msg( "????? " );
 			break;
@@ -637,6 +661,43 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int *samples )
 	{
 		format = GL_DEPTH_COMPONENT;
 		tex->flags &= ~TF_INTENSITY;
+	}
+	else if( tex->flags & TF_FLOAT && GL_Support( GL_ARB_TEXTURE_FLOAT_EXT ))
+	{
+		int	bits = glw_state.desktopBitsPixel;
+
+		switch( *samples )
+		{
+		case 1:
+			switch( bits )
+			{
+			case 16: format = GL_LUMINANCE16F_ARB; break;
+			default: format = GL_LUMINANCE32F_ARB; break;
+			}
+			break;
+		case 2:
+			switch( bits )
+			{
+			case 16: format = GL_LUMINANCE_ALPHA16F_ARB; break;
+			default: format = GL_LUMINANCE_ALPHA32F_ARB; break;
+			}
+			break;
+		case 3:
+			switch( bits )
+			{
+			case 16: format = GL_RGB16F_ARB; break;
+			default: format = GL_RGB32F_ARB; break;
+			}
+			break;		
+		case 4:
+		default:
+			switch( bits )
+			{
+			case 16: format = GL_RGBA16F_ARB; break;
+			default: format = GL_RGBA32F_ARB; break;
+			}
+			break;
+		}
 	}
 	else if( compress )
 	{
@@ -895,7 +956,7 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 	if( tex->flags & TF_NOMIPMAP )
 		return;
 
-	if( GL_Support( GL_SGIS_MIPMAPS_EXT ) && !( tex->flags & TF_NORMALMAP ))
+	if( GL_Support( GL_SGIS_MIPMAPS_EXT ) && !( tex->flags & ( TF_NORMALMAP|TF_ALPHACONTRAST )))
 	{
 		pglHint( GL_GENERATE_MIPMAP_HINT_SGIS, GL_NICEST );
 		pglTexParameteri( glTarget, GL_GENERATE_MIPMAP_SGIS, GL_TRUE );
@@ -914,7 +975,8 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 	while( w > 1 || h > 1 )
 	{
 		// build the mipmap
-		GL_BuildMipMap( buffer, w, h, ( tex->flags & TF_NORMALMAP ));
+		if( tex->flags & TF_ALPHACONTRAST ) Q_memset( buffer, pic->width >> mipLevel, w * h * 4 );
+		else GL_BuildMipMap( buffer, w, h, ( tex->flags & TF_NORMALMAP ));
 
 		w = (w+1)>>1;
 		h = (h+1)>>1;
@@ -1144,11 +1206,11 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 		}
 		else
 		{
-			if( GL_Support( GL_SGIS_MIPMAPS_EXT ) && !( tex->flags & TF_NORMALMAP ))
+			if( GL_Support( GL_SGIS_MIPMAPS_EXT ) && !( tex->flags & ( TF_NORMALMAP|TF_ALPHACONTRAST )))
 				GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 			if( subImage ) pglTexSubImage2D( tex->target, 0, 0, 0, tex->width, tex->height, inFormat, dataType, data );
 			else pglTexImage2D( tex->target, 0, outFormat, tex->width, tex->height, 0, inFormat, dataType, data );
-			if( !GL_Support( GL_SGIS_MIPMAPS_EXT ) || ( tex->flags & TF_NORMALMAP ))
+			if( !GL_Support( GL_SGIS_MIPMAPS_EXT ) || ( tex->flags & ( TF_NORMALMAP|TF_ALPHACONTRAST )))
 				GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 		}
 
@@ -2193,6 +2255,44 @@ static rgbdata_t *R_ClearPixels( rgbdata_t *in, qboolean clearAlpha )
 		// clear color or greyscale image otherwise
 		for( i = 0; i < in->width * in->height; i++ )
 			pic[(i<<2)+0] = pic[(i<<2)+1] = pic[(i<<2)+2] = 0xFF;
+	}
+
+	return in;
+}
+
+/*
+================
+R_MovePixels
+
+move alpha-channel into color or back
+================
+*/
+static rgbdata_t *R_MovePixels( rgbdata_t *in, qboolean alphaToColor )
+{
+	byte	*pic;
+	int	i;
+
+	// make sure what we processing RGBA images
+	in = R_ForceImageToRGBA( in );
+	pic = in->buffer;
+
+	if( alphaToColor )
+	{
+		for( i = 0; ( i < in->width * in->height ) && ( in->flags & IMAGE_HAS_ALPHA ); i++ )
+		{
+			pic[(i<<2)+0] = pic[(i<<2)+1] = pic[(i<<2)+2] = pic[(i<<2)+3]; // move from alpha to color
+			pic[(i<<2)+3] = 0xFF; // clear alpha channel
+		}
+	}
+	else
+	{
+		// clear color or greyscale image otherwise
+		for( i = 0; i < in->width * in->height; i++ )
+		{
+			// convert to grayscale
+			pic[(i<<2)+3] = (pic[(i<<2)+0] * 0.32f) + (pic[(i<<2)+0] * 0.59f) + (pic[(i<<2)+0] * 0.09f);
+			pic[(i<<2)+0] = pic[(i<<2)+1] = pic[(i<<2)+2] = 0x00; // clear RGB channels
+		}
 	}
 
 	return in;
@@ -3328,6 +3428,64 @@ static rgbdata_t *R_ParseClearPixels( char **script, int *samples, texFlags_t *f
 
 /*
 =================
+R_ParseMovePixels
+=================
+*/
+static rgbdata_t *R_ParseMovePixels( char **script, int *samples, texFlags_t *flags )
+{
+	char	token[256];
+	qboolean	alphaToColor;
+	rgbdata_t *pic;
+
+	*script = COM_ParseFile( *script, token );
+	if( Q_stricmp( token, "(" ))
+	{
+		MsgDev( D_WARN, "expected '(', found '%s' instead for 'movePixels'\n", token );
+		return NULL;
+	}
+
+	if(( *script = COM_ParseFile( *script, token )) == NULL )
+	{
+		MsgDev( D_WARN, "missing parameters for 'movePixels'\n" );
+		return NULL;
+	}
+
+	pic = R_LoadImage( script, token, NULL, 0, samples, flags );
+	if( !pic ) return NULL;
+
+	*script = COM_ParseFile( *script, token );
+	if( !Q_stricmp( token, "AlphaToColor" ))
+	{
+		*script = COM_ParseFile( *script, token );
+		alphaToColor = true;
+	}
+	else if( !Q_stricmp( token, "ColorToAlpha" ))
+	{
+		*script = COM_ParseFile( *script, token );
+		alphaToColor = false;
+	}
+	else if( !Q_stricmp( token, ")" ))
+	{
+		alphaToColor = true; // move alpha to color as default
+	}
+	else *script = COM_ParseFile( *script, token ); // skip unknown token
+	
+	if( Q_stricmp( token, ")" ))
+	{
+		MsgDev( D_WARN, "expected ')', found '%s' instead for 'movePixels'\n", token );
+		FS_FreeImage( pic );
+		return NULL;
+	}
+
+	*samples = alphaToColor ? 3 : 1;
+	if( alphaToColor ) *flags &= ~TF_HAS_ALPHA;
+	*flags &= ~TF_INTENSITY;
+
+	return R_MovePixels( pic, alphaToColor );
+}
+
+/*
+=================
 R_LoadImage
 =================
 */
@@ -3365,6 +3523,8 @@ static rgbdata_t *R_LoadImage( char **script, const char *name, const byte *buf,
 		return R_ParseDepthmap( script, buf, size, samples, flags );
 	else if( !Q_stricmp( name, "clearPixels" ))
 		return R_ParseClearPixels( script, samples, flags );
+	else if( !Q_stricmp( name, "movePixels" ))
+		return R_ParseMovePixels( script, samples, flags );
 	else if( !Q_stricmp( name, "Studio" ))
 		return R_ParseStudioSkin( script, buf, size, samples, flags );
 	else if( !Q_stricmp( name, "Sprite" ))
@@ -3635,6 +3795,34 @@ static rgbdata_t *R_InitBlankBumpTexture( texFlags_t *flags )
 		data2D[i*4+0] = 127;
 		data2D[i*4+1] = 127;
 		data2D[i*4+2] = 255;
+	}
+
+	*flags = TF_NORMALMAP|TF_UNCOMPRESSED;
+
+	r_image.buffer = data2D;
+	r_image.width = r_image.height = 16;
+	r_image.size = r_image.width * r_image.height * 4;
+	r_image.flags = IMAGE_HAS_COLOR;
+	r_image.type = PF_RGBA_32;
+
+	return &r_image;
+}
+
+/*
+==================
+R_InitBlankDeluxeTexture
+==================
+*/
+static rgbdata_t *R_InitBlankDeluxeTexture( texFlags_t *flags )
+{
+	int	i;
+
+	// default normalmap texture
+	for( i = 0; i < 256; i++ )
+	{
+		data2D[i*4+0] = 127;
+		data2D[i*4+1] = 127;
+		data2D[i*4+2] = 0;	// light from ceiling
 	}
 
 	*flags = TF_NORMALMAP|TF_UNCOMPRESSED;
@@ -3961,6 +4149,29 @@ static rgbdata_t *R_InitWhiteCubemap( texFlags_t *flags )
 
 /*
 ==================
+R_InitAlphaContrast
+==================
+*/
+static rgbdata_t *R_InitAlphaContrast( texFlags_t *flags )
+{
+	int	size = 64;
+	byte	*data = data2D;
+
+	*flags = (TF_NOPICMIP|TF_UNCOMPRESSED|TF_ALPHACONTRAST|TF_INTENSITY);
+
+	r_image.width = r_image.height = 64;
+	r_image.size = r_image.width * r_image.height * 4;
+
+	Q_memset( data, size, r_image.size );
+
+	r_image.buffer = data2D;
+	r_image.type = PF_RGBA_32;
+
+	return &r_image;
+}
+
+/*
+==================
 R_InitBuiltinTextures
 ==================
 */
@@ -3993,11 +4204,13 @@ static void R_InitBuiltinTextures( void )
 	{ "*attnno", &tr.attenuationStubTexture, R_InitAttenuationTextureNoAtten, TEX_SYSTEM },
 	{ "*normalize", &tr.normalizeTexture, R_InitNormalizeCubemap, TEX_CUBEMAP },
 	{ "*blankbump", &tr.blankbumpTexture, R_InitBlankBumpTexture, TEX_SYSTEM },
+	{ "*blankdeluxe", &tr.blankdeluxeTexture, R_InitBlankDeluxeTexture, TEX_SYSTEM },
 	{ "*lightCube", &tr.dlightCubeTexture, R_InitDlightCubemap, TEX_CUBEMAP },
 	{ "*grayCube", &tr.grayCubeTexture, R_InitGrayCubemap, TEX_CUBEMAP },
 	{ "*whiteCube", &tr.whiteCubeTexture, R_InitWhiteCubemap, TEX_CUBEMAP },
 	{ "*atten3D", &tr.attenuationTexture3D, R_InitAttenTexture3D, TEX_SYSTEM },
 	{ "*sky", &tr.skyTexture, R_InitSkyTexture, TEX_SYSTEM },
+	{ "*alphaContrast", &tr.acontTexture, R_InitAlphaContrast, TEX_SYSTEM },
 	{ NULL, NULL, NULL }
 	};
 	size_t	i, num_builtin_textures = sizeof( textures ) / sizeof( textures[0] ) - 1;

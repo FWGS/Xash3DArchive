@@ -323,7 +323,7 @@ void CL_LevelShot_f( void )
 	cls.scrshot_request = scrshot_inactive;
 
 	// check for exist
-	Q_sprintf( cls.shotname, "levelshots/%s.bmp", clgame.mapname );
+	Q_sprintf( cls.shotname, "levelshots/%s_%s.bmp", clgame.mapname, glState.wideScreen ? "16x9" : "4x3" );
 
 	// make sure what entity patch is never than bsp
 	ft1 = FS_FileTime( cl.worldmodel->name, false );

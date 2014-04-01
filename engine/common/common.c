@@ -422,14 +422,14 @@ Con_Printf
 */
 void Con_Printf( char *szFmt, ... )
 {
-	char	buffer[2048];	// must support > 1k messages
-	va_list	args;
+	static char	buffer[16384];	// must support > 1k messages
+	va_list		args;
 
 	if( host.developer <= 0 )
 		return;
 
 	va_start( args, szFmt );
-	Q_vsnprintf( buffer, 2048, szFmt, args );
+	Q_vsnprintf( buffer, 16384, szFmt, args );
 	va_end( args );
 
 	Sys_Print( buffer );
@@ -443,14 +443,14 @@ Con_DPrintf
 */
 void Con_DPrintf( char *szFmt, ... )
 {
-	char	buffer[2048];	// must support > 1k messages
-	va_list	args;
+	static char	buffer[16384];	// must support > 1k messages
+	va_list		args;
 
 	if( host.developer < D_INFO )
 		return;
 
 	va_start( args, szFmt );
-	Q_vsnprintf( buffer, 2048, szFmt, args );
+	Q_vsnprintf( buffer, 16384, szFmt, args );
 	va_end( args );
 
 	Sys_Print( buffer );

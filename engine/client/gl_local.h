@@ -160,6 +160,7 @@ typedef struct
 	int		whiteTexture;
 	int		grayTexture;
 	int		blackTexture;
+	int		acontTexture;
 	int		defaultTexture;   	// use for bad textures
 	int		particleTexture;	// particle texture
 	int		particleTexture2;	// unsmoothed particle texture
@@ -174,6 +175,7 @@ typedef struct
 	int		attenuationTexture3D;// 3D attenuation
 	int		attenuationStubTexture;
 	int		blankbumpTexture;
+	int		blankdeluxeTexture;
 	int		normalizeTexture;
 	int		dlightCubeTexture;	// dynamic cubemap
 	int		grayCubeTexture;
@@ -518,6 +520,7 @@ enum
 	GL_CUSTOM_VERTEX_ARRAY_EXT,
 	GL_TEXTURE_ENV_ADD_EXT,
 	GL_CLAMP_TEXBORDER_EXT,
+	GL_ARB_TEXTURE_FLOAT_EXT,
 	GL_DEPTH_TEXTURE,
 	GL_SHADOW_EXT,
 	GL_EXTCOUNT,		// must be last
@@ -621,6 +624,7 @@ extern convar_t	*gl_texture_lodbias;
 extern convar_t	*gl_showtextures;
 extern convar_t	*gl_compress_textures;
 extern convar_t	*gl_luminance_textures;
+extern convar_t	*gl_compensate_gamma_screenshots;
 extern convar_t	*gl_keeptjunctions;
 extern convar_t	*gl_detailscale;
 extern convar_t	*gl_overview;	// draw map in overview mode

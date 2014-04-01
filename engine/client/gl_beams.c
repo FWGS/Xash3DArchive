@@ -2186,7 +2186,8 @@ void CL_ReadLineFile_f( void )
 		
 		if( !CL_BeamPoints( p1, p2, modelIndex, 99999, 2, 0, 255, 0, 0, 0, 255.0f, 0.0f, 0.0f ))
 		{
-			if( !modelIndex ) MsgDev( D_ERROR, "CL_ReadLineFile: no beam sprite!\n" );
+			if( Mod_GetType( modelIndex ) != mod_sprite )
+				MsgDev( D_ERROR, "CL_ReadLineFile: failed to load sprites/laserbeam.spr!\n" );
 			else MsgDev( D_ERROR, "CL_ReadLineFile: not enough free beams!\n" );
 			break;
 		}

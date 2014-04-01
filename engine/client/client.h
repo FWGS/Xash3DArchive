@@ -800,6 +800,7 @@ void SCR_InitCinematic( void );
 void SCR_FreeCinematic( void );
 qboolean SCR_PlayCinematic( const char *name );
 qboolean SCR_DrawCinematic( void );
+qboolean SCR_NextMovie( void );
 void SCR_RunCinematic( void );
 void SCR_StopCinematic( void );
 void CL_PlayVideo_f( void );

@@ -92,6 +92,20 @@ typedef struct
 	int		flags;		// sky or slime, no lightmap or 256 subdivision
 } mtexinfo_t;
 
+// 73 bytes per VBO vertex
+// FIXME: align to 32 bytes
+typedef struct glvert_s
+{
+	vec3_t		vertex;		// position
+	vec3_t		normal;		// normal
+	vec2_t		stcoord;		// ST texture coords
+	vec2_t		lmcoord;		// ST lightmap coords
+	vec2_t		sccoord;		// ST scissor coords (decals only) - for normalmap coords migration
+	vec3_t		tangent;		// tangent
+	vec3_t		binormal;		// binormal
+	byte		color[4];		// colors per vertex
+} glvert_t;
+
 typedef struct glpoly_s
 {
 	struct glpoly_s	*next;
@@ -197,15 +211,11 @@ typedef struct msurfmesh_s
 {
 	unsigned short	numVerts;
 	unsigned short	numElems;		// ~ 20 000 vertex per one surface. Should be enough
+	unsigned int	startVert;	// user-variable. may be used for construct world single-VBO
+	unsigned int	startElem;	// user-variable. may be used for construct world single-VBO
 
-	vec3_t		*vertices;	// vertexes array
-	vec2_t		*stcoords;	// s\t coords array
-	vec2_t		*lmcoords;	// l\m coords array (unused for studio models)
-	vec3_t		*normals;		// normals array (identical for bsp polys, unique for studio models)
-	vec3_t		*tangent;		// tangent array (identical for bsp polys, unique for studio models)
-	vec3_t		*binormal;	// binormal array (identical for bsp polys, unique for studio models)
-	byte		*colors;		// colors array for vertex lighting (filling 0xFF by default)
-	unsigned short	*indices;		// indices		
+	glvert_t		*verts;		// vertexes array
+	unsigned short	*elems;		// indices		
 
 	struct msurface_s	*surf;		// pointer to parent surface. Just for consistency
 	struct msurfmesh_s	*next;		// temporary chain of subdivided surfaces

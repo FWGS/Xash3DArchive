@@ -611,7 +611,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 		CL_InitEdicts (); // re-arrange edicts
 
 	// get splash name
-	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s", clgame.mapname ));
+	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s_%s", clgame.mapname, glState.wideScreen ? "16x9" : "4x3" ));
 	Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar
 
 	if(( cl_allow_levelshots->integer && !cls.changelevel ) || cl.background )

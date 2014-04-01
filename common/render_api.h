@@ -118,6 +118,8 @@ typedef enum
 	TF_TEXTURE_RECTANGLE= (1<<22),	// this is GL_TEXTURE_RECTANGLE
 	TF_ALPHA_BORDER	= (1<<23),	// clamp to (0,0,0,255) (probably no difference)
 	TF_IMAGE_PROGRAM	= (1<<24),	// enable image program support like in Doom3
+	TF_ALPHACONTRAST	= (1<<25),	// special texture flags for internal usage
+	TF_FLOAT		= (1<<26),	// float textures
 } texFlags_t;
 
 typedef struct beam_s BEAM;
@@ -246,6 +248,8 @@ typedef struct render_interface_s
 	qboolean		(*R_SpeedsMessage)( char *out, size_t size );
 	// replace with built-in R_DrawCubemapView for make skyshots or envshots
 	qboolean		(*R_DrawCubemapView)( const float *origin, const float *angles, int size );
+	// alloc or destroy studiomodel custom data
+	void		(*Mod_ProcessUserData)( model_t *mod, qboolean create );
 } render_interface_t;
 
 #endif//RENDER_API_H

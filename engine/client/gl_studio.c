@@ -1503,7 +1503,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 		VectorSubtract( dl->origin, origin, direction );
 		dist = VectorLength( direction );
 
-		if( !dist || dist > dl->radius + ent->model->radius )
+		if( !dist || dist > dl->radius + studio_radius )
 			continue;
 
 		radius2 = dl->radius * dl->radius; // squared radius
@@ -1589,7 +1589,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 		VectorSubtract( el->origin, origin, direction );
 		dist = VectorLength( direction );
 
-		if( !dist || dist > el->radius + ent->model->radius )
+		if( !dist || dist > el->radius + studio_radius )
 			continue;
 
 		radius2 = el->radius * el->radius; // squared radius
@@ -2020,6 +2020,7 @@ static void R_StudioDrawPoints( void )
 		else if( g_nFaceFlags & STUDIO_NF_TRANSPARENT )
 		{
 			GL_SetRenderMode( kRenderTransAlpha );
+			pglAlphaFunc( GL_GREATER, 0.0f );
 			alpha = 1.0f;
 		}
 		else if( g_nFaceFlags & STUDIO_NF_ADDITIVE )
@@ -2569,6 +2570,8 @@ static void R_StudioSetupRenderer( int rendermode )
 	// enable depthmask on studiomodels
 	if( glState.drawTrans && g_iRenderMode != kRenderTransAdd )
 		pglDepthMask( GL_TRUE );
+
+	pglAlphaFunc( GL_GREATER, 0.0f );
 
 	if( g_iBackFaceCull )
 		GL_FrontFace( true );

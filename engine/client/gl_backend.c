@@ -451,6 +451,9 @@ void VID_ImageAdjustGamma( byte *in, uint width, uint height )
 	byte	r_gammaTable[256];	// adjust screenshot gamma
 	byte	*p = in;
 
+	if( !gl_compensate_gamma_screenshots->integer )
+		return;
+
 	// rebuild the gamma table	
 	for( i = 0; i < 256; i++ )
 	{
@@ -499,8 +502,16 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 		break;
 	case VID_LEVELSHOT:
 		flags |= IMAGE_RESAMPLE;
-		height = 384;
-		width = 512;
+		if( glState.wideScreen )
+		{
+			height = 480;
+			width = 800;
+		}
+		else
+		{
+			height = 480;
+			width = 640;
+		}
 		break;
 	case VID_MINISHOT:
 		flags |= IMAGE_RESAMPLE;
