@@ -101,20 +101,20 @@ typedef enum
 	TF_UNCOMPRESSED	= (1<<5),		// don't compress texture in video memory
 	TF_CUBEMAP	= (1<<6),		// it's cubemap texture
 	TF_DEPTHMAP	= (1<<7),		// custom texture filter used
-	TF_INTENSITY	= (1<<8),
+	TF_INTENSITY	= (1<<8),		// monochrome intensity image
 	TF_LUMINANCE	= (1<<9),		// force image to grayscale
-	TF_SKYSIDE	= (1<<10),
-	TF_CLAMP		= (1<<11),
-	TF_NOMIPMAP	= (1<<12),
+	TF_SKYSIDE	= (1<<10),	// this is a part of skybox
+	TF_CLAMP		= (1<<11),	// clamp texcoords to [0..1] range
+	TF_NOMIPMAP	= (1<<12),	// don't build mips for this image
 	TF_HAS_LUMA	= (1<<13),	// sets by GL_UploadTexture
-	TF_MAKELUMA	= (1<<14),	// create luma from quake texture
+	TF_MAKELUMA	= (1<<14),	// create luma from quake texture (only q1 textures contain luma-pixels)
 	TF_NORMALMAP	= (1<<15),	// is a normalmap
 	TF_HAS_ALPHA	= (1<<16),	// image has alpha (used only for GL_CreateTexture)
 	TF_FORCE_COLOR	= (1<<17),	// force upload monochrome textures as RGB (detail textures)
 	TF_TEXTURE_1D	= (1<<18),	// this is GL_TEXTURE_1D
 	TF_BORDER		= (1<<19),	// zero clamp for projected textures
 	TF_TEXTURE_3D	= (1<<20),	// this is GL_TEXTURE_3D
-	TF_STATIC		= (1<<21),	// a marker for purge mechanism
+	TF_STATIC		= (1<<21),	// a marker for purge mechanism (not used by engine)
 	TF_TEXTURE_RECTANGLE= (1<<22),	// this is GL_TEXTURE_RECTANGLE
 	TF_ALPHA_BORDER	= (1<<23),	// clamp to (0,0,0,255) (probably no difference)
 	TF_IMAGE_PROGRAM	= (1<<24),	// enable image program support like in Doom3
@@ -249,7 +249,7 @@ typedef struct render_interface_s
 	// replace with built-in R_DrawCubemapView for make skyshots or envshots
 	qboolean		(*R_DrawCubemapView)( const float *origin, const float *angles, int size );
 	// alloc or destroy studiomodel custom data
-	void		(*Mod_ProcessUserData)( model_t *mod, qboolean create );
+	void		(*Mod_ProcessUserData)( struct model_s *mod, qboolean create );
 } render_interface_t;
 
 #endif//RENDER_API_H

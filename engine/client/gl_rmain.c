@@ -631,6 +631,7 @@ static void R_SetupProjectionMatrix( const ref_params_t *fd, matrix4x4 m )
 	{
 		ref_overview_t *ov = &clgame.overView;
 		Matrix4x4_CreateOrtho( m, ov->xLeft, ov->xRight, ov->xTop, ov->xBottom, ov->zNear, ov->zFar );
+		RI.clipFlags = 0;
 		return;
 	}
 

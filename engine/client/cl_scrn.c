@@ -263,7 +263,8 @@ void SCR_DrawPlaque( void )
 		GL_SetRenderMode( kRenderNormal );
 		R_DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, levelshot );
 
-		CL_DrawHUD( CL_LOADING );
+		if( !Cvar_VariableInteger( "sv_background" ))
+			CL_DrawHUD( CL_LOADING );
 	}
 }
 
@@ -281,7 +282,7 @@ void SCR_BeginLoadingPlaque( qboolean is_background )
 	if( cls.state == ca_disconnected ) return;	// if at console, don't bring up the plaque
 	if( cls.key_dest == key_console ) return;
 
-	cls.draw_changelevel = true;
+	cls.draw_changelevel = is_background ? false : true;
 	SCR_UpdateScreen();
 	cls.disable_screen = host.realtime;
 	cls.disable_servercount = cl.servercount;
@@ -295,7 +296,7 @@ SCR_EndLoadingPlaque
 */
 void SCR_EndLoadingPlaque( void )
 {
-	cls.disable_screen = 0;
+	cls.disable_screen = 0.0f;
 	Con_ClearNotify();
 }
 

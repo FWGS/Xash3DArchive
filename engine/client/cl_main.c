@@ -310,7 +310,7 @@ void CL_CreateCmd( void )
 	V_ProcessOverviewCmds( &cmd );
 	V_ProcessShowTexturesCmds( &cmd );
 
-	if( cl.background || gl_overview->integer )
+	if( cl.background || gl_overview->integer || cls.changelevel )
 	{
 		VectorCopy( angles, cl.refdef.cl_viewangles );
 		VectorCopy( angles, cmd.viewangles );

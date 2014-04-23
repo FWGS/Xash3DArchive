@@ -810,9 +810,9 @@ void Delta_Init( void )
 	Delta_AddField( "movevars_t", "footsteps", DT_INTEGER, 1, 1.0f, 1.0f );
 	Delta_AddField( "movevars_t", "rollangle", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "rollspeed", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
-	Delta_AddField( "movevars_t", "skycolor_r", DT_FLOAT|DT_SIGNED, 9, 1.0f, 1.0f ); // 0 - 264
-	Delta_AddField( "movevars_t", "skycolor_g", DT_FLOAT|DT_SIGNED, 9, 1.0f, 1.0f );
-	Delta_AddField( "movevars_t", "skycolor_b", DT_FLOAT|DT_SIGNED, 9, 1.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skycolor_r", DT_FLOAT|DT_SIGNED, 12, 1.0f, 1.0f ); // 0 - 264
+	Delta_AddField( "movevars_t", "skycolor_g", DT_FLOAT|DT_SIGNED, 12, 1.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skycolor_b", DT_FLOAT|DT_SIGNED, 12, 1.0f, 1.0f );
 	Delta_AddField( "movevars_t", "skyvec_x", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f ); // 0 - 1
 	Delta_AddField( "movevars_t", "skyvec_y", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "skyvec_z", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
@@ -1133,7 +1133,7 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 	else if( pField->flags & DT_TIMEWINDOW_BIG )
 	{
 		flValue = *(float *)((byte *)to + pField->offset );
-		flTime = (timebase * 1000.0f) - (flValue * 1000.0f);
+		flTime = (flValue * 1000.0f) - (timebase * 1000.0f);
 		iValue = (uint)flTime;
 
 		BF_WriteBitLong( msg, iValue, pField->bits, bSigned );
@@ -1237,7 +1237,7 @@ qboolean Delta_ReadField( sizebuf_t *msg, delta_t *pField, void *from, void *to,
 		if( bChanged )
 		{
 			iValue = BF_ReadBitLong( msg, pField->bits, bSigned );
-			flValue = (float)((int)(iValue * 0.01f ));
+			flValue = (float)(iValue * 0.01f);
 			flTime = timebase + flValue;
 		}
 		else
@@ -1251,7 +1251,7 @@ qboolean Delta_ReadField( sizebuf_t *msg, delta_t *pField, void *from, void *to,
 		if( bChanged )
 		{
 			iValue = BF_ReadBitLong( msg, pField->bits, bSigned );
-			flValue = (float)((int)(iValue * 0.001f ));
+			flValue = (float)(iValue * 0.001f);
 			flTime = timebase + flValue;
 		}
 		else

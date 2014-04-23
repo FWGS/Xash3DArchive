@@ -66,6 +66,20 @@ FRAME PARSING
 */
 void CL_UpdateEntityFields( cl_entity_t *ent )
 {
+	// parametric rockets code
+	if( ent->curstate.starttime != 0.0f && ent->curstate.impacttime != 0.0f )
+	{
+		float	lerp = ( cl.time - ent->curstate.starttime ) / ( ent->curstate.impacttime - ent->curstate.starttime );
+		vec3_t	dir;
+
+		lerp = bound( 0.0f, lerp, 1.0f );
+
+		// first we need to calc actual origin
+		VectorLerp( ent->curstate.startpos, lerp, ent->curstate.endpos, ent->curstate.origin );
+		VectorSubtract( ent->curstate.endpos, ent->curstate.startpos, dir );
+		VectorAngles( dir, ent->curstate.angles ); // re-aim projectile		
+	}
+
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
 
