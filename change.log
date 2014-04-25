@@ -1,3 +1,30 @@
+build 2636
+
+Engine: added internal loader for deluxemap data (.dlit file that produces VHLT)
+Engine: msurfmesh_t was reorganized to complex vertex data instead of single arrays (VBO-ready)
+Engine: decal_t now contain msurfmesh_t with all vertices and texcoords
+Render: RenderAPI interface updated to version 35
+Render: get support for float textures format (GL_ARB_texture_float is required)
+Render: implementation of image program preprocessor, like in Doom3, syntax: AddNormals( texture1.tga, texture2.tga );
+Render: get acess to internal tesselator through RenderAPI
+Server: a little update for PhysicInterface: get support for custom decal save\restore
+Client: separate levelshots for wide-screen and normal screen
+Client: revert parametric rocket implementation (previous was lost between two backups)
+Client: fix a potentially crash when calling function IsSpectateOnly
+Client: now 'ESC' button while playing video invoke jump to next video in list (instead of completely stopping video)
+Client: fix bug when demo ends up (Connection Problem)
+Client: now compensate screenshot gamma is toggleable (cvar "gl_compensate_gamma_screenshots")
+Render: optimize decal code, remove unused functions
+Render: now all the lightmaps stored into 1024x1024 texture
+Render: add cvar "gl_detailscale" for customize _detail.txt generation
+Render: fix some errors with studiomodels lighting
+Sound: increase maximum count of words in sentence up to 64 (from 29)
+Engine: fix broken recursion in Cmd_CheckMapLis_R (potentially crash)
+Client: passed keyup event through HUD_KeyEvent callback
+Network: change delta params for skycolor_* variables (in some cases color value was incorrect received)
+Network: fixed TIMEWINDOW_BIG mode
+Engine: add engine build number into console log
+
 build 2463
 
 Engine: reorganize data in texture_t. Release one variable for mod-makers
