@@ -652,7 +652,7 @@ Combine and scale multiple lightmaps into the floating
 format in r_blocklights
 =================
 */
-static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
+static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean dynamic )
 {
 	int	smax, tmax;
 	uint	*bl, scale;
@@ -681,7 +681,7 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
 	}
 
 	// add all the dynamic lights
-	if( surf->dlightframe == tr.framecount )
+	if( surf->dlightframe == tr.framecount && dynamic )
 		R_AddDynamicLights( surf );
 
 	// Put into texture format
@@ -890,7 +890,7 @@ void R_BlendLightmaps( void )
 				base = gl_lms.lightmap_buffer;
 				base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
 
-				R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
+				R_BuildLightMap( surf, base, BLOCK_SIZE * 4, true );
 			}
 			else
 			{
@@ -926,7 +926,7 @@ void R_BlendLightmaps( void )
 				base = gl_lms.lightmap_buffer;
 				base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
 
-				R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
+				R_BuildLightMap( surf, base, BLOCK_SIZE * 4, true );
 			}
 		}
 
@@ -1204,7 +1204,7 @@ dynamic:
 			smax = ( fa->extents[0] / LM_SAMPLE_SIZE ) + 1;
 			tmax = ( fa->extents[1] / LM_SAMPLE_SIZE ) + 1;
 
-			R_BuildLightMap( fa, temp, smax * 4 );
+			R_BuildLightMap( fa, temp, smax * 4, true );
 			R_SetCacheState( fa );
                               
 			GL_Bind( GL_TEXTURE0, tr.lightmapTextures[fa->lightmaptexturenum] );
@@ -2039,7 +2039,7 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 	base += ( surf->light_t * BLOCK_SIZE + surf->light_s ) * 4;
 
 	R_SetCacheState( surf );
-	R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
+	R_BuildLightMap( surf, base, BLOCK_SIZE * 4, false );
 
 	// moved here in case we need valid lightmap coords
 	if( host.features & ENGINE_BUILD_SURFMESHES )

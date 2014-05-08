@@ -178,7 +178,9 @@ void GL_SelectTexture( GLint tmu )
 	if( pglActiveTextureARB )
 	{
 		pglActiveTextureARB( tmu + GL_TEXTURE0_ARB );
-		pglClientActiveTextureARB( tmu + GL_TEXTURE0_ARB );
+
+		if( tmu < glConfig.max_texture_coords )
+			pglClientActiveTextureARB( tmu + GL_TEXTURE0_ARB );
 	}
 	else if( pglSelectTextureSGIS )
 	{
@@ -272,7 +274,7 @@ GL_TexGen
 */
 void GL_TexGen( GLenum coord, GLenum mode )
 {
-	int	tmu = glState.activeTMU;
+	int	tmu = min( glConfig.max_texture_coords, glState.activeTMU );
 	int	bit, gen;
 
 	switch( coord )
@@ -322,7 +324,7 @@ GL_SetTexCoordArrayMode
 */
 void GL_SetTexCoordArrayMode( GLenum mode )
 {
-	int	tmu = glState.activeTMU;
+	int	tmu = min( glConfig.max_texture_coords, glState.activeTMU );
 	int	bit, cmode = glState.texCoordArrayMode[tmu];
 
 	if( mode == GL_TEXTURE_COORD_ARRAY )
@@ -588,7 +590,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 			flags = r_envMapInfo[i].flags;
                     }
 
-		pglReadPixels( 0, glState.height - size, size, size, GL_RGB, GL_UNSIGNED_BYTE, temp );
+		pglReadPixels( 0, 0, size, size, GL_RGB, GL_UNSIGNED_BYTE, temp );
 		r_side->flags = IMAGE_HAS_COLOR;
 		r_side->width = r_side->height = size;
 		r_side->type = PF_RGB_24;

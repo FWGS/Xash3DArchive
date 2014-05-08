@@ -60,6 +60,7 @@ GNU General Public License for more details.
 #define PARM_FEATURES	26	// same as movevars->features
 #define PARM_ACTIVE_TMU	27	// for debug
 #define PARM_CACHEFRAME	28
+#define PARM_MAX_IMAGE_UNITS	29
 
 enum
 {
@@ -211,7 +212,7 @@ typedef struct render_api_s
 		
 	// Misc renderer functions
 	void		(*GL_DrawParticles)( const float *vieworg, const float *fwd, const float *rt, const float *up, unsigned int clipFlags );
-	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot ); // creates a cubemap or skybox into gfx\env folder
+	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot, int shotsize ); // creates a cubemap or skybox into gfx\env folder
 	int		(*COM_CompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
 	void		(*Host_Error)( const char *error, ... ); // cause Host Error
 	int		(*SPR_LoadExt)( const char *szPicName, unsigned int texFlags ); // extended version of SPR_Load
@@ -249,7 +250,7 @@ typedef struct render_interface_s
 	// replace with built-in R_DrawCubemapView for make skyshots or envshots
 	qboolean		(*R_DrawCubemapView)( const float *origin, const float *angles, int size );
 	// alloc or destroy studiomodel custom data
-	void		(*Mod_ProcessUserData)( struct model_s *mod, qboolean create );
+	void		(*Mod_ProcessUserData)( struct model_s *mod, qboolean create, const byte *buffer );
 } render_interface_t;
 
 #endif//RENDER_API_H

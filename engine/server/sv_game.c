@@ -1529,16 +1529,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 
 	mod = Mod_Handle( pEdict->v.modelindex );
 
-	if( mod && mod->type == mod_brush && !( mod->flags & MODEL_HAS_ORIGIN ))
-	{
-		// handle PVS origin for bmodels
-		VectorAverage( pEdict->v.mins, pEdict->v.maxs, view );
-		VectorAdd( view, pEdict->v.origin, view );
-	}
-	else
-	{
-		VectorAdd( pEdict->v.origin, pEdict->v.view_ofs, view );
-	}
+	VectorAdd( pEdict->v.origin, pEdict->v.view_ofs, view );
 
 	if( pEdict->v.effects & EF_INVLIGHT )
 		view[2] -= 1.0f; // HACKHACK for barnacle
@@ -3856,7 +3847,7 @@ so we can't use a single PVS point
 */
 byte *pfnSetFatPVS( const float *org )
 {
-	if( !sv.worldmodel->visdata || sv_novis->integer || !org )
+	if( !sv.worldmodel->visdata || sv_novis->integer || !org || CL_DisableVisibility( ))
 		return Mod_DecompressVis( NULL );
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
@@ -3887,7 +3878,7 @@ so we can't use a single PHS point
 */
 byte *pfnSetFatPAS( const float *org )
 {
-	if( !sv.worldmodel->visdata || sv_novis->integer || !org )
+	if( !sv.worldmodel->visdata || sv_novis->integer || !org || CL_DisableVisibility( ))
 		return Mod_DecompressVis( NULL );
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );

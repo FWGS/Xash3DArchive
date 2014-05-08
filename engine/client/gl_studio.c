@@ -2123,7 +2123,7 @@ static void R_StudioDrawPoints( void )
 					}
 					else if( g_nFaceFlags & STUDIO_NF_FULLBRIGHT )
 					{
-						pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+						pglColor4f( 1.0f, 1.0f, 1.0f, alpha );
 					}
 					else
 					{
@@ -3591,7 +3591,7 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 		mstudioseqdesc_t	*pseqdesc = (mstudioseqdesc_t *)((byte *)phdr + phdr->seqindex);
 
 		// HACKHACK: MilkShape created a default animations with 30 frames
-		// FIXME: analyze real frames for more predicatable results
+		// TODO: analyze real frames for more predicatable results
 		// TODO: analyze all the sequences
 		if( pseqdesc->numframes == 1 || pseqdesc->numframes == 30 )
 			pseqdesc->flags |= STUDIO_STATIC;

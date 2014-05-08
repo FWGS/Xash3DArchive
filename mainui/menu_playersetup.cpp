@@ -518,7 +518,9 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.ent->latched.prevcontroller[1] = 127;
 	uiPlayerSetup.ent->latched.prevcontroller[2] = 127;
 	uiPlayerSetup.ent->latched.prevcontroller[3] = 127;
-	uiPlayerSetup.ent->origin[0] = uiPlayerSetup.ent->curstate.origin[0] = 92;
+	if(( ScreenWidth * 3 ) == ( 4 * ScreenHeight ) || ( ScreenWidth * 4 ) == ( ScreenHeight * 5 ))
+		uiPlayerSetup.ent->origin[0] = uiPlayerSetup.ent->curstate.origin[0] = 92;
+	else uiPlayerSetup.ent->origin[0] = uiPlayerSetup.ent->curstate.origin[0] = 120;
 	uiPlayerSetup.ent->origin[2] = uiPlayerSetup.ent->curstate.origin[2] = 2;
 	uiPlayerSetup.ent->angles[1] = uiPlayerSetup.ent->curstate.angles[1] = 180;
 	uiPlayerSetup.ent->player = true; // yes, draw me as playermodel

@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #define DIST_EPSILON		(1.0f / 32.0f)
 #define FRAC_EPSILON		(1.0f / 1024.0f)
 #define BACKFACE_EPSILON		0.01f
+#define DEFAULT_SMOOTHING_ANGLE	50.0f
 #define MAX_BOX_LEAFS		256
 #define DVIS_PVS			0
 #define DVIS_PHS			1
@@ -83,6 +84,7 @@ typedef struct
 	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
 	int		block_size;	// lightmap blocksize
 	color24		*deluxedata;	// deluxemap data pointer
+	float		smooth_threshold;	// used for calc smoothed TBN
 
 	vec3_t		mins;		// real accuracy world bounds
 	vec3_t		maxs;

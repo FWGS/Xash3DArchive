@@ -811,8 +811,11 @@ static void R_SetupFrame( void )
 	// setup viewplane dist
 	RI.viewplanedist = DotProduct( RI.vieworg, RI.vforward );
 
+	VectorCopy( RI.vieworg, RI.pvsorigin );
+
 	if( !r_lockcull->integer )
 	{
+		VectorCopy( RI.vieworg, RI.cullorigin );
 		VectorCopy( RI.vforward, RI.cull_vforward );
 		VectorCopy( RI.vright, RI.cull_vright );
 		VectorCopy( RI.vup, RI.cull_vup );
@@ -1307,13 +1310,13 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 		
 	// setup scissor
 	RI.scissor[0] = fd->viewport[0];
-	RI.scissor[1] = glState.height - fd->viewport[3] - fd->viewport[1];
+	RI.scissor[1] = fd->viewport[1];
 	RI.scissor[2] = fd->viewport[2];
 	RI.scissor[3] = fd->viewport[3];
 
 	// setup viewport
 	RI.viewport[0] = fd->viewport[0];
-	RI.viewport[1] = glState.height - fd->viewport[3] - fd->viewport[1];
+	RI.viewport[1] = fd->viewport[1];
 	RI.viewport[2] = fd->viewport[2];
 	RI.viewport[3] = fd->viewport[3];
 
@@ -1364,7 +1367,8 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 	fd = &RI.refdef;
 	*fd = r_lastRefdef;
 	fd->time = 0;
-	fd->viewport[0] = RI.refdef.viewport[1] = 0;
+	fd->viewport[0] = 0;
+	fd->viewport[1] = 0;
 	fd->viewport[2] = size;
 	fd->viewport[3] = size;
 	fd->fov_x = 90;
@@ -1375,13 +1379,13 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 		
 	// setup scissor
 	RI.scissor[0] = fd->viewport[0];
-	RI.scissor[1] = glState.height - fd->viewport[3] - fd->viewport[1];
+	RI.scissor[1] = fd->viewport[1];
 	RI.scissor[2] = fd->viewport[2];
 	RI.scissor[3] = fd->viewport[3];
 
 	// setup viewport
 	RI.viewport[0] = fd->viewport[0];
-	RI.viewport[1] = glState.height - fd->viewport[3] - fd->viewport[1];
+	RI.viewport[1] = fd->viewport[1];
 	RI.viewport[2] = fd->viewport[2];
 	RI.viewport[3] = fd->viewport[3];
 
@@ -1459,6 +1463,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return glt->texType;
 	case PARM_CACHEFRAME:
 		return world.load_sequence;
+	case PARM_MAX_IMAGE_UNITS:
+		return GL_MaxTextureUnits();
 	}
 	return 0;
 }
@@ -1494,7 +1500,7 @@ R_EnvShot
 
 =================
 */
-static void R_EnvShot( const float *vieworg, const char *name, int skyshot )
+static void R_EnvShot( const float *vieworg, const char *name, int skyshot, int shotsize )
 {
 	static vec3_t viewPoint;
 
@@ -1519,11 +1525,15 @@ static void R_EnvShot( const float *vieworg, const char *name, int skyshot )
 		// make sure what viewpoint don't temporare
 		VectorCopy( vieworg, viewPoint );
 		cls.envshot_vieworg = viewPoint;
+		cls.envshot_disable_vis = true;
 	}
 
 	// make request for envshot
 	if( skyshot ) cls.scrshot_action = scrshot_skyshot;
 	else cls.scrshot_action = scrshot_envshot;
+
+	// catch negative values
+	cls.envshot_viewsize = max( 0, shotsize );
 }
 
 static void R_SetCurrentEntity( cl_entity_t *ent )

@@ -490,7 +490,7 @@ static void Mod_FreeUserData( model_t *mod )
 	if( clgame.drawFuncs.Mod_ProcessUserData != NULL )
 	{
 		// let the client.dll free custom data
-		clgame.drawFuncs.Mod_ProcessUserData( mod, false );
+		clgame.drawFuncs.Mod_ProcessUserData( mod, false, NULL );
 	}
 }
 
@@ -1300,6 +1300,91 @@ static void Mod_CalcSurfaceBounds( msurface_t *surf, mextrasurf_t *info )
 	}
 
 	VectorAverage( info->mins, info->maxs, info->origin );
+}
+
+// this is a great time-waster. move to hlrad
+static void Mod_ComputeSmoothTBN( const msurface_t *f1, const int num, vec3_t t, vec3_t b, vec3_t n )
+{
+	vec3_t	n1, n2;	// plane normals
+	int	i, j, e, vert;
+
+	if( f1->flags & SURF_PLANEBACK )
+		VectorNegate( f1->plane->normal, n1 );
+	else VectorCopy( f1->plane->normal, n1 );
+
+	e = loadmodel->surfedges[f1->firstedge + num];
+	if( e > 0 ) vert = loadmodel->edges[e].v[0];
+	else vert = loadmodel->edges[-e].v[1];
+
+	VectorClear( t );
+	VectorClear( b );
+	VectorClear( n );
+
+	for( i = 0; i < loadmodel->numsurfaces; i++ )
+	{
+		// check if this face contains vert
+		msurface_t *f2 = &loadmodel->surfaces[i];
+		qboolean hasVert = false;
+
+		for( j = 0; j < f2->numedges; j++ )
+		{
+			e = loadmodel->surfedges[f2->firstedge + j];
+
+			if( e > 0 && loadmodel->edges[e].v[0] == vert )
+			{
+				hasVert = true;
+				break;
+			}
+
+			if( e < 0 && loadmodel->edges[-e].v[1] == vert )
+			{
+				hasVert = true;
+				break;
+			}
+		}
+
+		if( !hasVert ) continue;
+
+		if( f2->flags & SURF_PLANEBACK )
+			VectorNegate( f2->plane->normal, n2 );
+		else VectorCopy( f2->plane->normal, n2 );
+
+		if( DotProduct( n1, n2 ) < world.smooth_threshold )
+			continue;
+
+		VectorAdd( t, f2->texinfo->vecs[0], t );
+		VectorNormalize( t );
+
+		VectorAdd( b, f2->texinfo->vecs[1], b );
+		VectorNormalize( b );	
+
+		VectorAdd( n, n2, n );
+		VectorNormalize( n );
+	}
+
+	if( VectorIsNull( t ))
+	{
+		VectorCopy( f1->texinfo->vecs[0], t );
+		VectorNormalize( t );
+	}
+
+	if( VectorIsNull( b ))
+	{
+		VectorCopy( f1->texinfo->vecs[1], b );
+		VectorNormalize( b );
+	}
+
+	if( VectorIsNull( n ))
+	{
+		VectorCopy( n1, n );
+	}
+
+	// FIXME: get rid of this stupid binormal inversion!
+	// 1. cleanup VHLT code
+	// 2. cleanum Engine code
+	// 3. cleanup Paranoia2 renderer
+	// 4. cleanup XashXT renderer
+	VectorNegate( b, b );
 }
 
 /*
@@ -2200,6 +2285,9 @@ static void Mod_LoadEntities( const dlump_t *l )
 	Q_memcpy( loadmodel->entities, mod_base + l->fileofs, l->filelen );
 	if( !world.loading ) return;
 
+	// sets ZHLT\VHLT default value
+	world.smooth_threshold = (float)cos( DEG2RAD( DEFAULT_SMOOTHING_ANGLE ));
+
 	world.entdatasize = l->filelen;
 	pfile = (char *)loadmodel->entities;
 	wadlist.count = 0;
@@ -2244,6 +2332,8 @@ static void Mod_LoadEntities( const dlump_t *l )
 			}
 			else if( !Q_stricmp( keyname, "mapversion" ))
 				world.mapversion = Q_atoi( token );
+			else if( !Q_stricmp( keyname, "smoothangle" ))
+				world.smooth_threshold = (float)cos( DEG2RAD( Q_atof( token )));
 		}
 		return;	// all done
 	}
@@ -2936,21 +3026,23 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		return NULL;
 	}
 
-	Mem_Free( buf ); 
-
 	if( !loaded )
 	{
 		Mod_FreeModel( mod );
+		Mem_Free( buf );
 
 		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", tempname );
 		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", tempname );
+
 		return NULL;
 	}
 	else if( clgame.drawFuncs.Mod_ProcessUserData != NULL )
 	{
 		// let the client.dll load custom data
-		clgame.drawFuncs.Mod_ProcessUserData( mod, true );
+		clgame.drawFuncs.Mod_ProcessUserData( mod, true, buf );
 	}
+
+	Mem_Free( buf );
 
 	return mod;
 }

@@ -495,7 +495,7 @@ GL_MaxTextureUnits
 int GL_MaxTextureUnits( void )
 {
 	if( GL_Support( GL_SHADER_GLSL100_EXT ))
-		return max( min( glConfig.max_texture_coords, glConfig.max_teximage_units ), MAX_TEXTURE_UNITS );
+		return min( max( glConfig.max_texture_coords, glConfig.max_teximage_units ), MAX_TEXTURE_UNITS );
 	return glConfig.max_texture_units;
 }
 

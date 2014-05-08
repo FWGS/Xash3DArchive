@@ -93,6 +93,11 @@ qboolean CL_IsPlaybackDemo( void )
 	return cls.demoplayback;
 }
 
+qboolean CL_DisableVisibility( void )
+{
+	return cls.envshot_disable_vis;
+}
+
 /*
 ===============
 CL_ChangeGame
@@ -628,7 +633,7 @@ void CL_CheckForResend( void )
 	if( cls.demoplayback || cls.state != ca_connecting )
 		return;
 
-	if(( host.realtime - cls.connect_time ) < 3.0f )
+	if(( host.realtime - cls.connect_time ) < 10.0f )
 		return;
 
 	if( !NET_StringToAdr( cls.servername, &adr ))
@@ -868,6 +873,13 @@ void CL_LocalServers_f( void )
 {
 	netadr_t	adr;
 
+	// don't scan servers in singleplayer
+	if( cls.state == ca_active && CL_GetMaxClients() == 1 )
+	{
+		MsgDev( D_INFO, "First disconnect from local game\n" );
+		return;
+	}
+
 	MsgDev( D_INFO, "Scanning for servers on the local network area...\n" );
 	NET_Config( true ); // allow remote
 	
@@ -889,6 +901,13 @@ void CL_InternetServers_f( void )
 	char	part1query[12];
 	char	part2query[128];
 	string	fullquery;
+
+	// don't scan servers in singleplayer
+	if( cls.state == ca_active && CL_GetMaxClients() == 1 )
+	{
+		MsgDev( D_INFO, "First disconnect from local game\n" );
+		return;
+	}
 
 	MsgDev( D_INFO, "Scanning for servers on the internet area...\n" );
 	NET_Config( true ); // allow remote

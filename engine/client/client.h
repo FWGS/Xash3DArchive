@@ -432,6 +432,8 @@ typedef struct
 	scrshot_t		scrshot_request;		// request for screen shot
 	scrshot_t		scrshot_action;		// in-action
 	const float	*envshot_vieworg;		// envshot position
+	int		envshot_viewsize;		// override cvar
+	qboolean		envshot_disable_vis;	// disable VIS on server while makes an envshots
 	string		shotname;
 
 	// download info

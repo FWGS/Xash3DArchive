@@ -210,6 +210,11 @@ void SCR_MakeLevelShot( void )
 void SCR_MakeScreenShot( void )
 {
 	qboolean	iRet = false;
+	int	viewsize;
+
+	if( cls.envshot_viewsize > 0 )
+		viewsize = cls.envshot_viewsize;
+	else viewsize = cl_envshot_size->integer;
 
 	switch( cls.scrshot_action )
 	{
@@ -227,10 +232,10 @@ void SCR_MakeScreenShot( void )
 		iRet = VID_ScreenShot( cls.shotname, VID_MINISHOT );
 		break;
 	case scrshot_envshot:
-		iRet = VID_CubemapShot( cls.shotname, cl_envshot_size->integer, cls.envshot_vieworg, false );
+		iRet = VID_CubemapShot( cls.shotname, viewsize, cls.envshot_vieworg, false );
 		break;
 	case scrshot_skyshot:
-		iRet = VID_CubemapShot( cls.shotname, cl_envshot_size->integer, cls.envshot_vieworg, true );
+		iRet = VID_CubemapShot( cls.shotname, viewsize, cls.envshot_vieworg, true );
 		break;
 	case scrshot_mapshot:
 		iRet = VID_ScreenShot( cls.shotname, VID_MAPSHOT );
@@ -250,6 +255,8 @@ void SCR_MakeScreenShot( void )
 
 	cls.envshot_vieworg = NULL;
 	cls.scrshot_action = scrshot_inactive;
+	cls.envshot_disable_vis = false;
+	cls.envshot_viewsize = 0;
 	cls.shotname[0] = '\0';
 }
 
