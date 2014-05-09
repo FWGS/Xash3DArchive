@@ -2703,7 +2703,7 @@ qboolean FS_Delete( const char *path )
 	COM_FixSlashes( real_path );
 	iRet = remove( real_path );
 
-	return (iRet == 0) ? true : false;
+	return (iRet == 0);
 }
 
 /*

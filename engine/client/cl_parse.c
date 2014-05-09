@@ -557,6 +557,7 @@ CL_ParseServerData
 void CL_ParseServerData( sizebuf_t *msg )
 {
 	string	gamefolder;
+	qboolean	background;
 	int	i;
 
 	MsgDev( D_NOTE, "Serverdata packet received.\n" );
@@ -584,12 +585,25 @@ void CL_ParseServerData( sizebuf_t *msg )
 	clgame.maxEntities = bound( 600, clgame.maxEntities, 4096 );
 	Q_strncpy( clgame.mapname, BF_ReadString( msg ), MAX_STRING );
 	Q_strncpy( clgame.maptitle, BF_ReadString( msg ), MAX_STRING );
-	cl.background = BF_ReadOneBit( msg );
+	background = BF_ReadOneBit( msg );
 	Q_strncpy( gamefolder, BF_ReadString( msg ), MAX_STRING );
 	host.features = (uint)BF_ReadLong( msg );
 
 	if( cl.maxclients > 1 && host.developer < 1 )
 		host.developer++;
+
+	// set the background state
+	if( cls.demoplayback && ( cls.demonum != -1 ))
+	{
+		// re-init mouse
+		host.mouse_visible = false;
+		cl.background = true;
+	}
+	else cl.background = background;
+
+	if( cl.background )	// tell the game parts about background state
+		Cvar_FullSet( "cl_background", "1", CVAR_READ_ONLY );
+	else Cvar_FullSet( "cl_background", "0", CVAR_READ_ONLY );
 
 	if( !cls.changelevel ) 
 	{
@@ -600,7 +614,9 @@ void CL_ParseServerData( sizebuf_t *msg )
 	// NOTE: this is not tested as well. Use with precaution
 	CL_ChangeGame( gamefolder, false );
 #endif
-	UI_SetActiveMenu( cl.background );
+	if( !cls.changedemo )
+		UI_SetActiveMenu( cl.background );
+	else Key_SetKeyDest( key_menu );
 
 	cl.refdef.viewentity = cl.playernum + 1; // always keep viewent an actual
 
@@ -611,16 +627,16 @@ void CL_ParseServerData( sizebuf_t *msg )
 		CL_InitEdicts (); // re-arrange edicts
 
 	// get splash name
-	Cvar_Set( "cl_levelshot_name", va( "levelshots/%s_%s", clgame.mapname, glState.wideScreen ? "16x9" : "4x3" ));
+	if( cls.demoplayback && ( cls.demonum != -1 ))
+		Cvar_Set( "cl_levelshot_name", va( "levelshots/%s_%s", cls.demoname, glState.wideScreen ? "16x9" : "4x3" ));
+	else Cvar_Set( "cl_levelshot_name", va( "levelshots/%s_%s", clgame.mapname, glState.wideScreen ? "16x9" : "4x3" ));
 	Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar
 
 	if(( cl_allow_levelshots->integer && !cls.changelevel ) || cl.background )
 	{
 		if( !FS_FileExists( va( "%s.bmp", cl_levelshot_name->string ), true )) 
-		{
-			Cvar_Set( "cl_levelshot_name", "*black" );	// render a black screen
-			cls.scrshot_request = scrshot_plaque;		// make levelshot
-		}
+			Cvar_Set( "cl_levelshot_name", "*black" ); // render a black screen
+		cls.scrshot_request = scrshot_plaque; // request levelshot even if exist (check filetime)
 	}
 
 	if( scr_dark->integer )

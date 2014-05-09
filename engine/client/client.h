@@ -454,6 +454,7 @@ typedef struct
 	qboolean		demowaiting;		// don't record until a non-delta message is received
 	qboolean		timedemo;
 	string		demoname;			// for demo looping
+	double		demotime;			// recording time
 
 	file_t		*demofile;
 	file_t		*demoheader;		// contain demo startup info in case we record a demo on this level

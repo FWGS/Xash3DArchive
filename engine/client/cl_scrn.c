@@ -264,14 +264,12 @@ void SCR_DrawPlaque( void )
 {
 	int	levelshot;
 
-	if(( cl_allow_levelshots->integer && !cls.changelevel ) || Cvar_VariableInteger( "sv_background" ))
+	if(( cl_allow_levelshots->integer && !cls.changelevel ) || cl.background )
 	{
 		levelshot = GL_LoadTexture( cl_levelshot_name->string, NULL, 0, TF_IMAGE, NULL );
 		GL_SetRenderMode( kRenderNormal );
 		R_DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, levelshot );
-
-		if( !Cvar_VariableInteger( "sv_background" ))
-			CL_DrawHUD( CL_LOADING );
+		if( !cl.background ) CL_DrawHUD( CL_LOADING );
 	}
 }
 

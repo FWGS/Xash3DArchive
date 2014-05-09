@@ -281,7 +281,7 @@ void Con_ToggleConsole_f( void )
 
 	if( cls.key_dest == key_console )
 	{
-		if( Cvar_VariableInteger( "sv_background" ))
+		if( Cvar_VariableInteger( "sv_background" ) || Cvar_VariableInteger( "cl_background" ))
 			UI_SetActiveMenu( true );
 		else UI_SetActiveMenu( false );
 	}
@@ -1587,7 +1587,7 @@ Draws the debug messages (not passed to console history)
 */
 void Con_DrawDebug( void )
 {
-	if( !host.developer || Cvar_VariableInteger( "sv_background" ))
+	if( !host.developer || Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" ))
 		return;
 
 	if( con.draw_notify && !Con_Visible( ))
@@ -1613,7 +1613,7 @@ void Con_DrawNotify( void )
 
 	if( !con.curFont ) return;
 
-	if( host.developer && !Cvar_VariableInteger( "sv_background" ))
+	if( host.developer && ( !Cvar_VariableInteger( "cl_background" ) && !Cvar_VariableInteger( "sv_background" )))
 	{
 		currentColor = 7;
 		pglColor4ubv( g_color_table[currentColor] );
@@ -1780,7 +1780,7 @@ void Con_DrawConsole( void )
 	{
 		if( !cl_allow_levelshots->integer )
 		{
-			if( Cvar_VariableInteger( "sv_background" ) && cls.key_dest != key_console )
+			if(( Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" )) && cls.key_dest != key_console )
 				con.displayFrac = con.finalFrac = 0.0f;
 			else con.displayFrac = con.finalFrac = 1.0f;
 		}
@@ -1820,7 +1820,7 @@ void Con_DrawConsole( void )
 		break;
 	case ca_active:
 	case ca_cinematic: 
-		if( Cvar_VariableInteger( "sv_background" ))
+		if( Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" ))
 		{
 			if( cls.key_dest == key_console ) 
 				Con_DrawSolidConsole( 1.0f );

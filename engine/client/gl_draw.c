@@ -247,7 +247,6 @@ void R_Set2DMode( qboolean enable )
 			return;
 
 		// set 2D virtual screen size
-		pglScissor( 0, 0, glState.width, glState.height );
 		pglViewport( 0, 0, glState.width, glState.height );
 		pglMatrixMode( GL_PROJECTION );
 		pglLoadIdentity();

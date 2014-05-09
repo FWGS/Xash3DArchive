@@ -130,9 +130,12 @@ void Host_EndGame( const char *message, ... )
 	
 	if( host.type == HOST_DEDICATED )
 		Sys_Break( "Host_EndGame: %s\n", string ); // dedicated servers exit
-	
+Msg( "Endgame()\n" );	
 	if( CL_NextDemo( ));
 	else CL_Disconnect();
+
+	// recreate world if needs
+	CL_ClearEdicts ();
 
 	// release all models
 	Mod_ClearAll();
@@ -220,8 +223,8 @@ Host_Exec_f
 void Host_Exec_f( void )
 {
 	string	cfgpath;
+	char	*f, *txt; 
 	size_t	len;
-	char	*f; 
 
 	if( Cmd_Argc() != 2 )
 	{
@@ -246,9 +249,15 @@ void Host_Exec_f( void )
 		return;
 	}
 
-	MsgDev( D_INFO, "execing %s\n", Cmd_Argv( 1 ));
-	Cbuf_InsertText( f );
+	// adds \n\0 at end of the file
+	txt = Z_Malloc( len + 2 );
+	Q_memcpy( txt, f, len );
+	Q_strncat( txt, "\n", len + 2 );
 	Mem_Free( f );
+
+	MsgDev( D_INFO, "execing %s\n", Cmd_Argv( 1 ));
+	Cbuf_InsertText( txt );
+	Mem_Free( txt );
 }
 
 /*
@@ -500,7 +509,7 @@ qboolean Host_FilterTime( float time )
 	host.realframetime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
 	oldtime = host.realtime;
 
-	if( host_framerate->value > 0 && ( Host_IsLocalGame()/* || CL_IsPlaybackDemo() */))
+	if( host_framerate->value > 0 && ( Host_IsLocalGame()))
 	{
 		float fps = host_framerate->value;
 		if( fps > 1 ) fps = 1.0f / fps;

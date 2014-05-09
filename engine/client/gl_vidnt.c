@@ -19,11 +19,12 @@ GNU General Public License for more details.
 #include "mod_local.h"
 #include "input.h"
 
-#define VID_DEFAULTMODE	"1"
-#define num_vidmodes	((int)(sizeof(vidmode) / sizeof(vidmode[0])) - 1)
-#define WINDOW_STYLE	(WS_OVERLAPPED|WS_BORDER|WS_SYSMENU|WS_CAPTION|WS_VISIBLE)
-#define WINDOW_EX_STYLE	(0)
-#define WINDOW_NAME		"Xash Window" // Half-Life
+#define VID_DEFAULTMODE		"1"
+#define DISP_CHANGE_BADDUALVIEW	-6 // MSVC 6.0 doesn't
+#define num_vidmodes		((int)(sizeof(vidmode) / sizeof(vidmode[0])) - 1)
+#define WINDOW_STYLE		(WS_OVERLAPPED|WS_BORDER|WS_SYSMENU|WS_CAPTION|WS_VISIBLE)
+#define WINDOW_EX_STYLE		(0)
+#define WINDOW_NAME			"Xash Window" // Half-Life
 
 convar_t	*renderinfo;
 convar_t	*gl_allow_software;
@@ -1167,6 +1168,7 @@ void VID_DestroyWindow( void )
 rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 {
 	int	width, height;
+	int	cds_result;
 	HDC	hDC;
 	
 	R_SaveVideoMode( vid_mode );
@@ -1203,8 +1205,10 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 			dm.dmFields |= DM_DISPLAYFREQUENCY;
 			dm.dmDisplayFrequency = vid_displayfrequency->integer;
 		}
+
+		cds_result = ChangeDisplaySettings( &dm, CDS_FULLSCREEN );
 		
-		if( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) == DISP_CHANGE_SUCCESSFUL )
+		if( cds_result == DISP_CHANGE_SUCCESSFUL )
 		{
 			glState.fullScreen = true;
 
@@ -1212,13 +1216,11 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 				return rserr_invalid_mode;
 			return rserr_ok;
 		}
-		else
+		else if( cds_result == DISP_CHANGE_BADDUALVIEW )
 		{
 			dm.dmPelsWidth = width * 2;
 			dm.dmPelsHeight = height;
 			dm.dmFields = DM_PELSWIDTH|DM_PELSHEIGHT;
-			dm.dmBitsPerPel = 24;
-			dm.dmFields |= DM_BITSPERPEL;
 
 			// our first CDS failed, so maybe we're running on some weird dual monitor system 
 			if( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) != DISP_CHANGE_SUCCESSFUL )
@@ -1237,6 +1239,39 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 				return rserr_ok;
 			}
 		}
+		else
+		{
+			int	freq_specified = 0;
+
+			if( vid_displayfrequency->integer > 0 )
+			{
+				// clear out custom frequency
+				freq_specified = vid_displayfrequency->integer;
+				Cvar_SetFloat( "vid_displayfrequency", 0.0f );
+				dm.dmFields &= ~DM_DISPLAYFREQUENCY;
+				dm.dmDisplayFrequency = 0;
+			}
+
+			// our first CDS failed, so maybe we're running with too high displayfrequency
+			if( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) != DISP_CHANGE_SUCCESSFUL )
+			{
+				ChangeDisplaySettings( 0, 0 );
+				glState.fullScreen = false;
+				if( !VID_CreateWindow( width, height, false ))
+					return rserr_invalid_mode;
+				return rserr_invalid_fullscreen;
+			}
+			else
+			{
+				if( !VID_CreateWindow( width, height, true ))
+					return rserr_invalid_mode;
+
+				if( freq_specified )
+					MsgDev( D_ERROR, "VID_SetMode: display frequency %i Hz not supported by your display\n", freq_specified );
+				glState.fullScreen = true;
+				return rserr_ok;
+			}
+		}
 	}
 	else
 	{
@@ -1245,6 +1280,7 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 		if( !VID_CreateWindow( width, height, false ))
 			return rserr_invalid_mode;
 	}
+
 	return rserr_ok;
 }
 
@@ -1374,7 +1410,7 @@ static void GL_SetDefaults( void )
 
 	pglDisable( GL_DEPTH_TEST );
 	pglDisable( GL_CULL_FACE );
-	pglEnable( GL_SCISSOR_TEST );
+	pglDisable( GL_SCISSOR_TEST );
 	pglDepthFunc( GL_LEQUAL );
 	pglDepthMask( GL_FALSE );
 

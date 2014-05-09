@@ -64,7 +64,7 @@ static void UI_Credits_DrawFunc( void )
 	int	color = 0;
 
 	// draw the background first
-	if( !uiCredits.finalCredits && !CVAR_GET_FLOAT( "sv_background" ))
+	if( !uiCredits.finalCredits && !CVAR_GET_FLOAT( "cl_background" ))
 		UI_DrawPic( 0, 0, 1024 * uiStatic.scaleX, 768 * uiStatic.scaleY, uiColorWhite, ART_BACKGROUND );
 	else speed = 45.0f;	// syncronize with final background track :-)
 

@@ -865,8 +865,23 @@ static void R_SetupGL( void )
 
 	Matrix4x4_Concat( RI.worldviewProjectionMatrix, RI.projectionMatrix, RI.worldviewMatrix );
 
-	pglScissor( RI.scissor[0], RI.scissor[1], RI.scissor[2], RI.scissor[3] );
-	pglViewport( RI.viewport[0], RI.viewport[1], RI.viewport[2], RI.viewport[3] );
+	if( RP_NORMALPASS( ))
+	{
+		int	x, x2, y, y2;
+
+		// set up viewport (main, playersetup)
+		x = floor( RI.viewport[0] * glState.width / glState.width );
+		x2 = ceil(( RI.viewport[0] + RI.viewport[2] ) * glState.width / glState.width );
+		y = floor( glState.height - RI.viewport[1] * glState.height / glState.height );
+		y2 = ceil( glState.height - ( RI.viewport[1] + RI.viewport[3] ) * glState.height / glState.height );
+
+		pglViewport( x, y2, x2 - x, y - y2 );
+	}
+	else
+	{
+		// envpass, mirrorpass
+		pglViewport( RI.viewport[0], RI.viewport[1], RI.viewport[2], RI.viewport[3] );
+	}
 
 	pglMatrixMode( GL_PROJECTION );
 	GL_LoadMatrix( RI.projectionMatrix );
@@ -1307,12 +1322,6 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	if( !r_lockcull->integer )
 		VectorCopy( fd->vieworg, RI.cullorigin );
 	VectorCopy( fd->vieworg, RI.pvsorigin );
-		
-	// setup scissor
-	RI.scissor[0] = fd->viewport[0];
-	RI.scissor[1] = fd->viewport[1];
-	RI.scissor[2] = fd->viewport[2];
-	RI.scissor[3] = fd->viewport[3];
 
 	// setup viewport
 	RI.viewport[0] = fd->viewport[0];
@@ -1377,12 +1386,6 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 	VectorCopy( angles, fd->viewangles );
 	VectorCopy( fd->vieworg, RI.pvsorigin );
 		
-	// setup scissor
-	RI.scissor[0] = fd->viewport[0];
-	RI.scissor[1] = fd->viewport[1];
-	RI.scissor[2] = fd->viewport[2];
-	RI.scissor[3] = fd->viewport[3];
-
 	// setup viewport
 	RI.viewport[0] = fd->viewport[0];
 	RI.viewport[1] = fd->viewport[1];

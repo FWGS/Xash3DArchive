@@ -315,7 +315,7 @@ void CL_CreateCmd( void )
 	V_ProcessOverviewCmds( &cmd );
 	V_ProcessShowTexturesCmds( &cmd );
 
-	if( cl.background || gl_overview->integer || cls.changelevel )
+	if(( cl.background && !cls.demoplayback ) || gl_overview->integer || cls.changelevel )
 	{
 		VectorCopy( angles, cl.refdef.cl_viewangles );
 		VectorCopy( angles, cmd.viewangles );
@@ -762,6 +762,7 @@ void CL_ClearState( void )
 	BF_Clear( &cls.netchan.message );
 	Q_memset( &clgame.fade, 0, sizeof( clgame.fade ));
 	Q_memset( &clgame.shake, 0, sizeof( clgame.shake ));
+	Cvar_FullSet( "cl_background", "0", CVAR_READ_ONLY );
 	cl.refdef.movevars = &clgame.movevars;
 	cl.maxclients = 1; // allow to drawing player in menu
 
@@ -873,13 +874,6 @@ void CL_LocalServers_f( void )
 {
 	netadr_t	adr;
 
-	// don't scan servers in singleplayer
-	if( cls.state == ca_active && CL_GetMaxClients() == 1 )
-	{
-		MsgDev( D_INFO, "First disconnect from local game\n" );
-		return;
-	}
-
 	MsgDev( D_INFO, "Scanning for servers on the local network area...\n" );
 	NET_Config( true ); // allow remote
 	
@@ -901,13 +895,6 @@ void CL_InternetServers_f( void )
 	char	part1query[12];
 	char	part2query[128];
 	string	fullquery;
-
-	// don't scan servers in singleplayer
-	if( cls.state == ca_active && CL_GetMaxClients() == 1 )
-	{
-		MsgDev( D_INFO, "First disconnect from local game\n" );
-		return;
-	}
 
 	MsgDev( D_INFO, "Scanning for servers on the internet area...\n" );
 	NET_Config( true ); // allow remote
@@ -1108,7 +1095,7 @@ void CL_PrepSound( void )
 	{
 		cl.sound_index[i+1] = S_RegisterSound( cl.sound_precache[i+1] );
 		Cvar_SetFloat( "scr_loading", scr_loading->value + 5.0f / sndcount );
-		if( cl_allow_levelshots->integer || host.developer > 3 || cl.background )
+		if( cl_allow_levelshots->integer || host.developer > 3 || cls.demoplayback )
 			SCR_UpdateScreen();
 	}
 
@@ -1175,7 +1162,7 @@ void CL_PrepVideo( void )
 		Q_strncpy( name, cl.model_precache[i+1], MAX_STRING );
 		Mod_RegisterModel( name, i+1 );
 		Cvar_SetFloat( "scr_loading", scr_loading->value + 75.0f / mdlcount );
-		if( cl_allow_levelshots->integer || host.developer > 3 || cl.background )
+		if( cl_allow_levelshots->integer || host.developer > 3 || cls.demoplayback )
 			SCR_UpdateScreen();
 	}
 
@@ -1520,7 +1507,7 @@ void CL_ProcessFile( BOOL successfully_received, const char *filename )
 
 	if( cls.downloadfileid == cls.downloadcount - 1 )
 	{
-		MsgDev( D_INFO,"All Files downloaded\n" );
+		MsgDev( D_INFO, "All Files downloaded\n" );
 
 		BF_WriteByte( &cls.netchan.message, clc_stringcmd );
 		BF_WriteString( &cls.netchan.message, "continueloading" );
@@ -1635,6 +1622,7 @@ void CL_InitLocal( void )
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
 	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar
 	Cvar_Get( "cl_updaterate", "60", CVAR_USERINFO|CVAR_ARCHIVE, "refresh rate of server messages" );
+	Cvar_Get( "cl_background", "0", CVAR_READ_ONLY, "indicate what background map is running" );
 
 	// these two added to shut up CS 1.5 about 'unknown' commands
 	Cvar_Get( "lightgamma", "1", CVAR_ARCHIVE, "ambient lighting level (legacy, unused)" );

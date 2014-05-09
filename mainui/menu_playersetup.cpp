@@ -491,10 +491,10 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.refdef.fov_x = 40;
 
 	// NOTE: must be called after UI_AddItem whan we sure what UI_ScaleCoords is done
-	uiPlayerSetup.refdef.viewport[0] = uiPlayerSetup.view.generic.x + (uiPlayerSetup.view.generic.width / 12);
-	uiPlayerSetup.refdef.viewport[1] = uiPlayerSetup.view.generic.y + (uiPlayerSetup.view.generic.height / 12);
-	uiPlayerSetup.refdef.viewport[2] = uiPlayerSetup.view.generic.width-(uiPlayerSetup.view.generic.width / 6);
-	uiPlayerSetup.refdef.viewport[3] = uiPlayerSetup.view.generic.height-(uiPlayerSetup.view.generic.height / 6);
+	uiPlayerSetup.refdef.viewport[0] = uiPlayerSetup.view.generic.x;
+	uiPlayerSetup.refdef.viewport[1] = uiPlayerSetup.view.generic.y;
+	uiPlayerSetup.refdef.viewport[2] = uiPlayerSetup.view.generic.width;
+	uiPlayerSetup.refdef.viewport[3] = uiPlayerSetup.view.generic.height;
 
 	UI_PlayerSetup_CalcFov( &uiPlayerSetup.refdef );
 	uiPlayerSetup.ent = GET_MENU_EDICT ();
@@ -518,11 +518,9 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.ent->latched.prevcontroller[1] = 127;
 	uiPlayerSetup.ent->latched.prevcontroller[2] = 127;
 	uiPlayerSetup.ent->latched.prevcontroller[3] = 127;
-	if(( ScreenWidth * 3 ) == ( 4 * ScreenHeight ) || ( ScreenWidth * 4 ) == ( ScreenHeight * 5 ))
-		uiPlayerSetup.ent->origin[0] = uiPlayerSetup.ent->curstate.origin[0] = 92;
-	else uiPlayerSetup.ent->origin[0] = uiPlayerSetup.ent->curstate.origin[0] = 120;
-	uiPlayerSetup.ent->origin[2] = uiPlayerSetup.ent->curstate.origin[2] = 2;
-	uiPlayerSetup.ent->angles[1] = uiPlayerSetup.ent->curstate.angles[1] = 180;
+	uiPlayerSetup.ent->origin[0] = uiPlayerSetup.ent->curstate.origin[0] = 45.0f / tan( DEG2RAD( uiPlayerSetup.refdef.fov_y / 2.0f ));
+	uiPlayerSetup.ent->origin[2] = uiPlayerSetup.ent->curstate.origin[2] = 2.0f;
+	uiPlayerSetup.ent->angles[1] = uiPlayerSetup.ent->curstate.angles[1] = 180.0f;
 	uiPlayerSetup.ent->player = true; // yes, draw me as playermodel
 }
 

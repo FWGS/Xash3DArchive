@@ -3853,6 +3853,7 @@ void CL_UnloadProgs( void )
 	if( !( !Q_stricmp( GI->gamedir, "hlfx" ) && GI->version == 0.5f ))
 		clgame.dllFuncs.pfnShutdown();
 
+	Cvar_FullSet( "cl_background", "0", CVAR_READ_ONLY );
 	Cvar_FullSet( "host_clientloaded", "0", CVAR_INIT );
 
 	Com_FreeLibrary( clgame.hInstance );

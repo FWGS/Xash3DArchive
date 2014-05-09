@@ -104,7 +104,7 @@ inline HIMAGE PIC_Load( const char *szPicName, const byte *ucRawImage, long ulRa
 #define GET_SAVE_COMMENT	(*g_engfuncs.pfnGetSaveComment)
 #define GET_DEMO_COMMENT	(*g_engfuncs.pfnGetDemoComment)
 
-#define CL_IsActive()	(g_engfuncs.pfnClientInGame() && !CVAR_GET_FLOAT( "sv_background" ))
+#define CL_IsActive()	(g_engfuncs.pfnClientInGame() && !CVAR_GET_FLOAT( "cl_background" ))
 
 inline void PIC_Set( HIMAGE hPic, int r, int g, int b )
 {

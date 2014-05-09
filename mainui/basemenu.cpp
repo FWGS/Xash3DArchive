@@ -864,7 +864,7 @@ bool UI_StartBackGroundMap( void )
 	first = FALSE;
 
 	// some map is already running
-	if( !uiStatic.bgmapcount || CVAR_GET_FLOAT( "host_serverstate" ))
+	if( !uiStatic.bgmapcount || CVAR_GET_FLOAT( "host_serverstate" ) || gpGlobals->demoplayback )
 		return FALSE;
 
 	int bgmapid = RANDOM_LONG( 0, uiStatic.bgmapcount - 1 );
@@ -1010,7 +1010,7 @@ void UI_UpdateMenu( float flTime )
 	uiStatic.realTime = flTime * 1000;
 	uiStatic.framecount++;
 
-	if( CVAR_GET_FLOAT( "sv_background" ) && !g_engfuncs.pfnClientInGame())
+	if( CVAR_GET_FLOAT( "cl_background" ) && !g_engfuncs.pfnClientInGame())
 		return;	// don't draw menu while level is loading
 
 	if( uiStatic.firstDraw )

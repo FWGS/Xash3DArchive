@@ -785,17 +785,18 @@ void CL_PredictMovement( void )
 	clientdata_t	*cd;
 
 	if( cls.state != ca_active ) return;
-	if( cl.refdef.paused || cls.key_dest == key_menu ) return;
-
-	player = CL_GetLocalPlayer ();
-	viewent = CL_GetEntityByIndex( cl.refdef.viewentity );
-	cd = &cl.frame.local.client;
 
 	if( cls.demoplayback && cl.refdef.cmd != NULL )
 	{
 		// restore viewangles from cmd.angles
 		VectorCopy( cl.refdef.cmd->viewangles, cl.refdef.cl_viewangles );
 	}
+
+	if( cl.refdef.paused || cls.key_dest == key_menu ) return;
+
+	player = CL_GetLocalPlayer ();
+	viewent = CL_GetEntityByIndex( cl.refdef.viewentity );
+	cd = &cl.frame.local.client;
 
 	// unpredicted pure angled values converted into axis
 	AngleVectors( cl.refdef.cl_viewangles, cl.refdef.forward, cl.refdef.right, cl.refdef.up );

@@ -109,7 +109,6 @@ typedef struct
 	cl_entity_t	*currentbeam;	// same as above but for beams
 
 	int		viewport[4];
-	int		scissor[4];
 	mplane_t		frustum[6];
 
 	vec3_t		pvsorigin;

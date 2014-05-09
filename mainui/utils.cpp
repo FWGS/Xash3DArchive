@@ -1979,7 +1979,7 @@ void UI_Bitmap_Draw( menuBitmap_s *b )
 {
 	if( b->generic.id == ID_BACKGROUND )	// background is always 0!
 	{
-		if( CVAR_GET_FLOAT( "sv_background" ))
+		if( CVAR_GET_FLOAT( "cl_background" ))
 			return;	// has background map disable images
 
 		// UGLY HACK for replace all backgrounds

@@ -1918,6 +1918,8 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 		startspot = _startspot;
 	}
 
+	// init network stuff
+	NET_Config(( sv_maxclients->integer > 1 ));
 	Q_strncpy( level, mapname, MAX_STRING );
 	Q_strncpy( oldlevel, sv.name, MAX_STRING );
 	sv.background = false;
@@ -2117,6 +2119,9 @@ qboolean SV_LoadGame( const char *pName )
 		return false;
 
 	Q_snprintf( name, sizeof( name ), "save/%s.sav", pName );
+
+	// init network stuff
+	NET_Config(( sv_maxclients->integer > 1 ));
 
 	if( sv.background )
 		SV_Shutdown( true );

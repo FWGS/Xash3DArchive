@@ -86,7 +86,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	ent->model = Mod_Handle( ent->curstate.modelindex );
 	ent->curstate.msg_time = cl.time;
 
-	if( ent->player ) // stupid Half-Life bug
+	if( ent->player && RP_LOCALCLIENT( ent )) // stupid Half-Life bug
 		ent->angles[PITCH] = -ent->angles[PITCH] / 3.0f;
 
 	// make me lerp
