@@ -347,6 +347,8 @@ typedef struct
 	float		m_flTotalHeight;
 	bool		m_fHaveSteamBackground;
 	bool		m_fDisableLogo;
+	bool		m_fDemosPlayed;
+	int		m_iOldMenuDepth;
 
 	float		scaleX;
 	float		scaleY;

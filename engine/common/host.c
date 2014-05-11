@@ -130,9 +130,9 @@ void Host_EndGame( const char *message, ... )
 	
 	if( host.type == HOST_DEDICATED )
 		Sys_Break( "Host_EndGame: %s\n", string ); // dedicated servers exit
-Msg( "Endgame()\n" );	
-	if( CL_NextDemo( ));
-	else CL_Disconnect();
+
+	SV_Shutdown( false );
+	CL_Disconnect();
 
 	// recreate world if needs
 	CL_ClearEdicts ();

@@ -555,7 +555,11 @@ void MIX_MixChannelsToPaintbuffer( int endtime, int rate, int outputRate )
 		// NOTE: background map is allow both type sounds: menu and game
 		if( !cl.background )
 		{
-			if(( s_listener.inmenu || s_listener.paused ) && !ch->localsound )
+			if( cls.key_dest == key_console && ch->localsound )
+			{
+				// play, playvol
+			}
+			else if(( s_listener.inmenu || s_listener.paused ) && !ch->localsound )
 			{
 				// play only local sounds, keep pause for other
 				continue;

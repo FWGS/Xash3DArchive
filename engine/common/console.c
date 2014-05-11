@@ -1771,7 +1771,8 @@ Con_DrawConsole
 void Con_DrawConsole( void )
 {
 	// never draw console when changelevel in-progress
-	if( cls.changelevel || cls.changedemo ) return;
+	if( cls.state != ca_disconnected && ( cls.changelevel || cls.changedemo ))
+		return;
 
 	// check for console width changes from a vid mode change
 	Con_CheckResize ();

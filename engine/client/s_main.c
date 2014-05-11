@@ -21,7 +21,7 @@ GNU General Public License for more details.
 #include "pm_local.h"
 
 #define MAX_DUPLICATED_CHANNELS	4		// threshold for identical static channels (probably error)
-#define SND_CLIP_DISTANCE		1000.0f
+#define SND_CLIP_DISTANCE		(float)(GI->soundclip_dist)
 
 dma_t		dma;
 byte		*sndpool;
@@ -1213,14 +1213,14 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 S_StartLocalSound
 ==================
 */
-void S_StartLocalSound(  const char *name )
+void S_StartLocalSound(  const char *name, float volume )
 {
 	sound_t	sfxHandle;
 	int	flags = (SND_LOCALSOUND|SND_STOP_LOOPING);
 
 	if( !dma.initialized ) return;	
 	sfxHandle = S_RegisterSound( name );
-	S_StartSound( NULL, s_listener.entnum, CHAN_AUTO, sfxHandle, VOL_NORM, ATTN_NONE, PITCH_NORM, flags );
+	S_StartSound( NULL, s_listener.entnum, CHAN_AUTO, sfxHandle, volume, ATTN_NONE, PITCH_NORM, flags );
 }
 
 /*
@@ -1631,7 +1631,18 @@ void S_Play_f( void )
 		return;
 	}
 
-	S_StartLocalSound( Cmd_Argv( 1 ));
+	S_StartLocalSound( Cmd_Argv( 1 ), VOL_NORM );
+}
+
+void S_PlayVol_f( void )
+{
+	if( Cmd_Argc() == 1 )
+	{
+		Msg( "Usage: playvol <soundfile volume>\n" );
+		return;
+	}
+
+	S_StartLocalSound( Cmd_Argv( 1 ), Q_atof( Cmd_Argv( 2 )));
 }
 
 /*
@@ -1752,6 +1763,7 @@ qboolean S_Init( void )
 	s_phs = Cvar_Get( "s_phs", "0", CVAR_ARCHIVE, "cull sounds by PHS" );
 
 	Cmd_AddCommand( "play", S_Play_f, "playing a specified sound file" );
+	Cmd_AddCommand( "playvol", S_PlayVol_f, "playing a specified sound file with specified volume" );
 	Cmd_AddCommand( "stopsound", S_StopSound_f, "stop all sounds" );
 	Cmd_AddCommand( "music", S_Music_f, "starting a background track" );
 	Cmd_AddCommand( "soundlist", S_SoundList_f, "display loaded sounds" );

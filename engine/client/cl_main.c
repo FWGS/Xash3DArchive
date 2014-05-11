@@ -1095,7 +1095,7 @@ void CL_PrepSound( void )
 	{
 		cl.sound_index[i+1] = S_RegisterSound( cl.sound_precache[i+1] );
 		Cvar_SetFloat( "scr_loading", scr_loading->value + 5.0f / sndcount );
-		if( cl_allow_levelshots->integer || host.developer > 3 || cls.demoplayback )
+		if( cl_allow_levelshots->integer || host.developer > 3 || cl.background )
 			SCR_UpdateScreen();
 	}
 
@@ -1162,7 +1162,7 @@ void CL_PrepVideo( void )
 		Q_strncpy( name, cl.model_precache[i+1], MAX_STRING );
 		Mod_RegisterModel( name, i+1 );
 		Cvar_SetFloat( "scr_loading", scr_loading->value + 75.0f / mdlcount );
-		if( cl_allow_levelshots->integer || host.developer > 3 || cls.demoplayback )
+		if( cl_allow_levelshots->integer || host.developer > 3 || cl.background )
 			SCR_UpdateScreen();
 	}
 
@@ -1794,6 +1794,7 @@ void CL_Init( void )
 
 	cls.initialized = true;
 	cl.maxclients = 1; // allow to drawing player in menu
+	cls.olddemonum = -1;
 	cls.demonum = -1;
 }
 

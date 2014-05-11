@@ -442,6 +442,7 @@ typedef struct
 
 	// demo loop control
 	int		demonum;			// -1 = don't play demos
+	int		olddemonum;		// restore playing
 	string		demos[MAX_DEMOS];		// when not playing
 
 	// movie playlist
@@ -769,7 +770,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t sfx, float vol, 
 void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, float attn, int pitch, int flags );
 void S_FadeClientVolume( float fadePercent, float fadeOutSeconds, float holdTime, float fadeInSeconds );
 void S_FadeMusicVolume( float fadePercent );
-void S_StartLocalSound( const char *name );
+void S_StartLocalSound( const char *name, float volume );
 void S_RenderFrame( struct ref_params_s *fd );
 void S_ExtraUpdate( void );
 

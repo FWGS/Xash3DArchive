@@ -1044,10 +1044,10 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to, float timeba
 	}
 	else if( pField->flags & DT_TIMEWINDOW_BIG )
 	{
-		val_a = (*(float *)((byte *)from + pField->offset )) * 1000.0f;
-		val_b = (*(float *)((byte *)to + pField->offset )) * 1000.0f;
-		val_a -= (timebase * 1000.0f);
-		val_b -= (timebase * 1000.0f);
+		val_a = (*(float *)((byte *)from + pField->offset )) * pField->multiplier;
+		val_b = (*(float *)((byte *)to + pField->offset )) * pField->multiplier;
+		val_a = (timebase * pField->multiplier) - val_a;
+		val_b = (timebase * pField->multiplier) - val_b;
 		fromF = *((int *)&val_a);
 		toF = *((int *)&val_b);
 	}
@@ -1126,15 +1126,15 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 	{
 		flValue = *(float *)((byte *)to + pField->offset );
 		flTime = (timebase * 100.0f) - (flValue * 100.0f);
-		iValue = (uint)flTime;
+		iValue = (uint)abs( flTime );
 
 		BF_WriteBitLong( msg, iValue, pField->bits, bSigned );
 	}
 	else if( pField->flags & DT_TIMEWINDOW_BIG )
 	{
 		flValue = *(float *)((byte *)to + pField->offset );
-		flTime = (flValue * 1000.0f) - (timebase * 1000.0f);
-		iValue = (uint)flTime;
+		flTime = (timebase * pField->multiplier) - (flValue * pField->multiplier);
+		iValue = (uint)abs( flTime );
 
 		BF_WriteBitLong( msg, iValue, pField->bits, bSigned );
 	}
@@ -1251,7 +1251,7 @@ qboolean Delta_ReadField( sizebuf_t *msg, delta_t *pField, void *from, void *to,
 		if( bChanged )
 		{
 			iValue = BF_ReadBitLong( msg, pField->bits, bSigned );
-			flValue = (float)(iValue * 0.001f);
+			flValue = (float)(iValue * ( 1.0f / pField->multiplier ));
 			flTime = timebase + flValue;
 		}
 		else

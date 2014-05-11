@@ -1431,7 +1431,10 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 				S_StopAllSounds();
 
 				if( cls.demoplayback )
+				{
 					SCR_BeginLoadingPlaque( cl.background );
+					cls.changedemo = true;
+				}
 			}
 			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
 
@@ -1439,7 +1442,10 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_InitEdicts (); // re-arrange edicts
 
 			if( cls.demoplayback )
+			{
+				cl.background = (cls.demonum != -1) ? true : false;
 				cls.state = ca_connected;
+			}
 			else cls.state = ca_connecting;
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 			break;
@@ -1457,7 +1463,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		case svc_print:
 			i = BF_ReadByte( msg );
 			MsgDev( D_INFO, "^6%s", BF_ReadString( msg ));
-			if( i == PRINT_CHAT ) S_StartLocalSound( "common/menu2.wav" );
+			if( i == PRINT_CHAT ) S_StartLocalSound( "common/menu2.wav", VOL_NORM );
 			break;
 		case svc_stufftext:
 			s = BF_ReadString( msg );

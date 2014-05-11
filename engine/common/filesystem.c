@@ -1039,6 +1039,9 @@ static qboolean FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	if( GameInfo->nomodels )
 		FS_Printf( f, "nomodels\t\t\"%i\"\n", GameInfo->nomodels );
 
+	if( GameInfo->soundclip_dist > 0 )
+		FS_Printf( f, "soundclip_dist\t\"%i\"\n", GameInfo->soundclip_dist );
+
 	for( i = 0; i < 4; i++ )
 	{
 		float	*min, *max;
@@ -1081,6 +1084,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	defGI.max_edicts = 900;	// default value if not specified
 	defGI.max_tents = 500;
 	defGI.max_beams = 128;
+	defGI.soundclip_dist = 1536;
 	defGI.max_particles = 4096;
 	defGI.version = 1.0;
 	defGI.falldir[0] = '\0';
@@ -1121,6 +1125,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	GameInfo->max_edicts = 900;	// default value if not specified
 	GameInfo->max_tents = 500;
 	GameInfo->max_beams = 128;
+	GameInfo->soundclip_dist = 1536;
 	GameInfo->max_particles = 4096;
 	GameInfo->version = 1.0f;
 	GameInfo->falldir[0] = '\0';
@@ -1297,6 +1302,7 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	GameInfo->max_edicts = 900;	// default value if not specified
 	GameInfo->max_tents = 500;
 	GameInfo->max_beams = 128;
+	GameInfo->soundclip_dist = 1536;
 	GameInfo->max_particles = 4096;
 	GameInfo->version = 1.0f;
 	GameInfo->falldir[0] = '\0';
@@ -1438,6 +1444,11 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		{
 			pfile = COM_ParseFile( pfile, token );
 			GameInfo->nomodels = Q_atoi( token );
+		}
+		else if( !Q_stricmp( token, "soundclip_dist" ))
+		{
+			pfile = COM_ParseFile( pfile, token );
+			GameInfo->soundclip_dist = Q_atoi( token );
 		}
 		else if( !Q_strnicmp( token, "hull", 4 ))
 		{

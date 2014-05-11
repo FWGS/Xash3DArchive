@@ -1699,7 +1699,7 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 		r = r_studio_lambert->value;
 		if( r < 1.0f ) r = 1.0f;
 		lightcos = (lightcos + ( r - 1.0f )) / r; // do modified hemispherical lighting
-		if( lightcos > 0.0f ) VectorMA( illum, lightcos, plight->lightcolor, illum );
+		if( lightcos > 0.0f ) VectorMA( illum, -lightcos, plight->lightcolor, illum );
 		
 		if( illum[0] <= 0.0f ) illum[0] = 0.0f;
 		if( illum[1] <= 0.0f ) illum[1] = 0.0f;

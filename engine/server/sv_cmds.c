@@ -427,6 +427,12 @@ void SV_ChangeLevel_f( void )
 	char	*spawn_entity, *mapname;
 	int	flags, c = Cmd_Argc();
 
+	if( c < 2 )
+	{
+		Msg( "Usage: changelevel <map> [landmark]\n" );
+		return;
+	}
+
 	mapname = Cmd_Argv( 1 );
 
 	// determine spawn entity classname
@@ -448,7 +454,7 @@ void SV_ChangeLevel_f( void )
 		return;
 	}
 
-	if( c == 3 && !( flags & MAP_HAS_LANDMARK ))
+	if( c >= 3 && !( flags & MAP_HAS_LANDMARK ))
 	{
 		if( sv_validate_changelevel->integer )
 		{
@@ -460,7 +466,7 @@ void SV_ChangeLevel_f( void )
 		}
 	}
 
-	if( c == 3 && !Q_stricmp( sv.name, Cmd_Argv( 1 )))
+	if( c >= 3 && !Q_stricmp( sv.name, Cmd_Argv( 1 )))
 	{
 		MsgDev( D_INFO, "SV_ChangeLevel: can't changelevel with same map. Ignored.\n" );
 		return;	
@@ -501,12 +507,8 @@ void SV_ChangeLevel_f( void )
 		return;
 	}
 
-	switch( c )
-	{
-	case 2: SV_ChangeLevel( false, Cmd_Argv( 1 ), NULL ); break;
-	case 3: SV_ChangeLevel( true, Cmd_Argv( 1 ), Cmd_Argv( 2 )); break;
-	default: Msg( "Usage: changelevel <map> [landmark]\n" ); break;
-	}
+	if( c == 2 ) SV_ChangeLevel( false, Cmd_Argv( 1 ), NULL );
+	else SV_ChangeLevel( true, Cmd_Argv( 1 ), Cmd_Argv( 2 ));
 }
 
 /*

@@ -665,7 +665,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 
 	if( FS_FileSize( "maps.lst", onlyingamedir ) > 0 && !fRefresh )
 	{
-		Msg( "maps.lst is exist: %s\n", onlyingamedir ? "basedir" : "gamedir" );
+		MsgDev( D_NOTE, "maps.lst is exist: %s\n", onlyingamedir ? "basedir" : "gamedir" );
 		return true; // exist 
 	}
 
@@ -808,6 +808,7 @@ autocomplete_list_t cmd_list[] =
 { "map_background", Cmd_GetMapList },
 { "changelevel", Cmd_GetMapList },
 { "playdemo", Cmd_GetDemoList, },
+{ "playvol", Cmd_GetSoundList },
 { "hpkval", Cmd_GetCustomList },
 { "entpatch", Cmd_GetMapList },
 { "music", Cmd_GetMusicList, },

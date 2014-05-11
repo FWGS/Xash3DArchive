@@ -786,6 +786,7 @@ void CL_StopPlayback( void )
 	demo.framecount = 0;
 	cls.demofile = NULL;
 
+	cls.olddemonum = max( -1, cls.demonum - 1 );
 	Mem_Free( demo.directory.entries );
 	demo.directory.numentries = 0;
 	demo.directory.entries = NULL;
@@ -1163,6 +1164,12 @@ void CL_StartDemos_f( void )
 {
 	int	i, c;
 
+	if( cls.key_dest != key_menu )
+	{
+		MsgDev( D_INFO, "startdemos is not valid from the console\n" );
+		return;
+	}
+
 	c = Cmd_Argc() - 1;
 	if( c > MAX_DEMOS )
 	{
@@ -1178,6 +1185,7 @@ void CL_StartDemos_f( void )
 	if( !SV_Active() && !cls.demoplayback )
 	{
 		// run demos loop in background mode
+		Cvar_SetFloat( "v_dark", 1.0f );
 		cls.demonum = 0;
 		CL_NextDemo ();
 	}
@@ -1193,11 +1201,23 @@ Return to looping demos
 */
 void CL_Demos_f( void )
 {
+	if( cls.key_dest != key_menu )
+	{
+		MsgDev( D_INFO, "demos is not valid from the console\n" );
+		return;
+	}
+
+	cls.demonum = cls.olddemonum;
+
 	if( cls.demonum == -1 )
 		cls.demonum = 0;
 
-	CL_Disconnect ();
-	CL_NextDemo ();
+	if( !SV_Active() && !cls.demoplayback )
+	{
+		// run demos loop in background mode
+		cls.changedemo = true;
+		CL_NextDemo ();
+	}
 }
 
 

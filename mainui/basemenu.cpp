@@ -985,6 +985,13 @@ void UI_PopMenu( void )
 		KEY_SetDest( KEY_MENU );
 		UI_Main_Menu();
 	}
+
+	if( uiStatic.m_fDemosPlayed && uiStatic.m_iOldMenuDepth == uiStatic.menuDepth )
+	{
+		CLIENT_COMMAND( FALSE, "demos\n" );
+		uiStatic.m_fDemosPlayed = false;
+		uiStatic.m_iOldMenuDepth = 0;
+	}
 }
 
 // =====================================================================
@@ -1537,7 +1544,7 @@ void UI_Init( void )
 	Cmd_AddCommand( "menu_vidmodes", UI_VidModes_Menu );
 	Cmd_AddCommand( "menu_customgame", UI_CustomGame_Menu );
 
-//	CHECK_MAP_LIST( TRUE );
+	CHECK_MAP_LIST( TRUE );
 
 	memset( uiEmptyString, ' ', sizeof( uiEmptyString ));	// HACKHACK
 	uiStatic.initialized = true;

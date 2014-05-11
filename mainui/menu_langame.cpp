@@ -460,6 +460,14 @@ void UI_LanGame_Menu( void )
 	if ( gMenu.m_gameinfo.gamemode == GAME_SINGLEPLAYER_ONLY )
 		return;
 
+	// stop demos to allow open network sockets
+	if ( gpGlobals->demoplayback && CVAR_GET_FLOAT( "cl_background" ))
+	{
+		uiStatic.m_iOldMenuDepth = uiStatic.menuDepth;
+		CLIENT_COMMAND( FALSE, "stop\n" );
+		uiStatic.m_fDemosPlayed = true;
+	}
+
 	UI_LanGame_Precache();
 	UI_LanGame_Init();
 

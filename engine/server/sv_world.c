@@ -350,6 +350,7 @@ ENTITY AREA CHECKING
 
 ===============================================================================
 */
+static int	iTouchLinkSemaphore = 0;	// prevent recursion when SV_TouchLinks is active
 areanode_t	sv_areanodes[AREA_NODES];
 static int	sv_numareanodes;
 
@@ -418,6 +419,7 @@ void SV_ClearWorld( void )
 	}
 
 	Q_memset( sv_areanodes, 0, sizeof( sv_areanodes ));
+	iTouchLinkSemaphore = 0;
 	sv_numareanodes = 0;
 
 	SV_CreateAreaNode( 0, sv.worldmodel->mins, sv.worldmodel->maxs );
@@ -605,7 +607,6 @@ SV_LinkEdict
 void SV_LinkEdict( edict_t *ent, qboolean touch_triggers )
 {
 	areanode_t	*node;
-	static int	iTouchLinkSemaphore = 0;	// prevent recursion when SV_TouchLinks is active
 	int		headnode;
 
 	if( ent->area.prev ) SV_UnlinkEdict( ent );	// unlink from old position
