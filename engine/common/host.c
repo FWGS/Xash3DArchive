@@ -138,7 +138,7 @@ void Host_EndGame( const char *message, ... )
 	CL_ClearEdicts ();
 
 	// release all models
-	Mod_ClearAll();
+	Mod_ClearAll( true );
 
 	Host_AbortCurrentFrame ();
 }
@@ -644,7 +644,7 @@ void Host_Error( const char *error, ... )
 	CL_ClearEdicts ();
 
 	// release all models
-	Mod_ClearAll();
+	Mod_ClearAll( false );
 
 	recursive = false;
 	Host_AbortCurrentFrame();

@@ -193,7 +193,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	if( sv_quakehulls->integer == 1 )
 	{
 		// Using quake-style hull select for my Quake remake
-		if( size[0] < 3.0f || model->flags & MODEL_LIQUID )
+		if( size[0] < 3.0f || ( model->flags & MODEL_LIQUID && ent->v.solid != SOLID_TRIGGER ))
 			hull = &model->hulls[0];
 		else if( size[0] <= 32.0f )
 			hull = &model->hulls[1];
@@ -208,7 +208,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	}
 	else
 	{
-		if( size[0] <= 8.0f || model->flags & MODEL_LIQUID )
+		if( size[0] <= 8.0f || ( model->flags & MODEL_LIQUID && ent->v.solid != SOLID_TRIGGER ))
 		{
 			hull = &model->hulls[0];
 			VectorCopy( hull->clip_mins, offset ); 
@@ -276,6 +276,7 @@ hull_t *SV_HullForStudioModel( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t of
 {
 	int		isPointTrace;
 	float		scale = 0.5f;
+	hull_t		*hull = NULL;
 	vec3_t		size;
 	model_t		*mod;
 
@@ -333,11 +334,15 @@ hull_t *SV_HullForStudioModel( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t of
 			blending[0] = (byte)iBlend;
 			blending[1] = 0;
 
-			return Mod_HullForStudio( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin, size, controller, blending, numhitboxes, ent );
+			hull = Mod_HullForStudio( mod, ent->v.frame, ent->v.sequence, angles, ent->v.origin, size, controller, blending, numhitboxes, ent );
 		}
-
-		return Mod_HullForStudio( mod, ent->v.frame, ent->v.sequence, ent->v.angles, ent->v.origin, size, ent->v.controller, ent->v.blending, numhitboxes, ent );
+		else
+		{
+			hull = Mod_HullForStudio( mod, ent->v.frame, ent->v.sequence, ent->v.angles, ent->v.origin, size, ent->v.controller, ent->v.blending, numhitboxes, ent );
+		}
 	}
+
+	if( hull ) return hull;
 
 	*numhitboxes = 1;
 	return SV_HullForEntity( ent, mins, maxs, offset );

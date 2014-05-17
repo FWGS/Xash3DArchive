@@ -790,6 +790,10 @@ void CL_MuzzleFlash( const vec3_t pos, int type )
 		pTemp->entity.angles[2] = Com_RandomLong( 0, 359 );
 	}
 
+	// play playermodel muzzleflashes only for mirror pass
+	if( RP_LOCALCLIENT( RI.currententity ) && !RI.thirdPerson && ( RI.params & RP_MIRRORVIEW ))
+		pTemp->entity.curstate.effects |= EF_REFLECTONLY;
+
 	CL_TEntAddEntity( &pTemp->entity );
 }
 

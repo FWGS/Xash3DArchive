@@ -183,7 +183,7 @@ void IN_ToggleClientMouse( int newstate, int oldstate )
 		clgame.dllFuncs.IN_ActivateMouse();
 	}
 
-	if( newstate == key_menu && !cl.background )
+	if( newstate == key_menu && ( !CL_IsBackgroundMap() || CL_IsBackgroundDemo()))
 	{
 		in_mouseactive = false;
 		ClipCursor( NULL );

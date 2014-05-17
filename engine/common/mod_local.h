@@ -83,6 +83,7 @@ typedef struct
 	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
 	int		block_size;	// lightmap blocksize
 	color24		*deluxedata;	// deluxemap data pointer
+	char		message[2048];	// just for debug
 
 	vec3_t		mins;		// real accuracy world bounds
 	vec3_t		maxs;
@@ -99,7 +100,7 @@ extern int		bmodel_version;	// only actual during loading
 // model.c
 //
 void Mod_Init( void );
-void Mod_ClearAll( void );
+void Mod_ClearAll( qboolean keep_playermodel );
 void Mod_Shutdown( void );
 void Mod_ClearUserData( void );
 void Mod_PrintBSPFileSizes( void );

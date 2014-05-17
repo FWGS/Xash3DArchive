@@ -453,7 +453,7 @@ static void UI_PlayerSetup_Init( void )
 	uiPlayerSetup.showModels.generic.id = ID_SHOWMODELS;
 	uiPlayerSetup.showModels.generic.type = QMTYPE_CHECKBOX;
 	uiPlayerSetup.showModels.generic.flags = QMF_HIGHLIGHTIFFOCUS|QMF_ACT_ONRELEASE|QMF_MOUSEONLY|QMF_DROPSHADOW|addFlags;
-	uiPlayerSetup.showModels.generic.name = "Show Player Models";
+	uiPlayerSetup.showModels.generic.name = "Show 3D Preview";
 	uiPlayerSetup.showModels.generic.x = 72;
 	uiPlayerSetup.showModels.generic.y = 380;
 	uiPlayerSetup.showModels.generic.callback = UI_PlayerSetup_Callback;

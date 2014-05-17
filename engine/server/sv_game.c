@@ -4021,7 +4021,7 @@ void pfnEndSection( const char *pszSection )
 {
 	if( !Q_stricmp( "oem_end_credits", pszSection ))
 		Host_Credits ();
-	else Host_EndGame( pszSection );
+	else Cbuf_AddText( va( "endgame \"%s\"\n", pszSection ));
 }
 
 /*

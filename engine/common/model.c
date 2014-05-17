@@ -159,6 +159,8 @@ void Mod_PrintBSPFileSizes_f( void )
 
 	Msg( "=== Total BSP file data space used: %s ===\n", Q_memprint( totalmemory ));
 	Msg( "World size ( %g %g %g ) units\n", world.size[0], world.size[1], world.size[2] );
+	Msg( "original name: ^1%s\n", worldmodel->name );
+	Msg( "internal name: %s\n", (world.message[0]) ? va( "^2%s", world.message ) : "none" );
 }
 
 /*
@@ -546,15 +548,23 @@ void Mod_Init( void )
 	Mod_InitStudioHull ();
 }
 
-void Mod_ClearAll( void )
+void Mod_ClearAll( qboolean keep_playermodel )
 {
+	model_t	*plr = com_models[MAX_MODELS-1];
+	model_t	*mod;
 	int	i;
 
-	for( i = 0; i < cm_nummodels; i++ )
-		Mod_FreeModel( &cm_models[i] );
+	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
+	{
+		if( keep_playermodel && mod == plr )
+			continue;
 
-	Q_memset( cm_models, 0, sizeof( cm_models ));
-	cm_nummodels = 0;
+		Mod_FreeModel( mod );
+		memset( mod, 0, sizeof( *mod ));
+	}
+
+	// g-cont. may be just leave unchanged?
+	if( !keep_playermodel ) cm_nummodels = 0;
 }
 
 void Mod_ClearUserData( void )
@@ -567,7 +577,7 @@ void Mod_ClearUserData( void )
 
 void Mod_Shutdown( void )
 {
-	Mod_ClearAll();
+	Mod_ClearAll( false );
 	Mem_FreePool( &com_studiocache );
 }
 
@@ -2202,6 +2212,7 @@ static void Mod_LoadEntities( const dlump_t *l )
 
 	world.entdatasize = l->filelen;
 	pfile = (char *)loadmodel->entities;
+	world.message[0] = '\0';
 	wadlist.count = 0;
 
 	// parse all the wads for loading textures in right ordering
@@ -2244,6 +2255,8 @@ static void Mod_LoadEntities( const dlump_t *l )
 			}
 			else if( !Q_stricmp( keyname, "mapversion" ))
 				world.mapversion = Q_atoi( token );
+			else if( !Q_stricmp( keyname, "message" ))
+				Q_strncpy( world.message, token, sizeof( world.message ));
 		}
 		return;	// all done
 	}

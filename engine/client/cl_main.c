@@ -98,6 +98,16 @@ qboolean CL_DisableVisibility( void )
 	return cls.envshot_disable_vis;
 }
 
+qboolean CL_IsBackgroundDemo( void )
+{
+	return ( cls.demoplayback && cls.demonum != -1 );
+}
+
+qboolean CL_IsBackgroundMap( void )
+{
+	return ( cl.background && !cls.demoplayback );
+}
+
 /*
 ===============
 CL_ChangeGame
@@ -127,7 +137,7 @@ qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 			jlook_active = true;
 	
 		// so reload all images (remote connect)
-		Mod_ClearAll();
+		Mod_ClearAll( true );
 		R_ShutdownImages();
 		FS_LoadGameInfo( (bReset) ? host.gamefolder : gamefolder );
 		R_InitImages();
@@ -1477,7 +1487,7 @@ void CL_ReadPackets( void )
 		return;
           
 	// check timeout
-	if( cls.state >= ca_connected && !cls.demoplayback )
+	if( cls.state >= ca_connected && !cls.demoplayback && cls.state != ca_cinematic )
 	{
 		if( host.realtime - cls.netchan.last_received > cl_timeout->value )
 		{

@@ -1386,6 +1386,8 @@ void R_DrawBrushModel( cl_entity_t *e )
 	qboolean		rotated;
 	dlight_t		*l;
 
+	if( !RI.drawWorld ) return;
+
 	clmodel = e->model;
 	RI.currentWaveHeight = RI.currententity->curstate.scale * 32.0f;
 

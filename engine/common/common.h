@@ -796,6 +796,8 @@ qboolean UI_CreditsActive( void );
 void CL_ExtraUpdate( void );
 int CL_GetMaxClients( void );
 qboolean CL_IsPlaybackDemo( void );
+qboolean CL_IsBackgroundDemo( void );
+qboolean CL_IsBackgroundMap( void );
 qboolean CL_LoadProgs( const char *name );
 qboolean SV_GetComment( const char *savename, char *comment );
 qboolean SV_NewGame( const char *mapName, qboolean loadGame );
