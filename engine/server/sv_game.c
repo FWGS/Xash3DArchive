@@ -3855,15 +3855,31 @@ byte *pfnSetFatPVS( const float *org )
 	// portals can't change viewpoint!
 	if(!( sv.hostflags & SVF_PORTALPASS ))
 	{
+		vec3_t	offset;
+
 		// save viewpoint in case this overrided by custom camera code 
 		VectorCopy( org, viewPoint[svs.currentPlayerNum] );
+
+		// see code from client.cpp for understanding:
+		// org = pView->v.origin + pView->v.view_ofs;
+		// if ( pView->v.flags & FL_DUCKING )
+		// {
+		//	org = org + ( VEC_HULL_MIN - VEC_DUCK_HULL_MIN );
+		// }
+		// so we have unneeded duck calculations who have affect when player
+		// is ducked into water. Remove offset to restore right PVS position
+		if( svs.currentPlayer->edict->v.flags & FL_DUCKING )
+		{
+			VectorSubtract( svgame.pmove->player_mins[0], svgame.pmove->player_mins[1], offset );
+			VectorSubtract( viewPoint[svs.currentPlayerNum], offset, viewPoint[svs.currentPlayerNum] );
+		}
 	}
 
 	bitvector = fatpvs;
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;
 	if(!( sv.hostflags & SVF_PORTALPASS ))
 		Q_memset( bitvector, 0, fatbytes );
-	SV_AddToFatPVS( org, DVIS_PVS, sv.worldmodel->nodes );
+	SV_AddToFatPVS( viewPoint[svs.currentPlayerNum], DVIS_PVS, sv.worldmodel->nodes );
 
 	return bitvector;
 }
@@ -3878,16 +3894,40 @@ so we can't use a single PHS point
 */
 byte *pfnSetFatPAS( const float *org )
 {
+	vec3_t	viewPos;
+
 	if( !sv.worldmodel->visdata || sv_novis->integer || !org || CL_DisableVisibility( ))
 		return Mod_DecompressVis( NULL );
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
 
+	VectorCopy( org, viewPos );
+
+	// portals can't change viewpoint!
+	if(!( sv.hostflags & SVF_PORTALPASS ))
+	{
+		vec3_t	offset;
+
+		// see code from client.cpp for understanding:
+		// org = pView->v.origin + pView->v.view_ofs;
+		// if ( pView->v.flags & FL_DUCKING )
+		// {
+		//	org = org + ( VEC_HULL_MIN - VEC_DUCK_HULL_MIN );
+		// }
+		// so we have unneeded duck calculations who have affect when player
+		// is ducked into water. Remove offset to restore right PVS position
+		if( svs.currentPlayer->edict->v.flags & FL_DUCKING )
+		{
+			VectorSubtract( svgame.pmove->player_mins[0], svgame.pmove->player_mins[1], offset );
+			VectorSubtract( viewPos, offset, viewPos );
+		}
+	}
+
 	bitvector = fatphs;
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;
 	if(!( sv.hostflags & SVF_PORTALPASS ))
 		Q_memset( bitvector, 0, fatbytes );
-	SV_AddToFatPVS( org, DVIS_PHS, sv.worldmodel->nodes );
+	SV_AddToFatPVS( viewPos, DVIS_PHS, sv.worldmodel->nodes );
 
 	return bitvector;
 }
