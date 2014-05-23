@@ -3852,13 +3852,13 @@ byte *pfnSetFatPVS( const float *org )
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
 
+	fatbytes = (sv.worldmodel->numleafs+31)>>3;
+	bitvector = fatpvs;
+
 	// portals can't change viewpoint!
 	if(!( sv.hostflags & SVF_PORTALPASS ))
 	{
-		vec3_t	offset;
-
-		// save viewpoint in case this overrided by custom camera code 
-		VectorCopy( org, viewPoint[svs.currentPlayerNum] );
+		vec3_t	viewPos, offset;
 
 		// see code from client.cpp for understanding:
 		// org = pView->v.origin + pView->v.view_ofs;
@@ -3871,15 +3871,20 @@ byte *pfnSetFatPVS( const float *org )
 		if( svs.currentPlayer->edict->v.flags & FL_DUCKING )
 		{
 			VectorSubtract( svgame.pmove->player_mins[0], svgame.pmove->player_mins[1], offset );
-			VectorSubtract( viewPoint[svs.currentPlayerNum], offset, viewPoint[svs.currentPlayerNum] );
+			VectorSubtract( org, offset, viewPos );
 		}
-	}
+		else VectorCopy( org, viewPos );
 
-	bitvector = fatpvs;
-	fatbytes = (sv.worldmodel->numleafs+31)>>3;
-	if(!( sv.hostflags & SVF_PORTALPASS ))
+		// build a new PVS frame
 		Q_memset( bitvector, 0, fatbytes );
-	SV_AddToFatPVS( viewPoint[svs.currentPlayerNum], DVIS_PVS, sv.worldmodel->nodes );
+
+		SV_AddToFatPVS( viewPos, DVIS_PVS, sv.worldmodel->nodes );
+		VectorCopy( viewPos, viewPoint[svs.currentPlayerNum] );
+	}
+	else
+	{
+		SV_AddToFatPVS( org, DVIS_PVS, sv.worldmodel->nodes );
+	}
 
 	return bitvector;
 }
@@ -3894,19 +3899,18 @@ so we can't use a single PHS point
 */
 byte *pfnSetFatPAS( const float *org )
 {
-	vec3_t	viewPos;
-
 	if( !sv.worldmodel->visdata || sv_novis->integer || !org || CL_DisableVisibility( ))
 		return Mod_DecompressVis( NULL );
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
 
-	VectorCopy( org, viewPos );
+	fatbytes = (sv.worldmodel->numleafs+31)>>3;
+	bitvector = fatphs;
 
 	// portals can't change viewpoint!
 	if(!( sv.hostflags & SVF_PORTALPASS ))
 	{
-		vec3_t	offset;
+		vec3_t	viewPos, offset;
 
 		// see code from client.cpp for understanding:
 		// org = pView->v.origin + pView->v.view_ofs;
@@ -3919,15 +3923,20 @@ byte *pfnSetFatPAS( const float *org )
 		if( svs.currentPlayer->edict->v.flags & FL_DUCKING )
 		{
 			VectorSubtract( svgame.pmove->player_mins[0], svgame.pmove->player_mins[1], offset );
-			VectorSubtract( viewPos, offset, viewPos );
+			VectorSubtract( org, offset, viewPos );
 		}
-	}
+		else VectorCopy( org, viewPos );
 
-	bitvector = fatphs;
-	fatbytes = (sv.worldmodel->numleafs+31)>>3;
-	if(!( sv.hostflags & SVF_PORTALPASS ))
+		// build a new PHS frame
 		Q_memset( bitvector, 0, fatbytes );
-	SV_AddToFatPVS( viewPos, DVIS_PHS, sv.worldmodel->nodes );
+
+		SV_AddToFatPVS( viewPos, DVIS_PHS, sv.worldmodel->nodes );
+	}
+	else
+	{
+		// merge PVS
+		SV_AddToFatPVS( org, DVIS_PHS, sv.worldmodel->nodes );
+	}
 
 	return bitvector;
 }

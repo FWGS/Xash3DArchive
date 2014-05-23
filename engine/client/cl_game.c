@@ -3635,6 +3635,7 @@ static efx_api_t gEfxApi =
 	CL_GetPackedColor,
 	CL_LookupColor,
 	CL_DecalRemoveAll,
+	CL_FireCustomDecal,
 };
 
 static event_api_t gEventApi =
