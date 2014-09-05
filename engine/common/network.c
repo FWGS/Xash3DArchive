@@ -560,9 +560,6 @@ void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to
 	}
 	else Host_Error( "NET_SendPacket: bad address type %i\n", to.type );
 
-	if( to.type != NA_BROADCAST && to.type != NA_IP )
-		Host_Error( "NET_SendPacket: bad address type %i\n", to.type );
-
 	NET_NetadrToSockadr( &to, &addr );
 
 	ret = pSendTo( net_socket, data, length, 0, &addr, sizeof( addr ));

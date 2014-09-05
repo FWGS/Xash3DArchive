@@ -167,7 +167,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 		if( image.hint == IL_HINT_NO )
 			MsgDev( D_ERROR, "Image_LoadMDL: lump (%s) is corrupted\n", name );
 		return false; // unknown or unsupported mode rejected
-	} 
+	}
 
 	image.type = PF_INDEXED_32;	// 32-bit palete
 

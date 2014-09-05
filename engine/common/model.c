@@ -2527,12 +2527,12 @@ void Mod_CalcPHS( void )
 	// NOTE: first leaf is skipped becuase is a outside leaf. Now all leafs have shift up by 1.
 	// and last leaf (which equal worldmodel->numleafs) has no visdata! Add one extra leaf
 	// to avoid this situation.
-	num = worldmodel->numleafs + 1;
+	num = worldmodel->numleafs;
 	rowwords = (num + 31) >> 5;
 	rowbytes = rowwords * 4;
 
 	// typically PHS reqiured more room because RLE fails on multiple 1 not 0
-	phsdatasize = world.visdatasize * 4; // empirically determined
+	phsdatasize = world.visdatasize * 32; // empirically determined
 
 	// allocate pvs and phs data single array
 	visofs = Mem_Alloc( worldmodel->mempool, num * sizeof( int ));
@@ -2612,7 +2612,7 @@ void Mod_CalcPHS( void )
 
 	// apply leaf pointers
 	for( i = 0; i < worldmodel->numleafs; i++ )
-		worldmodel->leafs[i+1].compressed_pas = compressed_pas + visofs[i];
+		worldmodel->leafs[i].compressed_pas = compressed_pas + visofs[i];
 
 	// release uncompressed data
 	Mem_Free( uncompressed_vis );

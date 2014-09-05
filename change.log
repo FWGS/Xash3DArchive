@@ -1,3 +1,31 @@
+build 2664
+
+Engine: restore right ordering of arguments of SV_StudioSetupBones export
+Render: a some cosmetic changes in RenderAPI
+Client: make levelshots for background demos
+Client: now cmd 'startdemos' invoke to play demos sequence like as background map
+Client: increase demo auto-naming from 100 up to 10000
+Client: fix bug with inverted PITCH of non-local playermodel
+Client: added FireCustomDecal into EfxAPI (was missed)
+GameUI: fix some crashes after end the background map (like call of trigger_endsection)
+Client: eliminate muzzleflash copy from mirror reflection in normal view
+Render: fix bug with max_texture_units clamping
+Render: completely remove glScissor calls (just unused)
+Render: update thirdperson code for mirrors
+Render: rewrite viewport setup code
+Render: fix software gamma adjustment bug while flashlight is enabled
+Render: reset vid_displayfrequency if current value isn't support by user display. Throw warning message
+Engine: allow new param in gameinfo.txt who called soundclip_dist <radius>. Default is 1000.
+Sound: new cmd 'playvol' like in GoldSrc
+Server: fix crash in 'Gunman Chronicles' at map end1.bsp
+Engine: show more infos with cmd 'mapstats'
+Network: fix bug with DT_TIMEWINDOW_8
+Server: fix bug with triggers with 'liquid' textures
+Server: fix some bugs in PVS calculation on server
+GameUI: enable auto-refresh of actual multiplayer maps list
+GameUI: update 3D playermodel preview for 16:9 screen aspect
+
+
 build 2636
 
 Engine: added internal loader for deluxemap data (.dlit file that produces VHLT)

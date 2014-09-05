@@ -616,7 +616,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 #endif
 	if( !cls.changedemo )
 		UI_SetActiveMenu( cl.background );
-	else Key_SetKeyDest( key_menu );
+	else if( !cls.demoplayback )
+		Key_SetKeyDest( key_menu );
 
 	cl.refdef.viewentity = cl.playernum + 1; // always keep viewent an actual
 

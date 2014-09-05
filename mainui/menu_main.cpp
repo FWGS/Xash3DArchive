@@ -624,4 +624,4 @@ void UI_Main_Menu( void )
 	UI_Main_Init();
 
 	UI_PushMenu( &uiMain.menu );
-}        
+}

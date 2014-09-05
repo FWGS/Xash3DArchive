@@ -382,7 +382,7 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 			pglVertex3fv( vPoint2 );
 		}
 
-		vLast += vStep;	// Advance texture scroll (v axis only)
+		vLast += vStep; // Advance texture scroll (v axis only)
 		noiseIndex += noiseStep;
 	}
 

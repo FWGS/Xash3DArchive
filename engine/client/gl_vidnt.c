@@ -136,7 +136,6 @@ vidmode_t vidmode[] =
 { "Mode 20: 16x9",	1920,	1080,	true	},
 { "Mode 21: 16x9",	1920,	1200,	true	},
 { "Mode 22: 16x9",	2560,	1600,	true	},
-{ NULL,		0,	0,	0	},
 };
 
 static dllfunc_t opengl_110funcs[] =
@@ -1207,7 +1206,7 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 		}
 
 		cds_result = ChangeDisplaySettings( &dm, CDS_FULLSCREEN );
-		
+
 		if( cds_result == DISP_CHANGE_SUCCESSFUL )
 		{
 			glState.fullScreen = true;

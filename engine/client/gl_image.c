@@ -330,9 +330,9 @@ void R_SetTextureParameters( void )
 	if( GL_Support( GL_TEXTURE_LODBIAS ))
 	{
 		if( gl_texture_lodbias->value > glConfig.max_texture_lodbias )
-			Cvar_SetFloat( "r_texture_lodbias", glConfig.max_texture_lodbias );
+			Cvar_SetFloat( "gl_texture_lodbias", glConfig.max_texture_lodbias );
 		else if( gl_texture_lodbias->value < -glConfig.max_texture_lodbias )
-			Cvar_SetFloat( "r_texture_lodbias", -glConfig.max_texture_lodbias );
+			Cvar_SetFloat( "gl_texture_lodbias", -glConfig.max_texture_lodbias );
 	}
 
 	gl_texture_lodbias->modified = false;

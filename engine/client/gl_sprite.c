@@ -939,6 +939,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	if( R_SpriteOccluded( e, origin, &alpha, &scale ))
 		return; // sprite culled
+
 	r_stats.c_sprite_models_drawn++;
 
 	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
@@ -947,7 +948,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		pglAlphaFunc( GL_GREATER, 0.0f );
 	}
 
-	if( e->curstate.rendermode == kRenderGlow )
+	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderWorldGlow )
 		pglDisable( GL_DEPTH_TEST );
 
 	// select properly rendermode
@@ -961,6 +962,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		break;
 	case kRenderGlow:
 	case kRenderTransAdd:
+	case kRenderWorldGlow:
 		pglDisable( GL_FOG );
 		pglEnable( GL_BLEND );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
@@ -1101,7 +1103,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( psprite->facecull == SPR_CULL_NONE )
 		GL_Cull( GL_FRONT );
 
-	if( e->curstate.rendermode == kRenderGlow )
+	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderWorldGlow )
 		pglEnable( GL_DEPTH_TEST );
 
 	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )

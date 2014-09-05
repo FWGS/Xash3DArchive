@@ -845,7 +845,7 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	if( ent && !( flags & FDECAL_LOCAL_SPACE ))
 	{
 		vec3_t	pos_l;
-	
+
 		// transform decal position in local bmodel space
 		if( !VectorIsNull( ent->angles ))
 		{

@@ -221,7 +221,8 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 {
-	if( !ent->model ) return false;
+	if( !ent || !ent->model )
+		return false;
 
 	if( entityType == ET_TEMPENTITY )
 	{

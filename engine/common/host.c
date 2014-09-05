@@ -106,6 +106,7 @@ qboolean Host_NewGame( const char *mapName, qboolean loadGame )
 
 	return iRet;
 }
+
 /*
 ================
 Host_EndGame

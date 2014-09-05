@@ -840,7 +840,8 @@ void FS_ClearSearchPath( void )
 		{
 			W_Close( search->wad );
 		}
-		Mem_Free( search );
+
+		if( search ) Mem_Free( search );
 	}
 }
 
