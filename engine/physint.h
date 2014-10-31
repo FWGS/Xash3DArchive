@@ -57,6 +57,7 @@ typedef struct server_physics_api_s
 	void		( *Con_NXPrintf )( struct con_nprint_s *info, char *fmt, ... );
 	const char	*( *pfnGetLightStyle )( int style ); // read custom appreance for selected lightstyle
 	void		( *pfnUpdateFogSettings )( unsigned int packed_fog );
+	char		**(*pfnGetFilesList)( const char *pattern, int *numFiles, int gamedironly );
 } server_physics_api_t;
 
 // physic callbacks

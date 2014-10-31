@@ -868,6 +868,17 @@ void Cmd_Unlink( int group )
 
 /*
 ============
+Cmd_Null_f
+
+null function for some cmd stubs
+============
+*/
+void Cmd_Null_f( void )
+{
+}
+
+/*
+============
 Cmd_Init
 ============
 */

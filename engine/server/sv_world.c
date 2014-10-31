@@ -182,7 +182,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	model = Mod_Handle( ent->v.modelindex );
 
 	if( !model || model->type != mod_brush )
-		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", NUM_FOR_EDICT( ent ), model->type );
+		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", NUM_FOR_EDICT( ent ), (model) ? model->type : mod_bad );
 
 	VectorSubtract( maxs, mins, size );
 
@@ -1541,6 +1541,9 @@ void SV_RunLightStyles( void )
 {
 	int		i, ofs;
 	lightstyle_t	*ls;
+	float		scale;
+
+	scale = sv_lighting_modulate->value;
 
 	// run lightstyles animation
 	for( i = 0, ls = sv.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
@@ -1548,9 +1551,9 @@ void SV_RunLightStyles( void )
 		ls->time += host.frametime;
 		ofs = (ls->time * 10);
 
-		if( ls->length == 0 ) ls->value = 256.0f * sv_lighting_modulate->value; // disable this light
-		else if( ls->length == 1 ) ls->value = ls->map[0] * 22.0f * sv_lighting_modulate->value;
-		else ls->value = ls->map[ofs%ls->length] * 22.0f * sv_lighting_modulate->value;
+		if( ls->length == 0 ) ls->value = scale; // disable this light
+		else if( ls->length == 1 ) ls->value = ( ls->map[0] / 12.0f ) * scale;
+		else ls->value = ( ls->map[ofs % ls->length] / 12.0f ) * scale;
 	}
 }
 

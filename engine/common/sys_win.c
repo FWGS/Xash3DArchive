@@ -554,20 +554,22 @@ void Sys_Print( const char *pMsg )
 		if( msg[i] == '\n' && msg[i+1] == '\r' )
 		{
 			b[0] = '\r';
-			b[1] = c[0] = '\n';
+			b[1] = '\n';
+			c[0] = '\n';
 			b += 2, c++;
 			i++;
 		}
 		else if( msg[i] == '\r' )
 		{
-			b[0] = c[0] = '\r';
+			b[0] = '\r';
 			b[1] = '\n';
-			b += 2, c++;
+			b += 2;
 		}
 		else if( msg[i] == '\n' )
 		{
 			b[0] = '\r';
-			b[1] = c[0] = '\n';
+			b[1] = '\n';
+			c[0] = '\n';
 			b += 2, c++;
 		}
 		else if( msg[i] == '\35' || msg[i] == '\36' || msg[i] == '\37' )

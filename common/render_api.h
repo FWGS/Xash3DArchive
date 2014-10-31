@@ -121,6 +121,7 @@ typedef enum
 	TF_IMAGE_PROGRAM	= (1<<24),	// enable image program support like in Doom3
 	TF_ALPHACONTRAST	= (1<<25),	// special texture flags for internal usage
 	TF_FLOAT		= (1<<26),	// float textures
+	TF_NOCOMPARE	= (1<<27),	// disable comparing for depth textures
 } texFlags_t;
 
 typedef struct beam_s BEAM;

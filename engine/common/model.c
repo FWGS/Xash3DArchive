@@ -1852,7 +1852,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			out->flags |= (SURF_DRAWTILED|SURF_DRAWSKY);
 
 		if(( tex->name[0] == '*' && Q_stricmp( tex->name, "*default" )) || tex->name[0] == '!' )
-			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
+			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
 
 		if( !Q_strncmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
@@ -3026,8 +3026,8 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean force )
 	}
 
 	// purge all submodels
-	Mem_EmptyPool( com_studiocache );
 	Mod_FreeModel( &cm_models[0] );
+	Mem_EmptyPool( com_studiocache );
 	world.load_sequence++;	// now all models are invalid
 
 	// load the newmap

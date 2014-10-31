@@ -716,6 +716,18 @@ typedef float GLmatrix[16];
 #define GL_MAX_TEXTURE_COORDS_ARB		0x8871
 #define GL_MAX_TEXTURE_IMAGE_UNITS_ARB		0x8872
 
+#define WGL_CONTEXT_MAJOR_VERSION_ARB		0x2091
+#define WGL_CONTEXT_MINOR_VERSION_ARB		0x2092
+#define WGL_CONTEXT_LAYER_PLANE_ARB		0x2093
+#define WGL_CONTEXT_FLAGS_ARB			0x2094
+#define WGL_CONTEXT_DEBUG_BIT_ARB		0x0001
+#define WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB	0x0002
+#define WGL_CONTEXT_PROFILE_MASK_ARB		0x9126
+#define WGL_CONTEXT_CORE_PROFILE_BIT_ARB	0x00000001
+#define WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB	0x00000002
+#define WGL_CONTEXT_ES2_PROFILE_BIT_EXT		0x00000004	/*WGL_CONTEXT_ES2_PROFILE_BIT_EXT*/
+#define ERROR_INVALID_VERSION_ARB		0x2095
+#define ERROR_INVALID_PROFILE_ARB		0x2096
 
 // helper opengl functions
 GLenum ( APIENTRY *pglGetError )(void);
@@ -1175,5 +1187,6 @@ int   ( WINAPI * pwglGetLayerPaletteEntries)(HDC, int, int, int, COLORREF *);
 BOOL  ( WINAPI * pwglRealizeLayerPalette)(HDC, int, BOOL);
 BOOL  ( WINAPI * pwglSwapLayerBuffers)(HDC, UINT);
 BOOL  ( WINAPI * pwglSwapIntervalEXT)( int interval );
+HGLRC ( WINAPI * pwglCreateContextAttribsARB)( HDC hDC, HGLRC hShareContext, const int *attribList );
 
 #endif//GL_EXPORT_H

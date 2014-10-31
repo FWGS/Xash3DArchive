@@ -1213,14 +1213,17 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 S_StartLocalSound
 ==================
 */
-void S_StartLocalSound(  const char *name, float volume )
+void S_StartLocalSound(  const char *name, float volume, qboolean reliable )
 {
 	sound_t	sfxHandle;
 	int	flags = (SND_LOCALSOUND|SND_STOP_LOOPING);
+	int	channel = CHAN_AUTO;
+
+	if( reliable ) channel = CHAN_STATIC;
 
 	if( !dma.initialized ) return;	
 	sfxHandle = S_RegisterSound( name );
-	S_StartSound( NULL, s_listener.entnum, CHAN_AUTO, sfxHandle, volume, ATTN_NONE, PITCH_NORM, flags );
+	S_StartSound( NULL, s_listener.entnum, channel, sfxHandle, volume, ATTN_NONE, PITCH_NORM, flags );
 }
 
 /*
@@ -1631,7 +1634,7 @@ void S_Play_f( void )
 		return;
 	}
 
-	S_StartLocalSound( Cmd_Argv( 1 ), VOL_NORM );
+	S_StartLocalSound( Cmd_Argv( 1 ), VOL_NORM, false );
 }
 
 void S_PlayVol_f( void )
@@ -1642,7 +1645,29 @@ void S_PlayVol_f( void )
 		return;
 	}
 
-	S_StartLocalSound( Cmd_Argv( 1 ), Q_atof( Cmd_Argv( 2 )));
+	S_StartLocalSound( Cmd_Argv( 1 ), Q_atof( Cmd_Argv( 2 )), false );
+}
+
+void S_Say_f( void )
+{
+	if( Cmd_Argc() == 1 )
+	{
+		Msg( "Usage: speak <soundfile\n" );
+		return;
+	}
+
+	S_StartLocalSound( Cmd_Argv( 1 ), 1.0f, false );
+}
+
+void S_SayReliable_f( void )
+{
+	if( Cmd_Argc() == 1 )
+	{
+		Msg( "Usage: spk <soundfile>\n" );
+		return;
+	}
+
+	S_StartLocalSound( Cmd_Argv( 1 ), 1.0f, true );
 }
 
 /*
@@ -1768,6 +1793,10 @@ qboolean S_Init( void )
 	Cmd_AddCommand( "music", S_Music_f, "starting a background track" );
 	Cmd_AddCommand( "soundlist", S_SoundList_f, "display loaded sounds" );
 	Cmd_AddCommand( "s_info", S_SoundInfo_f, "print sound system information" );
+	Cmd_AddCommand( "+voicerecord", Cmd_Null_f, "start voice recording (non-implemented)" );
+	Cmd_AddCommand( "-voicerecord", Cmd_Null_f, "stop voice recording (non-implemented)" );
+	Cmd_AddCommand( "spk", S_SayReliable_f, "reliable play a specified sententce" );
+	Cmd_AddCommand( "speak", S_Say_f, "playing a specified sententce" );
 
 	if( !SNDDMA_Init( host.hWnd ))
 	{

@@ -2120,10 +2120,16 @@ qboolean SV_LoadGame( const char *pName )
 
 	Q_snprintf( name, sizeof( name ), "save/%s.sav", pName );
 
-	// init network stuff
-	NET_Config(( sv_maxclients->integer > 1 ));
+	// reset all multiplayer cvars
+	Cvar_FullSet( "coop", "0",  CVAR_LATCH );
+	Cvar_FullSet( "teamplay", "0",  CVAR_LATCH );
+	Cvar_FullSet( "deathmatch", "0",  CVAR_LATCH );
+	Cvar_FullSet( "maxplayers", "1", CVAR_LATCH );
 
-	if( sv.background )
+	// init network stuff
+	NET_Config ( false ); // close network sockets
+
+	if( sv.background || sv_maxclients->integer > 1 )
 		SV_Shutdown( true );
 	sv.background = false;
 

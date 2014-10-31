@@ -47,6 +47,7 @@ typedef struct event_api_s
 	unsigned short (*EV_IndexForEvent)( const char *name );
 	const char *(*EV_EventForIndex)( unsigned short index );
 	void	( *EV_PlayerTraceExt )( float *start, float *end, int traceFlags, int (*pfnIgnore)( struct physent_s *pe ), struct pmtrace_s *tr );
+	const char *(*EV_SoundForIndex)( int index );
 } event_api_t;
 
 #endif//EVENT_API_H

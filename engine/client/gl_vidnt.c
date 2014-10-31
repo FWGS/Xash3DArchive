@@ -651,17 +651,80 @@ static void GL_SetDefaultState( void )
 }
 
 /*
+===============
+GL_ContextError
+===============
+*/
+static void GL_ContextError( void )
+{
+	DWORD error = GetLastError();
+
+	if( error == ( 0xc0070000|ERROR_INVALID_VERSION_ARB ))
+		MsgDev( D_ERROR, "Unsupported OpenGL context version (%s).\n", "2.0" );
+	else if( error == ( 0xc0070000|ERROR_INVALID_PROFILE_ARB ))
+		MsgDev( D_ERROR, "Unsupported OpenGL profile (%s).\n", "compat" );
+	else if( error == ( 0xc0070000|ERROR_INVALID_OPERATION ))
+		MsgDev( D_ERROR, "wglCreateContextAttribsARB returned invalid operation.\n" );
+	else if( error == ( 0xc0070000|ERROR_DC_NOT_FOUND ))
+		MsgDev( D_ERROR, "wglCreateContextAttribsARB returned dc not found.\n" );
+	else if( error == ( 0xc0070000|ERROR_INVALID_PIXEL_FORMAT ))
+		MsgDev( D_ERROR, "wglCreateContextAttribsARB returned dc not found.\n" );
+	else if( error == ( 0xc0070000|ERROR_NO_SYSTEM_RESOURCES ))
+		MsgDev( D_ERROR, "wglCreateContextAttribsARB ran out of system resources.\n" );
+	else if( error == ( 0xc0070000|ERROR_INVALID_PARAMETER ))
+		MsgDev( D_ERROR, "wglCreateContextAttribsARB reported invalid parameter.\n" );
+	else MsgDev( D_ERROR, "Unknown error creating an OpenGL (%s) Context.\n", "2.0" );
+}
+
+/*
 =================
 GL_CreateContext
 =================
 */
 qboolean GL_CreateContext( void )
 {
+	HGLRC hBaseRC;
+
 	if(!( glw_state.hGLRC = pwglCreateContext( glw_state.hDC )))
 		return GL_DeleteContext();
 
 	if(!( pwglMakeCurrent( glw_state.hDC, glw_state.hGLRC )))
 		return GL_DeleteContext();
+
+	pwglCreateContextAttribsARB = GL_GetProcAddress( "wglCreateContextAttribsARB" );
+
+	if( pwglCreateContextAttribsARB != NULL )
+	{
+		int attribs[] =
+		{
+		WGL_CONTEXT_MAJOR_VERSION_ARB, 2,
+		WGL_CONTEXT_MINOR_VERSION_ARB, 0,
+		WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,         
+//		WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
+		0
+		};
+
+		hBaseRC = glw_state.hGLRC; // backup
+		glw_state.hGLRC = NULL;
+
+		if( !( glw_state.hGLRC = pwglCreateContextAttribsARB( glw_state.hDC, NULL, attribs )))
+		{
+			glw_state.hGLRC = hBaseRC;
+			GL_ContextError();
+			return true; // just use old context
+		}
+
+		if(!( pwglMakeCurrent( glw_state.hDC, glw_state.hGLRC )))
+		{
+			pwglDeleteContext( glw_state.hGLRC );
+			glw_state.hGLRC = hBaseRC;
+			GL_ContextError();
+			return true;
+		}
+
+		MsgDev( D_NOTE, "GL_CreateContext: using extended context\n" );
+		pwglDeleteContext( hBaseRC );	// release first context
+	}
 
 	return true;
 }
@@ -1371,6 +1434,8 @@ qboolean R_Init_OpenGL( void )
 	if( !opengl_dll.link )
 		return false;
 
+	GL_CheckExtension( "OpenGL Internal ProcAddress", wglproc_funcs, NULL, GL_WGL_PROCADDRESS );
+
 	return VID_SetMode();
 }
 
@@ -1518,7 +1583,7 @@ void GL_InitCommands( void )
 	r_norefresh = Cvar_Get( "r_norefresh", "0", 0, "disable 3D rendering (use with caution)" );
 	r_lighting_extended = Cvar_Get( "r_lighting_extended", "1", CVAR_ARCHIVE, "allow to get lighting from world and bmodels" );
 	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "0.6", CVAR_ARCHIVE, "lightstyles modulate scale" );
-	r_lighting_ambient = Cvar_Get( "r_lighting_ambient", "0.3", 0, "map ambient lighting scale" );
+	r_lighting_ambient = Cvar_Get( "r_lighting_ambient", "0.3", CVAR_ARCHIVE, "map ambient lighting scale" );
 	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", CVAR_ARCHIVE, "making FOV adjustment for wide-screens" );
 	r_novis = Cvar_Get( "r_novis", "0", 0, "ignore vis information (perfomance test)" );
 	r_nocull = Cvar_Get( "r_nocull", "0", 0, "ignore frustrum culling (perfomance test)" );
@@ -1600,7 +1665,6 @@ void GL_InitExtensions( void )
 	MsgDev( D_INFO, "Video: %s\n", glConfig.renderer_string );
 
 	// initalize until base opengl functions loaded
-	GL_CheckExtension( "OpenGL Internal ProcAddress", wglproc_funcs, NULL, GL_WGL_PROCADDRESS );
 	GL_CheckExtension( "WGL_EXT_swap_control", wglswapintervalfuncs, NULL, GL_WGL_SWAPCONTROL );
 
 	GL_CheckExtension( "glDrawRangeElements", drawrangeelementsfuncs, "gl_drawrangeelments", GL_DRAW_RANGEELEMENTS_EXT );

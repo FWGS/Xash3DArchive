@@ -2017,7 +2017,7 @@ static void R_StudioDrawPoints( void )
 			pglColor4ub( clr->r, clr->g, clr->b, 255 );
 			alpha = 1.0f;
 		}
-		else if( g_nFaceFlags & STUDIO_NF_TRANSPARENT )
+		else if( g_nFaceFlags & STUDIO_NF_TRANSPARENT && R_StudioOpaque( RI.currententity ))
 		{
 			GL_SetRenderMode( kRenderTransAlpha );
 			pglAlphaFunc( GL_GREATER, 0.0f );
@@ -2454,7 +2454,7 @@ static model_t *R_StudioSetupPlayerModel( int index )
 	// set to invisible, skip
 	if( !info->model[0] ) return NULL;
 
-	if( GI->nomodels || !Q_stricmp( info->model, "player" ))
+	if( !Q_stricmp( info->model, "player" ))
 	{
 		Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
 	}

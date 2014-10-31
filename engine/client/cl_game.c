@@ -531,8 +531,8 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 		rc = *prc;
 
 		// Sigh! some stupid modmakers set wrong rectangles in hud.txt 
-		if( rc.left <= 0 || rc.left > width ) rc.left = 0;
-		if( rc.top <= 0 || rc.top > height ) rc.top = 0;
+		if( rc.left <= 0 || rc.left >= width ) rc.left = 0;
+		if( rc.top <= 0 || rc.top >= height ) rc.top = 0;
 		if( rc.right <= 0 || rc.right > width ) rc.right = width;
 		if( rc.bottom <= 0 || rc.bottom > height ) rc.bottom = height;
 
@@ -785,6 +785,38 @@ Render callback for studio models
 int CL_GetMaxClients( void )
 {
 	return cl.maxclients;
+}
+
+/*
+====================
+CL_SoundFromIndex
+
+return soundname from index
+====================
+*/
+const char *CL_SoundFromIndex( int index )
+{
+	sfx_t	*sfx = NULL;
+	int	hSound;
+
+	// make sure what we in-bounds
+	index = bound( 0, index, MAX_SOUNDS );
+	hSound = cl.sound_index[index];
+
+	if( !hSound )
+	{
+		MsgDev( D_ERROR, "CL_SoundFromIndex: invalid sound index %i\n", index );
+		return NULL;
+	}
+
+	sfx = S_GetSfxByHandle( hSound );
+	if( !sfx )
+	{
+		MsgDev( D_ERROR, "CL_SoundFromIndex: bad sfx for index %i\n", index );
+		return NULL;
+	}
+
+	return sfx->name;
 }
 
 /*
@@ -3665,6 +3697,7 @@ static event_api_t gEventApi =
 	CL_EventIndex,
 	CL_IndexEvent,
 	CL_PlayerTraceExt,
+	CL_SoundFromIndex,
 };
 
 static demo_api_t gDemoApi =

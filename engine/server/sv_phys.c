@@ -1888,6 +1888,30 @@ void SV_UpdateFogSettings( unsigned int packed_fog )
 	physinfo->modified = true; // force to transmit
 }
 
+/*
+=========
+pfnGetFilesList
+
+=========
+*/
+static char **pfnGetFilesList( const char *pattern, int *numFiles, int gamedironly )
+{
+	static search_t	*t = NULL;
+
+	if( t ) Mem_Free( t ); // release prev search
+
+	t = FS_Search( pattern, true, gamedironly );
+
+	if( !t )
+	{
+		if( numFiles ) *numFiles = 0;
+		return NULL;
+	}
+
+	if( numFiles ) *numFiles = t->numfilenames;
+	return t->filenames;
+}
+
 static server_physics_api_t gPhysicsAPI =
 {
 	SV_LinkEdict,
@@ -1905,6 +1929,7 @@ static server_physics_api_t gPhysicsAPI =
 	Con_NXPrintf,
 	SV_GetLightStyle,
 	SV_UpdateFogSettings,
+	pfnGetFilesList,
 };
 
 /*

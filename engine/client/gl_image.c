@@ -149,17 +149,16 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 	{
 		pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 		pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		pglTexParameteri( tex->target, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL );
 
-		if( tex->flags & TF_LUMINANCE )
+		if( !( tex->flags & TF_NOCOMPARE ))
 		{
-			pglTexParameteri( tex->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_LUMINANCE );
-		}
-		else
-		{
-			pglTexParameteri( tex->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY );
+			pglTexParameteri( tex->target, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL );
 			pglTexParameteri( tex->target, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB );
 		}
+
+		if( tex->flags & TF_LUMINANCE )
+			pglTexParameteri( tex->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_LUMINANCE );
+		else pglTexParameteri( tex->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY );
 
 		if( GL_Support( GL_ANISOTROPY_EXT ))
 			pglTexParameterf( tex->target, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.0f );
@@ -226,7 +225,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 			if( tex->target != GL_TEXTURE_1D )
 				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 
-			if( tex->target == GL_TEXTURE_3D )
+			if( tex->target == GL_TEXTURE_3D || tex->target == GL_TEXTURE_CUBE_MAP_ARB )
 				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
 		}
 		else
@@ -236,7 +235,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 			if( tex->target != GL_TEXTURE_1D )
 				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP );
 
-			if( tex->target == GL_TEXTURE_3D )
+			if( tex->target == GL_TEXTURE_3D || tex->target == GL_TEXTURE_CUBE_MAP_ARB )
 				pglTexParameteri( tex->target, GL_TEXTURE_WRAP_R, GL_CLAMP );
 		}
 	}
@@ -247,7 +246,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 		if( tex->target != GL_TEXTURE_1D )
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
 
-		if( tex->target == GL_TEXTURE_3D )
+		if( tex->target == GL_TEXTURE_3D || tex->target == GL_TEXTURE_CUBE_MAP_ARB )
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER );
 
 		if( tex->flags & TF_BORDER )
@@ -262,7 +261,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 		if( tex->target != GL_TEXTURE_1D )
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_T, GL_REPEAT );
 
-		if( tex->target == GL_TEXTURE_3D )
+		if( tex->target == GL_TEXTURE_3D || tex->target == GL_TEXTURE_CUBE_MAP_ARB )
 			pglTexParameteri( tex->target, GL_TEXTURE_WRAP_R, GL_REPEAT );
 	}
 }
@@ -1030,7 +1029,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	byte		*buf, *data;
 	const byte	*bufend;
 	GLenum		outFormat, inFormat, glTarget;
-	uint		i, s, numSides, offset = 0;
+	uint		i, s, numSides, offset = 0, err;
 	int		texsize = 0, img_flags = 0, samples;
 	GLint		dataType = GL_UNSIGNED_BYTE;
 
@@ -1105,7 +1104,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	if( tex->flags & TF_DEPTHMAP )
 	{
 		inFormat = GL_DEPTH_COMPONENT;
-		dataType = GL_UNSIGNED_BYTE;
+		dataType = GL_FLOAT;
 	}
 
 	if( pic->flags & IMAGE_CUBEMAP )
@@ -1166,7 +1165,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	// uploading texture into video memory
 	for( i = 0; i < numSides; i++ )
 	{
-		if( buf >= bufend )
+		if( buf != NULL && buf >= bufend )
 			Host_Error( "GL_UploadTexture: %s image buffer overflow\n", tex->name );
 
 		// copy or resample the texture
@@ -1214,11 +1213,15 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 				GL_GenerateMipmaps( data, pic, tex, glTarget, inFormat, i, subImage );
 		}
 
-		if( numSides > 1 ) buf += offset;
+		if( numSides > 1 && buf != NULL )
+			buf += offset;
 		tex->size += texsize;
 
-		// clear gl error
-		while( pglGetError() != GL_NO_ERROR );
+		// catch possible errors
+		err = pglGetError();
+
+		if( err != GL_NO_ERROR )
+			MsgDev( D_ERROR, "GL_UploadTexture: error %x while uploading %s [%s]\n", err, tex->name, GL_Target( glTarget ));
 	}
 }
 
@@ -1455,6 +1458,12 @@ int GL_CreateTexture( const char *name, int width, int height, const void *buffe
 
 		r_empty.depth = r_empty.width;
 		r_empty.size = r_empty.width * r_empty.height * r_empty.depth * 4;
+	}
+	else if( flags & TF_CUBEMAP )
+	{
+		flags &= ~TF_CUBEMAP; // will be set later
+		r_empty.flags |= IMAGE_CUBEMAP;
+		r_empty.size *= 6;
 	}
 
 	texture = GL_LoadTextureInternal( name, &r_empty, flags, false );

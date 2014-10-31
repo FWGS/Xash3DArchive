@@ -100,17 +100,6 @@ const char *MenuButtons[PC_BUTTONCOUNT] =
 	"Spectate games"
 };
 
-#pragma pack(push,1)
-typedef struct
-{
-	char magic[2];
-	unsigned int filesz;
-	unsigned short creator1;
-	unsigned short creator2;
-	unsigned int bmp_offset;
-} bmphdr_t;
-#pragma pack(pop)
-
 /*
 =================
 UI_LoadBmpButtons
@@ -120,75 +109,67 @@ void UI_LoadBmpButtons( void )
 {
 	memset( uiStatic.buttonsPics, 0, sizeof( uiStatic.buttonsPics ));
 
-	int bmp_len_holder;
-	byte *bmp_buffer = LOAD_FILE( ART_BUTTONS_MAIN, &bmp_len_holder );
+	int bmp_filesize;
+	byte *bmp_buffer = LOAD_FILE( ART_BUTTONS_MAIN, &bmp_filesize );
 
-	if( !bmp_buffer || !bmp_len_holder )
+	if( !bmp_buffer || !bmp_filesize )
 	{
 		Con_Printf( "UI_LoadBmpButtons: btns_main.bmp not found\n" );
 		return;
 	}
 
-	BITMAPINFOHEADER *pInfoHdr;
-	bmphdr_t *pHdr;
+	BITMAPFILEHEADER *pFileHdr = (BITMAPFILEHEADER *)bmp_buffer;
+	BITMAPINFOHEADER *pInfoHdr = (BITMAPINFOHEADER *)&bmp_buffer[sizeof( BITMAPFILEHEADER )];
 
-	pInfoHdr =(BITMAPINFOHEADER *)&bmp_buffer[sizeof(bmphdr_t)];
-	pHdr = (bmphdr_t*)bmp_buffer;
+	BITMAPINFOHEADER NewInfoHdr;
+	BITMAPFILEHEADER NewFileHdr;
 
-	BITMAPINFOHEADER CuttedDibHdr;
-	bmphdr_t CuttedHdr;
+	if( pInfoHdr->biBitCount == 8 && pInfoHdr->biClrUsed == 0 )
+		pInfoHdr->biClrUsed = 256; // all colors used
 
-	memcpy( &CuttedHdr, pHdr, sizeof( bmphdr_t ));
-	memcpy( &CuttedDibHdr, pInfoHdr, pInfoHdr->biSize );
+	memcpy( &NewFileHdr, pFileHdr, sizeof( BITMAPFILEHEADER ));
+	memcpy( &NewInfoHdr, pInfoHdr, sizeof( BITMAPINFOHEADER ));
 
-	int pallete_sz = pHdr->bmp_offset - sizeof( bmphdr_t ) - pInfoHdr->biSize;
-
-	uiStatic.buttons_height = ( pInfoHdr->biBitCount == 4 ) ? 80 : 78; // bugstompers issues
-	uiStatic.buttons_width = pInfoHdr->biWidth - 3; // make some offset
-
-	int stride = (pInfoHdr->biWidth * pInfoHdr->biBitCount / 8);
-	int cutted_img_sz = ((stride + 3 ) & ~3) * uiStatic.buttons_height;
-	int CuttedBmpSize = sizeof( bmphdr_t ) + pInfoHdr->biSize + pallete_sz + cutted_img_sz;
-	byte *img_data = &bmp_buffer[bmp_len_holder-cutted_img_sz];
-
-	if ( pInfoHdr->biBitCount <= 8 )
-	{
-		byte* pallete=&bmp_buffer[sizeof( bmphdr_t ) + pInfoHdr->biSize];
-		byte* firstpixel_col=&pallete[img_data[0]*4];
-		firstpixel_col[0]=firstpixel_col[1]=firstpixel_col[2]=0;
-	}
-
-	CuttedDibHdr.biHeight = 78;	//uiStatic.buttons_height;
-	CuttedHdr.filesz = CuttedBmpSize;
-	CuttedDibHdr.biSizeImage = CuttedBmpSize - CuttedHdr.bmp_offset;
-
-	char fname[256];
-	byte *raw_img_buff = (byte *)MALLOC( sizeof( bmphdr_t ) + pInfoHdr->biSize + pallete_sz + cutted_img_sz );
+	byte *palette = bmp_buffer + sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER );
+	int palette_sz = pInfoHdr->biClrUsed * sizeof( RGBQUAD );
+	uiStatic.buttons_width = pInfoHdr->biWidth;
+	uiStatic.buttons_height = 78;	// fixed height
 
 	// determine buttons count by image height...
-//	int pic_count = ( pInfoHdr->biHeight == 5538 ) ? PC_BUTTONCOUNT : PC_BUTTONCOUNT - 2;
-	int pic_count = ( pInfoHdr->biHeight / 78 );
-	
+	int pic_count = ( pInfoHdr->biHeight / uiStatic.buttons_height );
+
+	int cutted_img_sz = ( pInfoHdr->biWidth * uiStatic.buttons_height * ( pInfoHdr->biBitCount >> 3 ));
+	int CuttedBmpSize = sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) + palette_sz + cutted_img_sz;
+	byte *img_data = &bmp_buffer[pFileHdr->bfOffBits + cutted_img_sz * ( pic_count - 1 )];
+
+	NewFileHdr.bfSize = CuttedBmpSize;
+	NewFileHdr.bfOffBits = sizeof( BITMAPFILEHEADER ) + sizeof( BITMAPINFOHEADER ) + palette_sz;
+	NewInfoHdr.biHeight = uiStatic.buttons_height;
+	NewInfoHdr.biSizeImage = cutted_img_sz;
+
+	char fname[256];
+	byte *raw_img_buff = (byte *)MALLOC( CuttedBmpSize );
+
 	for( int i = 0; i < pic_count; i++ )
 	{
 		sprintf( fname, "#btns_%d.bmp", i );
 
 		int offset = 0;
-		memcpy( &raw_img_buff[offset], &CuttedHdr, sizeof( bmphdr_t ));
-		offset += sizeof( bmphdr_t );
+		memcpy( &raw_img_buff[offset], &NewFileHdr, sizeof( BITMAPFILEHEADER ));
+		offset += sizeof( BITMAPFILEHEADER );
 
-		memcpy( &raw_img_buff[offset], &CuttedDibHdr, CuttedDibHdr.biSize );
-		offset += CuttedDibHdr.biSize;
+		memcpy( &raw_img_buff[offset], &NewInfoHdr, NewInfoHdr.biSize );
+		offset += NewInfoHdr.biSize;
 
-		if( CuttedDibHdr.biBitCount <= 8 )
+		if( NewInfoHdr.biBitCount <= 8 )
 		{
- 			memcpy( &raw_img_buff[offset], &bmp_buffer[offset], pallete_sz );
- 			offset += pallete_sz;
+ 			memcpy( &raw_img_buff[offset], palette, palette_sz );
+ 			offset += palette_sz;
 		}
 		
 		memcpy( &raw_img_buff[offset], img_data, cutted_img_sz );
 
-		// upload image into viedo memory
+		// upload image into video memory
 		uiStatic.buttonsPics[i] = PIC_Load( fname, raw_img_buff, CuttedBmpSize );
 
 		img_data -= cutted_img_sz;

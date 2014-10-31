@@ -149,6 +149,10 @@ void Con_SetColor_f( void )
 		Q_atov( color, Cmd_Argv( 1 ), 3 );
 		Con_DefaultColor( color[0], color[1], color[2] );
 		break;
+	case 4:
+		VectorSet( color, Q_atof( Cmd_Argv( 1 )), Q_atof( Cmd_Argv( 2 )), Q_atof( Cmd_Argv( 3 )));
+		Con_DefaultColor( color[0], color[1], color[2] );
+		break;
 	default:
 		Msg( "Usage: con_color \"r g b\"\n" );
 		break;

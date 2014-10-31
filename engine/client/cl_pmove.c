@@ -168,7 +168,7 @@ void CL_AddLinksToPmove( void )
 
 		solid = check->curstate.solid;
 
-		if( solid == SOLID_BSP || solid == SOLID_BBOX || solid == SOLID_SLIDEBOX )
+		if( solid == SOLID_BSP || solid == SOLID_BBOX || solid == SOLID_SLIDEBOX || solid == SOLID_CUSTOM )
 		{
 			// reserve slots for all the clients
 			if( clgame.pmove->numphysent < ( MAX_PHYSENTS - cl.maxclients ))

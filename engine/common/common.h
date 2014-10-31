@@ -850,6 +850,7 @@ struct cmd_s *Cmd_GetNextFunctionHandle( struct cmd_s *cmd );
 struct cmdalias_s *Cmd_AliasGetList( void );
 char *Cmd_GetName( struct cmd_s *cmd );
 cvar_t *Cvar_GetList( void );
+void Cmd_Null_f( void );
 
 typedef struct autocomplete_list_s
 {
