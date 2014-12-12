@@ -691,6 +691,9 @@ qboolean GL_CreateContext( void )
 	if(!( pwglMakeCurrent( glw_state.hDC, glw_state.hGLRC )))
 		return GL_DeleteContext();
 
+	if( host.developer <= 1 )
+		return true;
+
 	pwglCreateContextAttribsARB = GL_GetProcAddress( "wglCreateContextAttribsARB" );
 
 	if( pwglCreateContextAttribsARB != NULL )

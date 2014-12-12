@@ -700,11 +700,8 @@ rebuild_page:
 		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 		GL_Bind( GL_TEXTURE0, i ); // NOTE: don't use image->texnum here, because skybox has a 'wrong' indexes
 
-		if( image->texType == TEX_DEPTHMAP )
-		{
+		if(( image->flags & TF_DEPTHMAP ) && !( image->flags & TF_NOCOMPARE ))
 			pglTexParameteri( image->target, GL_TEXTURE_COMPARE_MODE_ARB, GL_NONE );
-			pglTexParameteri( image->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_LUMINANCE );
-                    }
 
 		pglBegin( GL_QUADS );
 		pglTexCoord2f( 0, 0 );
@@ -723,11 +720,8 @@ rebuild_page:
 		pglVertex2f( x, y + h );
 		pglEnd();
 
-		if( image->texType == TEX_DEPTHMAP )
-		{
+		if(( image->flags & TF_DEPTHMAP ) && !( image->flags & TF_NOCOMPARE ))
 			pglTexParameteri( image->target, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB );
-			pglTexParameteri( image->target, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY );
-                    }
 
 		FS_FileBase( image->name, shortname );
 		if( Q_strlen( shortname ) > 18 )

@@ -2120,11 +2120,9 @@ qboolean SV_LoadGame( const char *pName )
 
 	Q_snprintf( name, sizeof( name ), "save/%s.sav", pName );
 
-	// reset all multiplayer cvars
-	Cvar_FullSet( "coop", "0",  CVAR_LATCH );
-	Cvar_FullSet( "teamplay", "0",  CVAR_LATCH );
-	Cvar_FullSet( "deathmatch", "0",  CVAR_LATCH );
-	Cvar_FullSet( "maxplayers", "1", CVAR_LATCH );
+	// silently ignore if missed
+	if( !FS_FileExists( name, true ))
+		return false;
 
 	// init network stuff
 	NET_Config ( false ); // close network sockets
@@ -2132,10 +2130,6 @@ qboolean SV_LoadGame( const char *pName )
 	if( sv.background || sv_maxclients->integer > 1 )
 		SV_Shutdown( true );
 	sv.background = false;
-
-	// silently ignore if missed
-	if( !FS_FileExists( name, true ))
-		return false;
 
 	SCR_BeginLoadingPlaque ( false );
 
@@ -2168,6 +2162,7 @@ qboolean SV_LoadGame( const char *pName )
 	Cvar_FullSet( "coop", "0", CVAR_LATCH );
 	Cvar_FullSet( "teamplay", "0", CVAR_LATCH );
 	Cvar_FullSet( "deathmatch", "0", CVAR_LATCH );
+	Cvar_FullSet( "maxplayers", "1", CVAR_LATCH );
 
 	return Host_NewGame( gameHeader.mapName, true );
 }

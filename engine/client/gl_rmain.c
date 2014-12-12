@@ -1468,6 +1468,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return world.load_sequence;
 	case PARM_MAX_IMAGE_UNITS:
 		return GL_MaxTextureUnits();
+	case PARM_CLIENT_ACTIVE:
+		return (cls.state == ca_active);
 	}
 	return 0;
 }

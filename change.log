@@ -1,3 +1,17 @@
+build 2867
+
+Client: another extension for EventAPI: function EV_SoundForIndex to get soundpath from soundindex
+Render: RenderAPI update. New flag TF_NOCOMPARE to disable comparing for depth-textures and PARM_CLIENT_ACTIVE (self-explanatory)
+Server: PhysicAPI update. Add support for file searching.
+Client: fix a little bug in CL_AddVisibleEntity
+Client: check rectangles right for hud.txt
+Client: fix demoplaying in background mode (changelevel etc)
+Client: fix SOLID_CUSTOM support in client trace
+Render: create debug context for powerful OpenGL debugging
+Render: fix bug with kRenderWorldGlow
+Sound: add two new cmds: spk and speak like in GoldSrc
+GameUI: fix buttons bmp loader
+
 build 2664
 
 Engine: restore right ordering of arguments of SV_StudioSetupBones export
@@ -24,7 +38,6 @@ Server: fix bug with triggers with 'liquid' textures
 Server: fix some bugs in PVS calculation on server
 GameUI: enable auto-refresh of actual multiplayer maps list
 GameUI: update 3D playermodel preview for 16:9 screen aspect
-
 
 build 2636
 

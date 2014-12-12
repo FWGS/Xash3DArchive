@@ -61,6 +61,7 @@ GNU General Public License for more details.
 #define PARM_ACTIVE_TMU	27	// for debug
 #define PARM_CACHEFRAME	28
 #define PARM_MAX_IMAGE_UNITS	29
+#define PARM_CLIENT_ACTIVE	30
 
 enum
 {

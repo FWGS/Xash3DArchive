@@ -1852,7 +1852,12 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			out->flags |= (SURF_DRAWTILED|SURF_DRAWSKY);
 
 		if(( tex->name[0] == '*' && Q_stricmp( tex->name, "*default" )) || tex->name[0] == '!' )
-			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
+		{
+			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
+
+			if( !( host.features & ENGINE_BUILD_SURFMESHES ))
+				out->flags |= SURF_NOCULL;
+		}
 
 		if( !Q_strncmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
