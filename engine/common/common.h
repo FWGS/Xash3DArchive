@@ -92,7 +92,7 @@ typedef enum
 #define MAX_FPS         	500.0		// upper limit for maxfps.
 
 #define MAX_FRAMETIME	0.1
-#define MIN_FRAMETIME	0.001
+#define MIN_FRAMETIME	0.000001
 
 #define MAX_CMD_TOKENS	80		// cmd tokens
 #define MAX_ENTNUMBER	99999		// for server and client parsing
