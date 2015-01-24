@@ -842,6 +842,7 @@ void COM_SetRandomSeed( long lSeed );
 long Com_RandomLong( long lMin, long lMax );
 float Com_RandomFloat( float fMin, float fMax );
 void TrimSpace( const char *source, char *dest );
+const byte *GL_TextureData( unsigned int texnum );
 void GL_FreeImage( const char *name );
 void VID_RestoreGamma( void );
 void UI_SetActiveMenu( qboolean fActive );

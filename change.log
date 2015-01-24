@@ -2,6 +2,7 @@ build 2900
 
 Console: add detection for Paranoia 2 maps (show message in console)
 Engine: fix playing video when fps_max is 0 and framerate too high
+Engine: add function TraceSurface into pmove, EventAPI and PhysicAPI interfaces
 
 build 2867
 
