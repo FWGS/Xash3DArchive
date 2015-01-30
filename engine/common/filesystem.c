@@ -2323,7 +2323,7 @@ indicates at reached end of file
 qboolean FS_Eof( file_t* file )
 {
 	if( !file ) return true;
-	return (file->position == file->real_length) ? true : false;
+	return (( file->position - file->buff_len + file->buff_ind ) == file->real_length ) ? true : false;
 }
 
 /*
