@@ -136,6 +136,7 @@ vidmode_t vidmode[] =
 { "Mode 20: 16x9",	1920,	1080,	true	},
 { "Mode 21: 16x9",	1920,	1200,	true	},
 { "Mode 22: 16x9",	2560,	1600,	true	},
+{ "Mode 23: 16x9",	1600,	 900,	true	},
 };
 
 static dllfunc_t opengl_110funcs[] =

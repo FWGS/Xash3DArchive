@@ -2030,7 +2030,7 @@ static void R_StudioDrawPoints( void )
 			pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 			pglDepthMask( GL_FALSE );
 		}
-		else if( g_nFaceFlags & STUDIO_NF_ALPHA )
+		else if( g_nFaceFlags & STUDIO_NF_ALPHA && !( host.features & ENGINE_DISABLE_HDTEXTURES )) // Paranoia2 collision flag
 		{
 			GL_SetRenderMode( kRenderTransTexture );
 			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
