@@ -558,6 +558,9 @@ typedef struct
 	GLfloat		max_texture_anisotropy;
 	GLfloat		max_texture_lodbias;
 
+	GLint		max_vertex_uniforms;
+	GLint		max_vertex_attribs;
+
 	int		color_bits;
 	int		alpha_bits;
 	int		depth_bits;
