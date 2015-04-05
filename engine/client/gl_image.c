@@ -722,7 +722,7 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int *samples )
 		case 1: format = GL_LUMINANCE8; break;
 		case 2: format = GL_LUMINANCE8_ALPHA8; break;
 		case 3:
-			if( gl_luminance_textures->integer )
+			if( gl_luminance_textures->integer && !( tex->flags & TF_UNCOMPRESSED ))
 			{
 				switch( bits )
 				{
@@ -744,7 +744,7 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int *samples )
 			break;		
 		case 4:
 		default:
-			if( gl_luminance_textures->integer )
+			if( gl_luminance_textures->integer && !( tex->flags & TF_UNCOMPRESSED ))
 			{
 				switch( bits )
 				{

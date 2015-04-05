@@ -693,7 +693,7 @@ qboolean GL_CreateContext( void )
 	if(!( pwglMakeCurrent( glw_state.hDC, glw_state.hGLRC )))
 		return GL_DeleteContext();
 
-	if( host.developer <= 1 )
+	if( !Sys_CheckParm( "-gldebug" ) || host.developer < 1 ) // debug bit the kills perfomance
 		return true;
 
 	pwglCreateContextAttribsARB = GL_GetProcAddress( "wglCreateContextAttribsARB" );
