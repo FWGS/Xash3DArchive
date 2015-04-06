@@ -1850,6 +1850,9 @@ void GL_InitExtensions( void )
 	if( !GL_Support( GL_SGIS_MIPMAPS_EXT ))
 		GL_SetExtension( GL_ARB_TEXTURE_NPOT_EXT, false );
 
+	if( GL_Support( GL_TEXTURE_COMPRESSION_EXT ))
+		Image_AddCmdFlags( IL_DDS_HARDWARE );
+
 	glw_state.initialized = true;
 
 	tr.framecount = tr.visframecount = 1;

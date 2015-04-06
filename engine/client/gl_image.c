@@ -390,8 +390,10 @@ void R_TextureList_f( void )
 			Msg( "CI    " );
 			break;
 		case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+			Msg( "DXT1c " );
+			break;
 		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-			Msg( "DXT1  " );
+			Msg( "DXT1a " );
 			break;
 		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
 			Msg( "DXT3  " );
@@ -1017,6 +1019,193 @@ void GL_MakeLuminance( rgbdata_t *in )
 	}
 }
 
+static void GL_TextureImage( GLenum inFormat, GLenum outFormat, GLenum glTarget, GLint side, GLint level, GLint width, GLint height, GLint depth, qboolean subImage, size_t size, const void *data )
+{
+	GLint	dataType = GL_UNSIGNED_BYTE;
+
+	if( glTarget == GL_TEXTURE_1D )
+	{
+		if( subImage ) pglTexSubImage1D( glTarget, level, 0, width, inFormat, dataType, data );
+		else pglTexImage1D( glTarget, level, outFormat, width, 0, inFormat, dataType, data );
+	}
+	else if( glTarget == GL_TEXTURE_CUBE_MAP_ARB )
+	{
+		if( subImage ) pglTexSubImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, level, 0, 0, width, height, inFormat, dataType, data );
+		else pglTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, level, outFormat, width, height, 0, inFormat, dataType, data );
+	}
+	else if( glTarget == GL_TEXTURE_3D )
+	{
+		if( subImage ) pglTexSubImage3D( glTarget, level, 0, 0, 0, width, height, depth, inFormat, dataType, data );
+		else pglTexImage3D( glTarget, level, outFormat, width, height, depth, 0, inFormat, dataType, data );
+	}
+	else
+	{
+		if( subImage ) pglTexSubImage2D( glTarget, level, 0, 0, width, height, inFormat, dataType, data );
+		else pglTexImage2D( glTarget, level, outFormat, width, height, 0, inFormat, dataType, data );
+	}
+}
+
+static void GL_TextureImageDXT( GLenum format, GLenum glTarget, GLint side, GLint level, GLint width, GLint height, GLint depth, qboolean subImage, size_t size, const void *data )
+{
+	if( glTarget == GL_TEXTURE_1D )
+	{
+		if( subImage ) pglCompressedTexSubImage1DARB( glTarget, level, 0, width, format, size, data );
+		else pglCompressedTexImage1DARB( glTarget, level, format, width, 0, size, data );
+	}
+	else if( glTarget == GL_TEXTURE_CUBE_MAP_ARB )
+	{
+		if( subImage ) pglCompressedTexSubImage2DARB( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, level, 0, 0, width, height, format, size, data );
+		else pglCompressedTexImage2DARB( GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, level, format, width, height, 0, size, data );
+	}
+	else if( glTarget == GL_TEXTURE_3D )
+	{
+		if( subImage ) pglCompressedTexSubImage3DARB( glTarget, level, 0, 0, 0, width, height, depth, format, size, data );
+		else pglCompressedTexImage3DARB( glTarget, level, format, width, height, depth, 0, size, data );
+	}
+	else // 2D or RECT
+	{
+		if( subImage ) pglCompressedTexSubImage2DARB( glTarget, level, 0, 0, width, height, format, size, data );
+		else pglCompressedTexImage2DARB( glTarget, level, format, width, height, 0, size, data );
+	}
+}
+
+/*
+===============
+GL_UploadTextureDXT
+
+upload compressed texture into video memory
+===============
+*/
+static void GL_UploadTextureDXT( rgbdata_t *pic, gltexture_t *tex, qboolean subImage, imgfilter_t *filter )
+{
+	byte		*buf;
+	const byte	*bufend;
+	GLenum		inFormat, glTarget;
+	uint		width, height, depth;
+	int		texsize = 0, samples;
+	uint		i, j, s, numSides;
+	int		numMips, err;
+
+	ASSERT( pic != NULL && tex != NULL );
+
+	tex->srcWidth = tex->width = pic->width;
+	tex->srcHeight = tex->height = pic->height;
+	s = tex->srcWidth * tex->srcHeight;
+
+	tex->fogParams[0] = pic->fogParams[0];
+	tex->fogParams[1] = pic->fogParams[1];
+	tex->fogParams[2] = pic->fogParams[2];
+	tex->fogParams[3] = pic->fogParams[3];
+
+	// NOTE: normalmaps must be power of two or software mip generator will stop working
+	GL_RoundImageDimensions( &tex->width, &tex->height, tex->flags, ( tex->flags & TF_NORMALMAP ));
+
+	if( s&3 )
+	{
+		// will be resample, just tell me for debug targets
+		MsgDev( D_NOTE, "GL_Upload: %s s&3 [%d x %d]\n", tex->name, tex->srcWidth, tex->srcHeight );
+	}
+
+	// clear all the unsupported flags
+	tex->flags &= ~TF_KEEP_8BIT;
+	tex->flags &= ~TF_KEEP_RGBDATA;
+	tex->flags |= TF_NOPICMIP;
+
+	samples = GL_CalcTextureSamples( pic->flags );
+
+	if( pic->flags & IMAGE_HAS_ALPHA )
+		tex->flags |= TF_HAS_ALPHA;
+
+	if( !pic->numMips ) tex->flags |= TF_NOMIPMAP; // disable mipmapping by user request
+
+	// determine format
+	inFormat = PFDesc[pic->type].glFormat;
+
+	if( ImageDXT( pic->type ))
+		tex->format = inFormat;
+	else tex->format = GL_TextureFormat( tex, &samples );
+
+	if( !( tex->flags & TF_HAS_ALPHA ) && inFormat == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT )
+		tex->format = inFormat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT; // OpenGL hint
+
+	// determine target
+	tex->target = glTarget = GL_TEXTURE_2D;
+
+	numMips = (pic->numMips > 0) ? pic->numMips : 1;
+	numSides = 1;
+
+	if( pic->flags & IMAGE_CUBEMAP )
+	{
+		if( GL_Support( GL_TEXTURECUBEMAP_EXT ))
+		{		
+			numSides = 6;
+			tex->target = glTarget = GL_TEXTURE_CUBE_MAP_ARB;
+			tex->flags |= TF_CUBEMAP;
+
+			if( tex->flags & ( TF_BORDER|TF_ALPHA_BORDER ))
+			{
+				// don't use border for cubemaps
+				tex->flags &= ~(TF_BORDER|TF_ALPHA_BORDER);
+				tex->flags |= TF_CLAMP;
+			}
+		}
+		else
+		{
+			MsgDev( D_WARN, "GL_UploadTexture: cubemaps isn't supported, %s ignored\n", tex->name );
+			tex->flags &= ~TF_CUBEMAP;
+		}
+	}
+	else if( tex->flags & TF_TEXTURE_1D || pic->height <= 1 )
+	{
+		// determine target
+		tex->target = glTarget = GL_TEXTURE_1D;
+	}
+	else if( tex->flags & TF_TEXTURE_RECTANGLE )
+	{
+		if( glConfig.max_2d_rectangle_size )
+			tex->target = glTarget = glConfig.texRectangle;
+		// or leave as GL_TEXTURE_2D
+	}
+	else if( tex->flags & TF_TEXTURE_3D )
+	{
+		// determine target
+		tex->target = glTarget = GL_TEXTURE_3D;
+	}
+
+	pglBindTexture( tex->target, tex->texnum );
+
+	buf = pic->buffer;
+	bufend = pic->buffer + pic->size;
+	tex->size = pic->size;
+
+	// uploading texture into video memory
+	for( i = 0; i < numSides; i++ )
+	{
+		if( buf != NULL && buf >= bufend )
+			Host_Error( "GL_UploadTextureDXT: %s image buffer overflow\n", tex->name );
+
+		width = pic->width;
+		height = pic->height;
+		depth = pic->depth;
+
+		for( j = 0; j < numMips; j++ )
+		{
+			texsize = Image_DXTGetLinearSize( pic->type, width, height, depth );
+			if( ImageDXT( pic->type ))
+				GL_TextureImageDXT( inFormat, glTarget, i, j, width, height, depth, subImage, texsize, buf );
+			else GL_TextureImage( inFormat, tex->format, glTarget, i, j, width, height, depth, subImage, texsize, buf );
+
+			width = (width+1)>>1, height = (height+1)>>1;
+			buf += texsize; // move pointer
+
+			// catch possible errors
+			if(( err = pglGetError()) != GL_NO_ERROR )
+				MsgDev( D_ERROR, "GL_UploadTexture: error %x while uploading %s [%s]\n", err, tex->name, GL_Target( glTarget ));
+
+		}
+	}
+}
+
 /*
 ===============
 GL_UploadTexture
@@ -1032,6 +1221,13 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	uint		i, s, numSides, offset = 0, err;
 	int		texsize = 0, img_flags = 0, samples;
 	GLint		dataType = GL_UNSIGNED_BYTE;
+
+	if( pic->flags & IMAGE_DDS_FORMAT )
+	{
+		// special case for DDS textures
+		GL_UploadTextureDXT( pic, tex, subImage, filter );
+		return;
+	}
 
 	ASSERT( pic != NULL && tex != NULL );
 
@@ -1508,6 +1704,12 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 	if(!( image->flags & (TF_KEEP_RGBDATA|TF_KEEP_8BIT)) || !image->original )
 	{
 		MsgDev( D_ERROR, "GL_ProcessTexture: no input data for %s\n", image->name );
+		return;
+	}
+
+	if( ImageDXT( image->original->type ))
+	{
+		MsgDev( D_ERROR, "GL_ProcessTexture: can't process compressed texture %s\n", image->name );
 		return;
 	}
 
@@ -3542,10 +3744,19 @@ static rgbdata_t *R_LoadImage( char **script, const char *name, const byte *buf,
 	{	
 		// loading form disk
 		rgbdata_t	*image = FS_LoadImage( name, buf, size );
+
+		// we can't decompress DXT texture
+		if( image && ImageDXT( image->type ))
+		{
+			FS_FreeImage( image );
+			return NULL;
+		}
+
 		if( image ) *samples = GL_CalcTextureSamples( image->flags );
 
 		return image;
 	}
+
 	return NULL;
 }
 
