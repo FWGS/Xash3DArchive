@@ -1,3 +1,13 @@
+build 3000
+
+Render: new render info parm PARM_TEX_GLFORMAT for getting a real format for a given texture
+Server: added a engine memory allocations through internal mempool and function GetTextureData (a part of tracing alpha-textures)
+Client: clamping client pmove time if fps is too high
+Client: new fps counter-style that showing min and max values (cl_showfps 2 to enable)
+Render: get support for DDS textures (DXT1, DXT3, DXT5 and ARGB is allowed)
+Render: get support for floating depth-buffer texture (high prescision depth-buffer)
+
+
 build 2900
 
 Console: add detection for Paranoia 2 maps (show message in console)

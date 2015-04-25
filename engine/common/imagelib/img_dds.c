@@ -15,6 +15,85 @@ GNU General Public License for more details.
 
 #include "imagelib.h"
 
+qboolean Image_CheckDXT3Alpha( dds_t *hdr, byte *fin )
+{
+	uint	bitmask;
+	word	sAlpha;
+	byte	*alpha; 
+	int	x, y, i, j; 
+
+	// analyze quad 4x4
+	for( y = 0; y < 4; y += 4 )
+	{
+		for( x = 0; x < 4; x += 4 )
+		{
+			alpha = fin;
+			fin += 8;
+			bitmask = ((uint *)fin)[1];
+			fin += 8;
+
+			for( j = 0; j < 4; j++ )
+			{
+				sAlpha = alpha[2*j] + 256 * alpha[2*j+1];
+
+				for( i = 0; i < 4; i++ )
+				{
+					if((( x + i ) < hdr->dwWidth ) && (( y + j ) < hdr->dwHeight ))
+					{
+						if( sAlpha == 0 )
+							return true;
+					}
+					sAlpha >>= 4;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+qboolean Image_CheckDXT5Alpha( dds_t *hdr, byte *fin )
+{
+	uint	bits, bitmask;
+	byte	*alphamask; 
+	int	x, y, i, j; 
+
+	// analyze quad 4x4
+	for( y = 0; y < 4; y += 4 )
+	{
+		for( x = 0; x < 4; x += 4 )
+		{
+			if( y >= hdr->dwHeight || x >= hdr->dwWidth )
+				break;
+
+			alphamask = fin + 2;
+			fin += 8;
+
+			bitmask = ((uint *)fin)[1];
+			fin += 8;
+
+			// last three bytes
+			bits = (alphamask[3]) | (alphamask[4] << 8) | (alphamask[5] << 16);
+
+			for( j = 2; j < 4; j++ )
+			{
+				for( i = 0; i < 4; i++ )
+				{
+					// only put pixels out < width or height
+					if((( x + i ) < hdr->dwWidth ) && (( y + j ) < hdr->dwHeight ))
+					{
+						if( bits & 0x07 )
+							return true;
+					}
+					bits >>= 3;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+		
 void Image_DXTGetPixelFormat( dds_t *hdr )
 {
 	uint bits = hdr->dsPixelFormat.dwRGBBitCount;
@@ -223,6 +302,16 @@ qboolean Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
 	image.size = Image_DXTCalcSize( name, &header, filesize - 128 ); 
 	if( image.size == 0 ) return false; // just in case
 	fin = (byte *)(buffer + sizeof( dds_t ));
+
+	// check for real alpha-pixels
+	if( image.type == PF_DXT3 && Image_CheckDXT3Alpha( &header, fin ))
+	{
+		image.flags |= IMAGE_HAS_ALPHA;
+	}
+	else if( image.type == PF_DXT5 && Image_CheckDXT5Alpha( &header, fin ))
+	{
+		image.flags |= IMAGE_HAS_ALPHA;
+	}
 
 	// dds files will be uncompressed on a render. requires minimal of info for set this
 	image.rgba = Mem_Alloc( host.imagepool, image.size ); 

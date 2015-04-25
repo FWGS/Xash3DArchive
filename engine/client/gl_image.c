@@ -440,8 +440,12 @@ void R_TextureList_f( void )
 			Msg( "I8    " );
 			break;
 		case GL_DEPTH_COMPONENT:
-			Msg( "DEPTH " );
+		case GL_DEPTH_COMPONENT24:
+			Msg( "DEPTH24" );
 			break;			
+		case GL_DEPTH_COMPONENT32F:
+			Msg( "DEPTH32" );
+			break;
 		case GL_LUMINANCE16F_ARB:
 			Msg( "L16F  " );
 			break;
@@ -660,7 +664,9 @@ static GLenum GL_TextureFormat( gltexture_t *tex, int *samples )
 	// set texture format
 	if( tex->flags & TF_DEPTHMAP )
 	{
-		format = GL_DEPTH_COMPONENT;
+		if( tex->flags & TF_FLOAT && GL_Support( GL_ARB_DEPTH_FLOAT_EXT ))
+			format = GL_DEPTH_COMPONENT32F;
+		else format = GL_DEPTH_COMPONENT24;
 		tex->flags &= ~TF_INTENSITY;
 	}
 	else if( tex->flags & TF_FLOAT && GL_Support( GL_ARB_TEXTURE_FLOAT_EXT ))
@@ -1142,9 +1148,9 @@ static void GL_UploadTextureDXT( rgbdata_t *pic, gltexture_t *tex, qboolean subI
 			tex->target = glTarget = GL_TEXTURE_CUBE_MAP_ARB;
 			tex->flags |= TF_CUBEMAP;
 
-			if( tex->flags & ( TF_BORDER|TF_ALPHA_BORDER ))
+			if( !GL_Support( GL_ARB_SEAMLESS_CUBEMAP ) && ( tex->flags & ( TF_BORDER|TF_ALPHA_BORDER )))
 			{
-				// don't use border for cubemaps
+				// don't use border for cubemaps (but allow for seamless cubemaps)
 				tex->flags &= ~(TF_BORDER|TF_ALPHA_BORDER);
 				tex->flags |= TF_CLAMP;
 			}
@@ -1297,11 +1303,11 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	tex->target = glTarget = GL_TEXTURE_2D;
 	numSides = 1;
 
-	if( tex->flags & TF_DEPTHMAP )
-	{
-		inFormat = GL_DEPTH_COMPONENT;
+	if( tex->flags & TF_FLOATDATA )
 		dataType = GL_FLOAT;
-	}
+
+	if( tex->flags & TF_DEPTHMAP )
+		inFormat = GL_DEPTH_COMPONENT;
 
 	if( pic->flags & IMAGE_CUBEMAP )
 	{
@@ -1311,7 +1317,7 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 			tex->target = glTarget = GL_TEXTURE_CUBE_MAP_ARB;
 			tex->flags |= TF_CUBEMAP;
 
-			if( tex->flags & ( TF_BORDER|TF_ALPHA_BORDER ))
+			if( !GL_Support( GL_ARB_SEAMLESS_CUBEMAP ) && ( tex->flags & ( TF_BORDER|TF_ALPHA_BORDER )))
 			{
 				// don't use border for cubemaps
 				tex->flags &= ~(TF_BORDER|TF_ALPHA_BORDER);
@@ -4392,6 +4398,40 @@ static rgbdata_t *R_InitAlphaContrast( texFlags_t *flags )
 
 /*
 ==================
+R_InitVSDCTCubemap
+==================
+*/
+static rgbdata_t *R_InitVSDCTCubemap( texFlags_t *flags )
+{
+	// maps to a 2x3 texture rectangle with normalized coordinates
+	// +-
+	// XX
+	// YY
+	// ZZ
+	// stores abs(dir.xy), offset.xy/2.5
+	byte data[4*6] =
+	{
+		0xFF, 0x00, 0x33, 0x33, // +X: <1, 0>, <0.5, 0.5>
+		0xFF, 0x00, 0x99, 0x33, // -X: <1, 0>, <1.5, 0.5>
+		0x00, 0xFF, 0x33, 0x99, // +Y: <0, 1>, <0.5, 1.5>
+		0x00, 0xFF, 0x99, 0x99, // -Y: <0, 1>, <1.5, 1.5>
+		0x00, 0x00, 0x33, 0xFF, // +Z: <0, 0>, <0.5, 2.5>
+		0x00, 0x00, 0x99, 0xFF, // -Z: <0, 0>, <1.5, 2.5>
+	};
+
+	*flags = (TF_NOPICMIP|TF_UNCOMPRESSED|TF_NEAREST|TF_CUBEMAP|TF_CLAMP);
+
+	r_image.width = r_image.height = 1;
+	r_image.size = r_image.width * r_image.height * 4 * 6;
+	r_image.flags |= (IMAGE_CUBEMAP|IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA); // yes it's cubemap
+	r_image.buffer = data;
+	r_image.type = PF_RGBA_32;
+
+	return &r_image;
+}
+
+/*
+==================
 R_InitBuiltinTextures
 ==================
 */
@@ -4431,6 +4471,7 @@ static void R_InitBuiltinTextures( void )
 	{ "*atten3D", &tr.attenuationTexture3D, R_InitAttenTexture3D, TEX_SYSTEM },
 	{ "*sky", &tr.skyTexture, R_InitSkyTexture, TEX_SYSTEM },
 	{ "*alphaContrast", &tr.acontTexture, R_InitAlphaContrast, TEX_SYSTEM },
+	{ "*vsdct", &tr.vsdctCubeTexture, R_InitVSDCTCubemap, TEX_SYSTEM },
 	{ NULL, NULL, NULL }
 	};
 	size_t	i, num_builtin_textures = sizeof( textures ) / sizeof( textures[0] ) - 1;
