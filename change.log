@@ -6,7 +6,17 @@ Client: clamping client pmove time if fps is too high
 Client: new fps counter-style that showing min and max values (cl_showfps 2 to enable)
 Render: get support for DDS textures (DXT1, DXT3, DXT5 and ARGB is allowed)
 Render: get support for floating depth-buffer texture (high prescision depth-buffer)
-
+Render: added VSDCT internal texture
+Render: add support for seamless cubemaps
+Render: fullscreen resolution auto-detect on first launch
+Render: added resolution 1600x900
+Render: new command line option -gldebug (enable internal GL-driver debug info)
+Engine: fix bug with CRC calculation on BSP31 format (thx [WPMG]PRoSToTeM@)
+FS: additional check to prevent error "Mem_Free: not allocated or double freed (free at filesystem.c:1489)"
+FS: fix FS_Eof function (thx [WPMG]PRoSToTeM@)
+VGUI: handle ESC key while VGUI is shown
+Engine: allows to load "deluxedata" from base folder even if a map placed in game folder (probably it was a stupid limitation)
+Server: replace Host_Error "ED_Alloc: no free edicts" with Sys_Error to prevent possible troubles
 
 build 2900
 
