@@ -1,3 +1,12 @@
+build 3030
+
+Client: remove demoheader.tmp while engine is shutting down
+Render: allow .dds format for detail textures
+Render: get support up to 16384 verts per submodel for studio models
+Render: disable vertical sync while level is loading
+ImageLib: allow support big textures up to 8192x8192
+ImageLib: rewrited code for detecting alpha in DXT3, DXT5 formats
+
 build 3000
 
 Render: new render info parm PARM_TEX_GLFORMAT for getting a real format for a given texture
