@@ -38,7 +38,7 @@ qboolean CL_IsPredicted( void )
 	if( !cl_predict->integer || !cl.frame.valid )
 		return false;
 
-	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_sequence ) >= ( CL_UPDATE_BACKUP - 1 ))
+	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= ( CL_UPDATE_BACKUP - 1 ))
 		return false;
 
 	return true;
@@ -810,23 +810,7 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	}
 
 	// update local player states
-	if( player != NULL )
-	{
-		entity_state_t	*ps, *pps;
-		clientdata_t	*pcd, *ppcd;
-		weapon_data_t	*wd, *pwd;
-
-		pps = &player->curstate;
-		ppcd = &newframe->local.client;
-		pwd = newframe->local.weapondata;
-
-		ps = &cl.predict[cl.predictcount & CL_UPDATE_MASK].playerstate;
-		pcd = &cl.predict[cl.predictcount & CL_UPDATE_MASK].client;
-		wd = cl.predict[cl.predictcount & CL_UPDATE_MASK].weapondata;
-		
-		clgame.dllFuncs.pfnTxferPredictionData( ps, pps, pcd, ppcd, wd, pwd ); 
-		clgame.dllFuncs.pfnTxferLocalOverrides( &player->curstate, pcd );
-	}
+	clgame.dllFuncs.pfnTxferLocalOverrides( &player->curstate, &newframe->local.client );
 
 	// update state for all players
 	for( i = 0; i < cl.maxclients; i++ )
@@ -838,7 +822,6 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	}
 
 	cl.frame = *newframe;
-	cl.predict[cl.predictcount & CL_UPDATE_MASK] = cl.frame.local;
 }
 
 /*
