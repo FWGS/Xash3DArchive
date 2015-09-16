@@ -1,3 +1,10 @@
+build 3145
+
+Engine: add support for studiomodels with fixed texcoords multiplier (a studiomodel format extension)
+Engine: first experimental implementation of client movement predicting code (thx SovietCoder)
+Engine: first experimental implementation of client movement interpolation code (thx SovietCoder)
+Engine: some small bugfixes
+
 build 3030
 
 Client: remove demoheader.tmp while engine is shutting down
