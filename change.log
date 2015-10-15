@@ -1,3 +1,8 @@
+build 3153
+
+Render: RenderAPI update. New parm PARM_REBUILD_GAMMA to differentiate from map restart or change level when called from GL_BuildLightmaps
+GameUI: increased slots for savedgames\multiplayer maps up to 900
+
 build 3145
 
 Engine: add support for studiomodels with fixed texcoords multiplier (a studiomodel format extension)
