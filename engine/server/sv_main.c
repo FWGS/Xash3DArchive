@@ -583,7 +583,7 @@ void Master_Add( void )
 	if( !NET_StringToAdr( MASTERSERVER_ADR, &adr ))
 		MsgDev( D_INFO, "Can't resolve adr: %s\n", MASTERSERVER_ADR );
 
-	NET_SendPacket( NS_SERVER, 2, "\x4D\xFF", adr );
+	NET_SendPacket( NS_SERVER, 1, "q", adr );
 }
 
 /*
@@ -620,6 +620,14 @@ Informs all masters that this server is going down
 */
 void Master_Shutdown( void )
 {
+	netadr_t	adr;
+
+	NET_Config( true ); // allow remote
+
+	if( !NET_StringToAdr( MASTERSERVER_ADR, &adr ))
+		MsgDev( D_INFO, "Can't resolve addr: %s\n", MASTERSERVER_ADR );
+
+	NET_SendPacket( NS_SERVER, 2, "\x62\x0A", adr );
 }
 
 //============================================================================
@@ -785,10 +793,17 @@ void SV_Shutdown( qboolean reconnect )
 	// already freed
 	if( !SV_Active( )) return;
 
-	if( host.type == HOST_DEDICATED ) MsgDev( D_INFO, "SV_Shutdown: %s\n", host.finalmsg );
-	if( svs.clients ) SV_FinalMessage( host.finalmsg, reconnect );
+	// rcon will be disconnected
+	SV_EndRedirect();
 
-	Master_Shutdown();
+	if( host.type == HOST_DEDICATED )
+		MsgDev( D_INFO, "SV_Shutdown: %s\n", host.finalmsg );
+
+	if( svs.clients )
+		SV_FinalMessage( host.finalmsg, reconnect );
+
+	if( public_server->integer && sv_maxclients->integer != 1 )
+		Master_Shutdown();
 
 	if( !reconnect ) SV_UnloadProgs ();
 	else SV_DeactivateServer ();

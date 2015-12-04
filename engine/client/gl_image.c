@@ -1228,14 +1228,14 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	int		texsize = 0, img_flags = 0, samples;
 	GLint		dataType = GL_UNSIGNED_BYTE;
 
+	ASSERT( pic != NULL && tex != NULL );
+
 	if( pic->flags & IMAGE_DDS_FORMAT )
 	{
 		// special case for DDS textures
 		GL_UploadTextureDXT( pic, tex, subImage, filter );
 		return;
 	}
-
-	ASSERT( pic != NULL && tex != NULL );
 
 	tex->srcWidth = tex->width = pic->width;
 	tex->srcHeight = tex->height = pic->height;
