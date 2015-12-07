@@ -289,6 +289,9 @@ void SV_DisconnectClient( edict_t *pClient )
 		Mem_Free( pClient->pvPrivateData );
 		pClient->pvPrivateData = NULL;
 	}
+
+	// invalidate serial number
+	pClient->serialnumber++;
 }
 
 /*
@@ -809,16 +812,29 @@ recalc ping on current client
 int SV_CalcPing( sv_client_t *cl )
 {
 	float		ping = 0;
-	int		i, count;
+	int		i, count, back;
 	client_frame_t	*frame;
 
 	// bots don't have a real ping
-	if( cl->fakeclient )
+	if( cl->fakeclient || !cl->frames )
 		return 5;
 
 	count = 0;
 
-	for( i = 0; i < SV_UPDATE_BACKUP; i++ )
+	if ( SV_UPDATE_BACKUP <= 31 )
+	{
+		back = SV_UPDATE_BACKUP / 2;
+		if ( back <= 0 )
+		{
+			return 0;
+		}
+	}
+	else
+	{
+		back = 16;
+	}
+
+	for( i = 0; i < back; i++ )
 	{
 		frame = &cl->frames[(cl->netchan.incoming_acknowledged - (i + 1)) & SV_UPDATE_MASK];
 
