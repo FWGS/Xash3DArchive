@@ -2270,6 +2270,7 @@ FIXME: finalize
 */
 void pfnSetUpPlayerPrediction( int dopred, int bIncludeLocalClient )
 {
+#if 0
 	entity_state_t	*playerstate = cl.frames[cl.parsecountmod].playerstate;
 	predicted_player_t	*player = cls.predicted_players;
 	cl_entity_t	*clent;
@@ -2323,6 +2324,7 @@ void pfnSetUpPlayerPrediction( int dopred, int bIncludeLocalClient )
 			player->angles[2] = cl.frames[0].playerstate[0].angles[2] + v12;
 		}
 	}
+#endif
 }
 
 /*
