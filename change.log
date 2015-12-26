@@ -1,3 +1,17 @@
+build 3224
+
+Client: make players solid for prediction code
+Client: change out of band request to make compatibility with custom master-servers
+Client: reject triggers and other like things for prediction code
+Client: fix the potential crash in prediction code
+Render: fix the potential crash in image loader
+Client: fix thirdperson camera culling
+Console: experimental fix for console problems with word-wrapping
+Network: fix bug in BF_WriteBitAngle function (thx mittorn)
+Network: rewrite clamping bounds for delta-variables (it was incorrectly)
+Network: change address of master server (now master is working)
+Server: some changes for client connection\disconnection to prevent possible errors or crash the server
+
 build 3153
 
 Render: RenderAPI update. New parm PARM_REBUILD_GAMMA to differentiate from map restart or change level when called from GL_BuildLightmaps

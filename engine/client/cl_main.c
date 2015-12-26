@@ -341,9 +341,8 @@ void CL_CreateCmd( void )
 		int frame = cls.netchan.outgoing_sequence & CL_UPDATE_MASK;
 
 		cl.refdef.cmd = &cl.cmds[frame];
+		cl.runfuncs[frame] = false;
 		*cl.refdef.cmd = cmd;
-
-		cl.runfuncs[frame] = TRUE;
 	}
 }
 
@@ -490,6 +489,7 @@ void CL_WritePacket( void )
 		for( i = numcmds - 1; i >= 0; i-- )
 		{
 			cmdnumber = ( cls.netchan.outgoing_sequence - i ) & CL_UPDATE_MASK;
+			if( i == 0 ) cl.runfuncs[cmdnumber] = true; // only last cmd allow to run funcs
 
 			to = cmdnumber;
 			CL_WriteUsercmd( &buf, from, to );

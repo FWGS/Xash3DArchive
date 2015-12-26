@@ -155,7 +155,7 @@ void CL_AddLinksToPmove( void )
 		if( check->curstate.solid == SOLID_TRIGGER )
 			continue;
 
-		if( ( check->curstate.owner > 0) && cl.playernum == check->curstate.owner -1 )
+		if( ( check->curstate.owner > 0) && cl.playernum == ( check->curstate.owner - 1 ))
 			continue;
 
 		// players will be added later
@@ -838,6 +838,23 @@ void CL_RunUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qboole
 }
 
 /*
+===========
+CL_PostRunCmd
+
+used while predicting is off but local weapons is on
+===========
+*/
+void CL_PostRunCmd( usercmd_t *ucmd, int random_seed )
+{
+	local_state_t	from, to;
+
+	from = to = cl.frame.local;
+	from.playerstate = cl.frame.playerstate[cl.playernum];
+	to.playerstate = cl.frame.playerstate[cl.playernum];
+	clgame.dllFuncs.pfnPostRunCmd( &from, &to, ucmd, true, cl.time, random_seed );
+}
+
+/*
 =================
 CL_PredictMovement
 
@@ -870,11 +887,8 @@ void CL_PredictMovement( void )
 
 	if( !CL_IsPredicted( ))
 	{	
-		local_state_t t1, t2;
-		Q_memset( &t1, 0, sizeof( local_state_t ));
-		Q_memset( &t2, 0, sizeof( local_state_t ));
-
-		clgame.dllFuncs.pfnPostRunCmd( &t1, &t2, cl.refdef.cmd, false, cl.time, cls.lastoutgoingcommand );
+		// run commands even if client predicting is disabled - client expected it
+		CL_PostRunCmd( cl.refdef.cmd, cls.lastoutgoingcommand );
 		return;
 	}
 
