@@ -2997,7 +2997,7 @@ Mod_LoadWorld
 Loads in the map and all submodels
 ==================
 */
-void Mod_LoadWorld( const char *name, uint *checksum, qboolean force )
+void Mod_LoadWorld( const char *name, uint *checksum, qboolean multiplayer )
 {
 	int	i;
 
@@ -3011,8 +3011,11 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean force )
 		world.block_size = BLOCK_SIZE_MAX;
 	else world.block_size = BLOCK_SIZE_DEFAULT;
 
-	if( !Q_stricmp( cm_models[0].name, name ) && !force )
+	if( !Q_stricmp( cm_models[0].name, name ))
 	{
+		// recalc the checksum in force-mode
+		CRC32_MapFile( &world.checksum, worldmodel->name, multiplayer );
+
 		// singleplayer mode: server already loaded map
 		if( checksum ) *checksum = world.checksum;
 
@@ -3038,7 +3041,7 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean force )
 	// load the newmap
 	world.loading = true;
 	worldmodel = Mod_ForName( name, true );
-	CRC32_MapFile( &world.checksum, worldmodel->name );
+	CRC32_MapFile( &world.checksum, worldmodel->name, multiplayer );
 	world.loading = false;
 
 	if( checksum ) *checksum = world.checksum;

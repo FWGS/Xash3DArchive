@@ -762,13 +762,14 @@ void CL_RunUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qboole
 	pmove->watertype = fcd->watertype;
 	pmove->onground = fcd->flags & FL_ONGROUND;
 	pmove->deadflag = fcd->deadflag;
-	VectorCopy(fcd->velocity, pmove->velocity);
-	VectorCopy(fcd->view_ofs, pmove->view_ofs);
-	VectorCopy(fs->origin, pmove->origin);
-	VectorCopy(fs->basevelocity, pmove->basevelocity);
-	VectorCopy(fcd->punchangle, pmove->punchangle);
-	VectorCopy(fs->angles, pmove->angles);
-	VectorCopy(fs->angles, pmove->oldangles);
+	VectorCopy( fcd->velocity, pmove->velocity );
+	VectorCopy( fcd->view_ofs, pmove->view_ofs );
+	VectorCopy( fs->origin, pmove->origin );
+	VectorCopy( fs->basevelocity, pmove->basevelocity );
+	VectorCopy( fcd->punchangle, pmove->punchangle );
+	VectorCopy( fs->angles, pmove->angles );
+	pmove->angles[PITCH] = -( fs->angles[PITCH] * 3.0f );	// restore viewangle pitch
+	VectorCopy( pmove->angles, pmove->oldangles );
 	pmove->friction = fs->friction;
 	pmove->usehull = fs->usehull;
 	pmove->oldbuttons = fs->oldbuttons;
@@ -791,10 +792,10 @@ void CL_RunUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qboole
 	pmove->fuser2 = fcd->fuser2;
 	pmove->fuser3 = fcd->fuser3;
 	pmove->fuser4 = fcd->fuser4;
-	VectorCopy(fcd->vuser1, pmove->vuser1);
-	VectorCopy(fcd->vuser2, pmove->vuser2);
-	VectorCopy(fcd->vuser3, pmove->vuser3);
-	VectorCopy(fcd->vuser4, pmove->vuser4);
+	VectorCopy( fcd->vuser1, pmove->vuser1 );
+	VectorCopy( fcd->vuser2, pmove->vuser2 );
+	VectorCopy( fcd->vuser3, pmove->vuser3 );
+	VectorCopy( fcd->vuser4, pmove->vuser4 );
 
 	clgame.dllFuncs.pfnPlayerMove( pmove, false );
 
@@ -808,11 +809,13 @@ void CL_RunUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qboole
 	tcd->waterlevel = pmove->waterlevel;
 	tcd->maxspeed = pmove->clientmaxspeed;
 	tcd->deadflag = pmove->deadflag;
-	VectorCopy(pmove->velocity, tcd->velocity);
-	VectorCopy(pmove->view_ofs, tcd->view_ofs);
-	VectorCopy(pmove->origin, ts->origin);
-	VectorCopy(pmove->basevelocity, ts->basevelocity);
-	VectorCopy(pmove->punchangle, tcd->punchangle);
+	VectorCopy( pmove->velocity, tcd->velocity );
+	VectorCopy( pmove->view_ofs, tcd->view_ofs );
+	VectorCopy( pmove->origin, ts->origin );
+	VectorCopy( pmove->basevelocity, ts->basevelocity );
+	VectorCopy( pmove->punchangle, tcd->punchangle );
+	VectorCopy( pmove->angles, ts->angles );
+	ts->angles[PITCH] = -( pmove->angles[PITCH] / 3.0f );
 	ts->oldbuttons = pmove->oldbuttons;
 	ts->friction = pmove->friction;
 	ts->movetype = pmove->movetype;

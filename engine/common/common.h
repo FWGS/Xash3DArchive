@@ -716,7 +716,7 @@ void CRC32_ProcessBuffer( dword *pulCRC, const void *pBuffer, int nBuffer );
 void CRC32_ProcessByte( dword *pulCRC, byte ch );
 void CRC32_Final( dword *pulCRC );
 qboolean CRC32_File( dword *crcvalue, const char *filename );
-qboolean CRC32_MapFile( dword *crcvalue, const char *filename );
+qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multiplayer );
 void MD5Init( MD5Context_t *ctx );
 void MD5Update( MD5Context_t *ctx, const byte *buf, uint len );
 void MD5Final( byte digest[16], MD5Context_t *ctx );

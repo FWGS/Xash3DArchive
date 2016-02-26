@@ -1820,12 +1820,12 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 			Q_snprintf( temp2, sizeof( temp2 ), "%s (%u)", temp1, dupc++ );
 			Info_SetValueForKey( cl->userinfo, "name", temp2 );
 			val = Info_ValueForKey( cl->userinfo, "name" );
-			Q_strcpy( cl->name, temp2 );
+			Q_strncpy( cl->name, temp2, sizeof( cl->name ));
 		}
 		else
 		{
 			if( dupc == 1 ) // unchanged
-				Q_strcpy( cl->name, temp1 );
+				Q_strncpy( cl->name, temp1, sizeof( cl->name ));
 			break;
 		}
 	}

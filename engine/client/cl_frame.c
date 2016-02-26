@@ -574,8 +574,8 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean n
 	{
 		// client got new packet, shuffle animtimes
 		ent->latched.prevanimtime = ent->curstate.animtime;
-		VectorCopy( newstate->origin, ent->latched.prevorigin );
-		VectorCopy( newstate->angles, ent->latched.prevangles );
+		VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
+		VectorCopy( ent->curstate.angles, ent->latched.prevangles );
 
 		for( i = 0; i < 4; i++ )
 			ent->latched.prevcontroller[i] = newstate->controller[i];
@@ -591,12 +591,6 @@ void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean n
 	// copy blends
 	for( i = 0; i < 2; i++ )
 		ent->latched.prevblending[i] = ent->curstate.blending[i];
-
-	if( !VectorCompare( newstate->origin, ent->curstate.origin ))
-		VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
-
-	if( !VectorCompare( newstate->angles, ent->curstate.angles ))
-		VectorCopy( ent->curstate.angles, ent->latched.prevangles );
 }
 
 /*
