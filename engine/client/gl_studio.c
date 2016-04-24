@@ -3373,9 +3373,6 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	imgfilter_t	*filter = NULL;
 	texture_t		*tx = NULL;
 	
-	if( ptexture->flags & STUDIO_NF_TRANSPARENT )
-		flags |= (TF_CLAMP|TF_NOMIPMAP);
-
 	if( ptexture->flags & STUDIO_NF_NORMALMAP )
 		flags |= (TF_NORMALMAP);
 

@@ -357,8 +357,8 @@ void CL_CreateCmd( void )
 	pcmd->cmd.lerp_msec = cl_interp->value * 1000;
 	pcmd->cmd.lerp_msec = bound( 0, cmd.lerp_msec, 250 ); 
 
-	V_ProcessOverviewCmds( &cmd );
-	V_ProcessShowTexturesCmds( &cmd );
+	V_ProcessOverviewCmds( &pcmd->cmd );
+	V_ProcessShowTexturesCmds( &pcmd->cmd );
 
 	if(( cl.background && !cls.demoplayback ) || gl_overview->integer || cls.changelevel )
 	{
