@@ -395,6 +395,11 @@ void CL_ParseEvent( sizebuf_t *msg )
 				args.angles[PITCH] = -state->angles[PITCH] * 3;
 				args.angles[YAW] = state->angles[YAW];
 				args.angles[ROLL] = 0; // no roll
+
+				if( VectorIsNull( args.origin ))
+					VectorCopy( state->origin, args.origin );
+				if( VectorIsNull( args.velocity ))
+					VectorCopy( state->velocity, args.velocity );
 			}
 		}
 		else if( state )
@@ -443,6 +448,13 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 		MsgDev( D_ERROR, "CL_PlaybackEvent: invalid eventindex %i\n", eventindex );
 		return;
 	}
+
+	if( flags & FEV_SERVER )
+	{
+		MsgDev( D_WARN, "CL_PlaybackEvent: event with FEV_SERVER flag!\n" );
+		return;
+	}
+
 	// check event for precached
 	if( !CL_EventIndex( cl.event_precache[eventindex] ))
 	{
@@ -459,15 +471,17 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 	args.flags = 0;
 	args.entindex = invokerIndex;
 
-// TODO: restore checks when predicting will be done
-//	if( !angles || VectorIsNull( angles ))
+	if( !angles || VectorIsNull( angles ))
 		VectorCopy( cl.refdef.cl_viewangles, args.angles );
+	else VectorCopy( angles, args.angles );
 
-//	if( !origin || VectorIsNull( origin ))
+	if( !origin || VectorIsNull( origin ))
 		VectorCopy( cl.frame.client.origin, args.origin );
+	else VectorCopy( origin, args.origin );
 
 	VectorCopy( cl.frame.client.velocity, args.velocity );
-	args.ducking = cl.frame.client.bInDuck;
+	args.ducking = (cl.frame.playerstate[cl.playernum].usehull == 1);
+//	args.ducking = cl.frame.client.bInDuck;
 
 	args.fparam1 = fparam1;
 	args.fparam2 = fparam2;

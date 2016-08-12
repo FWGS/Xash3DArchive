@@ -3057,11 +3057,17 @@ char W_HintFromSuf( const char *lumpname )
 {
 	char		barename[64];
 	char		suffix[8];
+	size_t		namelen;
 	const wadtype_t	*hint;
 
 	// trying to extract hint from the name
 	FS_FileBase( lumpname, barename );
-	Q_strncpy( suffix, barename + Q_strlen( barename ) - HINT_NAMELEN, sizeof( suffix ));
+	namelen = Q_strlen( barename );
+
+	if( namelen <= HINT_NAMELEN )
+		return IMG_DIFFUSE;
+
+	Q_strncpy( suffix, barename + namelen - HINT_NAMELEN, sizeof( suffix ));
 
 	// we not known about filetype, so match only by filename
 	for( hint = wad_hints; hint->ext; hint++ )
@@ -3079,6 +3085,7 @@ static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char match
 	char		img_type = IMG_DIFFUSE;
 	char		barename[64], suffix[8];
 	int		left, right;
+	size_t		namelen;
 	const wadtype_t	*hint;
 
 	if( !wad || !wad->lumps || matchtype == TYP_NONE )
@@ -3086,20 +3093,25 @@ static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char match
 
 	// trying to extract hint from the name
 	FS_FileBase( name, barename );
-	Q_strncpy( suffix, barename + Q_strlen( barename ) - HINT_NAMELEN, sizeof( suffix ));
+	namelen = Q_strlen( barename );
 
-	// we not known about filetype, so match only by filename
-	for( hint = wad_hints; hint->ext; hint++ )
+	if( namelen > HINT_NAMELEN )
 	{
-		if( !Q_stricmp( suffix, hint->ext ))
-		{
-			img_type = hint->type;
-			break;
-		}
-	}
+		Q_strncpy( suffix, barename + namelen - HINT_NAMELEN, sizeof( suffix ));
 
-	if( img_type != IMG_DIFFUSE )
-		barename[Q_strlen( barename ) - HINT_NAMELEN] = '\0'; // kill the suffix
+		// we not known about filetype, so match only by filename
+		for( hint = wad_hints; hint->ext; hint++ )
+		{
+			if( !Q_stricmp( suffix, hint->ext ))
+			{
+				img_type = hint->type;
+				break;
+			}
+		}
+
+		if( img_type != IMG_DIFFUSE )
+			barename[namelen - HINT_NAMELEN] = '\0'; // kill the suffix
+	}
 
 	// look for the file (binary search)
 	left = 0;

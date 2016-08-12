@@ -550,9 +550,10 @@ static const char *pfnTraceTexture( int ground, float *vstart, float *vend )
 
 static void pfnPlaySound( int channel, const char *sample, float volume, float attenuation, int fFlags, int pitch )
 {
-	sound_t	snd = S_RegisterSound( sample );
+	if( !clgame.pmove->runfuncs )
+		return;
 
-	S_StartSound( NULL, clgame.pmove->player_index + 1, channel, snd, volume, attenuation, pitch, fFlags );
+	S_StartSound( NULL, clgame.pmove->player_index + 1, channel, S_RegisterSound( sample ), volume, attenuation, pitch, fFlags );
 }
 
 static void pfnPlaybackEventFull( int flags, int clientindex, word eventindex, float delay, float *origin,
@@ -1007,5 +1008,11 @@ void CL_PredictMovement( void )
 		VectorCopy( to->client.velocity, cl.predicted_velocity );
 		VectorCopy( to->client.view_ofs, cl.predicted_viewofs );
 		VectorCopy( to->client.punchangle, cl.predicted_punchangle );
+
+		cl.predicted_viewmodel = to->client.viewmodel;
+		cl.scr_fov = to->client.fov;
+
+		if( cl.scr_fov < 1.0f || cl.scr_fov > 179.0f )
+			cl.scr_fov = 90.0f;
 	}
 }

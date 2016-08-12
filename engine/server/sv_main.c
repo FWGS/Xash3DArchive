@@ -329,7 +329,22 @@ void SV_ReadPackets( void )
 		// check for connectionless packet (0xffffffff) first
 		if( BF_GetMaxBytes( &net_message ) >= 4 && *(int *)net_message.pData == -1 )
 		{
-			SV_ConnectionlessPacket( net_from, &net_message );
+			if( !svs.initialized )
+			{
+				char	*args, *c;
+
+				BF_Clear( &net_message  );
+				BF_ReadLong( &net_message  );// skip the -1 marker
+
+				args = BF_ReadStringLine( &net_message  );
+				Cmd_TokenizeString( args );
+				c = Cmd_Argv( 0 );
+
+				if( !Q_strcmp( c, "rcon" ))
+					SV_RemoteCommand( net_from, &net_message );
+			}
+			else SV_ConnectionlessPacket( net_from, &net_message );
+
 			continue;
 		}
 

@@ -163,6 +163,12 @@ typedef struct
 
 	cl_entity_t	*world;
 	model_t		*worldmodel;			// pointer to world
+
+	// weapon predict stuff
+	float		scr_fov;
+	int		predicted_viewmodel;
+	float		weaponstarttime;
+	int		weaponsequence;
 } client_t;
 
 /*
@@ -528,6 +534,7 @@ extern convar_t	*cl_lightstyle_lerping;
 extern convar_t	*cl_draw_particles;
 extern convar_t	*cl_levelshot_name;
 extern convar_t	*cl_draw_beams;
+extern convar_t	*cl_lw;		// local weapons
 extern convar_t	*scr_centertime;
 extern convar_t	*scr_viewsize;
 extern convar_t	*scr_download;

@@ -210,7 +210,7 @@ void GL_TexFilter( gltexture_t *tex, qboolean update )
 	if( tex->flags & ( TF_BORDER|TF_ALPHA_BORDER ) && !GL_Support( GL_CLAMP_TEXBORDER_EXT ))
 	{
 		// border is not support, use clamp instead
-		tex->flags &= ~(TF_BORDER||TF_ALPHA_BORDER);
+		tex->flags &= ~(TF_BORDER|TF_ALPHA_BORDER);
 		tex->flags |= TF_CLAMP;
 	}
 
@@ -1777,7 +1777,7 @@ void GL_FreeImage( const char *name )
 
 	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
-		MsgDev( D_ERROR, "GL_FreeImage: too long name %s\n", name, sizeof( r_textures->name ));
+		MsgDev( D_ERROR, "GL_FreeImage: too long name %s\n", name );
 		return;
 	}
 

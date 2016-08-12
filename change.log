@@ -1,5 +1,20 @@
 build 3366
 
+Render: get support for custom DXT encoding (custom renderers only)
+Render: remove image program stuff (just not used)
+Engine: adding support for new wad filetypes (like DDS images) and wad imagetypes (normalmap, glossmap etc)
+Render: implement tiling on the studiomodels
+Client: do revision of predicting implementation, fix errors, more clean code
+Client: implement prediction error to avoid ugly blinking view on moving platforms when predicting is enabled
+Render: fixup the DDS loading code (invalid calc for mip-sizes)
+Client: fixup parser of detailtextures when texturename contain symbol '{'
+Render: added experimental hint for Nvidia drivers for force select Nvidia videocard when engine is running
+Engine: rewrote condition to calculate level CRC (singleplayer or multiplayer)
+Engine: added cvar r_wadtextures like in HL. First load textures from the wad, then from BSP
+Server: fix bug with cl_updaterate variable (always get default values if not changed by user)
+Server: recalc the ping time correctly
+Server: fix bug with too long player name
+GameUI: fix bug with 4-bit bmps buttons (image cutter)
 
 build 3224
 

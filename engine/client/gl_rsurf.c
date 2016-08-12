@@ -716,6 +716,8 @@ void DrawGLPoly( glpoly_t *p, float xScale, float yScale )
 	cl_entity_t	*e = RI.currententity;
 	int		i, hasScale = false;
 
+	if( !p ) return;
+
 	// special hack for non-lightmapped surfaces
 	if( p->flags & SURF_DRAWTILED )
 		GL_ResetFogColor();

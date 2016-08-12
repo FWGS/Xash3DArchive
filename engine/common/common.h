@@ -39,6 +39,8 @@ extern "C" {
 #define MAX_MODS		512	// environment games that engine can keep visible
 #define EXPORT		__declspec( dllexport )
 #define BIT( n )		(1<<( n ))
+#define GAMMA		( 2.2 )		// Valve Software gamma
+#define INVGAMMA		( 1.0 / 2.2 )	// back to 1.0
 
 #ifndef __cplusplus
 #define NULL		((void *)0)
@@ -901,6 +903,8 @@ void S_StopAllSounds( void );
 void BuildGammaTable( float gamma, float texGamma );
 byte TextureToTexGamma( byte b );
 byte TextureToGamma( byte b );
+float TextureToLinear( int c );
+int LinearToTexture( float f );
 
 #ifdef __cplusplus
 }

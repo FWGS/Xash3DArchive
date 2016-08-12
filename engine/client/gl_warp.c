@@ -127,6 +127,8 @@ void DrawSkyPolygon( int nump, vec3_t vecs )
 		j = vec_to_st[axis][2];
 		dv = (j > 0) ? vecs[j-1] : -vecs[-j-1];
 
+		if( dv == 0.0f ) continue;
+
 		j = vec_to_st[axis][0];
 		s = (j < 0) ? -vecs[-j-1] / dv : vecs[j-1] / dv;
 
@@ -502,7 +504,7 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 	}
 
 	// make sure what sky image is valid
-	if( !r_sky || !r_sky->palette || r_sky->type != PF_INDEXED_32 )
+	if( !r_sky || !r_sky->palette || r_sky->type != PF_INDEXED_32 || r_sky->height == 0 )
 	{
 		MsgDev( D_ERROR, "R_InitSky: unable to load sky texture %s\n", tx->name );
 		FS_FreeImage( r_sky );

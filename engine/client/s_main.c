@@ -51,7 +51,6 @@ convar_t		*snd_gain_max;
 convar_t		*snd_gain_min;
 convar_t		*s_refdist;
 convar_t		*s_refdb;
-convar_t		*dsp_off;		// set to 1 to disable all dsp processing
 convar_t		*s_cull;		// cull sounds by geometry
 convar_t		*s_test;		// cvar for testing new effects
 convar_t		*s_phs;
@@ -357,8 +356,7 @@ channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx, const vec3_t pos )
 {
 	channel_t	*ch = NULL;
 	int	i, dupe = 0;
-
-#if 1	
+#if 0	
 	// TODO: remove this code when predicting is will be done
 	// check for duplicate sounds
 	for( i = 0; i < total_channels; i++ )
@@ -1609,7 +1607,7 @@ void S_RenderFrame( ref_params_t *fd )
 		else VectorSet( info.color, 1.0f, 1.0f, 1.0f );
 		info.index = 0;
 
-		Con_NXPrintf( &info, "----(%i)---- painted: %i\n", total - 1, paintedtime );
+		Con_NXPrintf( &info, "room_type: %i ----(%i)---- painted: %i\n", idsp_room, total - 1, paintedtime );
 	}
 
 	S_StreamBackgroundTrack ();
@@ -1773,7 +1771,6 @@ qboolean S_Init( void )
 	s_mixahead = Cvar_Get( "_snd_mixahead", "0.12", 0, "how much sound to mix ahead of time" );
 	s_show = Cvar_Get( "s_show", "0", CVAR_ARCHIVE, "show playing sounds" );
 	s_lerping = Cvar_Get( "s_lerping", "0", CVAR_ARCHIVE, "apply interpolation to sound output" );
-	dsp_off = Cvar_Get( "dsp_off", "0", CVAR_ARCHIVE, "set to 1 to disable all dsp processing" );
 	s_ambient_level = Cvar_Get( "ambient_level", "0.3", 0, "volume of environment noises (water and wind)" );
 	s_ambient_fade = Cvar_Get( "ambient_fade", "100", 0, "rate of volume fading when client is moving" );
 	s_combine_sounds = Cvar_Get( "s_combine_channels", "1", CVAR_ARCHIVE, "combine channels with same sounds" ); 

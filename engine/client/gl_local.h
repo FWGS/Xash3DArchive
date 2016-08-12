@@ -672,7 +672,6 @@ extern convar_t	*r_fastsky;
 extern convar_t	*vid_displayfrequency;
 extern convar_t	*vid_fullscreen;
 extern convar_t	*vid_gamma;
-extern convar_t	*vid_texgamma;
 extern convar_t	*vid_mode;
 
 #endif//GL_LOCAL_H

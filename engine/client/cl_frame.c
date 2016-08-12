@@ -148,7 +148,7 @@ int CL_InterpolateModel( cl_entity_t *e )
 	if( t - t2 < 0.0f )
 		return 0;
 
-	if( t2 == 0.0f || VectorIsNull( ph1->origin ) && !VectorIsNull( ph0->origin ))
+	if( t2 == 0.0f || ( VectorIsNull( ph1->origin ) && !VectorIsNull( ph0->origin )))
 	{
 		VectorCopy( ph0->origin, e->origin );
 		VectorCopy( ph0->angles, e->angles );
@@ -513,7 +513,12 @@ void CL_WeaponAnim( int iAnim, int body )
 {
 	cl_entity_t	*view = &clgame.viewent;
 
-	view->curstate.modelindex = cl.frame.client.viewmodel;
+	cl.weaponstarttime = 0;
+	cl.weaponsequence = iAnim;
+
+	if( Host_IsLocalClient() || cl_predict->value || !cl_lw->value )
+		view->curstate.modelindex = cl.frame.client.viewmodel;
+	else view->curstate.modelindex = cl.predicted_viewmodel;
 
 	// anim is changed. update latchedvars
 	if( iAnim != view->curstate.sequence )
@@ -652,8 +657,16 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	qboolean		newent = (old) ? false : true;
 	qboolean		result = true;
 
-	ent = CL_EDICT_NUM( newnum );
 	state = &cls.packet_entities[cls.next_client_entities % cls.num_client_entities];
+
+	if(( newnum < 0 ) || ( newnum >= clgame.maxEntities ))
+	{
+		if( !unchanged )
+			MSG_ReadDeltaEntity( msg, old, state, newnum, CL_IsPlayerIndex( newnum ), cl.mtime[0] );
+		return;
+	}
+
+	ent = CL_EDICT_NUM( newnum );
 	ent->index = newnum;
 
 	if( newent ) old = &ent->baseline;
@@ -663,7 +676,21 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 	if( !result )
 	{
-		if( newent ) Host_Error( "Cl_DeltaEntity: tried to release new entity\n" );
+		if( newent )
+		{
+			MsgDev( D_WARN, "Cl_DeltaEntity: tried to release new entity\n" );
+
+			// perform remove, entity was created and removed between packets
+			if( state->number == -1 )
+			{
+				MsgDev( D_NOTE, "Entity %i was removed from server\n", newnum );
+				ent->curstate.messagenum = 0;
+				ent->baseline.number = 0;
+			}
+			else MsgDev( D_NOTE, "Entity %i was removed from delta-message\n", newnum );
+
+			return;
+		}
 
 		CL_KillDeadBeams( ent ); // release dead beams
 #if 0
@@ -788,13 +815,16 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 
 		if( subtracted == 0 )
 		{
-			Host_Error( "CL_DeltaPacketEntities: update too old, connection dropped.\n" );
+			MsgDev( D_NOTE, "CL_DeltaPacketEntities: update too old (flush)\n" );
+			Con_NPrintf( 2, "^3Warning:^1 update too old\n^7\n" );
+			CL_FlushEntityPacket( msg );
 			return;
 		}
 
 		if( subtracted >= CL_UPDATE_MASK )
 		{	
 			// we can't use this, it is too old
+			MsgDev( D_NOTE, "CL_ParsePacketEntities: delta frame is too old: overflow (flush)\n");
 			Con_NPrintf( 2, "^3Warning:^1 delta frame is too old^7\n" );
 			CL_FlushEntityPacket( msg );
 			return;
@@ -804,6 +834,7 @@ void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 
 		if(( cls.next_client_entities - oldframe->first_entity ) > ( cls.num_client_entities - 128 ))
 		{
+			MsgDev( D_NOTE, "CL_ParsePacketEntities: delta frame is too old (flush)\n");
 			Con_NPrintf( 2, "^3Warning:^1 delta frame is too old^7\n" );
 			CL_FlushEntityPacket( msg );
 			return;

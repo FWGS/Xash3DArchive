@@ -90,7 +90,6 @@ convar_t	*r_fastsky;
 convar_t	*vid_displayfrequency;
 convar_t	*vid_fullscreen;
 convar_t	*vid_gamma;
-convar_t	*vid_texgamma;
 convar_t	*vid_mode;
 
 byte		*r_temppool;
@@ -882,7 +881,7 @@ void VID_StartupGamma( void )
 	if( gl_ignorehwgamma->integer )
 	{
 		glConfig.deviceSupportsGamma = false;	// even if supported!
-		BuildGammaTable( vid_gamma->value, vid_texgamma->value );
+		BuildGammaTable( vid_gamma->value, GAMMA );
 		MsgDev( D_NOTE, "VID_StartupGamma: software gamma initialized\n" );
 		return;
 	}
@@ -1599,7 +1598,7 @@ void R_RenderInfo_f( void )
 	}
 
 	Msg( "\n" );
-	Msg( "MODE: %i, %i x %i %s\n", vid_mode->integer, r_width->integer, r_height->integer );
+	Msg( "MODE: %i, %i x %i %s\n", vid_mode->integer, r_width->integer, r_height->integer, vidmode[vid_mode->integer].desc );
 	Msg( "GAMMA: %s\n", (glConfig.deviceSupportsGamma) ? "hardware" : "software" );
 	Msg( "\n" );
 	Msg( "PICMIP: %i\n", gl_picmip->integer );
@@ -1680,7 +1679,6 @@ void GL_InitCommands( void )
 	gl_swapInterval->modified = true;
 
 	vid_gamma = Cvar_Get( "gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
-	vid_texgamma = Cvar_Get( "texgamma", "2.2", CVAR_GLCONFIG, "texgamma amount (default Half-Life artwork gamma)" );
 	vid_mode = Cvar_Get( "vid_mode", VID_AUTOMODE, CVAR_RENDERINFO, "display resolution mode" );
 	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO, "set in 1 to enable fullscreen mode" );
 	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_RENDERINFO, "fullscreen refresh rate" );

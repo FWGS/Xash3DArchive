@@ -443,6 +443,7 @@ void SV_ExecuteUserCommand (char *s);
 void SV_InitOperatorCommands( void );
 void SV_KillOperatorCommands( void );
 void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo );
+void SV_RemoteCommand( netadr_t from, sizebuf_t *msg );
 void SV_PrepWorldFrame( void );
 void SV_ProcessFile( sv_client_t *cl, char *filename );
 void SV_SendResourceList( sv_client_t *cl );

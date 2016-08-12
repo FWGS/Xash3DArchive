@@ -45,6 +45,7 @@ convar_t	*cl_solid_players;
 convar_t	*cl_draw_beams;
 convar_t	*cl_cmdrate;
 convar_t	*cl_interp;
+convar_t	*cl_lw;
 
 //
 // userinfo
@@ -311,14 +312,20 @@ void CL_CreateCmd( void )
 	VectorCopy( cl.frame.client.origin, cl.data.origin );
 	VectorCopy( cl.refdef.cl_viewangles, cl.data.viewangles );
 	cl.data.iWeaponBits = cl.frame.client.weapons;
-	cl.data.fov = cl.frame.client.fov;
+
+	if( cl.scr_fov < 1.0f || cl.scr_fov > 179.0f )
+		cl.scr_fov = 90.0f;	// reset to default
+	cl.data.fov = cl.scr_fov;
 
 	clgame.dllFuncs.pfnUpdateClientData( &cl.data, cl.time );
 
 	// grab changes
 	VectorCopy( cl.data.viewangles, cl.refdef.cl_viewangles );
 	cl.frame.client.weapons = cl.data.iWeaponBits;
-	cl.frame.client.fov = cl.data.fov;
+	cl.scr_fov = cl.data.fov;
+
+	if( cl.scr_fov < 1.0f || cl.scr_fov > 179.0f )
+		cl.scr_fov = 90.0f;	// reset to default
 
 	// allways dump the first ten messages,
 	// because it may contain leftover inputs
@@ -430,6 +437,7 @@ void CL_WritePacket( void )
 		Cvar_SetFloat( "cl_cmdrate", MIN_CMD_RATE );
 	}
 #endif
+	Q_memset( data, 0, MAX_CMD_BUFFER );
 	BF_Init( &buf, "ClientData", data, sizeof( data ));
 
 	// Determine number of backup commands to send along
@@ -814,6 +822,7 @@ void CL_ClearState( void )
 	Cvar_FullSet( "cl_background", "0", CVAR_READ_ONLY );
 	cl.refdef.movevars = &clgame.movevars;
 	cl.maxclients = 1; // allow to drawing player in menu
+	cl.scr_fov = 90.0f;
 
 	Cvar_SetFloat( "scr_download", 0.0f );
 	Cvar_SetFloat( "scr_loading", 0.0f );

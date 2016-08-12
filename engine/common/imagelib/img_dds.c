@@ -175,7 +175,7 @@ size_t Image_DXTCalcMipmapSize( dds_t *hdr )
 	int	i, width, height;
 		
 	// now correct buffer size
-	for( i = 0; i < hdr->dwMipMapCount; i++ )
+	for( i = 0; i < max( 1, ( hdr->dwMipMapCount )); i++ )
 	{
 		width = max( 1, ( hdr->dwWidth >> i ));
 		height = max( 1, ( hdr->dwHeight >> i ));
@@ -311,6 +311,15 @@ qboolean Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
 			image.flags |= IMAGE_HAS_ALPHA;
 		image.flags |= IMAGE_HAS_COLOR;
 		break;
+	}
+
+	if( header.dwReserved1[1] != 0 )
+	{
+		// store texture reflectivity
+		image.fogParams[0] = ((header.dwReserved1[1] & 0x000000FF) >> 0 );
+		image.fogParams[1] = ((header.dwReserved1[1] & 0x0000FF00) >> 8 );
+		image.fogParams[2] = ((header.dwReserved1[1] & 0x00FF0000) >> 16);
+		image.fogParams[3] = ((header.dwReserved1[1] & 0xFF000000) >> 24);
 	}
 
 	// dds files will be uncompressed on a render. requires minimal of info for set this

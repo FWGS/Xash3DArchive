@@ -810,9 +810,9 @@ void Delta_Init( void )
 	Delta_AddField( "movevars_t", "footsteps", DT_INTEGER, 1, 1.0f, 1.0f );
 	Delta_AddField( "movevars_t", "rollangle", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "rollspeed", DT_FLOAT|DT_SIGNED, 16, 8.0f, 1.0f );
-	Delta_AddField( "movevars_t", "skycolor_r", DT_FLOAT|DT_SIGNED, 12, 1.0f, 1.0f ); // 0 - 264
-	Delta_AddField( "movevars_t", "skycolor_g", DT_FLOAT|DT_SIGNED, 12, 1.0f, 1.0f );
-	Delta_AddField( "movevars_t", "skycolor_b", DT_FLOAT|DT_SIGNED, 12, 1.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skycolor_r", DT_FLOAT|DT_SIGNED, 16, 1.0f, 1.0f ); // 0 - 264
+	Delta_AddField( "movevars_t", "skycolor_g", DT_FLOAT|DT_SIGNED, 16, 1.0f, 1.0f );
+	Delta_AddField( "movevars_t", "skycolor_b", DT_FLOAT|DT_SIGNED, 16, 1.0f, 1.0f );
 	Delta_AddField( "movevars_t", "skyvec_x", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f ); // 0 - 1
 	Delta_AddField( "movevars_t", "skyvec_y", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "skyvec_z", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );

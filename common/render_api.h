@@ -65,6 +65,7 @@ GNU General Public License for more details.
 #define PARM_MAX_IMAGE_UNITS	29
 #define PARM_CLIENT_ACTIVE	30
 #define PARM_REBUILD_GAMMA	31	// if true lightmaps rebuilding for gamma change
+#define PARM_DEDICATED_SERVER	32
 
 enum
 {
@@ -257,6 +258,8 @@ typedef struct render_interface_s
 	qboolean		(*R_DrawCubemapView)( const float *origin, const float *angles, int size );
 	// alloc or destroy studiomodel custom data
 	void		(*Mod_ProcessUserData)( struct model_s *mod, qboolean create, const byte *buffer );
+	// alloc or destroy entity custom data
+	void		(*R_ProcessEntData)( qboolean allocate );
 } render_interface_t;
 
 #endif//RENDER_API_H

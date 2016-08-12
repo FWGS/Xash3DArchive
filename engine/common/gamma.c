@@ -22,6 +22,8 @@ GNU General Public License for more details.
 //-----------------------------------------------------------------------------
 static byte	gammatable[256];
 static byte	texgammatable[256];		// palette is sent through this to convert to screen gamma
+static float	texturetolinear[256];	// texture (0..255) to linear (0..1)
+static int	lineartotexture[1024];	// linear (0..1) to texture (0..255)
 
 void BuildGammaTable( float gamma, float texGamma )
 {
@@ -47,6 +49,18 @@ void BuildGammaTable( float gamma, float texGamma )
 		inf = (int)(f + 0.5f);
 		gammatable[i] = bound( 0, inf, 255 );
 	}
+
+	for( i = 0; i < 256; i++ )
+	{
+		// convert from nonlinear texture space (0..255) to linear space (0..1)
+		texturetolinear[i] =  pow( i / 255.0, GAMMA );
+	}
+
+	for( i = 0; i < 1024; i++ )
+	{
+		// convert from linear space (0..1) to nonlinear texture space (0..255)
+		lineartotexture[i] =  pow( i / 1023.0, INVGAMMA ) * 255;
+	}
 }
 
 byte TextureToTexGamma( byte b )
@@ -66,3 +80,9 @@ byte TextureToGamma( byte b )
 	b = bound( 0, b, 255 );
 	return gammatable[b];
 }
+
+// convert texture to linear 0..1 value
+float TextureToLinear( int c ) { return texturetolinear[bound( 0, c, 255 )]; }
+
+// convert texture to linear 0..1 value
+int LinearToTexture( float f ) { return lineartotexture[bound( 0, (int)(f * 1023), 1023 )]; }

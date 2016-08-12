@@ -138,7 +138,7 @@ R_StudioInit
 */
 void R_StudioInit( void )
 {
-	float	pixelAspect;
+	float	pixelAspect, fov_x = 90.0f, fov_y;
 
 	r_studio_lambert = Cvar_Get( "r_studio_lambert", "2", CVAR_ARCHIVE, "bonelighting lambert value" );
 	r_studio_lerping = Cvar_Get( "r_studio_lerping", "1", CVAR_ARCHIVE, "enables studio animation lerping" );
@@ -156,7 +156,8 @@ void R_StudioInit( void )
 		pixelAspect *= (320.0f / 240.0f);
 	else pixelAspect *= (640.0f / 480.0f);
 
-	aliasXscale = (float)scr_width->integer / RI.refdef.fov_y;
+	fov_y = V_CalcFov( &fov_x, scr_width->integer, scr_height->integer );
+	aliasXscale = (float)scr_width->integer / fov_y; // stub
 	aliasYscale = aliasXscale * pixelAspect;
 
 	Matrix3x4_LoadIdentity( g_aliastransform );
@@ -736,7 +737,7 @@ StudioCalcBoneAdj
 void R_StudioCalcBoneAdj( float dadt, float *adj, const byte *pcontroller1, const byte *pcontroller2, byte mouthopen )
 {
 	mstudiobonecontroller_t	*pbonecontroller;
-	float			value;	
+	float			value = 0.0f;	
 	int			i, j;
 
 	pbonecontroller = (mstudiobonecontroller_t *)((byte *)m_pStudioHeader + m_pStudioHeader->bonecontrollerindex);
@@ -2948,7 +2949,7 @@ R_StudioDrawPlayer
 static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 {
 	int	m_nPlayerIndex;
-	float	gaitframe, gaityaw;
+	float	gaitframe = 0.0f, gaityaw = 0.0f;
 	vec3_t	dir, prevgaitorigin;
 	alight_t	lighting;
 
@@ -3301,9 +3302,16 @@ void R_RunViewmodelEvents( void )
 	if( !Mod_Extradata( clgame.viewent.model ))
 		return;
 
+	if( cl_lw->value && cl.frame.client.viewmodel != cl.predicted_viewmodel )
+		return;
+
 	RI.currententity = &clgame.viewent;
 	RI.currentmodel = RI.currententity->model;
 	if( !RI.currentmodel ) return;
+
+	if( !cl.weaponstarttime ) cl.weaponstarttime = cl.time;
+	RI.currententity->curstate.animtime = cl.weaponstarttime;
+	RI.currententity->curstate.sequence = cl.weaponsequence;
 
 	pStudioDraw->StudioDrawModel( STUDIO_EVENTS );
 
@@ -3331,6 +3339,9 @@ void R_DrawViewModel( void )
 	if( !Mod_Extradata( clgame.viewent.model ))
 		return;
 
+	if( cl_lw->value && cl.frame.client.viewmodel != cl.predicted_viewmodel )
+		return;
+
 	RI.currententity = &clgame.viewent;
 	RI.currentmodel = RI.currententity->model;
 	if( !RI.currentmodel ) return;
@@ -3343,6 +3354,10 @@ void R_DrawViewModel( void )
 	// backface culling for left-handed weapons
 	if( r_lefthand->integer == 1 || g_iBackFaceCull )
 		GL_FrontFace( !glState.frontFace );
+
+	if( !cl.weaponstarttime ) cl.weaponstarttime = cl.time;
+	RI.currententity->curstate.animtime = cl.weaponstarttime;
+	RI.currententity->curstate.sequence = cl.weaponsequence;
 
 	pStudioDraw->StudioDrawModel( STUDIO_RENDER );
 

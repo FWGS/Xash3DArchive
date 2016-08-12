@@ -321,6 +321,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 	byte	*fin, *pal;
 	int	ofs[4], rendermode;
 	int	i, pixels, numcolors;
+	int	reflectivity[3] = { 0, 0, 0 };
 
 	if( filesize < sizeof( mip ))
 	{
@@ -461,6 +462,17 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 
 		// calc the decal reflectivity
 		image.fogParams[3] = VectorAvg( image.fogParams );         
+	}
+	else if( pal != NULL )// calc texture reflectivity
+	{
+		for( i = 0; i < 256; i++ )
+		{
+			reflectivity[0] += pal[i*3+0];
+			reflectivity[1] += pal[i*3+1];
+			reflectivity[2] += pal[i*3+2];
+		}
+ 
+		VectorDivide( reflectivity, 256, image.fogParams );
 	}
  
 	image.type = PF_INDEXED_32;	// 32-bit palete

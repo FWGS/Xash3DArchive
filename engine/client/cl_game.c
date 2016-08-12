@@ -30,6 +30,7 @@ GNU General Public License for more details.
 #include "vgui_draw.h"
 #include "sound.h"		// SND_STOP_LOOPING
 
+#define MAX_LINELENGTH	80
 #define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channels)
 #define TEXT_MSGNAME	"TextMessage%i"
 
@@ -573,7 +574,7 @@ void CL_DrawCenterPrint( void )
 	char	*pText;
 	int	i, j, x, y;
 	int	width, lineLength;
-	byte	*colorDefault, line[80];
+	byte	*colorDefault, line[MAX_LINELENGTH];
 	int	charWidth, charHeight;
 
 	if( !clgame.centerPrint.time )
@@ -596,7 +597,7 @@ void CL_DrawCenterPrint( void )
 		lineLength = 0;
 		width = 0;
 
-		while( *pText && *pText != '\n' )
+		while( *pText && *pText != '\n' && lineLength < MAX_LINELENGTH )
 		{
 			byte c = *pText;
 			line[lineLength] = c;
@@ -605,6 +606,9 @@ void CL_DrawCenterPrint( void )
 			lineLength++;
 			pText++;
 		}
+
+		if( lineLength == MAX_LINELENGTH )
+			lineLength--;
 
 		pText++; // Skip LineFeed
 		line[lineLength] = 0;
@@ -1084,6 +1088,8 @@ void CL_InitEdicts( void )
 {
 	ASSERT( clgame.entities == NULL );
 
+	if( !clgame.mempool ) return; // Host_Error without client
+
 	CL_UPDATE_BACKUP = ( cl.maxclients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
 	cls.num_client_entities = CL_UPDATE_BACKUP * 64;
 	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
@@ -1097,10 +1103,22 @@ void CL_InitEdicts( void )
 		clgame.maxRemapInfos = clgame.maxEntities + 1; 
 		clgame.remap_info = (remap_info_t **)Mem_Alloc( clgame.mempool, sizeof( remap_info_t* ) * clgame.maxRemapInfos );
 	}
+
+	if( clgame.drawFuncs.R_ProcessEntData != NULL )
+	{
+		// let the client.dll free custom data
+		clgame.drawFuncs.R_ProcessEntData( true );
+	}
 }
 
 void CL_FreeEdicts( void )
 {
+	if( clgame.drawFuncs.R_ProcessEntData != NULL )
+	{
+		// let the client.dll free custom data
+		clgame.drawFuncs.R_ProcessEntData( false );
+	}
+
 	if( clgame.entities )
 		Mem_Free( clgame.entities );
 	clgame.entities = NULL;
@@ -2098,7 +2116,7 @@ static void pfnHookEvent( const char *filename, pfnEventHook pfn )
 
 		if( !Q_stricmp( name, ev->name ) && ev->func != NULL )
 		{
-			MsgDev( D_WARN, "CL_HookEvent: %s already hooked!\n" );
+			MsgDev( D_WARN, "CL_HookEvent: %s already hooked!\n", name );
 			return;
 		}
 	}
@@ -2808,7 +2826,11 @@ TODO: implement
 */
 int pfnDrawString( int x, int y, const char *str, int r, int g, int b )
 {
-	return 0;
+	// draw the string until we hit the null character or a newline character
+	for( ; *str != 0 && *str != '\n'; str++ )
+		x += pfnDrawCharacter( x, y, (byte)*str, r, g, b );
+
+	return x;
 }
 
 /*
@@ -2820,7 +2842,14 @@ TODO: implement
 */
 int pfnDrawStringReverse( int x, int y, const char *str, int r, int g, int b )
 {
-	return 0;
+	char	*szIt;
+
+	// find the end of the string
+	for( szIt = (char *)str; *szIt != 0; szIt++ )
+		x -= clgame.scrInfo.charWidths[(byte)*szIt];
+	pfnDrawString( x, y, str, r, g, b );
+
+	return x;
 }
 
 /*
@@ -2951,7 +2980,7 @@ pfnGetAppID
 */
 int pfnGetAppID( void )
 {
-	return 220; // standard Valve value
+	return 130; // borrowed from SDLash3D
 }
 
 /*
@@ -4074,7 +4103,7 @@ qboolean CL_LoadProgs( const char *name )
 	}
 
 	Cvar_Get( "cl_nopred", "1", CVAR_ARCHIVE|CVAR_USERINFO, "disable client movement predicting" );
-	Cvar_Get( "cl_lw", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
+	cl_lw = Cvar_Get( "cl_lw", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
 	Cvar_Get( "cl_lc", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable lag compensation" );
 	Cvar_FullSet( "host_clientloaded", "1", CVAR_INIT );
 
@@ -4086,13 +4115,12 @@ qboolean CL_LoadProgs( const char *name )
 	CL_InitParticles ();
 	CL_InitViewBeams ();
 	CL_InitTempEnts ();
-	CL_InitEdicts ();	// initailize local player and world
-	CL_InitClientMove(); // initialize pm_shared
 
 	if( !R_InitRenderAPI())	// Xash3D extension
-	{
 		MsgDev( D_WARN, "CL_LoadProgs: couldn't get render API\n" );
-	}
+
+	CL_InitEdicts ();		// initailize local player and world
+	CL_InitClientMove();	// initialize pm_shared
 
 	// initialize game
 	clgame.dllFuncs.pfnInit();

@@ -14,6 +14,7 @@ GNU General Public License for more details.
 */
 
 #include "imagelib.h"
+#include "mathlib.h"
 
 /*
 =============
@@ -26,6 +27,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	byte	palette[256][4];
 	int	i, columns, column, rows, row, bpp = 1;
 	int	cbPalBytes = 0, padSize = 0, bps = 0;
+	int	reflectivity[3] = { 0, 0, 0 };
 	qboolean	load_qfont = false;
 	bmp_t	bhdr;
 
@@ -280,12 +282,18 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 				Mem_Free( image.rgba );
 				return false;
 			}
+
 			if( !Image_CheckFlag( IL_KEEP_8BIT ) && ( red != green || green != blue ))
 				image.flags |= IMAGE_HAS_COLOR;
+
+			reflectivity[0] += red;
+			reflectivity[1] += green;
+			reflectivity[2] += blue;
 		}
 		buf_p += padSize;	// actual only for 4-bit bmps
 	}
 
+	VectorDivide( reflectivity, ( image.width * image.height ), image.fogParams );
 	if( image.palette ) Image_GetPaletteBMP( image.palette );
 
 	return true;

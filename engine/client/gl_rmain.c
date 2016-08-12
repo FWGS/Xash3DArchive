@@ -1248,7 +1248,7 @@ void R_BeginFrame( qboolean clearScene )
 		else
 		{
 			glConfig.softwareGammaUpdate = true;
-			BuildGammaTable( vid_gamma->value, vid_texgamma->value );
+			BuildGammaTable( vid_gamma->value, GAMMA );
 			GL_RebuildLightmaps();
 			glConfig.softwareGammaUpdate = false;
 		}
@@ -1466,6 +1466,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return (cls.state == ca_active);
 	case PARM_REBUILD_GAMMA:
 		return glConfig.softwareGammaUpdate;
+	case PARM_DEDICATED_SERVER:
+		return (host.type == HOST_DEDICATED);
 	}
 	return 0;
 }
