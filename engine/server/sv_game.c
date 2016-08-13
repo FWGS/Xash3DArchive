@@ -3185,7 +3185,7 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 	if( sv.state != ss_active )
 	{
 		// send message into console during loading
-		MsgDev( D_INFO, szMsg );
+		MsgDev( D_INFO, "%s\n", szMsg );
 		return;
 	}
 
@@ -3198,7 +3198,7 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 	switch( ptype )
 	{
 	case print_console:
-		if( client->fakeclient ) MsgDev( D_INFO, szMsg );
+		if( client->fakeclient ) MsgDev( D_INFO, "%s", szMsg );
 		else SV_ClientPrintf( client, PRINT_HIGH, "%s", szMsg );
 		break;
 	case print_chat:
@@ -3222,7 +3222,7 @@ pfnServerPrint
 void pfnServerPrint( const char *szMsg )
 {
 	// while loading in-progress we can sending message only for local client
-	if( sv.state != ss_active ) MsgDev( D_INFO, szMsg );	
+	if( sv.state != ss_active ) MsgDev( D_INFO, "%s", szMsg );	
 	else SV_BroadcastPrintf( PRINT_HIGH, "%s", szMsg );
 }
 
@@ -4362,15 +4362,16 @@ pfnCheckParm
 */
 static int pfnCheckParm( char *parm, char **ppnext )
 {
-	static char	str[64];
+	int i = Sys_CheckParm( parm );
 
-	if( Sys_GetParmFromCmdLine( parm, str ))
+	if( ppnext != NULL )
 	{
-		// get the pointer on cmdline param
-		if( ppnext ) *ppnext = str;
-		return 1;
+		if( i > 0 && i < host.argc - 1 )
+			*ppnext = (char*)host.argv[i + 1];
+		else *ppnext = NULL;
 	}
-	return 0;
+
+	return i;
 }
 					
 // engine callbacks

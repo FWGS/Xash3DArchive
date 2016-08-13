@@ -320,7 +320,8 @@ SV_ReadPackets
 void SV_ReadPackets( void )
 {
 	sv_client_t	*cl;
-	int		i, qport, curSize;
+	int		i, qport;
+	size_t		curSize;
 
 	while( NET_GetPacket( NS_SERVER, &net_from, net_message_buffer, &curSize ))
 	{
@@ -548,7 +549,12 @@ Host_ServerFrame
 void Host_ServerFrame( void )
 {
 	// if server is not active, do nothing
-	if( !svs.initialized ) return;
+	if( !svs.initialized )
+	{
+		// but allow rcon
+		SV_ReadPackets ();
+		return;
+	}
 
 	svgame.globals->frametime = host.frametime;
 
@@ -599,7 +605,7 @@ void Master_Add( void )
 	if( !NET_StringToAdr( MASTERSERVER_ADR, &adr ))
 		MsgDev( D_INFO, "Can't resolve adr: %s\n", MASTERSERVER_ADR );
 
-	NET_SendPacket( NS_SERVER, 1, "q", adr );
+	NET_SendPacket( NS_SERVER, 2, "q\xFF", adr );
 }
 
 /*
@@ -644,6 +650,54 @@ void Master_Shutdown( void )
 		MsgDev( D_INFO, "Can't resolve addr: %s\n", MASTERSERVER_ADR );
 
 	NET_SendPacket( NS_SERVER, 2, "\x62\x0A", adr );
+}
+
+/*
+=================
+SV_AddToMaster
+
+A server info answer to master server.
+Master will validate challenge and this server to public list
+=================
+*/
+void SV_AddToMaster( netadr_t from, sizebuf_t *msg )
+{
+	uint	challenge;
+	char	s[MAX_INFO_STRING] = "0\n"; // skip 2 bytes of header
+	int	clients = 0, bots = 0, index;
+
+	if( svs.clients )
+	{
+		for( index = 0; index < sv_maxclients->integer; index++ )
+		{
+			if( svs.clients[index].state >= cs_connected )
+			{
+				if( svs.clients[index].fakeclient )
+					bots++;
+				else clients++;
+			}
+		}
+	}
+
+	challenge = BF_ReadUBitLong( msg, sizeof( uint ) << 3 );
+
+	Info_SetValueForKey( s, "protocol", va( "%d", PROTOCOL_VERSION ) ); // protocol version
+	Info_SetValueForKey( s, "challenge", va( "%u", challenge ) ); // challenge number
+	Info_SetValueForKey( s, "players", va( "%d", clients ) ); // current player number, without bots
+	Info_SetValueForKey( s, "max", sv_maxclients->string ); // max_players
+	Info_SetValueForKey( s, "bots", va( "%d", bots ) ); // bot count
+	Info_SetValueForKey( s, "gamedir", GI->gamedir ); // gamedir
+	Info_SetValueForKey( s, "map", sv.name ); // current map
+	Info_SetValueForKey( s, "type", (host.type == HOST_DEDICATED) ? "d" : "l" ); // dedicated or local
+	Info_SetValueForKey( s, "password", "0" ); // is password set
+	Info_SetValueForKey( s, "os", "w" ); // Windows
+	Info_SetValueForKey( s, "secure", "0" ); // server anti-cheat
+	Info_SetValueForKey( s, "lan", "0" ); // LAN servers doesn't send info to master
+	Info_SetValueForKey( s, "version", va( "%g", XASH_VERSION )); // server region. 255 -- all regions
+	Info_SetValueForKey( s, "region", "255" ); // server region. 255 -- all regions
+	Info_SetValueForKey( s, "product", GI->gamefolder ); // product? Where is the difference with gamedir?
+
+	NET_SendPacket( NS_SERVER, Q_strlen( s ), s, from );
 }
 
 //============================================================================

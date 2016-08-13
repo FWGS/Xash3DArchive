@@ -1226,7 +1226,8 @@ HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags )
 	// load new model
 	if( CL_LoadHudSprite( name, &clgame.sprites[i], false, texFlags ))
 	{
-		clgame.sprites[i].needload = clgame.load_sequence;
+		if( i < ( MAX_IMAGES - 1 ))
+			clgame.sprites[i].needload = clgame.load_sequence;
 		return i;
 	}
 	return 0;
@@ -2217,6 +2218,8 @@ pfnLocalPlayerDucking
 */
 int pfnLocalPlayerDucking( void )
 {
+	if( CL_IsPredicted( ))
+		return (cl.predicted.usehull == 1);
 	return cl.frame.client.bInDuck;
 }
 
@@ -2232,7 +2235,7 @@ void pfnLocalPlayerViewheight( float *view_ofs )
 	if( !view_ofs ) return;
 
 	if( CL_IsPredicted( ))
-		VectorCopy( cl.predicted_viewofs, view_ofs );		
+		VectorCopy( cl.predicted.viewofs, view_ofs );		
 	else VectorCopy( cl.frame.client.view_ofs, view_ofs );
 }
 
@@ -2281,94 +2284,6 @@ physent_t *pfnGetPhysent( int idx )
 		return &clgame.pmove->physents[idx];
 	}
 	return NULL;
-}
-
-/*
-=============
-pfnSetUpPlayerPrediction
-
-FIXME: finalize
-=============
-*/
-void pfnSetUpPlayerPrediction( int dopred, int bIncludeLocalClient )
-{
-#if 0
-	entity_state_t	*playerstate = cl.frames[cl.parsecountmod].playerstate;
-	predicted_player_t	*player = cls.predicted_players;
-	cl_entity_t	*clent;
-	int		j, v12;
-
-	for( j = 0; j < MAX_CLIENTS; j++, player++, playerstate++ )
-	{
-		player->active = false;
-
-		if( playerstate->messagenum != cl.parsecount )
-			continue; // not present this frame
-
-		if( !playerstate->modelindex )
-			continue;
-
-		// special for EF_NODRAW and local client?
-		if(( playerstate->effects & EF_NODRAW ) && !bIncludeLocalClient )
-		{
-			// don't include local player?
-			if( cl.playernum != j )
-			{
-				player->active = true;
-				player->movetype = playerstate->movetype;
-				player->solid = playerstate->solid;
-				player->usehull = playerstate->usehull;
-
-				clent = CL_EDICT_NUM( j + 1 );
-//				CL_ComputePlayerOrigin( v9 );
-				VectorCopy( clent->origin, player->origin );
-				VectorCopy( clent->angles, player->angles );
-			}
-			else continue;
-		}
-		else
-		{
-			if( cl.playernum == j )
-				continue;
-
-			player->active = true;
-			player->movetype = playerstate->movetype;
-			player->solid = playerstate->solid;
-			player->usehull = playerstate->usehull;
-
-			v12 = 17080 * cl.parsecountmod + 340 * j;
-			player->origin[0] = cl.frames[0].playerstate[0].origin[0] + v12;
-			player->origin[1] = cl.frames[0].playerstate[0].origin[1] + v12;
-			player->origin[2] = cl.frames[0].playerstate[0].origin[2] + v12;
-
-			player->angles[0] = cl.frames[0].playerstate[0].angles[0] + v12;
-			player->angles[1] = cl.frames[0].playerstate[0].angles[1] + v12;
-			player->angles[2] = cl.frames[0].playerstate[0].angles[2] + v12;
-		}
-	}
-#endif
-}
-
-/*
-=============
-pfnPushPMStates
-
-=============
-*/
-void pfnPushPMStates( void )
-{
-	clgame.oldcount = clgame.pmove->numphysent;
-}
-
-/*
-=============
-pfnPopPMStates
-
-=============
-*/
-void pfnPopPMStates( void )
-{
-	clgame.pmove->numphysent = clgame.oldcount;
 }
 
 /*
@@ -2612,7 +2527,7 @@ const char *PlayerInfo_ValueForKey( int playerNum, const char *key )
 	if(( playerNum > cl.maxclients ) || ( playerNum < 1 ))
 		return NULL;
 
-	if(( cl.players[playerNum-1].name == NULL ) || (*(cl.players[playerNum-1].name) == 0 ))
+	if( !cl.players[playerNum-1].name[0] )
 		return NULL;
 
 	return Info_ValueForKey( cl.players[playerNum-1].userinfo, key );
@@ -3351,7 +3266,8 @@ TriForParams
 */
 void TriFogParams( float flDensity, int iFogSkybox )
 {
-	// TODO: implement
+	RI.fogDensity = flDensity;
+	RI.fogCustom = iFogSkybox;
 }
 
 /*
@@ -3787,9 +3703,9 @@ static event_api_t gEventApi =
 	pfnLocalPlayerBounds,
 	pfnIndexFromTrace,
 	pfnGetPhysent,
-	pfnSetUpPlayerPrediction,
-	pfnPushPMStates,
-	pfnPopPMStates,
+	CL_SetUpPlayerPrediction,
+	CL_PushPMStates,
+	CL_PopPMStates,
 	CL_SetSolidPlayers,
 	CL_SetTraceHull,
 	CL_PlayerTrace,

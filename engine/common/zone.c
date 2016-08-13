@@ -165,9 +165,16 @@ static const char *Mem_CheckFilename( const char *filename )
 	int		i;
 
 	if( !out ) return dummy;
+
 	for( i = 0; i < 128; i++, out++ )
-		if( out == '\0' ) break; // valid name
-	if( i == 128 ) return dummy;
+	{
+		if( *out == '\0' )
+			break; // valid name
+	}
+
+	if( i == 128 )
+		return dummy;
+
 	return filename;
 }
 

@@ -3302,9 +3302,6 @@ void R_RunViewmodelEvents( void )
 	if( !Mod_Extradata( clgame.viewent.model ))
 		return;
 
-	if( cl_lw->value && cl.frame.client.viewmodel != cl.predicted_viewmodel )
-		return;
-
 	RI.currententity = &clgame.viewent;
 	RI.currentmodel = RI.currententity->model;
 	if( !RI.currentmodel ) return;
@@ -3337,9 +3334,6 @@ void R_DrawViewModel( void )
 		return;
 
 	if( !Mod_Extradata( clgame.viewent.model ))
-		return;
-
-	if( cl_lw->value && cl.frame.client.viewmodel != cl.predicted_viewmodel )
 		return;
 
 	RI.currententity = &clgame.viewent;

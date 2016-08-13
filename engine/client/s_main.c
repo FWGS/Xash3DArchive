@@ -355,20 +355,8 @@ already playing.
 channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx, const vec3_t pos )
 {
 	channel_t	*ch = NULL;
-	int	i, dupe = 0;
-#if 0	
-	// TODO: remove this code when predicting is will be done
-	// check for duplicate sounds
-	for( i = 0; i < total_channels; i++ )
-	{
-		if( channels[i].sfx == sfx && VectorCompare( channels[i].origin, pos ))
-			dupe++;
-	}
+	int	i;
 
-	// check for duplicated static channels (same origin and same sfx)
-	if( dupe > MAX_DUPLICATED_CHANNELS )
-		return NULL;
-#endif
 	// check for replacement sound, or find the best one to replace
  	for( i = MAX_DYNAMIC_CHANNELS; i < total_channels; i++ )
  	{

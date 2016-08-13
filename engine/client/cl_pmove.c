@@ -29,6 +29,120 @@ void CL_ClearPhysEnts( void )
 	clgame.pmove->numphysent = 0;
 }
 
+/*
+=============
+CL_PushPMStates
+
+=============
+*/
+void CL_PushPMStates( void )
+{
+	if( clgame.pushed )
+	{
+		MsgDev( D_ERROR, "PushPMStates called with pushed stack\n");
+	}
+	else
+	{
+		clgame.oldphyscount = clgame.pmove->numphysent;
+		clgame.oldviscount  = clgame.pmove->numvisent;
+		clgame.pushed = true;
+	}
+
+}
+
+/*
+=============
+CL_PopPMStates
+
+=============
+*/
+void CL_PopPMStates( void )
+{
+	if( clgame.pushed )
+	{
+		clgame.pmove->numphysent = clgame.oldphyscount;
+		clgame.pmove->numvisent  = clgame.oldviscount;
+		clgame.pushed = false;
+	}
+	else
+	{
+		MsgDev( D_ERROR, "PopPMStates called without stack\n");
+	}
+}
+
+/*
+=============
+CL_ComputePlayerOrigin
+
+FIXME: implement
+=============
+*/
+void CL_ComputePlayerOrigin( cl_entity_t *clent )
+{
+}
+
+/*
+=============
+CL_SetUpPlayerPrediction
+
+=============
+*/
+void CL_SetUpPlayerPrediction( int dopred, int bIncludeLocalClient )
+{
+	entity_state_t	*state;
+	predicted_player_t	*player;
+	cl_entity_t	*clent;
+	int		i;
+
+	for( i = 0; i < MAX_CLIENTS; i++ )
+	{
+		state = &cl.frames[cl.parsecountmod].playerstate[i];
+		player = &cls.predicted_players[i];
+
+		player->active = false;
+
+		if( state->messagenum != cl.parsecount )
+			continue; // not present this frame
+
+		if( !state->modelindex )
+			continue;
+
+		clent = CL_GetEntityByIndex( i + 1 );
+
+		// special for EF_NODRAW and local client?
+		if(( state->effects & EF_NODRAW ) && !bIncludeLocalClient )
+		{
+			// don't include local player?
+			if( cl.playernum == i )
+				continue;
+
+			player->active = true;
+			player->movetype = state->movetype;
+			player->solid = state->solid;
+			player->usehull = state->usehull;
+
+			CL_ComputePlayerOrigin( clent );
+
+			VectorCopy( clent->origin, player->origin );
+			VectorCopy( clent->angles, player->angles );
+		}
+		else
+		{
+			player->active = true;
+			player->movetype = state->movetype;
+			player->solid = state->solid;
+			player->usehull = state->usehull;
+
+			// don't rewrite origin and angles of local client
+			if( cl.playernum == i )
+				continue;
+
+			VectorCopy( state->origin, player->origin );
+			VectorCopy( state->angles, player->angles );
+		}
+	}
+}
+
 void CL_ClipPMoveToEntity( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *tr )
 {
 	ASSERT( tr != NULL );
@@ -211,24 +325,31 @@ pmove must be setup with world and solid entity hulls before calling
 */
 void CL_SetSolidPlayers( int playernum )
 {
-	int		j;
-	extern	vec3_t	player_mins;
-	extern	vec3_t	player_maxs;
+	entity_state_t	*state;
 	cl_entity_t	*ent;
 	physent_t		*pe;
+	int		i;
 
 	if( !cl_solid_players->integer )
 		return;
 
-	for( j = 0; j < cl.maxclients; j++ )
+	for( i = 0; i < cl.maxclients; i++ )
 	{
 		// the player object never gets added
-		if( j == playernum ) continue;
+		if( i == playernum ) continue;
 
-		ent = CL_GetEntityByIndex( j + 1 );		
+		ent = CL_GetEntityByIndex( i + 1 );		
 
 		if( !ent || !ent->player )
 			continue; // not present this frame
+
+		state = cl.frames[cl.parsecountmod].playerstate + i;
+
+		if( state->effects & EF_NODRAW )
+			continue; // skip invisible
+
+		if( !state->solid )
+			continue; // not solid
 
 		pe = &clgame.pmove->physents[clgame.pmove->numphysent];
 		if( CL_CopyEntityToPhysEnt( pe, ent ))
@@ -858,6 +979,10 @@ void CL_RunUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qboole
 	// copy results back to client
 	CL_FinishPMove( clgame.pmove, to );
 
+	cl.predicted.lastground = clgame.pmove->onground;
+	if( cl.predicted.lastground > 0 && cl.predicted.lastground < clgame.pmove->numphysent )
+		cl.predicted.lastground = clgame.pmove->physents[cl.predicted.lastground].info;
+
 	clgame.dllFuncs.pfnPostRunCmd( from, to, &cmd, runfuncs, *time, random_seed );
 	*time += (double)cmd.msec / 1000.0;
 }
@@ -879,26 +1004,30 @@ void CL_CheckPredictionError( void )
 	frame = ( cls.netchan.incoming_acknowledged ) & CL_UPDATE_MASK;
 
 	// compare what the server returned with what we had predicted it to be
-	VectorSubtract( cl.frame.playerstate[cl.playernum].origin, cl.predicted_origins[frame], delta );
+	VectorSubtract( cl.frame.playerstate[cl.playernum].origin, cl.predicted.origins[frame], delta );
 
 	maxspd = ( clgame.movevars.maxvelocity * host.frametime );
 	len = VectorLength( delta );
 
 	// save the prediction error for interpolation
-	if(( cl.frame.client.flags & EF_NOINTERP ) || len > maxspd )
+//	if(( cl.frame.client.flags & EF_NOINTERP ) || len > maxspd )
+	if( len > 64.0f )
 	{
 		// a teleport or something or gamepaused
-		VectorClear( cl.prediction_error );
+		VectorClear( cl.predicted.error );
 	}
 	else
 	{
 		if( cl_showerror->value && len > 0.5f )
 			MsgDev( D_ERROR, "prediction error on %i: %g\n", cl.parsecount, len );
 
-		VectorCopy( cl.frame.playerstate[cl.playernum].origin, cl.predicted_origins[frame] );
+		VectorCopy( cl.frame.playerstate[cl.playernum].origin, cl.predicted.origins[frame] );
 
-		// save for error itnerpolation
-		VectorCopy( delta, cl.prediction_error );
+		// save for error interpolation
+		VectorCopy( delta, cl.predicted.error );
+
+		if(( len > 0.25f ) && ( cl.maxclients > 1 ))
+			cl.predicted.correction_time = cl_smoothtime->value;
 	}
 }
 
@@ -913,12 +1042,43 @@ void CL_PostRunCmd( usercmd_t *ucmd, int random_seed )
 {
 	local_state_t	from, to;
 
-	memcpy( from.weapondata, cl.frame.weapondata, sizeof( from.weapondata ));
+	Q_memset( &from, 0, sizeof( local_state_t ));
+	Q_memset( &to, 0, sizeof( local_state_t ));
+	Q_memcpy( from.weapondata, cl.frame.weapondata, sizeof( from.weapondata ));
 	from.playerstate = cl.frame.playerstate[cl.playernum];
 	from.client = cl.frame.client;
 	to = from;
 
 	clgame.dllFuncs.pfnPostRunCmd( &from, &to, ucmd, true, cl.time, random_seed );
+}
+
+/*
+=================
+CL_FakeUsercmd
+
+Runs client weapons prediction code
+=================
+*/
+void CL_FakeUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qboolean runfuncs, double *pfElapsed, unsigned int random_seed )
+{
+	usercmd_t		cmd;
+	local_state_t	temp;
+	usercmd_t		split;
+
+	while( u->msec > 50 )
+	{
+		split = *u;
+		split.msec /= 2;
+		CL_FakeUsercmd( from, &temp, &split, runfuncs, pfElapsed, random_seed );
+		from = &temp;
+		u = &split;
+	}
+
+	cmd = *u;
+	*to = *from;
+
+	clgame.dllFuncs.pfnPostRunCmd( from, to, &cmd, runfuncs, *pfElapsed, random_seed );
+	*pfElapsed += cmd.msec / 1000.0;
 }
 
 /*
@@ -949,15 +1109,62 @@ void CL_PredictMovement( void )
 
 	if( !CL_IsInGame( )) return;
 
+	CL_SetUpPlayerPrediction( false, false );
+
 	// unpredicted pure angled values converted into axis
 	AngleVectors( cl.refdef.cl_viewangles, cl.refdef.forward, cl.refdef.right, cl.refdef.up );
 
 	ASSERT( cl.refdef.cmd != NULL );
 
 	if( !CL_IsPredicted( ))
-	{	
-		// run commands even if client predicting is disabled - client expected it
-		CL_PostRunCmd( cl.refdef.cmd, cls.lastoutgoingcommand );
+	{
+		// fake prediction code
+		// we need to perform cl_lw prediction while cl_predict is disabled
+		// because cl_lw is enabled by default in Half-Life
+		if( !cl_lw->integer )
+		{
+			cl.predicted.viewmodel = cl.frame.client.viewmodel;
+			return;
+		}
+
+		ack = cls.netchan.incoming_acknowledged;
+		outgoing_command = cls.netchan.outgoing_sequence;
+
+		from = &cl.predict[cl.parsecountmod];
+		from->playerstate = cl.frame.playerstate[cl.playernum];
+		from->client = cl.frame.client;
+		Q_memcpy( from->weapondata, cl.frame.weapondata, sizeof( from->weapondata ));
+
+		time = cl.frame.time;
+
+		while( 1 )
+		{
+			// we've run too far forward
+			if( frame >= ( CL_UPDATE_BACKUP - 1 ))
+				break;
+
+			// Incoming_acknowledged is the last usercmd the server acknowledged having acted upon
+			current_command = ack + frame;
+			current_command_mod = current_command & CL_UPDATE_MASK;
+
+			// we've caught up to the current command.
+			if( current_command >= outgoing_command )
+				break;
+
+			to = &cl.predict[( cl.parsecountmod + frame ) & CL_UPDATE_MASK];
+
+			CL_FakeUsercmd( from, to, &cl.commands[current_command_mod].cmd,
+				!cl.commands[current_command_mod].processedfuncs,
+				&time, cls.netchan.incoming_acknowledged + frame );
+
+			cl.commands[current_command_mod].processedfuncs = true;
+
+			from = to;
+			frame++;
+		}
+
+		if( to )
+			cl.predicted.viewmodel = to->client.viewmodel;
 		return;
 	}
 
@@ -965,7 +1172,7 @@ void CL_PredictMovement( void )
 	outgoing_command = cls.netchan.outgoing_sequence;
 
 	from = &cl.predict[cl.parsecountmod];
-	memcpy( from->weapondata, cl.frame.weapondata, sizeof( from->weapondata ));
+	Q_memcpy( from->weapondata, cl.frame.weapondata, sizeof( from->weapondata ));
 	from->playerstate = cl.frame.playerstate[cl.playernum];
 	from->client = cl.frame.client;
 
@@ -996,7 +1203,7 @@ void CL_PredictMovement( void )
 		cl.commands[current_command_mod].processedfuncs = true;
 
 		// save for debug checking
-		VectorCopy( to->playerstate.origin, cl.predicted_origins[current_command_mod] );
+		VectorCopy( to->playerstate.origin, cl.predicted.origins[current_command_mod] );
 
 		from = to;
 		frame++;
@@ -1004,15 +1211,109 @@ void CL_PredictMovement( void )
 
 	if( to )
 	{
-		VectorCopy( to->playerstate.origin, cl.predicted_origin );
-		VectorCopy( to->client.velocity, cl.predicted_velocity );
-		VectorCopy( to->client.view_ofs, cl.predicted_viewofs );
-		VectorCopy( to->client.punchangle, cl.predicted_punchangle );
+		float	t0 = cl.commands[( cl.parsecountmod + frame - 1) & CL_UPDATE_MASK].senttime;
+		float	t1 = cl.commands[( cl.parsecountmod + frame ) & CL_UPDATE_MASK].senttime;
+		float	t;
 
-		cl.predicted_viewmodel = to->client.viewmodel;
-		cl.scr_fov = to->client.fov;
+		if( t0 == t1 )
+		{
+			t = 0.0f;
+		}
+		else
+		{
+			t = (host.realtime - t0) / (t1 - t0);
+			t = bound( 0.0f, t, 1.0f );
+		}
 
-		if( cl.scr_fov < 1.0f || cl.scr_fov > 179.0f )
-			cl.scr_fov = 90.0f;
+		// was teleported
+		if( fabs( to->playerstate.origin[0] - from->playerstate.origin[0] ) > 128.0f ||
+			fabs( to->playerstate.origin[1] - from->playerstate.origin[1] ) > 128.0f ||
+			fabs( to->playerstate.origin[2] - from->playerstate.origin[2] ) > 128.0f )
+		{
+			VectorCopy( to->playerstate.origin, cl.predicted.origin );
+			VectorCopy( to->client.velocity, cl.predicted.velocity );
+			VectorCopy( to->client.punchangle, cl.predicted.punchangle );
+			VectorCopy( to->client.view_ofs, cl.predicted.viewofs );
+		}
+		else
+		{
+			vec3_t	delta_origin, delta_punch, delta_vel;
+
+			VectorSubtract( to->playerstate.origin, from->playerstate.origin, delta_origin );
+			VectorSubtract( to->client.velocity, from->client.velocity, delta_vel );
+			VectorSubtract( to->client.punchangle, from->client.punchangle, delta_punch );
+
+			VectorMA( from->playerstate.origin, t, delta_origin, cl.predicted.origin );
+			VectorMA( from->client.velocity, t, delta_vel, cl.predicted.velocity );
+			VectorMA( from->client.punchangle, t, delta_punch, cl.predicted.punchangle );
+
+			if( from->playerstate.usehull == to->playerstate.usehull )
+			{
+				vec3_t	delta_viewofs;
+
+				VectorSubtract( to->client.view_ofs, from->client.view_ofs, delta_viewofs );
+				VectorMA( from->client.view_ofs, t, delta_viewofs, cl.predicted.viewofs );
+			}
+		}
+
+		cl.predicted.waterlevel = to->client.waterlevel;
+		cl.predicted.viewmodel = to->client.viewmodel;
+		cl.predicted.usehull = to->playerstate.usehull;
+
+		if( to->client.flags & FL_ONGROUND )
+		{
+			cl_entity_t *ent = CL_GetEntityByIndex( cl.predicted.lastground );
+			
+			cl.predicted.onground = cl.predicted.lastground;
+			cl.predicted.moving = 0;
+
+			if( ent )
+			{
+				vec3_t delta;
+				delta[0] = ent->curstate.origin[0] - ent->prevstate.origin[0];
+				delta[1] = ent->curstate.origin[1] - ent->prevstate.origin[1];
+				delta[2] = 0.0f;
+
+				if( VectorLength( delta ) > 0.0f )
+				{
+					cl.predicted.correction_time = 0;
+					cl.predicted.moving = 1;
+				}
+			}
+		}
+		else
+		{
+			cl.predicted.onground = -1;
+			cl.predicted.moving = 0;
+		}
+
+		if ( cl.predicted.correction_time > 0.0 && !cl_nosmooth->value && cl_smoothtime->value )
+		{
+			float	d;
+			int	i;
+
+			cl.predicted.correction_time = cl.predicted.correction_time - host.frametime;
+
+			if( cl_smoothtime->value <= 0 )
+				Cvar_SetFloat( "cl_smoothtime", 0.1 );
+
+			if( cl.predicted.correction_time < 0 )
+				cl.predicted.correction_time = 0;
+
+			if( cl_smoothtime->value <= cl.predicted.correction_time )
+				cl.predicted.correction_time = cl_smoothtime->value;
+
+			d = cl.predicted.correction_time / cl_smoothtime->value;
+
+			for( i = 0; i < 3; i++ )
+			{
+				cl.predicted.origin[i] = cl.predicted.lastorigin[i] + ( cl.predicted.origin[i] - cl.predicted.lastorigin[i] ) * (1.0 - d);
+			}
+		}
+
+		VectorCopy( cl.predicted.origin, cl.predicted.lastorigin );
+		CL_SetIdealPitch();
 	}
+
+	CL_CheckPredictionError();
 }

@@ -228,7 +228,7 @@ KeyCode VGUI_MapKey( int keyCode )
 	}
 }
 
-long VGUI_SurfaceWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
+LONG VGUI_SurfaceWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
 	SurfaceBase *surface = NULL;
 	CEnginePanel *panel = NULL;

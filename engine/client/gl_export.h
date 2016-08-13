@@ -1191,5 +1191,6 @@ BOOL  ( WINAPI * pwglRealizeLayerPalette)(HDC, int, BOOL);
 BOOL  ( WINAPI * pwglSwapLayerBuffers)(HDC, UINT);
 BOOL  ( WINAPI * pwglSwapIntervalEXT)( int interval );
 HGLRC ( WINAPI * pwglCreateContextAttribsARB)( HDC hDC, HGLRC hShareContext, const int *attribList );
+const char *( WINAPI * pwglGetExtensionsStringEXT)( void );
 
 #endif//GL_EXPORT_H

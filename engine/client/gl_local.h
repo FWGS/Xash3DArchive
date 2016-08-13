@@ -492,6 +492,7 @@ void R_NewMap( void );
 enum
 {
 	GL_OPENGL_110 = 0,		// base
+	GL_WGL_EXTENSIONS,
 	GL_WGL_SWAPCONTROL,		
 	GL_WGL_PROCADDRESS,
 	GL_HARDWARE_GAMMA_CONTROL,
@@ -548,6 +549,7 @@ typedef struct
 
 	// list of supported extensions
 	const char	*extensions_string;
+	const char	*wgl_extensions_string;
 	byte		extension[GL_EXTCOUNT];
 
 	int		max_texture_units;

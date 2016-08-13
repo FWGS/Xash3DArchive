@@ -30,7 +30,8 @@ GNU General Public License for more details.
 convar_t	*rcon_client_password;
 convar_t	*rcon_address;
 
-convar_t	*cl_smooth;
+convar_t	*cl_nosmooth;
+convar_t	*cl_smoothtime;
 convar_t	*cl_timeout;
 convar_t	*cl_predict;
 convar_t	*cl_showfps;
@@ -38,6 +39,7 @@ convar_t	*cl_nodelta;
 convar_t	*cl_crosshair;
 convar_t	*cl_cmdbackup;
 convar_t	*cl_showerror;
+convar_t	*cl_bmodelinterp;
 convar_t	*cl_draw_particles;
 convar_t	*cl_lightstyle_lerping;
 convar_t	*cl_idealpitchscale;
@@ -305,27 +307,22 @@ void CL_CreateCmd( void )
 	Q_memset( &cmd, 0, sizeof( cmd ));
 
 	// build list of all solid entities per next frame (exclude clients)
-	CL_SetSolidEntities ();
-	CL_SetSolidPlayers ( cl.playernum );
+	CL_SetSolidEntities();
+	CL_PushPMStates();
+	CL_SetSolidPlayers( cl.playernum );
 
 	VectorCopy( cl.refdef.cl_viewangles, angles );
 	VectorCopy( cl.frame.client.origin, cl.data.origin );
 	VectorCopy( cl.refdef.cl_viewangles, cl.data.viewangles );
 	cl.data.iWeaponBits = cl.frame.client.weapons;
-
-	if( cl.scr_fov < 1.0f || cl.scr_fov > 179.0f )
-		cl.scr_fov = 90.0f;	// reset to default
 	cl.data.fov = cl.scr_fov;
 
-	clgame.dllFuncs.pfnUpdateClientData( &cl.data, cl.time );
-
-	// grab changes
-	VectorCopy( cl.data.viewangles, cl.refdef.cl_viewangles );
-	cl.frame.client.weapons = cl.data.iWeaponBits;
-	cl.scr_fov = cl.data.fov;
-
-	if( cl.scr_fov < 1.0f || cl.scr_fov > 179.0f )
-		cl.scr_fov = 90.0f;	// reset to default
+	if( clgame.dllFuncs.pfnUpdateClientData( &cl.data, cl.time ))
+	{
+		// grab changes if successful
+		VectorCopy( cl.data.viewangles, cl.refdef.cl_viewangles );
+		cl.scr_fov = cl.data.fov;
+	}
 
 	// allways dump the first ten messages,
 	// because it may contain leftover inputs
@@ -337,6 +334,8 @@ void CL_CreateCmd( void )
 			cl.refdef.cmd = &cl.commands[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].cmd;
 			*cl.refdef.cmd = cmd;
 		}
+
+		CL_PopPMStates();
 		return;
 	}
 
@@ -354,6 +353,7 @@ void CL_CreateCmd( void )
 
 	active = ( cls.state == ca_active && !cl.refdef.paused && !cls.demoplayback );
 	clgame.dllFuncs.CL_CreateMove( cl.time - cl.oldtime, &pcmd->cmd, active );
+	CL_PopPMStates();
 
 	R_LightForPoint( cl.frame.client.origin, &color, false, false, 128.0f );
 	pcmd->cmd.lightlevel = (color.r + color.g + color.b) / 3;
@@ -523,7 +523,6 @@ void CL_WritePacket( void )
 		for( i = numcmds - 1; i >= 0; i-- )
 		{
 			cmdnumber = ( cls.netchan.outgoing_sequence - i ) & CL_UPDATE_MASK;
-			if( i == 0 ) cl.commands[cmdnumber].processedfuncs = true; // only last cmd allow to run funcs
 
 			to = cmdnumber;
 			CL_WriteUsercmd( &buf, from, to );
@@ -722,7 +721,7 @@ void CL_Connect_f( void )
 		return;	
 	}
 
-	Q_strncpy( server, Cmd_Argv( 1 ), sizeof( cls.servername ));
+	Q_strncpy( server, Cmd_Argv( 1 ), sizeof( server ));
 
 	if( Host_ServerState())
 	{	
@@ -950,7 +949,7 @@ CL_InternetServers_f
 void CL_InternetServers_f( void )
 {
 	netadr_t	adr;
-	char	fullquery[512] = "\x31\xFF" "0.0.0.0:0\0" "\\gamedir\\";
+	char	fullquery[512] = "1\xFF" "0.0.0.0:0\0" "\\gamedir\\";
 
 	MsgDev( D_INFO, "Scanning for servers on the internet area...\n" );
 	NET_Config( true ); // allow remote
@@ -958,9 +957,9 @@ void CL_InternetServers_f( void )
 	if( !NET_StringToAdr( MASTERSERVER_ADR, &adr ) )
 		MsgDev( D_INFO, "Can't resolve adr: %s\n", MASTERSERVER_ADR );
 
-	Q_strcpy( &fullquery[21], GI->gamedir );
+	Q_strcpy( &fullquery[22], GI->gamedir );
 
-	NET_SendPacket( NS_CLIENT, Q_strlen( GI->gamedir ) + 22, fullquery, adr );
+	NET_SendPacket( NS_CLIENT, Q_strlen( GI->gamedir ) + 23, fullquery, adr );
 }
 
 /*
@@ -1074,9 +1073,10 @@ Handle a reply from a info
 */
 void CL_ParseStatusMessage( netadr_t from, sizebuf_t *msg )
 {
-	char	*s;
+	char	*s = BF_ReadString( msg );
 
-	s = BF_ReadString( msg );
+	// more info about servers
+	MsgDev( D_INFO, "Server: %s, Game: %s\n", NET_AdrToString( from ), Info_ValueForKey( s, "gamedir" ));
 	UI_AddServerToList( from, s );
 }
 
@@ -1395,26 +1395,21 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		// dropped the connection but it is still getting packets from us
 		CL_Disconnect();
 	}
-	else if( msg->pData[0] == 0xFF && msg->pData[1] == 0xFF && msg->pData[2] == 0xFF && msg->pData[3] == 0xFF && msg->pData[4] == 0x66 && msg->pData[5] == 0x0A )
+	else if( !Q_strcmp( c, "f" ))
 	{
-		dataoffset = 6;
-
-		while( 1 )
+		// serverlist got from masterserver
+		while( !msg->bOverflow )
 		{
 			servadr.type = NA_IP;
-			Q_memcpy( servadr.ip, &msg->pData[dataoffset], sizeof(servadr.ip));
-			servadr.port = *(word *)&msg->pData[dataoffset + 4];
+			// 4 bytes for IP
+			BF_ReadBytes( msg, servadr.ip, sizeof( servadr.ip ));
+			// 2 bytes for Port
+			servadr.port = BF_ReadShort( msg );
 
-			if( !servadr.port )
-				break;
-
-			MsgDev( D_INFO, "Found server: %s\n", NET_AdrToString( servadr ));
+			if( !servadr.port ) break;
 
 			NET_Config( true ); // allow remote
-
 			Netchan_OutOfBandPrint( NS_CLIENT, servadr, "info %i", PROTOCOL_VERSION );
-
-			dataoffset += 6;
 		}
 	}
 	else if( clgame.dllFuncs.pfnConnectionlessPacket( &from, args, buf, &len ))
@@ -1670,13 +1665,15 @@ void CL_InitLocal( void )
 	rate = Cvar_Get( "rate", "25000", CVAR_USERINFO|CVAR_ARCHIVE, "player network rate" );
 	hltv = Cvar_Get( "hltv", "0", CVAR_USERINFO|CVAR_LATCH, "HLTV mode" );
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
-	cl_smooth = Cvar_Get ("cl_smooth", "0", CVAR_ARCHIVE, "smooth up stair climbing and interpolate position in multiplayer" );
+	cl_nosmooth = Cvar_Get( "cl_nosmooth", "0", CVAR_ARCHIVE, "disable smooth up stair climbing and interpolate position in multiplayer" );
+	cl_smoothtime = Cvar_Get( "cl_smoothtime", "0.1", CVAR_ARCHIVE, "time to smooth up" );
 	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "10", CVAR_ARCHIVE, "how many additional history commands are sent" );
 	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", CVAR_ARCHIVE, "Max number of command packets sent to server per second" );
 	cl_draw_particles = Cvar_Get( "cl_draw_particles", "1", CVAR_ARCHIVE, "Disable any particle effects" );
 	cl_draw_beams = Cvar_Get( "cl_draw_beams", "1", CVAR_ARCHIVE, "Disable view beams" );
 	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", CVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
 	cl_showerror = Cvar_Get( "cl_showerror", "0", CVAR_ARCHIVE, "show prediction error" );
+	cl_bmodelinterp = Cvar_Get( "cl_bmodelinterp", "1", CVAR_ARCHIVE, "enable bmodel interpolation" );
 
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
 	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar

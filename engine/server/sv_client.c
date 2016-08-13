@@ -548,7 +548,7 @@ char *SV_StatusString( void )
 		cl = &svs.clients[i];
 		if( cl->state == cs_connected || cl->state == cs_spawned )
 		{
-			Q_sprintf( player, "%i %i \"%s\"\n", (int)cl->edict->v.frags, cl->ping, cl->name );
+			Q_sprintf( player, "%i %i \"%s\"\n", (int)cl->edict->v.frags, (int)cl->ping, cl->name );
 			playerLength = Q_strlen( player );
 			if( statusLength + playerLength >= sizeof( status ))
 				break; // can't hold any more
@@ -642,7 +642,7 @@ void SV_Info( netadr_t from )
 	int	version;
 
 	// ignore in single player
-	if( sv_maxclients->integer == 1 )
+	if( sv_maxclients->integer == 1 || !svs.initialized )
 		return;
 
 	version = Q_atoi( Cmd_Argv( 1 ));
@@ -660,9 +660,9 @@ void SV_Info( netadr_t from )
 
 		Info_SetValueForKey( string, "host", hostname->string );
 		Info_SetValueForKey( string, "map", sv.name );
-		Info_SetValueForKey( string, "dm", va( "%i", svgame.globals->deathmatch ));
-		Info_SetValueForKey( string, "team", va( "%i", svgame.globals->teamplay ));
-		Info_SetValueForKey( string, "coop", va( "%i", svgame.globals->coop ));
+		Info_SetValueForKey( string, "dm", va( "%i", (int)svgame.globals->deathmatch ));
+		Info_SetValueForKey( string, "team", va( "%i", (int)svgame.globals->teamplay ));
+		Info_SetValueForKey( string, "coop", va( "%i", (int)svgame.globals->coop ));
 		Info_SetValueForKey( string, "numcl", va( "%i", count ));
 		Info_SetValueForKey( string, "maxcl", va( "%i", sv_maxclients->integer ));
 		Info_SetValueForKey( string, "gamedir", GI->gamefolder );
@@ -685,7 +685,7 @@ void SV_BuildNetAnswer( netadr_t from )
 	int	i, count = 0;
 
 	// ignore in single player
-	if( sv_maxclients->integer == 1 )
+	if( sv_maxclients->integer == 1 || !svs.initialized )
 		return;
 
 	version = Q_atoi( Cmd_Argv( 1 ));
@@ -716,7 +716,7 @@ void SV_BuildNetAnswer( netadr_t from )
 			{
 				edict_t *ed = svs.clients[i].edict;
 				float time = host.realtime - svs.clients[i].lastconnect;
-				Q_strncat( string, va( "%c\\%s\\%i\\%f\\", count, svs.clients[i].name, ed->v.frags, time ), sizeof( string )); 
+				Q_strncat( string, va( "%c\\%s\\%i\\%f\\", count, svs.clients[i].name, (int)ed->v.frags, time ), sizeof( string )); 
 				count++;
 			}
 		}
@@ -1802,6 +1802,14 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 		val = Info_ValueForKey( cl->userinfo, "name" );
 	}
 
+	if( !Q_strlen( temp1 ) )
+	{
+		Info_SetValueForKey( cl->userinfo, "name", "unnamed" );
+		val = Info_ValueForKey( cl->userinfo, "name" );
+		Q_strncpy( temp2, "unnamed", sizeof( temp2 ));
+		Q_strncpy( temp1, "unnamed", sizeof( temp1 ));
+	}
+
 	// check to see if another user by the same name exists
 	while( 1 )
 	{
@@ -1870,6 +1878,14 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 		else cl->modelindex = 0;
 	}
 	else cl->modelindex = 0;
+
+	// force reset player model to "player"
+	if( cl->modelindex == 0 )
+	{
+		Info_SetValueForKey( cl->userinfo, "model", "player" );
+		Mod_RegisterModel( "models/player.mdl", SV_ModelIndex( "models/player.mdl" ));
+		SV_SetModel( ent, "models/player.mdl" );
+	}
 
 	// call prog code to allow overrides
 	svgame.dllFuncs.pfnClientUserInfoChanged( cl->edict, cl->userinfo );
@@ -2039,6 +2055,70 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 }
 
 /*
+==================
+SV_TSourceEngineQuery
+==================
+*/
+void SV_TSourceEngineQuery( netadr_t from )
+{
+	// A2S_INFO
+	char	answer[1024] = "";
+	int	count = 0, bots = 0, index;
+	sizebuf_t	buf;
+
+	if( svs.clients )
+	{
+		for( index = 0; index < sv_maxclients->integer; index++ )
+		{
+			if( svs.clients[index].state >= cs_connected )
+			{
+				if( svs.clients[index].fakeclient )
+					bots++;
+				else count++;
+			}
+		}
+	}
+
+	BF_Init( &buf, "TSourceEngineQuery", answer, sizeof( answer ));
+
+	BF_WriteByte( &buf, 'm' );
+	BF_WriteString( &buf, NET_AdrToString( net_local ) );
+	BF_WriteString( &buf, hostname->string );
+	BF_WriteString( &buf, sv.name );
+	BF_WriteString( &buf, GI->gamefolder );
+	BF_WriteString( &buf, GI->title );
+	BF_WriteByte( &buf, count );
+	BF_WriteByte( &buf, sv_maxclients->integer );
+	BF_WriteByte( &buf, PROTOCOL_VERSION );
+	BF_WriteByte( &buf, host.type == HOST_DEDICATED ? 'D' : 'L');
+	BF_WriteByte( &buf, 'W' );
+
+	if( Q_stricmp( GI->gamedir, "valve" ))
+	{
+		BF_WriteByte( &buf, 1 ); // mod
+		BF_WriteString( &buf, GI->game_url );
+		BF_WriteString( &buf, GI->update_url );
+		BF_WriteByte( &buf, 0 );
+		BF_WriteLong( &buf, (long)GI->version );
+		BF_WriteLong( &buf, GI->size );
+
+		if( GI->gamemode == 2 )
+			BF_WriteByte( &buf, 1 ); // multiplayer_only
+		else BF_WriteByte( &buf, 0 );
+
+		if( Q_strstr( GI->game_dll, "hl." ))
+			BF_WriteByte( &buf, 0 ); // Half-Life DLL
+		else BF_WriteByte( &buf, 1 ); // Own DLL
+	}
+	else BF_WriteByte( &buf, 0 ); // Half-Life
+
+	BF_WriteByte( &buf, GI->secure ); // unsecure
+	BF_WriteByte( &buf, bots );
+
+	NET_SendPacket( NS_SERVER, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ), from );
+}
+
+/*
 =================
 SV_ConnectionlessPacket
 
@@ -2053,9 +2133,6 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	char	*args;
 	char	*c, buf[MAX_SYSPATH];
 	int	len = sizeof( buf );
-	uint	challenge;
-	int	index, count = 0;
-	char	query[512], ostype = 'w';
 
 	BF_Clear( msg );
 	BF_ReadLong( msg );// skip the -1 marker
@@ -2074,46 +2151,9 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !Q_strcmp( c, "connect" )) SV_DirectConnect( from );
 	else if( !Q_strcmp( c, "rcon" )) SV_RemoteCommand( from, msg );
 	else if( !Q_strcmp( c, "netinfo" )) SV_BuildNetAnswer( from );
-	else if( msg->pData[0] == 0xFF && msg->pData[1] == 0xFF && msg->pData[2] == 0xFF && msg->pData[3] == 0xFF && msg->pData[4] == 0x73 && msg->pData[5] == 0x0A )
-	{
-		Q_memcpy(&challenge, &msg->pData[6], sizeof(int));
-
-		for( index = 0; index < sv_maxclients->integer; index++ )
-		{
-			if( svs.clients[index].state >= cs_connected )
-				count++;
-		}
-
-		Q_snprintf( query, sizeof( query ),
-		"0\n"
-		"\\protocol\\%d"			// protocol version
-		"\\challenge\\%u"			// challenge number that got after FF FF FF FF 73 0A
-		"\\players\\%d"			// current player number
-		"\\max\\%d"			// max_players
-		"\\bots\\0"			// bot number?
-		"\\gamedir\\%s"			// gamedir. _xash appended, because Xash3D is not compatible with GS in multiplayer
-		"\\map\\%s"			// current map
-		"\\type\\d"			// server type
-		"\\password\\0"			// is password set
-		"\\os\\%c"			// server OS?
-		"\\secure\\0"			// server anti-cheat? VAC?
-		"\\lan\\0"			// is LAN server?
-		"\\version\\%f"			// server version
-		"\\region\\255"			// server region
-		"\\product\\%s\n",			// product? Where is the difference with gamedir?
-		PROTOCOL_VERSION,
-		challenge,
-		count,
-		sv_maxclients->integer,
-		GI->gamefolder,
-		sv.name,
-		ostype,
-		XASH_VERSION,
-		GI->gamefolder
-		);
-
-		NET_SendPacket( NS_SERVER, Q_strlen( query ), query, from );
-	}
+	else if( !Q_strcmp( c, "s")) SV_AddToMaster( from, msg );
+	else if( !Q_strcmp( c, "T" "Source" )) SV_TSourceEngineQuery( from );
+	else if( !Q_strcmp( c, "i" )) NET_SendPacket( NS_SERVER, 5, "\xFF\xFF\xFF\xFFj", from ); // A2A_PING
 	else if( svgame.dllFuncs.pfnConnectionlessPacket( &from, args, buf, &len ))
 	{
 		// user out of band message (must be handled in CL_ConnectionlessPacket)
@@ -2143,7 +2183,6 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	usercmd_t		cmds[32], *to;
 	edict_t		*player;
 
-	numbackup = 2;
 	player = cl->edict;
 
 	frame = &cl->frames[cl->netchan.incoming_acknowledged & SV_UPDATE_MASK];

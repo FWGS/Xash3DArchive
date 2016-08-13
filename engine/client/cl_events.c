@@ -476,12 +476,22 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 	else VectorCopy( angles, args.angles );
 
 	if( !origin || VectorIsNull( origin ))
-		VectorCopy( cl.frame.client.origin, args.origin );
+	{
+		if( CL_IsPredicted( )) VectorCopy( cl.predicted.origin, args.origin );
+		else VectorCopy( cl.frame.client.origin, args.origin );
+	}
 	else VectorCopy( origin, args.origin );
 
-	VectorCopy( cl.frame.client.velocity, args.velocity );
-	args.ducking = (cl.frame.playerstate[cl.playernum].usehull == 1);
-//	args.ducking = cl.frame.client.bInDuck;
+	if( CL_IsPredicted( ))
+	{
+		VectorCopy( cl.predicted.velocity, args.velocity );
+		args.ducking = (cl.predicted.usehull == 1);
+	}
+	else
+	{
+		VectorCopy( cl.frame.client.velocity, args.velocity );
+		args.ducking = cl.frame.client.bInDuck;
+	}
 
 	args.fparam1 = fparam1;
 	args.fparam2 = fparam2;

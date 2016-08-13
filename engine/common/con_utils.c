@@ -304,8 +304,8 @@ qboolean Cmd_GetMusicList( const char *s, char *completedname, int length )
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( !Q_stricmp( ext, "wav" ) || !Q_stricmp( ext, "mp3" ));
-		else continue;
+		if( Q_stricmp( ext, "wav" ) && Q_stricmp( ext, "mp3" ))
+			continue;
 
 		FS_FileBase( t->filenames[i], matchbuf );
 		Msg( "%16s\n", matchbuf );
@@ -568,7 +568,7 @@ Cmd_GetTexturemodes
 Prints or complete sound filename
 =====================================
 */
-qboolean Cmd_GetTexturemodes( const char *s, char *completedname, int length )
+qboolean Cmd_GetTextureModes( const char *s, char *completedname, int length )
 {
 	int	i, numtexturemodes;
 	string	texturemodes[6];	// keep an actual ( sizeof( gl_texturemode) / sizeof( gl_texturemode[0] ))
@@ -584,7 +584,7 @@ qboolean Cmd_GetTexturemodes( const char *s, char *completedname, int length )
 	"GL_NEAREST_MIPMAP_NEAREST",
 	};
 
-	// compare gamelist with current keyword
+	// compare texture filtering mode list with current keyword
 	for( i = 0, numtexturemodes = 0; i < 6; i++ )
 	{
 		if(( *s == '*' ) || !Q_strnicmp( gl_texturemode[i], s, Q_strlen( s )))
@@ -592,7 +592,7 @@ qboolean Cmd_GetTexturemodes( const char *s, char *completedname, int length )
 	}
 
 	if( !numtexturemodes ) return false;
-	Q_strncpy( matchbuf, gl_texturemode[0], MAX_STRING ); 
+	Q_strncpy( matchbuf, texturemodes[0], MAX_STRING ); 
 	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
 	if( numtexturemodes == 1 ) return true;
 
@@ -652,6 +652,63 @@ qboolean Cmd_GetGamesList( const char *s, char *completedname, int length )
 	}
 
 	Msg( "\n^3 %i games found.\n", numgamedirs );
+
+	// cut shortestMatch to the amount common with s
+	if( completedname && length )
+	{
+		for( i = 0; matchbuf[i]; i++ )
+		{
+			if( Q_tolower( completedname[i] ) != Q_tolower( matchbuf[i] ))
+				completedname[i] = 0;
+		}
+	}
+	return true;
+}
+
+/*
+=====================================
+Cmd_GetCDList
+
+Prints or complete CD command name
+=====================================
+*/
+qboolean Cmd_GetCDList( const char *s, char *completedname, int length )
+{
+	int i, numcdcommands;
+	string	cdcommands[8];
+	string	matchbuf;
+
+	const char *cd_command[] =
+	{
+	"info",
+	"loop",
+	"off",
+	"on",
+	"pause",
+	"play",
+	"resume",
+	"stop",
+	};
+
+	// compare CD command list with current keyword
+	for( i = 0, numcdcommands = 0; i < 8; i++ )
+	{
+		if(( *s == '*' ) || !Q_strnicmp( cd_command[i], s, Q_strlen( s )))
+			Q_strcpy( cdcommands[numcdcommands++], cd_command[i] );
+	}
+
+	if( !numcdcommands ) return false;
+	Q_strncpy( matchbuf, cdcommands[0], MAX_STRING );
+	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( numcdcommands == 1 ) return true;
+
+	for( i = 0; i < numcdcommands; i++ )
+	{
+		Q_strncpy( matchbuf, cdcommands[i], MAX_STRING );
+		Msg( "%16s\n", matchbuf );
+	}
+
+	Msg( "\n^3 %i commands found.\n", numcdcommands );
 
 	// cut shortestMatch to the amount common with s
 	if( completedname && length )
@@ -815,7 +872,7 @@ qboolean Cmd_CheckMapsList( qboolean fRefresh )
 
 autocomplete_list_t cmd_list[] =
 {
-{ "gl_texturemode", Cmd_GetTexturemodes },
+{ "gl_texturemode", Cmd_GetTextureModes },
 { "map_background", Cmd_GetMapList },
 { "changelevel", Cmd_GetMapList },
 { "playdemo", Cmd_GetDemoList, },
@@ -832,6 +889,7 @@ autocomplete_list_t cmd_list[] =
 { "load", Cmd_GetSavesList },
 { "play", Cmd_GetSoundList },
 { "map", Cmd_GetMapList },
+{ "cd", Cmd_GetCDList },
 { NULL }, // termiantor
 };
 

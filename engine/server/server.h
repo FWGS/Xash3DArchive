@@ -447,6 +447,7 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg );
 void SV_PrepWorldFrame( void );
 void SV_ProcessFile( sv_client_t *cl, char *filename );
 void SV_SendResourceList( sv_client_t *cl );
+void SV_AddToMaster( netadr_t from, sizebuf_t *msg );
 void Master_Add( void );
 void Master_Heartbeat( void );
 void Master_Packet( void );

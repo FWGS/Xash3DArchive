@@ -462,6 +462,8 @@ void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end )
 		
 		maxcol = max( max( r, g ), b ) / 255.0f;
 		mincol = min( min( r, g ), b ) / 255.0f;
+
+		if( maxcol == 0 ) continue;
 		
 		val = maxcol;
 		sat = (maxcol - mincol) / maxcol;
@@ -567,7 +569,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 	// check for color
 	for( i = 0; i < 256; i++ )
 	{
-		col = (rgba_t *)image.d_currentpal[i];
+		col = (rgba_t *)&image.d_currentpal[i];
 		if( col[0] != col[1] || col[1] != col[2] )
 		{
 			image.flags |= IMAGE_HAS_COLOR;
@@ -1114,7 +1116,7 @@ byte *Image_FloodInternal( const byte *indata, int inwidth, int inheight, int ou
 			{
 				if( x < inwidth )
 					*out++ = *in++;
-				else *out++;
+				else out++;
 			}
 		}
 	}

@@ -755,12 +755,6 @@ void Con_Print( const char *txt )
 			if( txt[l] <= ' ')
 				break;
 		}
-#if 0
-		// g-cont. experiment from SDLash3D
-		// word wrap
-		if( l != con.linewidth && ( con.x + l >= con.linewidth ))
-			Con_Linefeed();
-#endif
 		txt++;
 
 		switch( c )

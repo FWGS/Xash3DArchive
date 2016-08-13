@@ -27,11 +27,6 @@ GNU General Public License for more details.
 #define WINDOW_EX_STYLE		(0)
 #define WINDOW_NAME			"Xash Window" // Half-Life
 
-#ifdef WIN32
-// Enable NVIDIA High Performance Graphics while using Integrated Graphics.
-__declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
-#endif
-
 convar_t	*renderinfo;
 convar_t	*gl_allow_software;
 convar_t	*gl_extensions;
@@ -465,6 +460,12 @@ static dllfunc_t wglswapintervalfuncs[] =
 { NULL, NULL }
 };
 
+static dllfunc_t wglgetextensionsstring[] =
+{
+{ "wglGetExtensionsStringEXT" , (void **)&pwglGetExtensionsStringEXT },
+{ NULL, NULL }
+};
+
 dll_info_t opengl_dll = { "opengl32.dll", wgl_funcs, true };
 
 /*
@@ -530,6 +531,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 {
 	const dllfunc_t	*func;
 	convar_t		*parm;
+	const char	*extensions_string;
 
 	MsgDev( D_NOTE, "GL_CheckExtension: %s ", name );
 
@@ -547,7 +549,12 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 		GL_SetExtension( r_ext, 1 );
 	}
 
-	if(( name[2] == '_' || name[3] == '_' ) && !Q_strstr( glConfig.extensions_string, name ))
+	extensions_string = glConfig.extensions_string; 
+
+	if( name[0] == 'W' && name[1] == 'G' && name[2] == 'L' && glConfig.wgl_extensions_string != NULL )
+		extensions_string = glConfig.wgl_extensions_string;
+
+	if(( name[2] == '_' || name[3] == '_' ) && !Q_strstr( extensions_string, name ))
 	{
 		GL_SetExtension( r_ext, false );	// update render info
 		MsgDev( D_NOTE, "- ^1failed\n" );
@@ -1577,7 +1584,12 @@ void R_RenderInfo_f( void )
 
 	// don't spam about extensions
 	if( host.developer >= 4 )
+	{
 		Msg( "GL_EXTENSIONS: %s\n", glConfig.extensions_string );
+
+		if( glConfig.wgl_extensions_string != NULL )
+			Msg( "\nWGL_EXTENSIONS: %s\n", glConfig.wgl_extensions_string );
+	}
 
 	Msg( "GL_MAX_TEXTURE_SIZE: %i\n", glConfig.max_2d_texture_size );
 	
@@ -1704,6 +1716,13 @@ void GL_InitExtensions( void )
 	glConfig.version_string = pglGetString( GL_VERSION );
 	glConfig.extensions_string = pglGetString( GL_EXTENSIONS );
 	MsgDev( D_INFO, "Video: %s\n", glConfig.renderer_string );
+
+	// windows-specific extensions
+	GL_CheckExtension( "WGL Extensions String", wglgetextensionsstring, NULL, GL_WGL_EXTENSIONS );
+
+	if( pwglGetExtensionsStringEXT != NULL )
+		glConfig.wgl_extensions_string = pwglGetExtensionsStringEXT();
+	else glConfig.wgl_extensions_string = NULL;
 
 	// initalize until base opengl functions loaded
 	GL_CheckExtension( "WGL_EXT_swap_control", wglswapintervalfuncs, NULL, GL_WGL_SWAPCONTROL );

@@ -403,6 +403,9 @@ void SV_DeactivateServer( void )
 
 	svgame.dllFuncs.pfnServerDeactivate();
 
+	if( sv_maxclients->integer > 32 )
+		Cvar_SetFloat( "maxplayers", 32.0f );
+
 	for( i = 0; i < sv_maxclients->integer; i++ )
 	{
 		// release client frames
@@ -677,7 +680,7 @@ void SV_InitGame( void )
 	// copy gamemode into svgame.globals
 	svgame.globals->deathmatch = Cvar_VariableInteger( "deathmatch" );
 	svgame.globals->teamplay = Cvar_VariableInteger( "teamplay" );
-	svgame.globals->coop = Cvar_VariableInteger( "coop" );
+	svgame.globals->coop = ( sv_maxclients->integer > 1 ) ? Cvar_VariableInteger( "coop" ) : 0;
 
 	// heartbeats will always be sent to the id master
 	svs.last_heartbeat = MAX_HEARTBEAT; // send immediately

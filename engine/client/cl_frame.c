@@ -123,7 +123,7 @@ qboolean CL_FindInterpolationUpdates( cl_entity_t *ent, float targettime, positi
 
 int CL_InterpolateModel( cl_entity_t *e )
 {
-	position_history_t	*ph0, *ph1;
+	position_history_t  *ph0 = NULL, *ph1 = NULL;
 	vec3_t		origin, angles, delta;
 	float		t, t1, t2, frac;
 	int		i;
@@ -131,13 +131,15 @@ int CL_InterpolateModel( cl_entity_t *e )
 	VectorCopy( e->curstate.origin, e->origin );
 	VectorCopy( e->curstate.angles, e->angles );
 
-	if( e->model == NULL || cl.maxclients <= 1 )
+	if( !e->model || ( e->model->name[0] == '*' && !cl_bmodelinterp->integer ) || RP_LOCALCLIENT( e ) || cl.maxclients <= 1 )
+		return 1;
+
+	if( cl.predicted.moving && cl.predicted.onground == e->index )
 		return 1;
 
 	t = cl.time - cl_interp->value;
 
-	if( !CL_FindInterpolationUpdates( e, t, &ph0, &ph1, NULL ))
-		return 0;
+	CL_FindInterpolationUpdates( e, t, &ph0, &ph1, NULL );
 
 	if( ph0 == NULL || ph1 == NULL )
 		return 0;
@@ -193,6 +195,36 @@ int CL_InterpolateModel( cl_entity_t *e )
 	return 1;
 }
 
+void CL_InterpolateMovingEntity( cl_entity_t *ent )
+{
+	float		d, f = 0.0f;
+	int		i;
+
+	// don't do it if the goalstarttime hasn't updated in a while.
+	// NOTE: Because we need to interpolate multiplayer characters, the interpolation time limit
+	// was increased to 1.0 s., which is 2x the max lag we are accounting for.
+	if(( cl.time < ent->curstate.animtime + 1.0f ) && ( ent->curstate.animtime != ent->latched.prevanimtime ))
+		f = ( cl.time - ent->curstate.animtime ) / ( ent->curstate.animtime - ent->latched.prevanimtime );
+
+	f = f - 1.0f;
+
+	ent->origin[0] += ( ent->origin[0] - ent->latched.prevorigin[0] ) * f;
+	ent->origin[1] += ( ent->origin[1] - ent->latched.prevorigin[1] ) * f;
+	ent->origin[2] += ( ent->origin[2] - ent->latched.prevorigin[2] ) * f;
+
+	for( i = 0; i < 3; i++ )
+	{
+		float	ang1, ang2;
+
+		ang1 = ent->angles[i];
+		ang2 = ent->latched.prevangles[i];
+		d = ang1 - ang2;
+		if( d > 180.0f ) d -= 360.0f;
+		else if( d < -180.0f ) d += 360.0f;
+		ent->angles[i] += d * f;
+	}
+}
+
 void CL_UpdateEntityFields( cl_entity_t *ent )
 {
 	// parametric rockets code
@@ -218,7 +250,11 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 		ent->angles[PITCH] = -ent->angles[PITCH] / 3.0f;
 
 	// make me lerp
-	if( ent->model && ent->model->type == mod_brush && ent->curstate.animtime != 0.0f )
+	if( ent->index == cl.predicted.onground && cl.predicted.moving )
+	{
+		CL_InterpolateMovingEntity( ent );
+	}
+	else if( ent->model && ent->model->type == mod_brush && ent->curstate.animtime != 0.0f)
 	{
 		float		d, f = 0.0f;
 		int		i;
@@ -324,7 +360,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 				}
 			}
 
-			// move code from StudioSetupTransform here
+			// moved code from StudioSetupTransform here
 			if( host.features & ENGINE_COMPUTE_STUDIO_LERP )
 			{
 				ent->origin[0] += ( ent->curstate.origin[0] - ent->latched.prevorigin[0] ) * f;
@@ -515,10 +551,6 @@ void CL_WeaponAnim( int iAnim, int body )
 
 	cl.weaponstarttime = 0;
 	cl.weaponsequence = iAnim;
-
-	if( Host_IsLocalClient() || cl_predict->value || !cl_lw->value )
-		view->curstate.modelindex = cl.frame.client.viewmodel;
-	else view->curstate.modelindex = cl.predicted_viewmodel;
 
 	// anim is changed. update latchedvars
 	if( iAnim != view->curstate.sequence )
@@ -749,6 +781,8 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 /*
 =================
 CL_FlushEntityPacket
+
+Read and ignore whole entity packet.
 =================
 */
 void CL_FlushEntityPacket( sizebuf_t *msg )
@@ -756,7 +790,6 @@ void CL_FlushEntityPacket( sizebuf_t *msg )
 	int		newnum;
 	entity_state_t	from, to;
 
-	MsgDev( D_INFO, "FlushEntityPacket()\n" );
 	Q_memset( &from, 0, sizeof( from ));
 
 	cl.frames[cl.parsecountmod].valid = false;
@@ -1003,23 +1036,34 @@ CL_SetIdealPitch
 void CL_SetIdealPitch( void )
 {
 	float	angleval, sinval, cosval;
-	vec3_t	top, bottom;
-	float	z[MAX_FORWARD];
+	float	z[MAX_FORWARD], view_z;
+	vec3_t	top, bottom, origin;
 	int	i, j;
 	int	step, dir, steps;
 	pmtrace_t	tr;
 
 	if( !( cl.frame.client.flags & FL_ONGROUND ))
 		return;
-		
+
+	if( CL_IsPredicted( ))
+	{
+		VectorCopy( cl.predicted.origin, origin );
+		view_z = cl.predicted.viewofs[2];
+	}
+	else
+	{
+		VectorCopy( cl.frame.client.origin, origin );
+		view_z = cl.frame.client.view_ofs[2];
+	}		
+
 	angleval = cl.frame.playerstate[cl.playernum].angles[YAW] * M_PI2 / 360.0f;
 	SinCos( angleval, &sinval, &cosval );
 
 	for( i = 0; i < MAX_FORWARD; i++ )
 	{
-		top[0] = cl.frame.client.origin[0] + cosval * (i + 3.0f) * 12.0f;
-		top[1] = cl.frame.client.origin[1] + sinval * (i + 3.0f) * 12.0f;
-		top[2] = cl.frame.client.origin[2] + cl.frame.client.view_ofs[2];
+		top[0] = origin[0] + cosval * (i + 3.0f) * 12.0f;
+		top[1] = origin[1] + sinval * (i + 3.0f) * 12.0f;
+		top[2] = origin[2] + view_z;
 		
 		bottom[0] = top[0];
 		bottom[1] = top[1];

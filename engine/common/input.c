@@ -435,7 +435,7 @@ IN_WndProc
 main window procedure
 ====================
 */
-long IN_WndProc( void *hWnd, uint uMsg, uint wParam, long lParam )
+LONG IN_WndProc( HWND hWnd, UINT uMsg, UINT wParam, LONG lParam )
 {
 	int	i, temp = 0;
 	qboolean	fActivate;
