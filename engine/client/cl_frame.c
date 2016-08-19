@@ -249,12 +249,12 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	if( ent->player && RP_LOCALCLIENT( ent )) // stupid Half-Life bug
 		ent->angles[PITCH] = -ent->angles[PITCH] / 3.0f;
 
-	// make me lerp
-	if( ent->index == cl.predicted.onground && cl.predicted.moving )
+	// make me lerp (multiplayer only. this code visually breaks XashXT parent system)
+	if( ent->index == cl.predicted.onground && cl.predicted.moving && ( cl.maxclients > 1 ))
 	{
 		CL_InterpolateMovingEntity( ent );
 	}
-	else if( ent->model && ent->model->type == mod_brush && ent->curstate.animtime != 0.0f)
+	else if( ent->model && ent->model->type == mod_brush && ent->curstate.animtime != 0.0f )
 	{
 		float		d, f = 0.0f;
 		int		i;

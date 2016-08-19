@@ -549,12 +549,7 @@ Host_ServerFrame
 void Host_ServerFrame( void )
 {
 	// if server is not active, do nothing
-	if( !svs.initialized )
-	{
-		// but allow rcon
-		SV_ReadPackets ();
-		return;
-	}
+	if( !svs.initialized ) return;
 
 	svgame.globals->frametime = host.frametime;
 
