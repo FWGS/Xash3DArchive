@@ -1088,15 +1088,8 @@ void R_RenderBrushPoly( msurface_t *fa )
 	else r_stats.c_brush_polys++; 
 
 	if( fa->flags & SURF_DRAWSKY )
-	{	
-		if( world.sky_sphere )
-		{
-			// warp texture, no lightmaps
-			EmitSkyLayers( fa );
-		}
-		return;
-	}
-		
+		return; // already handled
+
 	t = R_TextureAnimation( fa->texinfo->texture, fa - RI.currententity->model->surfaces );
 
 	if( RP_NORMALPASS() && fa->flags & SURF_REFLECT )
@@ -1130,7 +1123,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 		return;
 	}
 
-	if( t->fb_texturenum )
+	if( t->fb_texturenum && fa->polys )
 	{
 		// HACKHACK: store fullbrights in poly->next (only for non-water surfaces)
 		fa->polys->next = fullbright_polys[t->fb_texturenum];
@@ -1251,9 +1244,24 @@ void R_DrawTextureChains( void )
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
 
+	if( world.sky_sphere )
+	{
+		pglDisable( GL_TEXTURE_2D );
+		pglColor3f( 1.0f, 1.0f, 1.0f );
+	}
+
 	// clip skybox surfaces
 	for( s = skychain; s != NULL; s = s->texturechain )
 		R_AddSkyBoxSurface( s );
+
+	if( world.sky_sphere )
+	{
+		pglEnable( GL_TEXTURE_2D );
+
+		if( skychain )
+			R_DrawClouds();
+		skychain = NULL;
+	}
 
 	for( i = 0; i < cl.worldmodel->numtextures; i++ )
 	{
@@ -1261,21 +1269,15 @@ void R_DrawTextureChains( void )
 		if( !t ) continue;
 
 		s = t->texturechain;
-		if( !s ) continue;
 
-		if( i == tr.skytexturenum )
-		{
-			if( world.sky_sphere )
-				R_DrawSkyChain( s );
-		}
-		else
-		{
-			if(( s->flags & SURF_DRAWTURB ) && cl.refdef.movevars->wateralpha < 1.0f )
-				continue;	// draw translucent water later
+		if( !s || ( i == tr.skytexturenum ))
+			continue;
 
-			for( ; s != NULL; s = s->texturechain )
-				R_RenderBrushPoly( s );
-		}
+		if(( s->flags & SURF_DRAWTURB ) && cl.refdef.movevars->wateralpha < 1.0f )
+			continue;	// draw translucent water later
+
+		for( ; s != NULL; s = s->texturechain )
+			R_RenderBrushPoly( s );
 		t->texturechain = NULL;
 	}
 
@@ -1553,7 +1555,7 @@ void R_DrawStaticModel( cl_entity_t *e )
 		if( R_CullSurface( psurf, RI.clipFlags ))
 			continue;
 
-		if( psurf->flags & SURF_DRAWSKY && !world.sky_sphere )
+		if( psurf->flags & SURF_DRAWSKY )
 		{
 			// make sky chain to right clip the skybox
 			psurf->texturechain = skychain;
@@ -1679,7 +1681,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 		if( R_CullSurface( surf, clipflags ))
 			continue;
 
-		if( surf->flags & SURF_DRAWSKY && !world.sky_sphere )
+		if( surf->flags & SURF_DRAWSKY )
 		{
 			// make sky chain to right clip the skybox
 			surf->texturechain = skychain;
@@ -2166,9 +2168,6 @@ void GL_BuildLightmaps( void )
 			GL_CreateSurfaceLightmap( m->surfaces + j );
 
 			if( m->surfaces[j].flags & SURF_DRAWTURB )
-				continue;
-
-			if( m->surfaces[j].flags & SURF_DRAWSKY && world.sky_sphere )
 				continue;
 
 			GL_BuildPolygonFromSurface( m, m->surfaces + j );

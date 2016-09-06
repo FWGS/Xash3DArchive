@@ -977,7 +977,13 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 {
 	int	mipLevel;
 	int	dataType = GL_UNSIGNED_BYTE;
-	int	w, h;
+	int	w, h, maxdim;
+
+	mipLevel = 0;
+	w = tex->width;
+	h = tex->height;
+	maxdim = max( w, h );
+	tex->numMips = 1;	// always have mip #0
 
 	// not needs
 	if( tex->flags & TF_NOMIPMAP )
@@ -988,15 +994,12 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 		pglHint( GL_GENERATE_MIPMAP_HINT_SGIS, GL_NICEST );
 		pglTexParameteri( glTarget, GL_GENERATE_MIPMAP_SGIS, GL_TRUE );
 		pglGetError(); // clear error queue on mips generate
+		while( maxdim >>= 1 ) tex->numMips++;
 		return; 
 	}
 
 	// screen texture?
 	if( !buffer ) return;
-
-	mipLevel = 0;
-	w = tex->width;
-	h = tex->height;
 
 	// software mipmap generator
 	while( w > 1 || h > 1 )
@@ -1007,6 +1010,7 @@ void GL_GenerateMipmaps( byte *buffer, rgbdata_t *pic, gltexture_t *tex, GLenum 
 
 		w = (w+1)>>1;
 		h = (h+1)>>1;
+		tex->numMips++;
 		mipLevel++;
 
 		if( subImage ) pglTexSubImage2D( tex->target + side, mipLevel, 0, 0, w, h, inFormat, dataType, buffer );
@@ -1109,8 +1113,7 @@ static void GL_UploadTextureDXT( rgbdata_t *pic, gltexture_t *tex, qboolean subI
 	GLenum		inFormat, glTarget;
 	uint		width, height, depth;
 	int		texsize = 0, samples;
-	uint		i, j, s, numSides;
-	int		numMips, err;
+	uint		i, j, s, err, numSides;
 
 	ASSERT( pic != NULL && tex != NULL );
 
@@ -1158,7 +1161,7 @@ static void GL_UploadTextureDXT( rgbdata_t *pic, gltexture_t *tex, qboolean subI
 	// determine target
 	tex->target = glTarget = GL_TEXTURE_2D;
 
-	numMips = (pic->numMips > 0) ? pic->numMips : 1;
+	tex->numMips = (pic->numMips > 0) ? pic->numMips : 1;
 	numSides = 1;
 
 	if( pic->flags & IMAGE_CUBEMAP )
@@ -1215,7 +1218,7 @@ static void GL_UploadTextureDXT( rgbdata_t *pic, gltexture_t *tex, qboolean subI
 		height = pic->height;
 		depth = pic->depth;
 
-		for( j = 0; j < numMips; j++ )
+		for( j = 0; j < tex->numMips; j++ )
 		{
 			width = max( 1, ( pic->width >> j ));
 			height = max( 1, ( pic->height >> j ));
@@ -1267,6 +1270,8 @@ static void GL_UploadTexture( rgbdata_t *pic, gltexture_t *tex, qboolean subImag
 	tex->fogParams[1] = pic->fogParams[1];
 	tex->fogParams[2] = pic->fogParams[2];
 	tex->fogParams[3] = pic->fogParams[3];
+
+	tex->numMips = pic->numMips;
 
 	// NOTE: normalmaps must be power of two or software mip generator will stop working
 	GL_RoundImageDimensions( &tex->width, &tex->height, tex->flags, ( tex->flags & TF_NORMALMAP ));

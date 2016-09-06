@@ -1726,7 +1726,7 @@ void Mod_BuildSurfacePolygons( msurface_t *surf, mextrasurf_t *info )
 	}
 
 	// subdivide water or sky sphere for Quake1 maps
-	if(( surf->flags & SURF_DRAWTURB && !( surf->flags & SURF_REFLECT )) || ( surf->flags & SURF_DRAWSKY && world.loading && world.sky_sphere ))
+	if( surf->flags & SURF_DRAWTURB && !( surf->flags & SURF_REFLECT ))
 	{
 		Mod_SubdividePolygon( info, surf, surf->numedges, verts[0], 64.0f );
 		Mod_ConvertSurface( info, surf );
@@ -1904,9 +1904,6 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		// build polygons for non-lightmapped surfaces
 		if( host.features & ENGINE_BUILD_SURFMESHES && (( out->flags & SURF_DRAWTILED ) || !out->samples ))
 			Mod_BuildSurfacePolygons( out, info );
-
-		if( out->flags & SURF_DRAWSKY && world.loading && world.sky_sphere )
-			GL_SubdivideSurface( out ); // cut up polygon for warps
 
 		if( out->flags & SURF_DRAWTURB )
 			GL_SubdivideSurface( out ); // cut up polygon for warps

@@ -351,6 +351,9 @@ void CL_SetSolidPlayers( int playernum )
 		if( !state->solid )
 			continue; // not solid
 
+		if( !state->movetype )
+			continue; // dead
+
 		pe = &clgame.pmove->physents[clgame.pmove->numphysent];
 		if( CL_CopyEntityToPhysEnt( pe, ent ))
 			clgame.pmove->numphysent++;

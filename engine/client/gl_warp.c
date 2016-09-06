@@ -19,9 +19,9 @@ GNU General Public License for more details.
 #include "com_model.h"
 #include "wadfile.h"
 
+#define SKYCLOUDS_QUALITY	12
 #define MAX_CLIP_VERTS	64 // skybox clip vertices
 #define TURBSCALE		( 256.0f / ( M_PI2 ))
-static float		speedscale;
 static const char*		r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" };
 static const int		r_skyTexOrder[6] = { 0, 2, 1, 3, 4, 5 };
 
@@ -304,6 +304,7 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 {
 	vec3_t	verts[MAX_CLIP_VERTS];
 	glpoly_t	*p;
+	float	*v;
 	int	i;
 
 	if( r_fastsky->integer )
@@ -317,6 +318,20 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 			RI.skyMins[0][i] = RI.skyMins[1][i] = -1.0f;
 			RI.skyMaxs[0][i] = RI.skyMaxs[1][i] = 1.0f;
 		}
+	}
+
+	if( world.sky_sphere && fa->polys )
+	{
+		glpoly_t	*p = fa->polys;
+
+		// draw the sky poly
+		pglBegin( GL_POLYGON );
+		for( i = 0, v = p->verts[0]; i < p->numverts; i++, v += VERTEXSIZE )
+		{
+			pglTexCoord2f( v[3], v[4] );
+			pglVertex3fv( v );
+		}
+		pglEnd ();
 	}
 
 	// calculate vertex values for sky box
@@ -468,6 +483,179 @@ void R_SetupSky( const char *skyboxname )
 	// completely couldn't load skybox (probably never happens)
 	MsgDev( D_ERROR, "R_SetupSky: couldn't load skybox '%s'\n", skyboxname );
 	R_UnloadSkybox();
+}
+
+//==============================================================================
+//
+//  RENDER CLOUDS
+//
+//==============================================================================
+/*
+==============
+R_CloudVertex
+==============
+*/
+void R_CloudVertex( float s, float t, int axis, vec3_t v )
+{
+	int	j, k, farclip;
+	vec3_t	b;
+
+	farclip = RI.farClip;
+
+	b[0] = s * (farclip >> 1);
+	b[1] = t * (farclip >> 1);
+	b[2] = (farclip >> 1);
+
+	for( j = 0; j < 3; j++ )
+	{
+		k = st_to_vec[axis][j];
+		v[j] = (k < 0) ? -b[-k-1] : b[k-1];
+		v[j] += RI.cullorigin[j];
+	}
+}
+
+/*
+=============
+R_CloudTexCoord
+=============
+*/
+void R_CloudTexCoord( vec3_t v, float speed, float *s, float *t )
+{
+	float	length, speedscale;
+	vec3_t	dir;
+
+	speedscale = cl.time * speed;
+	speedscale -= (int)speedscale & ~127;
+
+	VectorSubtract( v, RI.vieworg, dir );
+	dir[2] *= 3.0f; // flatten the sphere
+
+	length = VectorLength( dir );
+	length = 6.0f * 63.0f / length;
+
+	*s = ( speedscale + dir[0] * length ) * (1.0f / 128.0f);
+	*t = ( speedscale + dir[1] * length ) * (1.0f / 128.0f);
+}
+
+/*
+===============
+Sky_DrawFaceQuad
+===============
+*/
+void R_CloudDrawPoly( glpoly_t *p )
+{
+	float	s, t;
+	float	*v;
+	int		i;
+
+	GL_SetRenderMode( kRenderNormal );
+	GL_Bind( GL_TEXTURE0, tr.solidskyTexture );
+
+	pglBegin( GL_QUADS );
+	for( i = 0, v = p->verts[0]; i < 4; i++, v += VERTEXSIZE )
+	{
+		R_CloudTexCoord( v, 8.0f, &s, &t );
+		pglTexCoord2f( s, t );
+		pglVertex3fv( v );
+	}
+	pglEnd();
+
+	GL_SetRenderMode( kRenderTransTexture );
+	GL_Bind( GL_TEXTURE0, tr.alphaskyTexture );
+
+	pglBegin( GL_QUADS );
+	for( i = 0, v = p->verts[0]; i < 4; i++, v += VERTEXSIZE )
+	{
+		R_CloudTexCoord( v, 16.0f, &s, &t );
+		pglTexCoord2f( s, t );
+		pglVertex3fv( v );
+	}
+	pglEnd();
+
+	pglDisable( GL_BLEND );
+}
+
+/*
+==============
+R_CloudRenderSide
+==============
+*/
+void R_CloudRenderSide( int axis )
+{
+	vec3_t	verts[4];
+	float	di, qi, dj, qj;
+	vec3_t	vup, vright;
+	vec3_t	temp, temp2;
+	glpoly_t	p[1];
+	int	i, j;
+
+	R_CloudVertex( -1.0f, -1.0f, axis, verts[0] );
+	R_CloudVertex( -1.0f,  1.0f, axis, verts[1] );
+	R_CloudVertex(  1.0f,  1.0f, axis, verts[2] );
+	R_CloudVertex(  1.0f, -1.0f, axis, verts[3] );
+
+	VectorSubtract( verts[2], verts[3], vup );
+	VectorSubtract( verts[2], verts[1], vright );
+
+	p->numverts = 4;
+	di = SKYCLOUDS_QUALITY;
+	qi = 1.0 / di;
+	dj = (axis < 4) ? di * 2 : di; //subdivide vertically more than horizontally on skybox sides
+	qj = 1.0 / dj;
+
+	for( i = 0; i < di; i++ )
+	{
+		for( j = 0; j < dj; j++ )
+		{
+			if( i * qi < RI.skyMins[0][axis] / 2 + 0.5f - qi
+			 || i * qi > RI.skyMaxs[0][axis] / 2 + 0.5f
+			 || j * qj < RI.skyMins[1][axis] / 2 + 0.5f - qj
+			 || j * qj > RI.skyMaxs[1][axis] / 2 + 0.5f )
+				continue;
+
+			VectorScale( vright, qi * i, temp );
+			VectorScale( vup, qj * j, temp2 );
+			VectorAdd( temp, temp2, temp );
+			VectorAdd( verts[0], temp, p->verts[0] );
+
+			VectorScale( vup, qj, temp );
+			VectorAdd( p->verts[0], temp, p->verts[1] );
+
+			VectorScale( vright, qi, temp );
+			VectorAdd( p->verts[1], temp, p->verts[2] );
+
+			VectorAdd( p->verts[0], temp, p->verts[3] );
+
+			R_CloudDrawPoly( p );
+		}
+	}
+}
+
+/*
+==============
+R_DrawClouds
+
+Quake-style clouds
+==============
+*/
+void R_DrawClouds( void )
+{
+	int	i;
+
+	RI.isSkyVisible = true;
+
+	pglDepthFunc( GL_GEQUAL );
+	pglDepthMask( 0 );
+
+	for( i = 0; i < 6; i++ )
+	{
+		if( RI.skyMins[0][i] >= RI.skyMaxs[0][i] || RI.skyMins[1][i] >= RI.skyMaxs[1][i] )
+			continue;
+		R_CloudRenderSide( i );
+	}
+
+	pglDepthMask( GL_TRUE );
+	pglDepthFunc( GL_LEQUAL );
 }
 
 /*
@@ -634,103 +822,4 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull )
 	if( noCull ) pglEnable( GL_CULL_FACE );
 
 	GL_SetupFogColorForSurfaces();
-}
-
-/*
-=============
-EmitSkyPolys
-=============
-*/
-void EmitSkyPolys( msurface_t *fa )
-{
-	glpoly_t	*p;
-	float	*v;
-	int	i;
-	float	s, t;
-	vec3_t	dir;
-	float	length;
-
-	for( p = fa->polys; p; p = p->next )
-	{
-		pglBegin( GL_POLYGON );
-
-		for( i = 0, v = p->verts[0]; i < p->numverts; i++, v += VERTEXSIZE )
-		{
-			VectorSubtract( v, RI.vieworg, dir );
-			dir[2] *= 3.0f; // flatten the sphere
-
-			length = VectorLength( dir );
-			length = 6.0f * 63.0f / length;
-
-			dir[0] *= length;
-			dir[1] *= length;
-
-			s = ( speedscale + dir[0] ) * (1.0f / 128.0f);
-			t = ( speedscale + dir[1] ) * (1.0f / 128.0f);
-
-			pglTexCoord2f( s, t );
-			pglVertex3fv( v );
-		}
-		pglEnd ();
-	}
-}
-
-/*
-=================
-R_DrawSkyChain
-=================
-*/
-void R_DrawSkyChain( msurface_t *s )
-{
-	msurface_t	*fa;
-
-	GL_SetRenderMode( kRenderNormal );
-	GL_Bind( GL_TEXTURE0, tr.solidskyTexture );
-
-	speedscale = cl.time * 8.0f;
-	speedscale -= (int)speedscale & ~127;
-
-	for( fa = s; fa; fa = fa->texturechain )
-		EmitSkyPolys( fa );
-
-	GL_SetRenderMode( kRenderTransTexture );
-	GL_Bind( GL_TEXTURE0, tr.alphaskyTexture );
-
-	speedscale = cl.time * 16.0f;
-	speedscale -= (int)speedscale & ~127;
-
-	for( fa = s; fa; fa = fa->texturechain )
-		EmitSkyPolys( fa );
-
-	pglDisable( GL_BLEND );
-}
-
-/*
-===============
-EmitBothSkyLayers
-
-Does a sky warp on the pre-fragmented glpoly_t chain
-This will be called for brushmodels, the world
-will have them chained together.
-===============
-*/
-void EmitSkyLayers( msurface_t *fa )
-{
-	GL_SetRenderMode( kRenderNormal );
-	GL_Bind( GL_TEXTURE0, tr.solidskyTexture );
-
-	speedscale = cl.time * 8.0f;
-	speedscale -= (int)speedscale & ~127;
-
-	EmitSkyPolys( fa );
-
-	GL_SetRenderMode( kRenderTransTexture );
-	GL_Bind( GL_TEXTURE0, tr.alphaskyTexture );
-
-	speedscale = cl.time * 16.0f;
-	speedscale -= (int)speedscale & ~127;
-
-	EmitSkyPolys( fa );
-
-	pglDisable( GL_BLEND );
 }

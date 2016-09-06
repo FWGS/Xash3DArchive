@@ -64,6 +64,7 @@ typedef struct gltexture_s
 	word		srcHeight;
 	word		width;		// upload width\height
 	word		height;
+	byte		numMips;		// mipmap count
 
 	uint		cacheframe;	// worldmodel->load_sequence
 
@@ -422,10 +423,8 @@ void R_InitSky( struct mip_s *mt, struct texture_s *tx );
 void R_AddSkyBoxSurface( msurface_t *fa );
 void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
-void EmitSkyLayers( msurface_t *fa );
-void EmitSkyPolys( msurface_t *fa );
+void R_DrawClouds( void );
 void EmitWaterPolys( glpoly_t *polys, qboolean noCull );
-void R_DrawSkyChain( msurface_t *s );
 
 //
 // gl_vidnt.c
