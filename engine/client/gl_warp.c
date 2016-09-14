@@ -539,7 +539,7 @@ void R_CloudTexCoord( vec3_t v, float speed, float *s, float *t )
 
 /*
 ===============
-Sky_DrawFaceQuad
+R_CloudDrawPoly
 ===============
 */
 void R_CloudDrawPoly( glpoly_t *p )
