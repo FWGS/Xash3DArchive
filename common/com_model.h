@@ -89,7 +89,8 @@ typedef struct
 					// s or t = dot( 3Dpoint, vecs[i] ) + vecs[i][3]
 	float		mipadjust;	// mipmap limits for very small surfaces
 	texture_t		*texture;
-	int		flags;		// sky or slime, no lightmap or 256 subdivision
+	short		flags;		// sky or slime, no lightmap or 256 subdivision
+	short		groupid;
 } mtexinfo_t;
 
 // 73 bytes per VBO vertex

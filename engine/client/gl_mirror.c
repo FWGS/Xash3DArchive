@@ -160,7 +160,6 @@ int R_AllocateMirrorTexture( void )
 		r_screen.flags = IMAGE_HAS_COLOR;
 		r_screen.buffer = NULL; // create empty texture for now
 		tr.mirrorTextures[i] = GL_LoadTextureInternal( txName, &r_screen, TF_IMAGE, false );
-		GL_SetTextureType( tr.mirrorTextures[i], TEX_SCREENCOPY );
 		texture = tr.mirrorTextures[i];
 	}
 

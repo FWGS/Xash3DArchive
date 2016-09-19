@@ -104,8 +104,6 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	pspriteframe->gl_texturenum = gl_texturenum;
 	*ppframe = pspriteframe;
 
-	GL_SetTextureType( pspriteframe->gl_texturenum, TEX_SPRITE );
-
 	return (dframetype_t *)((byte *)(pinframe + 1) + pinframe->width * pinframe->height );
 }
 
@@ -384,8 +382,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size, qboolean 
 		pspriteframe->down = ( h >> 1 ) - h;
 		pspriteframe->right = w + -( w >> 1 );
 		pspriteframe->gl_texturenum = GL_LoadTextureInternal( texname, &temp, TF_IMAGE, false );
-		GL_SetTextureType( pspriteframe->gl_texturenum, TEX_NOMIP );
-			
+
 		xl += w;
 		if( xl >= pix->width )
 		{

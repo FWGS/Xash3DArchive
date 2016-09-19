@@ -744,7 +744,6 @@ static void Mod_LoadTextures( const dlump_t *l )
 				if( load_external )
 				{
 					tr.solidskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP, NULL );
-					GL_SetTextureType( tr.solidskyTexture, TEX_BRUSH );
 					load_external = false;
 				}
 
@@ -766,7 +765,6 @@ static void Mod_LoadTextures( const dlump_t *l )
 					if( load_external )
 					{
 						tr.alphaskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP, NULL );
-						GL_SetTextureType( tr.alphaskyTexture, TEX_BRUSH );
 						load_external = false;
 					}
 				}
@@ -917,13 +915,6 @@ static void Mod_LoadTextures( const dlump_t *l )
 					MsgDev( D_ERROR, "Couldn't load %s\n", texname );
 				} 
 			}
-		}
-
-		if( tx->gl_texturenum != tr.defaultTexture )
-		{
-			// apply texture type (just for debug)
-			GL_SetTextureType( tx->gl_texturenum, TEX_BRUSH );
-			GL_SetTextureType( tx->fb_texturenum, TEX_BRUSH );
 		}
 	}
 
@@ -1113,6 +1104,7 @@ static void Mod_LoadTexInfo( const dlump_t *l )
 
 		out->texture = loadmodel->textures[miptex];
 		out->flags = in->flags;
+		out->groupid = in->groupid;
 	}
 }
 

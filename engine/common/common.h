@@ -426,6 +426,7 @@ typically expanded to rgba buffer
 NOTE: number at end of pixelformat name it's a total bitscount e.g. PF_RGB_24 == PF_RGB_888
 ========================================================================
 */
+#define ImageRAW( type )	(type == PF_RGBA_32 || type == PF_BGRA_32 || type == PF_RGB_24 || type == PF_BGR_24)
 #define ImageDXT( type )	(type == PF_DXT1 || type == PF_DXT3 || type == PF_DXT5)
 
 typedef enum
@@ -485,6 +486,7 @@ typedef enum
 	IMAGE_SKYBOX	= BIT(5),		// only used by FS_SaveImage - for write right suffixes
 	IMAGE_QUAKESKY	= BIT(6),		// it's a quake sky double layered clouds (so keep it as 8 bit)
 	IMAGE_DDS_FORMAT	= BIT(7),		// a hint for GL loader
+	IMAGE_MULTILAYER	= BIT(8),		// to differentiate from 3D texture
 
 	// Image_Process manipulation flags
 	IMAGE_FLIP_X	= BIT(16),	// flip the image by width

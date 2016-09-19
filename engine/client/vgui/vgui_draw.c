@@ -98,7 +98,6 @@ void VGUI_UploadTexture( int id, const char *buffer, int width, int height )
 	r_image.buffer = (byte *)buffer;
 
 	g_textures[id] = GL_LoadTextureInternal( texName, &r_image, TF_IMAGE, false );
-	GL_SetTextureType( g_textures[id], TEX_VGUI );
 	g_iBoundTexture = id;
 }
 
@@ -131,7 +130,6 @@ void VGUI_CreateTexture( int id, int width, int height )
 	r_image.buffer = NULL;
 
 	g_textures[id] = GL_LoadTextureInternal( texName, &r_image, TF_IMAGE|TF_NEAREST, false );
-	GL_SetTextureType( g_textures[id], TEX_VGUI );
 	g_iBoundTexture = id;
 }
 

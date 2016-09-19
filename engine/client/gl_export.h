@@ -235,6 +235,29 @@ typedef float GLmatrix[16];
 #define GL_PROXY_TEXTURE_2D               	0x8064
 #define GL_MAX_TEXTURE_SIZE			0x0D33
 
+#define GL_RG				0x8227
+#define GL_RG_INTEGER			0x8228
+#define GL_R8				0x8229
+#define GL_R16				0x822A
+#define GL_RG8				0x822B
+#define GL_RG16				0x822C
+#define GL_R16F				0x822D
+#define GL_R32F				0x822E
+#define GL_RG16F				0x822F
+#define GL_RG32F				0x8230
+#define GL_R8I				0x8231
+#define GL_R8UI				0x8232
+#define GL_R16I				0x8233
+#define GL_R16UI				0x8234
+#define GL_R32I				0x8235
+#define GL_R32UI				0x8236
+#define GL_RG8I				0x8237
+#define GL_RG8UI				0x8238
+#define GL_RG16I				0x8239
+#define GL_RG16UI				0x823A
+#define GL_RG32I				0x823B
+#define GL_RG32UI				0x823C
+
 // texture coord name
 #define GL_S				0x2000
 #define GL_T				0x2001
@@ -613,6 +636,15 @@ typedef float GLmatrix[16];
 
 #define GL_DOT3_RGB_ARB			0x86AE
 #define GL_DOT3_RGBA_ARB			0x86AF
+
+#define GL_TEXTURE_1D_ARRAY_EXT		0x8C18
+#define GL_PROXY_TEXTURE_1D_ARRAY_EXT		0x8C19
+#define GL_TEXTURE_2D_ARRAY_EXT		0x8C1A
+#define GL_PROXY_TEXTURE_2D_ARRAY_EXT		0x8C1B
+#define GL_TEXTURE_BINDING_1D_ARRAY_EXT		0x8C1C
+#define GL_TEXTURE_BINDING_2D_ARRAY_EXT		0x8C1D
+#define GL_MAX_ARRAY_TEXTURE_LAYERS_EXT		0x88FF
+#define GL_COMPARE_REF_DEPTH_TO_TEXTURE_EXT	0x884E
 
 #define GL_MULTISAMPLE_ARB			0x809D
 #define GL_SAMPLE_ALPHA_TO_COVERAGE_ARB		0x809E

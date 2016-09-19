@@ -1602,6 +1602,8 @@ void R_RenderInfo_f( void )
 		Msg( "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT: %.1f\n", glConfig.max_texture_anisotropy );
 	if( glConfig.texRectangle )
 		Msg( "GL_MAX_RECTANGLE_TEXTURE_SIZE_NV: %i\n", glConfig.max_2d_rectangle_size );
+	if( GL_Support( GL_TEXTURE_ARRAY_EXT ))
+		Msg( "GL_MAX_ARRAY_TEXTURE_LAYERS_EXT: %i\n", glConfig.max_2d_texture_layers );
 	if( GL_Support( GL_SHADER_GLSL100_EXT ))
 	{
 		Msg( "GL_MAX_TEXTURE_COORDS_ARB: %i\n", glConfig.max_texture_coords );
@@ -1775,6 +1777,12 @@ void GL_InitExtensions( void )
 		}
 	}
 
+	// 2d texture array support
+	GL_CheckExtension( "GL_EXT_texture_array", texture3dextfuncs, "gl_texture_2d_array", GL_TEXTURE_ARRAY_EXT );
+
+	if( GL_Support( GL_TEXTURE_ARRAY_EXT ))
+		pglGetIntegerv( GL_MAX_ARRAY_TEXTURE_LAYERS_EXT, &glConfig.max_2d_texture_layers );
+
 	GL_CheckExtension( "GL_SGIS_generate_mipmap", NULL, "gl_sgis_generate_mipmaps", GL_SGIS_MIPMAPS_EXT );
 
 	// hardware cubemaps
@@ -1845,6 +1853,9 @@ void GL_InitExtensions( void )
 
 	// occlusion queries
 	GL_CheckExtension( "GL_ARB_occlusion_query", occlusionfunc, "gl_occlusion_queries", GL_OCCLUSION_QUERIES_EXT );
+
+	// rectangle textures support
+	GL_CheckExtension( "GL_ARB_texture_rectangle", NULL, "gl_texture_rectangle", GL_TEXTURE_2D_RECT_EXT );
 
 	if( GL_Support( GL_SHADER_GLSL100_EXT ))
 	{

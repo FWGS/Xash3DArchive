@@ -57,6 +57,10 @@ GNU General Public License for more details.
 #define STUDIO_TO_RAD	(M_PI / 32768.0)
 #define nanmask		(255<<23)
 
+#define INV127F		( 1.0f / 127.0f )
+#define INV255F		( 1.0f / 255.0f )
+#define MAKE_SIGNED( x )	((( x ) * INV127F ) - 1.0f )
+
 #define Q_rint(x)		((x) < 0 ? ((int)((x)-0.5f)) : ((int)((x)+0.5f)))
 #define IS_NAN(x)		(((*(int *)&x)&nanmask)==nanmask)
 

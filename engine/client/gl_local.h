@@ -64,6 +64,7 @@ typedef struct gltexture_s
 	word		srcHeight;
 	word		width;		// upload width\height
 	word		height;
+	word		depth;		// texture depth or count of layers for 2D_ARRAY
 	byte		numMips;		// mipmap count
 
 	uint		cacheframe;	// worldmodel->load_sequence
@@ -79,7 +80,6 @@ typedef struct gltexture_s
 	rgbdata_t		*original;	// keep original image
 
 	// debug info
-	byte		texType;		// used for gl_showtextures
 	size_t		size;		// upload size for debug targets
 
 	// detail textures stuff
@@ -162,7 +162,6 @@ typedef struct
 	int		whiteTexture;
 	int		grayTexture;
 	int		blackTexture;
-	int		acontTexture;
 	int		defaultTexture;   	// use for bad textures
 	int		particleTexture;	// particle texture
 	int		particleTexture2;	// unsmoothed particle texture
@@ -303,8 +302,8 @@ void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height,
 //
 void R_SetTextureParameters( void );
 gltexture_t *R_GetTexture( GLenum texnum );
-void GL_SetTextureType( GLenum texnum, GLenum type );
 int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, imgfilter_t *filter );
+int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter );
 int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, qboolean update );
 byte *GL_ResampleTexture( const byte *source, int in_w, int in_h, int out_w, int out_h, qboolean isNormalMap );
 int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags );
@@ -508,6 +507,8 @@ enum
 	GL_SGIS_MIPMAPS_EXT,
 	GL_DRAW_RANGEELEMENTS_EXT,
 	GL_LOCKARRAYS_EXT,
+	GL_TEXTURE_2D_RECT_EXT,
+	GL_TEXTURE_ARRAY_EXT,
 	GL_TEXTURE_3D_EXT,
 	GL_CLAMPTOEDGE_EXT,
 	GL_BLEND_MINMAX_EXT,
@@ -556,6 +557,7 @@ typedef struct
 	int		max_teximage_units;
 	GLint		max_2d_texture_size;
 	GLint		max_2d_rectangle_size;
+	GLint		max_2d_texture_layers;
 	GLint		max_3d_texture_size;
 	GLint		max_cubemap_size;
 	GLint		texRectangle;

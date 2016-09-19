@@ -1412,6 +1412,9 @@ static int GL_RenderGetParm( int parm, int arg )
 	case PARM_TEX_MIPCOUNT:
 		glt = R_GetTexture( arg );
 		return glt->numMips;
+	case PARM_TEX_DEPTH:
+		glt = R_GetTexture( arg );
+		return glt->depth;
 	case PARM_TEX_SKYBOX:
 		ASSERT( arg >= 0 && arg < 6 );
 		return tr.skyboxTextures[arg];
@@ -1458,9 +1461,6 @@ static int GL_RenderGetParm( int parm, int arg )
 		return glt->cacheframe;
 	case PARM_MAP_HAS_DELUXE:
 		return (world.deluxedata != NULL);
-	case PARM_TEX_TYPE:
-		glt = R_GetTexture( arg );
-		return glt->texType;
 	case PARM_CACHEFRAME:
 		return world.load_sequence;
 	case PARM_MAX_IMAGE_UNITS:
@@ -1609,6 +1609,11 @@ static int GL_LoadTextureNoFilter( const char *name, const byte *buf, size_t siz
 	return GL_LoadTexture( name, buf, size, flags, NULL );	
 }
 
+static int GL_LoadTextureArrayNoFilter( const char **names, int flags )
+{
+	return GL_LoadTextureArray( names, flags, NULL );	
+}
+
 static const ref_overview_t *GL_GetOverviewParms( void )
 {
 	return &clgame.overView;
@@ -1667,7 +1672,7 @@ static render_api_t gRenderAPI =
 	GL_TextureData,
 	GL_LoadTextureNoFilter,
 	GL_CreateTexture,
-	GL_SetTextureType,
+	GL_LoadTextureArrayNoFilter,
 	GL_TextureUpdateCache,
 	GL_FreeTexture,
 	DrawSingleDecal,

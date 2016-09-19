@@ -216,7 +216,8 @@ typedef struct
 {
 	float	vecs[2][4];		// texmatrix [s/t][xyz offset]
 	int	miptex;
-	int	flags;
+	short	flags;
+	short	groupid;
 } dtexinfo_t;
 
 typedef word	dmarkface_t;		// leaf marksurfaces indexes

@@ -462,7 +462,6 @@ void R_SetupSky( const char *skyboxname )
 	{
 		Q_snprintf( sidename, sizeof( sidename ), "%s%s", loadname, r_skyBoxSuffix[i] );
 		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY, NULL );
-		GL_SetTextureType( tr.skyboxTextures[i], TEX_CUBEMAP );
 		if( !tr.skyboxTextures[i] ) break;
 	}
 
@@ -475,7 +474,6 @@ void R_SetupSky( const char *skyboxname )
 	{
 		Q_snprintf( sidename, sizeof( sidename ), "%s_%s", loadname, r_skyBoxSuffix[i] );
 		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY, NULL );
-		GL_SetTextureType( tr.skyboxTextures[i], TEX_CUBEMAP );
 		if( !tr.skyboxTextures[i] ) break;
 	}
 	if( i == 6 ) return; // loaded
@@ -756,9 +754,6 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 
 	// load it in
 	tr.alphaskyTexture = GL_LoadTextureInternal( "alpha_sky", &r_temp, TF_UNCOMPRESSED|TF_NOMIPMAP, false );
-
-	GL_SetTextureType( tr.solidskyTexture, TEX_BRUSH );
-	GL_SetTextureType( tr.alphaskyTexture, TEX_BRUSH );
 
 	// clean up
 	FS_FreeImage( r_sky );
