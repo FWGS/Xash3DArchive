@@ -214,6 +214,7 @@ qboolean Image_LoadTGA( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	VectorDivide( reflectivity, ( image.width * image.height ), image.fogParams );
+	image.depth = 1;
 
 	return true;
 }

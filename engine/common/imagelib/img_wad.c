@@ -58,6 +58,7 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 	image.rgba = NULL;	// only palette, not real image
 	image.size = 1024;	// expanded palette
 	image.width = image.height = 0;
+	image.depth = 1;
 	
 	return true;
 }
@@ -119,6 +120,7 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	image.type = PF_INDEXED_32;	// 32-bit palette
+	image.depth = 1;
 
 	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
@@ -170,6 +172,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	image.type = PF_INDEXED_32;	// 32-bit palete
+	image.depth = 1;
 
 	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
@@ -214,6 +217,7 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	// sorry, can't validate palette rendermode
 	if( !Image_LumpValidSize( name )) return false;
 	image.type = PF_INDEXED_32;	// 32-bit palete
+	image.depth = 1;
 
 	// detect alpha-channel by palette type
 	switch( image.d_rendermode )
@@ -305,6 +309,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	if( fin[0] == 255 ) image.flags |= IMAGE_HAS_ALPHA;
 	Image_GetPaletteLMP( pal, rendermode );
 	image.type = PF_INDEXED_32; // 32-bit palete
+	image.depth = 1;
 
 	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }
@@ -476,5 +481,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 	}
  
 	image.type = PF_INDEXED_32;	// 32-bit palete
+	image.depth = 1;
+
 	return Image_AddIndexedImageToPack( fin, image.width, image.height );
 }

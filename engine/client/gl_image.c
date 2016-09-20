@@ -1570,7 +1570,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	uint		numLayers = 0;
 	uint		picFlags = 0;
 	char		name[256];
-	uint		i, hash;
+	uint		i, j, hash;
 
 	if( !names || !names[0] || !glw_state.initialized )
 		return 0;
@@ -1614,6 +1614,8 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	// load all the images and pack it into single image
 	for( i = 0, pic = NULL; i < numLayers; i++ )
 	{
+		size_t	srcsize, dstsize, mipsize;
+
 		src = FS_LoadImage( names[i], NULL, 0 );
 		if( !src ) break; // coldn't find layer
 
@@ -1627,29 +1629,47 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 			if( pic->numMips != src->numMips )
 				break;
 
+			if( pic->encode != src->encode )
+				break;
+
 			// but allow to rescale raw images
 			if( ImageRAW( pic->type ) && ImageRAW( src->type ) && ( pic->width != src->width || pic->height != src->height ))
 				Image_Process( &src, pic->width, pic->height, 0.0f, IMAGE_RESAMPLE, NULL );
 
 			if( pic->size != src->size )
 				break;
-
-			Q_memcpy( pic->buffer + (i * pic->size), src->buffer, pic->size );
-			FS_FreeImage( src );
 		}
 		else
 		{
-			pic = src;
+			// create new image
+			pic = Mem_Alloc( host.imagepool, sizeof( rgbdata_t ));
+			Q_memcpy( pic, src, sizeof( rgbdata_t ));
+
 			// expand pic buffer for all layers
-			pic->buffer = Mem_Realloc( host.imagepool, pic->buffer, pic->size * numLayers );
+			pic->buffer = Mem_Alloc( host.imagepool, pic->size * numLayers );
+			pic->depth = 0;
 		}
+
+		mipsize = srcsize = dstsize = 0;
+
+		for( j = 0; j < max( 1, pic->numMips ); j++ )
+		{
+			int width = max( 1, ( pic->width >> j ));
+			int height = max( 1, ( pic->height >> j ));
+			mipsize = GL_CalcImageSize( pic->type, width, height, 1 );
+			Q_memcpy( pic->buffer + dstsize + mipsize * i, src->buffer + srcsize, mipsize );
+			dstsize += mipsize * numLayers;
+			srcsize += mipsize;
+		}
+
+		FS_FreeImage( src );
 
 		// increase layers
 		pic->depth++;
 	}
 
 	// there were errors
-	if( pic->depth != numLayers )
+	if( !pic || ( pic->depth != numLayers ))
 	{
 		if( pic ) FS_FreeImage( pic );
 		return 0;
@@ -1657,6 +1677,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 
 	// it's multilayer image!
 	pic->flags |= IMAGE_MULTILAYER;
+	pic->size *= numLayers;
 
 	// find a free texture slot
 	if( r_numTextures == MAX_TEXTURES )

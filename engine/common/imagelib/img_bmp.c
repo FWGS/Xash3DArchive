@@ -295,6 +295,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 
 	VectorDivide( reflectivity, ( image.width * image.height ), image.fogParams );
 	if( image.palette ) Image_GetPaletteBMP( image.palette );
+	image.depth = 1;
 
 	return true;
 }
