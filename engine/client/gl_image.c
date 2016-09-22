@@ -806,7 +806,7 @@ static void GL_SetTextureTarget( gltexture_t *tex, rgbdata_t *pic )
 		tex->target = GL_TEXTURE_1D;
 	else if( pic->flags & IMAGE_CUBEMAP )
 		tex->target = GL_TEXTURE_CUBE_MAP_ARB;
-	else if(( pic->flags & IMAGE_MULTILAYER ) && pic->depth > 1 )
+	else if(( pic->flags & IMAGE_MULTILAYER ) && pic->depth >= 1 )
 		tex->target = GL_TEXTURE_2D_ARRAY_EXT;
 	else if( pic->width > 1 && pic->height > 1 && pic->depth > 1 )
 		tex->target = GL_TEXTURE_3D;
