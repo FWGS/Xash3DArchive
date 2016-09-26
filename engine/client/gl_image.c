@@ -1443,11 +1443,8 @@ static void GL_ProcessImage( gltexture_t *tex, rgbdata_t *pic, imgfilter_t *filt
 			tex->flags &= ~TF_MAKELUMA;
 		}
 
-		if( !( tex->flags & TF_IMG_UPLOADED ) && ( tex->flags & TF_KEEP_8BIT ))
+		if( !( tex->flags & TF_IMG_UPLOADED ) && ( tex->flags & ( TF_KEEP_8BIT|TF_KEEP_RGBDATA )))
 			tex->original = FS_CopyImage( pic ); // because current pic will be expanded to rgba
-
-		if( !( tex->flags & TF_IMG_UPLOADED ) && ( tex->flags & TF_KEEP_RGBDATA ))
-			tex->original = pic; // no need to copy
 
 		// we need to expand image into RGBA buffer
 		if( pic->type == PF_INDEXED_24 || pic->type == PF_INDEXED_32 )
@@ -1544,9 +1541,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	GL_ProcessImage( tex, pic, filter );
 	GL_UploadTexture( tex, pic );
 	GL_TexFilter( tex, false ); // update texture filter, wrap etc
-
-	if(!( flags & ( TF_KEEP_8BIT|TF_KEEP_RGBDATA )))
-		FS_FreeImage( pic ); // release source texture
+	FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
 	hash = Com_HashKey( tex->name, TEXTURES_HASH_SIZE );
@@ -1800,7 +1795,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 ================
 GL_CreateTexture
 
-creates an empty 32-bit texture (just reserve slot)
+creates texture from buffer
 ================
 */
 int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags )
@@ -1843,6 +1838,44 @@ int GL_CreateTexture( const char *name, int width, int height, const void *buffe
 
 /*
 ================
+GL_CreateTextureArray
+
+creates texture array from buffer
+================
+*/
+int GL_CreateTextureArray( const char *name, int width, int height, int depth, const void *buffer, texFlags_t flags )
+{
+	rgbdata_t	r_empty;
+	int	texture;
+
+	Q_memset( &r_empty, 0, sizeof( r_empty ));
+	r_empty.width = width;
+	r_empty.height = height;
+	r_empty.depth = depth;
+	r_empty.type = PF_RGBA_32;
+	r_empty.size = r_empty.width * r_empty.height * r_empty.depth * 4;
+	r_empty.flags = IMAGE_HAS_COLOR | (( flags & TF_HAS_ALPHA ) ? IMAGE_HAS_ALPHA : 0 );
+	r_empty.buffer = (byte *)buffer;
+
+	if( flags & TF_TEXTURE_3D )
+	{
+		if( !GL_Support( GL_TEXTURE_3D_EXT ))
+			return 0;
+	}
+	else
+	{
+		if( !GL_Support( GL_TEXTURE_ARRAY_EXT ))
+			return 0;
+		r_empty.flags |= IMAGE_MULTILAYER;
+	}
+
+	texture = GL_LoadTextureInternal( name, &r_empty, flags, false );
+
+	return texture;
+}
+
+/*
+================
 GL_ProcessTexture
 ================
 */
@@ -1871,7 +1904,7 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 		return;
 	}
 
-	if(!( image->flags & (TF_KEEP_RGBDATA|TF_KEEP_8BIT)) || !image->original )
+	if( !image->original )
 	{
 		MsgDev( D_ERROR, "GL_ProcessTexture: no input data for %s\n", image->name );
 		return;
@@ -2015,7 +2048,7 @@ void R_FreeImage( gltexture_t *image )
 	}
 
 	// release source
-	if( image->flags & (TF_KEEP_RGBDATA|TF_KEEP_8BIT) && image->original )
+	if( image->original )
 		FS_FreeImage( image->original );
 
 	pglDeleteTextures( 1, &image->texnum );

@@ -1673,7 +1673,7 @@ static render_api_t gRenderAPI =
 	GL_LoadTextureNoFilter,
 	GL_CreateTexture,
 	GL_LoadTextureArrayNoFilter,
-	GL_TextureUpdateCache,
+	GL_CreateTextureArray,
 	GL_FreeTexture,
 	DrawSingleDecal,
 	R_DecalSetupVerts,

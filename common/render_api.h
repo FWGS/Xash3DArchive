@@ -166,7 +166,7 @@ typedef struct render_api_s
 	int		(*GL_LoadTexture)( const char *name, const byte *buf, size_t size, int flags );
 	int		(*GL_CreateTexture)( const char *name, int width, int height, const void *buffer, int flags ); 
 	int		(*GL_LoadTextureArray)( const char **names, int flags );
-	void		(*GL_TextureCacheFrame)( unsigned int texnum );
+	int		(*GL_CreateTextureArray)( const char *name, int width, int height, int depth, const void *buffer, int flags );
 	void		(*GL_FreeTexture)( unsigned int texnum );
 
 	// Decals manipulating (draw & remove)
