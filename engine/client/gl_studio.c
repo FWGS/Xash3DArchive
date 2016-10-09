@@ -2567,7 +2567,6 @@ R_StudioSetupRenderer
 static void R_StudioSetupRenderer( int rendermode )
 {
 	g_iRenderMode = bound( 0, rendermode, kRenderTransAdd );
-	pglShadeModel( GL_SMOOTH );	// enable gouraud shading
 	if( clgame.ds.cullMode != GL_NONE ) GL_Cull( GL_FRONT );
 
 	// enable depthmask on studiomodels
@@ -2589,7 +2588,6 @@ R_StudioRestoreRenderer
 static void R_StudioRestoreRenderer( void )
 {
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-	pglShadeModel( GL_FLAT );
 
 	// restore depthmask state for sprites etc
 	if( glState.drawTrans && g_iRenderMode != kRenderTransAdd )

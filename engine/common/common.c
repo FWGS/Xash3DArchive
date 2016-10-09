@@ -378,6 +378,8 @@ pfnCvar_RegisterVariable
 */
 cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags )
 {
+	if( flags & FCVAR_GLCONFIG )
+		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( "enable or disable %s", szName ));
 	return (cvar_t *)Cvar_Get( szName, szValue, flags|CVAR_CLIENTDLL, "client cvar" );
 }
 

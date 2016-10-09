@@ -1554,7 +1554,7 @@ static void GL_SetDefaults( void )
 	pglDisable( GL_POLYGON_OFFSET_FILL );
 	pglAlphaFunc( GL_GREATER, 0.0f );
 	pglEnable( GL_TEXTURE_2D );
-	pglShadeModel( GL_FLAT );
+	pglShadeModel( GL_SMOOTH );
 
 	pglPointSize( 1.2f );
 	pglLineWidth( 1.2f );
@@ -1856,6 +1856,9 @@ void GL_InitExtensions( void )
 
 	// rectangle textures support
 	GL_CheckExtension( "GL_ARB_texture_rectangle", NULL, "gl_texture_rectangle", GL_TEXTURE_2D_RECT_EXT );
+
+	// shadow cubeMaps required this
+	GL_CheckExtension( "GL_EXT_gpu_shader4", NULL, "gl_ext_gpu_shader4", GL_GPU_SHADER4_EXT );
 
 	if( GL_Support( GL_SHADER_GLSL100_EXT ))
 	{

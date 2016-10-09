@@ -305,9 +305,6 @@ void CL_CreateCmd( void )
 	else if( ms <= 0 ) ms = 1;	// keep time an actual
 
 	Q_memset( &cmd, 0, sizeof( cmd ));
-
-	// build list of all solid entities per next frame (exclude clients)
-	CL_SetSolidEntities();
 	CL_PushPMStates();
 	CL_SetSolidPlayers( cl.playernum );
 
@@ -1519,6 +1516,9 @@ void CL_ReadPackets( void )
 		Cvar_SetCheatState();
 #endif
 	CL_UpdateFrameLerp ();
+
+	// build list of all solid entities per next frame (exclude clients)
+	CL_SetSolidEntities();
 
 	// singleplayer never has connection timeout
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))

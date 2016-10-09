@@ -836,6 +836,10 @@ static void GL_SetTextureTarget( gltexture_t *tex, rgbdata_t *pic )
 			tex->flags |= TF_CLAMP;
 		}
 
+		// depth cubemaps only allowed when GL_EXT_gpu_shader4 is supported
+		if( !GL_Support( GL_GPU_SHADER4_EXT ) && ( tex->flags & TF_DEPTHMAP ))
+			tex->target = GL_NONE;
+
 		tex->flags |= TF_CUBEMAP; // it's cubemap!
 	}
 }
@@ -1109,7 +1113,8 @@ Operates in place, quartering the size of the texture
 static void GL_BuildMipMap( byte *in, int srcWidth, int srcHeight, int srcDepth, qboolean isNormalMap )
 {
 	byte	*out = in;
-	int	mipWidth, mipHeight;
+	int	instride = ALIGN( srcWidth * 4, 1 );
+	int	mipWidth, mipHeight, outpadding;
 	int	row, x, y, z;
 	vec3_t	normal;
 
@@ -1117,6 +1122,7 @@ static void GL_BuildMipMap( byte *in, int srcWidth, int srcHeight, int srcDepth,
 
 	mipWidth = max( 1, ( srcWidth >> 1 ));
 	mipHeight = max( 1, ( srcHeight >> 1 ));
+	outpadding = ALIGN( mipWidth * 4, 1 ) - mipWidth * 4;
 	row = srcWidth << 2;
 
 	// move through all layers
@@ -1124,13 +1130,23 @@ static void GL_BuildMipMap( byte *in, int srcWidth, int srcHeight, int srcDepth,
 	{
 		if( isNormalMap )
 		{
-			for( y = 0; y < mipHeight; y++, in += row )
+			for( y = 0; y < mipHeight; y++, in += instride * 2, out += outpadding )
 			{
-				for( x = 0; x < mipWidth; x++, in += 8, out += 4 )
+				byte *next = ((( y << 1 ) + 1 ) < srcHeight ) ? ( in + instride ) : in;
+				for( x = 0, row = 0; x < mipWidth; x++, row += 8, out += 4 )
 				{
-					normal[0] = MAKE_SIGNED(in[0]) + MAKE_SIGNED(in[4]) + MAKE_SIGNED(in[row+0]) + MAKE_SIGNED(in[row+4]);
-					normal[1] = MAKE_SIGNED(in[1]) + MAKE_SIGNED(in[5]) + MAKE_SIGNED(in[row+1]) + MAKE_SIGNED(in[row+5]);
-					normal[2] = MAKE_SIGNED(in[2]) + MAKE_SIGNED(in[6]) + MAKE_SIGNED(in[row+2]) + MAKE_SIGNED(in[row+6]);
+					if((( x << 1 ) + 1 ) < srcWidth )
+					{
+						normal[0] = MAKE_SIGNED(in[row+0]) + MAKE_SIGNED(in[row+4]) + MAKE_SIGNED(next[row+0]) + MAKE_SIGNED(next[row+4]);
+						normal[1] = MAKE_SIGNED(in[row+1]) + MAKE_SIGNED(in[row+5]) + MAKE_SIGNED(next[row+1]) + MAKE_SIGNED(next[row+5]);
+						normal[2] = MAKE_SIGNED(in[row+2]) + MAKE_SIGNED(in[row+6]) + MAKE_SIGNED(next[row+2]) + MAKE_SIGNED(next[row+6]);
+					}
+					else
+					{
+						normal[0] = MAKE_SIGNED(in[row+0]) + MAKE_SIGNED(next[row+0]);
+						normal[1] = MAKE_SIGNED(in[row+1]) + MAKE_SIGNED(next[row+1]);
+						normal[2] = MAKE_SIGNED(in[row+2]) + MAKE_SIGNED(next[row+2]);
+					}
 
 					if( !VectorNormalizeLength( normal ))
 						VectorSet( normal, 0.5f, 0.5f, 1.0f );
@@ -1144,14 +1160,25 @@ static void GL_BuildMipMap( byte *in, int srcWidth, int srcHeight, int srcDepth,
 		}
 		else
 		{
-			for( y = 0; y < mipHeight; y++, in += row )
+			for( y = 0; y < mipHeight; y++, in += instride * 2, out += outpadding )
 			{
-				for( x = 0; x < mipWidth; x++, in += 8, out += 4 )
+				byte *next = ((( y << 1 ) + 1 ) < srcHeight ) ? ( in + instride ) : in;
+				for( x = 0, row = 0; x < mipWidth; x++, row += 8, out += 4 )
 				{
-					out[0] = (in[0] + in[4] + in[row+0] + in[row+4]) >> 2;
-					out[1] = (in[1] + in[5] + in[row+1] + in[row+5]) >> 2;
-					out[2] = (in[2] + in[6] + in[row+2] + in[row+6]) >> 2;
-					out[3] = (in[3] + in[7] + in[row+3] + in[row+7]) >> 2;
+					if((( x << 1 ) + 1 ) < srcWidth )
+					{
+						out[0] = (in[row+0] + in[row+4] + next[row+0] + next[row+4]) >> 2;
+						out[1] = (in[row+1] + in[row+5] + next[row+1] + next[row+5]) >> 2;
+						out[2] = (in[row+2] + in[row+6] + next[row+2] + next[row+6]) >> 2;
+						out[3] = (in[row+3] + in[row+7] + next[row+3] + next[row+7]) >> 2;
+					}
+					else
+					{
+						out[0] = (in[row+0] + next[row+0]) >> 1;
+						out[1] = (in[row+1] + next[row+1]) >> 1;
+						out[2] = (in[row+2] + next[row+2]) >> 1;
+						out[3] = (in[row+3] + next[row+3]) >> 1;
+					}
 				}
 			}
 		}

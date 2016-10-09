@@ -1181,7 +1181,6 @@ void CL_PredictMovement( void )
 
 	time = cl.frame.time;
 
-	CL_SetSolidEntities();
 	CL_SetSolidPlayers( cl.playernum );
 
 	while( 1 )

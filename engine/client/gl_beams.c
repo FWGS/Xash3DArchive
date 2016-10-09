@@ -1447,8 +1447,6 @@ void CL_DrawBeam( BEAM *pbeam )
 	VectorScale( color, ( pbeam->brightness / 255.0f ), color );
 	VectorScale( color, ( 1.0f / 255.0f ), color );
 
-	pglShadeModel( GL_SMOOTH );
-
 	switch( pbeam->type )
 	{
 	case TE_BEAMDISK:
@@ -1478,7 +1476,6 @@ void CL_DrawBeam( BEAM *pbeam )
 		MsgDev( D_ERROR, "CL_DrawBeam:  Unknown beam type %i\n", pbeam->type );
 		break;
 	}
-	pglShadeModel( GL_FLAT );
 }
 
 /*
