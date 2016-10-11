@@ -335,7 +335,7 @@ void R_TextureList_f( void )
 	int		i, texCount, bytes = 0;
 
 	Msg( "\n" );
-	Msg("      -w-- -h-- -size- -fmt- type -data-- -encode-- -wrap-- -name--------\n" );
+	Msg("      -w-- -h-- -size- -fmt- type -data-- -encode-- -wrap-- -depth- -name--------\n" );
 
 	for( i = texCount = 0, image = r_textures; i < r_numTextures; i++, image++ )
 	{
@@ -420,10 +420,10 @@ void R_TextureList_f( void )
 			break;
 		case GL_DEPTH_COMPONENT:
 		case GL_DEPTH_COMPONENT24:
-			Msg( "DEPTH24" );
+			Msg( "DPTH24" );
 			break;			
 		case GL_DEPTH_COMPONENT32F:
-			Msg( "DEPTH32" );
+			Msg( "DPTH32" );
 			break;
 		case GL_LUMINANCE16F_ARB:
 			Msg( "L16F  " );
@@ -513,6 +513,7 @@ void R_TextureList_f( void )
 		else if( image->flags & TF_BORDER )
 			Msg( "border " );
 		else Msg( "repeat " );
+		Msg( "   %d  ", image->depth );
 		Msg( "  %s\n", image->name );
 	}
 
@@ -1566,7 +1567,13 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	else tex->texnum = i; // texnum is used for fast acess into r_textures array too
 
 	GL_ProcessImage( tex, pic, filter );
-	GL_UploadTexture( tex, pic );
+	if( !GL_UploadTexture( tex, pic ))
+	{
+		Q_memset( tex, 0, sizeof( gltexture_t ));
+		FS_FreeImage( pic ); // release source texture
+		return 0;
+	}
+
 	GL_TexFilter( tex, false ); // update texture filter, wrap etc
 	FS_FreeImage( pic ); // release source texture
 
@@ -1645,21 +1652,33 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 		{
 			// mixed mode: DXT + RGB
 			if( pic->type != src->type )
+			{
+				MsgDev( D_ERROR, "GL_LoadTextureArray: mismatch image format for %s and %s\n", names[0], names[i] );
 				break;
+			}
 
 			// different mipcount
 			if( pic->numMips != src->numMips )
+			{
+				MsgDev( D_ERROR, "GL_LoadTextureArray: mismatch mip count for %s and %s\n", names[0], names[i] );
 				break;
+			}
 
 			if( pic->encode != src->encode )
+			{
+				MsgDev( D_ERROR, "GL_LoadTextureArray: mismatch custom encoding for %s and %s\n", names[0], names[i] );
 				break;
+			}
 
 			// but allow to rescale raw images
 			if( ImageRAW( pic->type ) && ImageRAW( src->type ) && ( pic->width != src->width || pic->height != src->height ))
 				Image_Process( &src, pic->width, pic->height, 0.0f, IMAGE_RESAMPLE, NULL );
 
 			if( pic->size != src->size )
+			{
+				MsgDev( D_ERROR, "GL_LoadTextureArray: mismatch image size for %s and %s\n", names[0], names[i] );
 				break;
+			}
 		}
 		else
 		{
@@ -1693,6 +1712,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	// there were errors
 	if( !pic || ( pic->depth != numLayers ))
 	{
+		MsgDev( D_ERROR, "GL_LoadTextureArray: not all layers were loaded. Texture array is not created\n" );
 		if( pic ) FS_FreeImage( pic );
 		return 0;
 	}	
@@ -1722,9 +1742,14 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	tex->texnum = i; // texnum is used for fast acess into r_textures array too
 
 	GL_ProcessImage( tex, pic, filter );
-	GL_UploadTexture( tex, pic );
-	GL_TexFilter( tex, false ); // update texture filter, wrap etc
+	if( !GL_UploadTexture( tex, pic ))
+	{
+		Q_memset( tex, 0, sizeof( gltexture_t ));
+		FS_FreeImage( pic ); // release source texture
+		return 0;
+	}
 
+	GL_TexFilter( tex, false ); // update texture filter, wrap etc
 	FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
