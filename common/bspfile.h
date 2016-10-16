@@ -32,6 +32,7 @@ BRUSH MODELS
 
 #define IDEXTRAHEADER	(('H'<<24)+('S'<<16)+('A'<<8)+'X') // little-endian "XASH"
 #define EXTRA_VERSION	2 // because version 1 was occupied by old versions of XashXT
+#define EXTRA_VERSION_3	3 // same as version 2 but with old lightmap resolution (1 luxel per 16 pixels)
 
 #define DELUXEMAP_VERSION	1
 #define IDDELUXEMAPHEADER	(('T'<<24)+('I'<<16)+('L'<<8)+'Q') // little-endian "QLIT"

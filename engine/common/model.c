@@ -2665,16 +2665,22 @@ Mod_LoadBrushModel
 */
 static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *loaded )
 {
-	int	i, j;
-	int	sample_size;
-	char	*ents;
-	dheader_t	*header;
-	dmodel_t 	*bm;
+	int		i, j;
+	int		sample_size;
+	char		*ents;
+	dheader_t		*header;
+	dextrahdr_t	*extrahdr;
+	dmodel_t		*bm;
 
 	if( loaded ) *loaded = false;	
 	header = (dheader_t *)buffer;
 	loadmodel->type = mod_brush;
 	i = header->version;
+
+	// BSP31 and BSP30 have different offsets
+	if( i == XTBSP_VERSION )
+		extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader31_t ));	
+	else extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
 
 	switch( i )
 	{
@@ -2687,7 +2693,9 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		sample_size = 16;
 		break;
 	case XTBSP_VERSION:
-		sample_size = 8;
+		if( extrahdr->id == IDEXTRAHEADER && extrahdr->version == EXTRA_VERSION_3 )
+			sample_size = 16;
+		else sample_size = 8;
 		break;
 	default:
 		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)", loadmodel->name, i, HLBSP_VERSION );
