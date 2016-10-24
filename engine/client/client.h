@@ -369,7 +369,6 @@ typedef struct
 	movevars_t	oldmovevars;
 	playermove_t	*pmove;			// pmove state
 
-	int                  old_trace_hull;             // used by PM_Push\Pop state
 	qboolean             pushed;                     // used by PM_Push\Pop state
 	int                  oldviscount;                // used by PM_Push\Pop state
 	int                  oldphyscount;               // used by PM_Push\Pop state

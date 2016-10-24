@@ -2294,7 +2294,6 @@ pfnSetTraceHull
 */
 void CL_SetTraceHull( int hull )
 {
-	clgame.old_trace_hull = clgame.pmove->usehull;
 	clgame.pmove->usehull = bound( 0, hull, 3 );
 
 }
@@ -2309,7 +2308,6 @@ void CL_PlayerTrace( float *start, float *end, int traceFlags, int ignore_pe, pm
 {
 	if( !tr ) return;
 	*tr = PM_PlayerTraceExt( clgame.pmove, start, end, traceFlags, clgame.pmove->numphysent, clgame.pmove->physents, ignore_pe, NULL );
-	clgame.pmove->usehull = clgame.old_trace_hull;	// restore old trace hull 
 }
 
 /*
@@ -2322,7 +2320,6 @@ void CL_PlayerTraceExt( float *start, float *end, int traceFlags, int (*pfnIgnor
 {
 	if( !tr ) return;
 	*tr = PM_PlayerTraceExt( clgame.pmove, start, end, traceFlags, clgame.pmove->numphysent, clgame.pmove->physents, -1, pfnIgnore );
-	clgame.pmove->usehull = clgame.old_trace_hull;	// restore old trace hull 
 }
 
 /*
@@ -3081,7 +3078,7 @@ void TriBrightness( float brightness )
 	rgba[1] = clgame.ds.triColor[1] * brightness;
 	rgba[2] = clgame.ds.triColor[2] * brightness;
 
-	pglColor3ub( rgba[0], rgba[1], rgba[2] );
+	pglColor4ub( rgba[0], rgba[1], rgba[2], clgame.ds.triColor[3] );
 }
 
 /*

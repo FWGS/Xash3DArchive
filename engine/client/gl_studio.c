@@ -2574,6 +2574,7 @@ static void R_StudioSetupRenderer( int rendermode )
 		pglDepthMask( GL_TRUE );
 
 	pglAlphaFunc( GL_GREATER, 0.0f );
+	pglShadeModel( GL_SMOOTH );
 
 	if( g_iBackFaceCull )
 		GL_FrontFace( true );

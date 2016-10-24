@@ -80,6 +80,7 @@ typedef struct
 	qboolean		loading;		// true if worldmodel is loading
 	qboolean		sky_sphere;	// true when quake sky-sphere is used
 	qboolean		has_mirrors;	// one or more brush models contain reflective textures
+	qboolean		custom_skybox;	// if sky_sphere is active and custom skybox set
 	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
 	int		block_size;	// lightmap blocksize
 	color24		*deluxedata;	// deluxemap data pointer

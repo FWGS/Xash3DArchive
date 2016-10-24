@@ -671,6 +671,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		GL_FreeTexture( tr.alphaskyTexture );
 		tr.solidskyTexture = tr.alphaskyTexture = 0;
 		world.texdatasize = l->filelen;
+		world.custom_skybox = false;
 		world.has_mirrors = false;
 		world.sky_sphere = false;
 	}

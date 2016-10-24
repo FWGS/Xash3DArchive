@@ -1424,7 +1424,7 @@ static int GL_RenderGetParm( int parm, int arg )
 		ASSERT( arg >= 0 && arg < MAX_LIGHTMAPS );
 		return tr.lightmapTextures[arg];
 	case PARM_SKY_SPHERE:
-		return world.sky_sphere;
+		return world.sky_sphere && !world.custom_skybox;
 	case PARM_WORLD_VERSION:
 		if( cls.state != ca_active )
 			return bmodel_version;

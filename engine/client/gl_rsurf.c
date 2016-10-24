@@ -1243,7 +1243,7 @@ void R_DrawTextureChains( void )
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
 
-	if( world.sky_sphere )
+	if( world.sky_sphere && !world.custom_skybox )
 	{
 		pglDisable( GL_TEXTURE_2D );
 		pglColor3f( 1.0f, 1.0f, 1.0f );
@@ -1253,7 +1253,7 @@ void R_DrawTextureChains( void )
 	for( s = skychain; s != NULL; s = s->texturechain )
 		R_AddSkyBoxSurface( s );
 
-	if( world.sky_sphere )
+	if( world.sky_sphere && !world.custom_skybox )
 	{
 		pglEnable( GL_TEXTURE_2D );
 

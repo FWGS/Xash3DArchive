@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "wadfile.h"
 
 #define SKYCLOUDS_QUALITY	12
-#define MAX_CLIP_VERTS	64 // skybox clip vertices
+#define MAX_CLIP_VERTS	128 // skybox clip vertices
 #define TURBSCALE		( 256.0f / ( M_PI2 ))
 static const char*		r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" };
 static const int		r_skyTexOrder[6] = { 0, 2, 1, 3, 4, 5 };
@@ -320,7 +320,7 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 		}
 	}
 
-	if( world.sky_sphere && fa->polys )
+	if( world.sky_sphere && fa->polys && !world.custom_skybox )
 	{
 		glpoly_t	*p = fa->polys;
 
@@ -364,6 +364,7 @@ void R_UnloadSkybox( void )
 	tr.skyboxbasenum = 5800;	// set skybox base (to let some mods load hi-res skyboxes)
 
 	Q_memset( tr.skyboxTextures, 0, sizeof( tr.skyboxTextures ));
+	world.custom_skybox = false;
 }
 
 /*
@@ -465,7 +466,11 @@ void R_SetupSky( const char *skyboxname )
 		if( !tr.skyboxTextures[i] ) break;
 	}
 
-	if( i == 6 ) return; // loaded
+	if( i == 6 )
+	{
+		world.custom_skybox = true;
+		return; // loaded
+	}
 
 	// clear previous and try again
 	R_UnloadSkybox();
@@ -476,7 +481,12 @@ void R_SetupSky( const char *skyboxname )
 		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY, NULL );
 		if( !tr.skyboxTextures[i] ) break;
 	}
-	if( i == 6 ) return; // loaded
+
+	if( i == 6 )
+	{
+		world.custom_skybox = true;
+		return; // loaded
+	}
 
 	// completely couldn't load skybox (probably never happens)
 	MsgDev( D_ERROR, "R_SetupSky: couldn't load skybox '%s'\n", skyboxname );
