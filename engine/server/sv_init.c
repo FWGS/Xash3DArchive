@@ -374,7 +374,7 @@ void SV_ActivateServer( void )
 
 	// mapchangecfgfile
 	{
-		char	*mapchangecfgfile = Cvar_VariableString( "mapchangecfgfile" );
+		char *mapchangecfgfile = Cvar_VariableString( "mapchangecfgfile" );
 		if( *mapchangecfgfile ) Cbuf_AddText( va( "exec %s\n", mapchangecfgfile ));
 	}
 }
@@ -395,13 +395,13 @@ void SV_DeactivateServer( void )
 
 	sv.state = ss_dead;
 
+	svgame.dllFuncs.pfnServerDeactivate();
+
 	SV_FreeEdicts ();
 
 	SV_ClearPhysEnts ();
 
 	Mem_EmptyPool( svgame.stringspool );
-
-	svgame.dllFuncs.pfnServerDeactivate();
 
 	if( sv_maxclients->integer > 32 )
 		Cvar_SetFloat( "maxplayers", 32.0f );
@@ -587,8 +587,11 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	// clear physics interaction links
 	SV_ClearWorld();
 
+	// disabled because invoke crash in battlegrounds mod
+#if 0
 	// tell dlls about new level started
 	svgame.dllFuncs.pfnParmsNewLevel();
+#endif
 
 	return true;
 }

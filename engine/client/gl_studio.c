@@ -2018,7 +2018,7 @@ static void R_StudioDrawPoints( void )
 			pglColor4ub( clr->r, clr->g, clr->b, 255 );
 			alpha = 1.0f;
 		}
-		else if( g_nFaceFlags & STUDIO_NF_TRANSPARENT && R_StudioOpaque( RI.currententity ))
+		else if( g_nFaceFlags & STUDIO_NF_TRANSPARENT && R_StudioOpaque( g_iRenderMode ))
 		{
 			GL_SetRenderMode( kRenderTransAlpha );
 			pglAlphaFunc( GL_GREATER, 0.0f );
@@ -2566,6 +2566,7 @@ R_StudioSetupRenderer
 */
 static void R_StudioSetupRenderer( int rendermode )
 {
+	if( rendermode > kRenderTransAdd ) rendermode = 0;
 	g_iRenderMode = bound( 0, rendermode, kRenderTransAdd );
 	if( clgame.ds.cullMode != GL_NONE ) GL_Cull( GL_FRONT );
 

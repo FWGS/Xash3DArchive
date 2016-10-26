@@ -1167,7 +1167,10 @@ void R_DrawEntitiesOnList( void )
 	}
 
 	if( RI.drawWorld )
+	{
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		clgame.dllFuncs.pfnDrawTransparentTriangles ();
+	}
 
 	if( !RI.refdef.onlyClientDraw )
 	{
