@@ -726,8 +726,7 @@ static void GL_SetTextureDimensions( gltexture_t *tex, int width, int height, in
 	tex->srcWidth = width;
 	tex->srcHeight = height;
 
-	// NOTE: normalmaps must be power of two or software mip generator will stop working
-	if(( tex->flags & TF_NORMALMAP ) || !GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
+	if( !GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
 	{
 #if 0
 		// find nearest power of two, rounding down if desired
