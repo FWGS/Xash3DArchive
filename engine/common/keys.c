@@ -106,7 +106,7 @@ Key_IsDown
 */
 qboolean Key_IsDown( int keynum )
 {
-	if ( keynum == -1 )
+	if( keynum == -1 )
 		return false;
 	return keys[keynum].down;
 }
@@ -179,6 +179,7 @@ int Key_StringToKeynum( const char *str )
 		if( !Q_stricmp( str, kn->name ))
 			return kn->keynum;
 	}
+
 	return -1;
 }
 
@@ -275,6 +276,7 @@ int Key_GetKey( const char *binding )
 		if( keys[i].binding && !Q_stricmp( binding, keys[i].binding ))
 			return i;
 	}
+
 	return -1;
 }
 
@@ -294,11 +296,13 @@ void Key_Unbind_f( void )
 	}
 	
 	b = Key_StringToKeynum( Cmd_Argv( 1 ));
+
 	if( b == -1 )
 	{
 		Msg( "\"%s\" isn't a valid key\n", Cmd_Argv( 1 ));
 		return;
 	}
+
 	Key_SetBinding( b, "" );
 }
 
@@ -325,8 +329,8 @@ Key_Reset_f
 */
 void Key_Reset_f( void )
 {
-	int	i;
 	keyname_t	*kn;
+	int	i;
 
 	// clear all keys first	
 	for( i = 0; i < 256; i++ )
@@ -347,8 +351,8 @@ Key_Bind_f
 */
 void Key_Bind_f( void )
 {
-	int	i, c, b;
 	char	cmd[1024];
+	int	i, c, b;
 	
 	c = Cmd_Argc();
 
@@ -398,12 +402,13 @@ void Key_WriteBindings( file_t *f )
 	int	i;
 
 	if( !f ) return;
+
 	FS_Printf( f, "unbindall\n" );
 
 	for( i = 0; i < 256; i++ )
 	{
 		if( keys[i].binding && keys[i].binding[0] )
-			FS_Printf( f, "bind %s \"%s\"\n", Key_KeynumToString(i), keys[i].binding );
+			FS_Printf( f, "bind %s \"%s\"\n", Key_KeynumToString( i ), keys[i].binding );
 	}
 }
 
@@ -556,6 +561,12 @@ void Key_Event( int key, qboolean down )
 		switch( cls.key_dest )
 		{
 		case key_game:
+			if( gl_showtextures->integer )
+			{
+				// close texture atlas
+				Cvar_SetFloat( "r_showtextures", 0.0f );
+				return;
+			}
 			if( host.mouse_visible && cls.state != ca_cinematic )
 			{
 				clgame.dllFuncs.pfnKey_Event( down, key, keys[key].binding );

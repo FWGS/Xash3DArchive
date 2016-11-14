@@ -381,19 +381,19 @@ void VOX_LoadWord( channel_t *pchan )
 void VOX_FreeWord( channel_t *pchan )
 {
 	pchan->currentWord = NULL; // sentence is finished
-	Q_memset( &pchan->pMixer, 0, sizeof( pchan->pMixer ));
+	memset( &pchan->pMixer, 0, sizeof( pchan->pMixer ));
 
-#if 0	// release unused sounds ?
+	// release unused sounds
 	if( pchan->words[pchan->wordIndex].sfx )
 	{
 		// If this wave wasn't precached by the game code
 		if( !pchan->words[pchan->wordIndex].fKeepCached )
 		{
-			S_FreeSound( pchan->words[pchan->wordIndex].sfx );
+			FS_FreeSound( pchan->words[pchan->wordIndex].sfx->cache );
+			pchan->words[pchan->wordIndex].sfx->cache = NULL;
 			pchan->words[pchan->wordIndex].sfx = NULL;
 		}
 	}
-#endif
 }
 
 void VOX_LoadFirstWord( channel_t *pchan, voxword_t *pwords )

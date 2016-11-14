@@ -164,6 +164,10 @@ SOURCE=.\client\cl_menu.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\cl_netgraph.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\cl_parse.c
 # End Source File
 # Begin Source File

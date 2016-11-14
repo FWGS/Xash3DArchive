@@ -142,7 +142,7 @@ qboolean CL_FireEvent( event_info_t *ei )
 
 		if( !ev )
 		{
-			idx = bound( 1, ei->index, MAX_EVENTS );
+			idx = bound( 1, ei->index, ( MAX_EVENTS - 1 ));
 			MsgDev( D_ERROR, "CL_FireEvent: %s not precached\n", cl.event_precache[idx] );
 			break;
 		}
@@ -173,10 +173,9 @@ called right before draw frame
 */
 void CL_FireEvents( void )
 {
-	int		i;
 	event_state_t	*es;
 	event_info_t	*ei;
-	qboolean		success;
+	int		i;
 
 	es = &cl.events;
 
@@ -191,7 +190,7 @@ void CL_FireEvents( void )
 		if( ei->fire_time && ( ei->fire_time > cl.time ))
 			continue;
 
-		success = CL_FireEvent( ei );
+		CL_FireEvent( ei );
 
 		// zero out the remaining fields
 		CL_ResetEvent( ei );
@@ -302,10 +301,10 @@ void CL_ParseReliableEvent( sizebuf_t *msg )
 
 	Q_memset( &nullargs, 0, sizeof( nullargs ));
 
-	event_index = BF_ReadUBitLong( msg, MAX_EVENT_BITS );
+	event_index = MSG_ReadUBitLong( msg, MAX_EVENT_BITS );
 
-	if( BF_ReadOneBit( msg ))
-		delay = (float)BF_ReadWord( msg ) * (1.0f / 100.0f);
+	if( MSG_ReadOneBit( msg ))
+		delay = (float)MSG_ReadWord( msg ) * (1.0f / 100.0f);
 
 	// reliable events not use delta-compression just null-compression
 	MSG_ReadDeltaEvent( msg, &nullargs, &args );
@@ -343,20 +342,20 @@ void CL_ParseEvent( sizebuf_t *msg )
 
 	Q_memset( &nullargs, 0, sizeof( nullargs ));
 
-	num_events = BF_ReadUBitLong( msg, 5 );
+	num_events = MSG_ReadUBitLong( msg, 5 );
 
 	// parse events queue
 	for( i = 0 ; i < num_events; i++ )
 	{
-		event_index = BF_ReadUBitLong( msg, MAX_EVENT_BITS );
+		event_index = MSG_ReadUBitLong( msg, MAX_EVENT_BITS );
 		Q_memset( &args, 0, sizeof( args ));
 		has_update = false;
 
-		if( BF_ReadOneBit( msg ))
+		if( MSG_ReadOneBit( msg ))
 		{
-			packet_ent = BF_ReadUBitLong( msg, MAX_ENTITY_BITS );
+			packet_ent = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
 
-			if( BF_ReadOneBit( msg ))
+			if( MSG_ReadOneBit( msg ))
 			{
 				MSG_ReadDeltaEvent( msg, &nullargs, &args );
 				has_update = true;
@@ -421,8 +420,8 @@ void CL_ParseEvent( sizebuf_t *msg )
 				VectorCopy( pEnt->curstate.velocity, args.velocity );
 		}
 
-		if( BF_ReadOneBit( msg ))
-			delay = (float)BF_ReadWord( msg ) * (1.0f / 100.0f);
+		if( MSG_ReadOneBit( msg ))
+			delay = (float)MSG_ReadWord( msg ) * (1.0f / 100.0f);
 		else delay = 0.0f;
 
 		// g-cont. should we need find the event with same index?

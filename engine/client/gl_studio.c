@@ -876,13 +876,13 @@ void R_StudioCalcBoneQuaterion( int frame, float s, mstudiobone_t *pbone, mstudi
 
 	if( !VectorCompare( angle1, angle2 ))
 	{
-		AngleQuaternion( angle1, q1 );
-		AngleQuaternion( angle2, q2 );
+		AngleQuaternion( angle1, q1, true );
+		AngleQuaternion( angle2, q2, true );
 		QuaternionSlerp( q1, q2, s, q );
 	}
 	else
 	{
-		AngleQuaternion( angle1, q );
+		AngleQuaternion( angle1, q, true );
 	}
 }
 
@@ -3442,7 +3442,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		filter = R_FindTexFilter( va( "%s.mdl/%s", mdlname, name )); // grab texture filter
 
 	// NOTE: colormaps must have the palette for properly work. Ignore it.
-	if( Mod_AllowMaterials( ) && !( ptexture->flags & STUDIO_NF_COLORMAP ))
+	if( Mod_AllowMaterials( ) && !FBitSet( ptexture->flags, STUDIO_NF_COLORMAP ))
 	{
 		int	gl_texturenum = 0;
 
@@ -3464,7 +3464,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		ptexture->index = (int)((byte *)phdr) + ptexture->index;
 		size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
 
-		if( host.features & ENGINE_DISABLE_HDTEXTURES && ptexture->flags & STUDIO_NF_TRANSPARENT )
+		if( FBitSet( host.features, ENGINE_DISABLE_HDTEXTURES ) && FBitSet( ptexture->flags, STUDIO_NF_TRANSPARENT ))
 			flags |= TF_KEEP_8BIT; // Paranoia2 alpha-tracing
 
 		// build the texname

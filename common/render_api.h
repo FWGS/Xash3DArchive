@@ -104,10 +104,12 @@ typedef enum
 	TF_STATIC		= (1<<21),	// obsolete (not used)
 	TF_TEXTURE_RECTANGLE= (1<<22),	// this is GL_TEXTURE_RECTANGLE
 
+	TF_DXT_FORMAT	= (1<<23),	// internal flag who indicated DXT-compressed texture
 	TF_TEXTURE_2D_ARRAY	= (1<<24),	// this is 2D texture array (multi-layers)
 	TF_IMG_UPLOADED	= (1<<25),	// this is set for first time when called glTexImage, otherwise it will be call glTexSubImage
 	TF_ARB_FLOAT	= (1<<26),	// float textures
 	TF_NOCOMPARE	= (1<<27),	// disable comparing for depth textures
+	TF_ARB_16BIT	= (1<<28),	// keep image as 16-bit (not 24)
 } texFlags_t;
 
 typedef struct beam_s BEAM;

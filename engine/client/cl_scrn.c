@@ -116,42 +116,26 @@ void SCR_NetSpeeds( void )
 	int		x, y, height;
 	char		*p, *start, *end;
 	float		time = cl.mtime[0];
+	static int	min_svfps = 100;
+	static int	max_svfps = 0;
+	int		cur_svfps = 0;
 	rgba_t		color;
 
-	if( !net_speeds->integer ) return;
-	if( cls.state != ca_active ) return; 
+	if( !net_speeds->integer || cls.demoplayback || cls.state != ca_active )
+		return;
 
-	switch( net_speeds->integer )
+	if( cl_serverframetime() != 0 )
 	{
-	case 1:
-		if( cls.netchan.compress )
-		{
-			Q_snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal received from server:\n Huffman %s\nUncompressed %s\n",
-			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_received ), Q_memprint( cls.netchan.total_received_uncompressed ));
-		}
-		else
-		{
-			Q_snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal received from server:\nUncompressed %s\n",
-			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_received_uncompressed ));
-		}
-		break;
-	case 2:
-		if( cls.netchan.compress )
-		{
-			Q_snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal sended to server:\nHuffman %s\nUncompressed %s\n",
-			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended ), Q_memprint( cls.netchan.total_sended_uncompressed ));
-		}
-		else
-		{
-			Q_snprintf( msg, sizeof( msg ), "Game Time: %02d:%02d\nTotal sended to server:\nUncompressed %s\n",
-			(int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended_uncompressed ));
-		}
-		break;
-	default: return;
+		cur_svfps = Q_rint( 1.0f / cl_serverframetime( ));
+		if( cur_svfps < min_svfps ) min_svfps = cur_svfps;
+		if( cur_svfps > max_svfps ) max_svfps = cur_svfps;
 	}
 
+	Q_snprintf( msg, sizeof( msg ), "sv fps: ^1%4i min, ^3%4i cur, ^2%4i max\nGame Time: %02d:%02d\nTotal sended to server: %s\nTotal received from server: %s\n",
+	min_svfps, cur_svfps, max_svfps, (int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended ), Q_memprint( cls.netchan.total_received ));
+
 	x = scr_width->integer - 320;
-	y = 256;
+	y = 384;
 
 	Con_DrawStringLen( NULL, NULL, &height );
 	MakeRGBA( color, 255, 255, 255, 255 );
@@ -258,7 +242,7 @@ void SCR_MakeScreenShot( void )
 	{
 		// snapshots don't writes message about image		
 		if( cls.scrshot_action != scrshot_snapshot )
-			MsgDev( D_AICONSOLE, "Write %s\n", cls.shotname );
+			MsgDev( D_REPORT, "Write %s\n", cls.shotname );
 	}
 	else MsgDev( D_ERROR, "Unable to write %s\n", cls.shotname );
 
@@ -629,6 +613,7 @@ void SCR_Init( void )
 	SCR_InstallParticlePalette ();
 	SCR_RegisterTextures ();
 	SCR_InitCinematic();
+	CL_InitNetgraph();
 	SCR_VidInit();
 
 	if( host.state != HOST_RESTART )

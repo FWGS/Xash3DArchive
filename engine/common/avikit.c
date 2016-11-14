@@ -382,7 +382,7 @@ qboolean AVI_SeekPosition( movie_state_t *Avi, dword offset )
 }
 
 // get a chunk of audio from the stream (in bytes)
-fs_offset_t AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset, long length )
+long AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset, long length )
 {
 	int	i;
 	long	result = 0;

@@ -641,7 +641,7 @@ void MsgDev( int level, const char *pMsg, ... )
 		break;
 	case D_INFO:
 	case D_NOTE:
-	case D_AICONSOLE:
+	case D_REPORT:
 		Sys_Print( text );
 		break;
 	}

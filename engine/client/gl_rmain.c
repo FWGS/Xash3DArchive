@@ -1262,9 +1262,8 @@ void R_BeginFrame( qboolean clearScene )
 	// draw buffer stuff
 	pglDrawBuffer( GL_BACK );
 
-	// texturemode stuff
 	// update texture parameters
-	if( gl_texturemode->modified || gl_texture_anisotropy->modified || gl_texture_lodbias->modified )
+	if( gl_texture_nearest->modified || gl_texture_anisotropy->modified || gl_texture_lodbias->modified )
 		R_SetTextureParameters();
 
 	// swapinterval stuff
@@ -1731,7 +1730,7 @@ qboolean R_InitRenderAPI( void )
 	{
 		if( clgame.dllFuncs.pfnGetRenderInterface( CL_RENDER_INTERFACE_VERSION, &gRenderAPI, &clgame.drawFuncs ))
 		{
-			MsgDev( D_AICONSOLE, "CL_LoadProgs: ^2initailized extended RenderAPI ^7ver. %i\n", CL_RENDER_INTERFACE_VERSION );
+			MsgDev( D_REPORT, "CL_LoadProgs: ^2initailized extended RenderAPI ^7ver. %i\n", CL_RENDER_INTERFACE_VERSION );
 			return true;
 		}
 

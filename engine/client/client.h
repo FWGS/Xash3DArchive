@@ -49,6 +49,19 @@ GNU General Public License for more details.
 typedef int		sound_t;
 
 //=============================================================================
+typedef struct netbandwithgraph_s
+{
+	word		client;
+	word		players;
+	word		entities;	// entities bytes, except for players
+	word		tentities;// temp entities
+	word		sound;
+	word		event;
+	word		usr;
+	word		msgbytes;
+	word		voicebytes;
+} netbandwidthgraph_t;
+
 typedef struct frame_s
 {
 	// received from server
@@ -59,6 +72,7 @@ typedef struct frame_s
 	clientdata_t	client;		// local client private data
 	entity_state_t	playerstate[MAX_CLIENTS];
 	weapon_data_t	weapondata[64];
+	netbandwidthgraph_t graphdata;
 
 	int		num_entities;
 	int		first_entity;	// into the circular cl_packet_entities[]
@@ -79,6 +93,9 @@ typedef struct runcmd_s
 	int		sendsize;
 } runcmd_t;
 
+#define ANGLE_BACKUP	16
+#define ANGLE_MASK		(ANGLE_BACKUP - 1)
+
 #define CMD_BACKUP		MULTIPLAYER_BACKUP	// allow a lot of command backups for very fast systems
 #define CMD_MASK		(CMD_BACKUP - 1)
 
@@ -86,6 +103,8 @@ typedef struct runcmd_s
 extern int CL_UPDATE_BACKUP;
 
 #define INVALID_HANDLE	0xFFFF		// for XashXT cache system
+
+#define cl_serverframetime()	(cl.mtime[0] - cl.mtime[1])
 
 typedef struct
 {
@@ -129,9 +148,10 @@ typedef struct
 	int		last_command_ack;
 	int		last_incoming_sequence;
 
-	qboolean		force_send_usercmd;
+	qboolean		send_reply;
 	qboolean		thirdperson;
 	qboolean		background;		// not real game, just a background
+	qboolean		first_frame;		// first rendering frame
 
 	uint		checksum;			// for catching cheater maps
 
@@ -442,7 +462,6 @@ typedef struct
 
 	byte		*mempool;			// client premamnent pool: edicts etc
 	
-	int		framecount;
 	int		quakePort;		// a 16 bit value that allows quake servers
 						// to work around address translating routers
 						// g-cont. this port allow many copies of engine in multiplayer game
@@ -541,6 +560,8 @@ extern convar_t	*cl_nosmooth;
 extern convar_t	*cl_smoothtime;
 extern convar_t	*cl_crosshair;
 extern convar_t	*cl_testlights;
+extern convar_t	*cl_cmdrate;
+extern convar_t	*cl_updaterate;
 extern convar_t	*cl_solid_players;
 extern convar_t	*cl_idealpitchscale;
 extern convar_t	*cl_allow_levelshots;
@@ -548,6 +569,7 @@ extern convar_t	*cl_lightstyle_lerping;
 extern convar_t	*cl_draw_particles;
 extern convar_t	*cl_levelshot_name;
 extern convar_t	*cl_draw_beams;
+extern convar_t	*gl_showtextures;
 extern convar_t	*cl_bmodelinterp;
 extern convar_t	*cl_lw;		// local weapons
 extern convar_t	*scr_centertime;
@@ -608,6 +630,7 @@ void CL_WriteDemoUserCmd( int cmdnumber );
 void CL_WriteDemoMessage( qboolean startup, int start, sizebuf_t *msg );
 void CL_WriteDemoUserMessage( const byte *buffer, size_t size );
 qboolean CL_DemoReadMessage( byte *buffer, size_t *length );
+void CL_DemoInterpolateAngles( void );
 void CL_WriteDemoJumpTime( void );
 void CL_CloseDemoHeader( void );
 void CL_StopPlayback( void );
@@ -659,6 +682,8 @@ HSPRITE pfnSPR_Load( const char *szPicName );
 HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags );
 void TextAdjustSize( int *x, int *y, int *w, int *h );
 void PicAdjustSize( float *x, float *y, float *w, float *h );
+void CL_FillRGBA( int x, int y, int width, int height, int r, int g, int b, int a );
+void CL_FillRGBABlend( int x, int y, int width, int height, int r, int g, int b, int a );
 void CL_PlayerTrace( float *start, float *end, int traceFlags, int ignore_pe, pmtrace_t *tr );
 void CL_PlayerTraceExt( float *start, float *end, int traceFlags, int (*pfnIgnore)( physent_t *pe ), pmtrace_t *tr );
 void CL_SetTraceHull( int hull );
@@ -697,6 +722,12 @@ void SCR_RSpeeds( void );
 void SCR_DrawFPS( void );
 
 //
+// cl_netgraph.c
+//
+void CL_InitNetgraph( void );
+void SCR_DrawNetGraph( void );
+
+//
 // cl_view.c
 //
 
@@ -705,11 +736,7 @@ void V_Shutdown( void );
 qboolean V_PreRender( void );
 void V_PostRender( void );
 void V_RenderView( void );
-void V_SetupOverviewState( void );
-void V_ProcessOverviewCmds( usercmd_t *cmd );
-void V_MergeOverviewRefdef( ref_params_t *fd );
-void V_ProcessShowTexturesCmds( usercmd_t *cmd );
-void V_WriteOverviewScript( void );
+void V_SetupRefDef( void );
 
 //
 // cl_pmove.c
@@ -739,7 +766,7 @@ void CL_InitStudioAPI( void );
 //
 // cl_frame.c
 //
-void CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
+int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType );
 void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean noInterp );
 qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, float *pradius );

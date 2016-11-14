@@ -513,8 +513,8 @@ void Huff_CompressPacket( sizebuf_t *msg, int offset )
 	int	outLen;
 	int	i, inLen;
 
-	data = BF_GetData( msg ) + offset;
-	inLen = BF_GetNumBytesWritten( msg ) - offset;	
+	data = MSG_GetData( msg ) + offset;
+	inLen = MSG_GetNumBytesWritten( msg ) - offset;	
 	if( inLen <= 0 || inLen >= NET_MAX_PAYLOAD )
 		return;
 
@@ -552,8 +552,8 @@ void Huff_DecompressPacket( sizebuf_t *msg, int offset )
 	int	inLen;
 	int	ch, i, j;
 
-	data = BF_GetData( msg ) + offset;
-	inLen = BF_GetMaxBytes( msg ) - offset;
+	data = MSG_GetData( msg ) + offset;
+	inLen = MSG_GetMaxBytes( msg ) - offset;
 	if( inLen <= 0 ) return;
 
 	Huff_PrepareTree( tree );

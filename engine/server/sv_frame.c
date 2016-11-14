@@ -191,14 +191,14 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 			from = NULL;
 			from_num_entities = 0;
 
-			BF_WriteByte( msg, svc_packetentities );
-			BF_WriteWord( msg, to->num_entities );
+			MSG_WriteByte( msg, svc_packetentities );
+			MSG_WriteWord( msg, to->num_entities );
 		}
 		else
 		{
-			BF_WriteByte( msg, svc_deltapacketentities );
-			BF_WriteWord( msg, to->num_entities );
-			BF_WriteByte( msg, cl->delta_sequence );
+			MSG_WriteByte( msg, svc_deltapacketentities );
+			MSG_WriteWord( msg, to->num_entities );
+			MSG_WriteByte( msg, cl->delta_sequence );
 		}
 	}
 	else
@@ -206,8 +206,8 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		from = NULL;
 		from_num_entities = 0;
 
-		BF_WriteByte( msg, svc_packetentities );
-		BF_WriteWord( msg, to->num_entities );
+		MSG_WriteByte( msg, svc_packetentities );
+		MSG_WriteWord( msg, to->num_entities );
 	}
 
 	newent = NULL;
@@ -271,7 +271,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		}
 	}
 
-	BF_WriteWord( msg, 0 ); // end of packetentities
+	MSG_WriteWord( msg, 0 ); // end of packetentities
 }
 
 /*
@@ -341,8 +341,8 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 		}
 	}
 
-	BF_WriteByte( msg, svc_event );	// create message
-	BF_WriteUBitLong( msg, ev_count, 5 );	// up to MAX_EVENT_QUEUE events
+	MSG_WriteByte( msg, svc_event );	// create message
+	MSG_WriteUBitLong( msg, ev_count, 5 );	// up to MAX_EVENT_QUEUE events
 
 	for( count = i = 0; i < MAX_EVENT_QUEUE; i++ )
 	{
@@ -358,34 +358,34 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 		// only send if there's room
 		if( count < ev_count )
 		{
-			BF_WriteUBitLong( msg, info->index, MAX_EVENT_BITS ); // 1024 events
+			MSG_WriteUBitLong( msg, info->index, MAX_EVENT_BITS ); // 1024 events
 
 			if( info->packet_index == -1 )
 			{
-				BF_WriteOneBit( msg, 0 );
+				MSG_WriteOneBit( msg, 0 );
 			}
 			else
 			{
-				BF_WriteOneBit( msg, 1 );
-				BF_WriteUBitLong( msg, info->packet_index, MAX_ENTITY_BITS );
+				MSG_WriteOneBit( msg, 1 );
+				MSG_WriteUBitLong( msg, info->packet_index, MAX_ENTITY_BITS );
 
 				if( !Q_memcmp( &nullargs, &info->args, sizeof( event_args_t )))
 				{
-					BF_WriteOneBit( msg, 0 );
+					MSG_WriteOneBit( msg, 0 );
 				}
 				else
 				{
-					BF_WriteOneBit( msg, 1 );
+					MSG_WriteOneBit( msg, 1 );
 					MSG_WriteDeltaEvent( msg, &nullargs, &info->args );
 				}
 			}
 
 			if( info->fire_time )
 			{
-				BF_WriteOneBit( msg, 1 );
-				BF_WriteWord( msg, Q_rint( info->fire_time * 100.0f ));
+				MSG_WriteOneBit( msg, 1 );
+				MSG_WriteWord( msg, Q_rint( info->fire_time * 100.0f ));
 			}
-			else BF_WriteOneBit( msg, 0 );
+			else MSG_WriteOneBit( msg, 0 );
 		}
 
 		info->index = 0;
@@ -407,7 +407,7 @@ void SV_EmitPings( sizebuf_t *msg )
 	int		packet_loss;
 	int		i, ping;
 
-	BF_WriteByte( msg, svc_updatepings );
+	MSG_WriteByte( msg, svc_updatepings );
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -417,14 +417,14 @@ void SV_EmitPings( sizebuf_t *msg )
 		SV_GetPlayerStats( cl, &ping, &packet_loss );
 
 		// there are 25 bits for each client
-		BF_WriteOneBit( msg, 1 );
-		BF_WriteUBitLong( msg, i, MAX_CLIENT_BITS );
-		BF_WriteUBitLong( msg, ping, 12 );
-		BF_WriteUBitLong( msg, packet_loss, 7 );
+		MSG_WriteOneBit( msg, 1 );
+		MSG_WriteUBitLong( msg, i, MAX_CLIENT_BITS );
+		MSG_WriteUBitLong( msg, ping, 12 );
+		MSG_WriteUBitLong( msg, packet_loss, 7 );
 	}
 
 	// end marker
-	BF_WriteOneBit( msg, 0 );
+	MSG_WriteOneBit( msg, 0 );
 }
 
 /*
@@ -454,8 +454,8 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 
 	if( cl->chokecount != 0 )
 	{
-		BF_WriteByte( msg, svc_chokecount );
-		BF_WriteByte( msg, cl->chokecount );
+		MSG_WriteByte( msg, svc_chokecount );
+		MSG_WriteByte( msg, cl->chokecount );
 		cl->chokecount = 0;
 	}
 
@@ -463,15 +463,15 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	switch( clent->v.fixangle )
 	{
 	case 1:
-		BF_WriteByte( msg, svc_setangle );
-		BF_WriteBitAngle( msg, clent->v.angles[0], 16 );
-		BF_WriteBitAngle( msg, clent->v.angles[1], 16 );
-		BF_WriteBitAngle( msg, clent->v.angles[2], 16 );
+		MSG_WriteByte( msg, svc_setangle );
+		MSG_WriteBitAngle( msg, clent->v.angles[0], 16 );
+		MSG_WriteBitAngle( msg, clent->v.angles[1], 16 );
+		MSG_WriteBitAngle( msg, clent->v.angles[2], 16 );
 		clent->v.effects |= EF_NOINTERP;
 		break;
 	case 2:
-		BF_WriteByte( msg, svc_addangle );
-		BF_WriteBitAngle( msg, clent->v.avelocity[1], 16 );
+		MSG_WriteByte( msg, svc_addangle );
+		MSG_WriteBitAngle( msg, clent->v.avelocity[1], 16 );
 		clent->v.avelocity[1] = 0.0f;
 		break;
 	}
@@ -483,7 +483,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	// update clientdata_t
 	svgame.dllFuncs.pfnUpdateClientData( clent, cl->local_weapons, &frame->clientdata );
 
-	BF_WriteByte( msg, svc_clientdata );
+	MSG_WriteByte( msg, svc_clientdata );
 	if( cl->hltv_proxy ) return;	// don't send more nothing
 
 	if( cl->delta_sequence == -1 ) from_cd = &nullcd;
@@ -492,12 +492,12 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 
 	if( cl->delta_sequence == -1 )
 	{
-		BF_WriteOneBit( msg, 0 );	// no delta-compression
+		MSG_WriteOneBit( msg, 0 );	// no delta-compression
 	}
 	else
 	{
-		BF_WriteOneBit( msg, 1 );	// we are delta-ing from
-		BF_WriteByte( msg, cl->delta_sequence );
+		MSG_WriteOneBit( msg, 1 );	// we are delta-ing from
+		MSG_WriteByte( msg, cl->delta_sequence );
 	}
 
 	// write clientdata_t
@@ -518,7 +518,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	}
 
 	// end marker
-	BF_WriteOneBit( msg, 0 );
+	MSG_WriteOneBit( msg, 0 );
 }
 
 /*
@@ -608,30 +608,30 @@ void SV_SendClientDatagram( sv_client_t *cl )
 	svs.currentPlayerNum = (cl - svs.clients);
 
 	Q_memset( msg_buf, 0, NET_MAX_PAYLOAD );
-	BF_Init( &msg, "Datagram", msg_buf, sizeof( msg_buf ));
+	MSG_Init( &msg, "Datagram", msg_buf, sizeof( msg_buf ));
 
 	// always send servertime at new frame
-	BF_WriteByte( &msg, svc_time );
-	BF_WriteFloat( &msg, sv.time );
+	MSG_WriteByte( &msg, svc_time );
+	MSG_WriteFloat( &msg, sv.time );
 
 	SV_WriteClientdataToMessage( cl, &msg );
 	SV_WriteEntitiesToClient( cl, &msg );
 
 	// copy the accumulated multicast datagram
 	// for this client out to the message
-	if( BF_CheckOverflow( &cl->datagram )) MsgDev( D_WARN, "datagram overflowed for %s\n", cl->name );
-	else BF_WriteBits( &msg, BF_GetData( &cl->datagram ), BF_GetNumBitsWritten( &cl->datagram ));
-	BF_Clear( &cl->datagram );
+	if( MSG_CheckOverflow( &cl->datagram )) MsgDev( D_WARN, "datagram overflowed for %s\n", cl->name );
+	else MSG_WriteBits( &msg, MSG_GetData( &cl->datagram ), MSG_GetNumBitsWritten( &cl->datagram ));
+	MSG_Clear( &cl->datagram );
 
-	if( BF_CheckOverflow( &msg ))
+	if( MSG_CheckOverflow( &msg ))
 	{	
 		// must have room left for the packet header
 		MsgDev( D_WARN, "msg overflowed for %s\n", cl->name );
-		BF_Clear( &msg );
+		MSG_Clear( &msg );
 	}
 
 	// send the datagram
-	Netchan_TransmitBits( &cl->netchan, BF_GetNumBitsWritten( &msg ), BF_GetData( &msg ));
+	Netchan_TransmitBits( &cl->netchan, MSG_GetNumBitsWritten( &msg ), MSG_GetData( &msg ));
 }
 
 /*
@@ -669,24 +669,24 @@ void SV_UpdateToReliableMessages( void )
 	if( sv.write_bad_message && Com_RandomLong( 0, 512 ) == 404 )
 	{
 		// just for network debugging (send only for local client)
-		BF_WriteByte( &sv.datagram, svc_bad );
-		BF_WriteLong( &sv.datagram, rand( ));		// send some random data
-		BF_WriteString( &sv.datagram, host.finalmsg );	// send final message
+		MSG_WriteByte( &sv.datagram, svc_bad );
+		MSG_WriteLong( &sv.datagram, rand( ));		// send some random data
+		MSG_WriteString( &sv.datagram, host.finalmsg );	// send final message
 		sv.write_bad_message = false;
 	}
 
 	// clear the server datagram if it overflowed.
-	if( BF_CheckOverflow( &sv.datagram ))
+	if( MSG_CheckOverflow( &sv.datagram ))
 	{
 		MsgDev( D_ERROR, "sv.datagram overflowed!\n" );
-		BF_Clear( &sv.datagram );
+		MSG_Clear( &sv.datagram );
 	}
 
 	// clear the server datagram if it overflowed.
-	if( BF_CheckOverflow( &sv.spectator_datagram ))
+	if( MSG_CheckOverflow( &sv.spectator_datagram ))
 	{
 		MsgDev( D_ERROR, "sv.spectator_datagram overflowed!\n" );
-		BF_Clear( &sv.spectator_datagram );
+		MSG_Clear( &sv.spectator_datagram );
 	}
 
 	// now send the reliable and server datagrams to all clients.
@@ -695,19 +695,19 @@ void SV_UpdateToReliableMessages( void )
 		if( cl->state < cs_connected || cl->fakeclient )
 			continue;	// reliables go to all connected or spawned
 
-		BF_WriteBits( &cl->netchan.message, BF_GetData( &sv.reliable_datagram ), BF_GetNumBitsWritten( &sv.reliable_datagram ));
-		BF_WriteBits( &cl->datagram, BF_GetData( &sv.datagram ), BF_GetNumBitsWritten( &sv.datagram ));
+		MSG_WriteBits( &cl->netchan.message, MSG_GetData( &sv.reliable_datagram ), MSG_GetNumBitsWritten( &sv.reliable_datagram ));
+		MSG_WriteBits( &cl->datagram, MSG_GetData( &sv.datagram ), MSG_GetNumBitsWritten( &sv.datagram ));
 
 		if( cl->hltv_proxy )
 		{
-			BF_WriteBits( &cl->datagram, BF_GetData( &sv.spectator_datagram ), BF_GetNumBitsWritten( &sv.spectator_datagram ));
+			MSG_WriteBits( &cl->datagram, MSG_GetData( &sv.spectator_datagram ), MSG_GetNumBitsWritten( &sv.spectator_datagram ));
 		}
 	}
 
 	// now clear the reliable and datagram buffers.
-	BF_Clear( &sv.spectator_datagram );
-	BF_Clear( &sv.reliable_datagram );
-	BF_Clear( &sv.datagram );
+	MSG_Clear( &sv.spectator_datagram );
+	MSG_Clear( &sv.reliable_datagram );
+	MSG_Clear( &sv.datagram );
 }
 
 /*
@@ -760,10 +760,10 @@ void SV_SendClientMessages( void )
 		}
 
 		// if the reliable message overflowed, drop the client
-		if( BF_CheckOverflow( &cl->netchan.message ))
+		if( MSG_CheckOverflow( &cl->netchan.message ))
 		{
-			BF_Clear( &cl->netchan.message );
-			BF_Clear( &cl->datagram );
+			MSG_Clear( &cl->netchan.message );
+			MSG_Clear( &cl->datagram );
 			SV_BroadcastPrintf( PRINT_HIGH, "%s overflowed\n", cl->name );
 			MsgDev( D_WARN, "reliable overflow for %s\n", cl->name );
 			SV_DropClient( cl );
@@ -885,6 +885,6 @@ void SV_InactivateClients( void )
 			svs.clients[i].state = cs_connected;
 
 		// clear netchan message (but keep other buffers)
-		BF_Clear( &cl->netchan.message );
+		MSG_Clear( &cl->netchan.message );
 	}
 }

@@ -265,6 +265,7 @@ void GL_LoadTexMatrixExt( const float *glmatrix );
 void GL_LoadMatrix( const matrix4x4 source );
 void GL_TexGen( GLenum coord, GLenum mode );
 void GL_SelectTexture( GLint texture );
+void GL_CleanupAllTextureUnits( void );
 void GL_LoadIdentityTexMatrix( void );
 void GL_DisableAllTexGens( void );
 void GL_SetRenderMode( int mode );
@@ -309,7 +310,7 @@ byte *GL_ResampleTexture( const byte *source, int in_w, int in_h, int out_w, int
 int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags );
 int GL_CreateTextureArray( const char *name, int width, int height, int depth, const void *buffer, texFlags_t flags );
 void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor );
-void GL_TexFilter( gltexture_t *tex, qboolean update );
+void GL_ApplyTextureParams( gltexture_t *tex );
 void R_FreeImage( gltexture_t *image );
 int GL_FindTexture( const char *name );
 void GL_FreeTexture( GLenum texnum );
@@ -494,41 +495,33 @@ enum
 	GL_WGL_EXTENSIONS,
 	GL_WGL_SWAPCONTROL,		
 	GL_WGL_PROCADDRESS,
-	GL_HARDWARE_GAMMA_CONTROL,
 	GL_ARB_VERTEX_BUFFER_OBJECT_EXT,
-	GL_ENV_COMBINE_EXT,
+	GL_ARB_VERTEX_ARRAY_OBJECT_EXT,
 	GL_ARB_MULTITEXTURE,
-	GL_TEXTURECUBEMAP_EXT,
-	GL_DOT3_ARB_EXT,
+	GL_TEXTURE_CUBEMAP_EXT,
 	GL_ANISOTROPY_EXT,
-	GL_TEXTURE_LODBIAS,
+	GL_TEXTURE_LOD_BIAS,
 	GL_OCCLUSION_QUERIES_EXT,
 	GL_TEXTURE_COMPRESSION_EXT,
 	GL_SHADER_GLSL100_EXT,
-	GL_GPU_SHADER4_EXT,
-	GL_SGIS_MIPMAPS_EXT,
 	GL_DRAW_RANGEELEMENTS_EXT,
-	GL_LOCKARRAYS_EXT,
 	GL_TEXTURE_2D_RECT_EXT,
 	GL_TEXTURE_ARRAY_EXT,
 	GL_TEXTURE_3D_EXT,
 	GL_CLAMPTOEDGE_EXT,
-	GL_BLEND_MINMAX_EXT,
-	GL_STENCILTWOSIDE_EXT,
-	GL_BLEND_SUBTRACT_EXT,
 	GL_SHADER_OBJECTS_EXT,
-	GL_VERTEX_SHADER_EXT,	// glsl vertex program
-	GL_FRAGMENT_SHADER_EXT,	// glsl fragment program	
-	GL_EXT_POINTPARAMETERS,
-	GL_SEPARATESTENCIL_EXT,
 	GL_ARB_TEXTURE_NPOT_EXT,
-	GL_CUSTOM_VERTEX_ARRAY_EXT,
-	GL_TEXTURE_ENV_ADD_EXT,
 	GL_CLAMP_TEXBORDER_EXT,
 	GL_ARB_TEXTURE_FLOAT_EXT,
+	GL_ARB_HALF_FLOAT_EXT,
 	GL_ARB_DEPTH_FLOAT_EXT,
 	GL_ARB_SEAMLESS_CUBEMAP,
+	GL_FRAMEBUFFER_OBJECT,
+	GL_DRAW_BUFFERS_EXT,
+	GL_EXT_GPU_SHADER4,		// shaders only
+	GL_ARB_TEXTURE_RG,
 	GL_DEPTH_TEXTURE,
+	GL_DEBUG_OUTPUT,
 	GL_SHADOW_EXT,
 	GL_EXTCOUNT,		// must be last
 };
@@ -543,11 +536,20 @@ enum
 	MAX_TEXTURE_UNITS = 32	// can't acess to all over units without GLSL or cg
 };
 
+typedef enum
+{
+	GLHW_GENERIC,		// where everthing works the way it should
+	GLHW_RADEON,		// where you don't have proper GLSL support
+	GLHW_NVIDIA		// Geforce 8/9 class DX10 hardware
+} glHWType_t;
+
 typedef struct
 {
 	const char	*renderer_string;		// ptrs to OpenGL32.dll, use with caution
 	const char	*vendor_string;
 	const char	*version_string;
+
+	glHWType_t	hardware_type;
 
 	// list of supported extensions
 	const char	*extensions_string;
@@ -562,10 +564,10 @@ typedef struct
 	GLint		max_2d_texture_layers;
 	GLint		max_3d_texture_size;
 	GLint		max_cubemap_size;
-	GLint		texRectangle;
+	GLint		max_draw_buffers;
 
 	GLfloat		max_texture_anisotropy;
-	GLfloat		max_texture_lodbias;
+	GLfloat		max_texture_lod_bias;
 
 	GLint		max_vertex_uniforms;
 	GLint		max_vertex_attribs;
@@ -613,8 +615,8 @@ typedef struct
 	int		desktopWidth;
 	int		desktopHeight;
 
-	qboolean		software;		// OpenGL software emulation
 	qboolean		initialized;	// OpenGL subsystem started
+	qboolean		extended;		// extended context allows to GL_Debug
 } glwstate_t;
 
 extern glconfig_t		glConfig;
@@ -624,7 +626,6 @@ extern glwstate_t		glw_state;
 //
 // renderer cvars
 //
-extern convar_t	*gl_allow_software;
 extern convar_t	*gl_texture_anisotropy;
 extern convar_t	*gl_extensions;
 extern convar_t	*gl_stencilbits;
@@ -632,11 +633,9 @@ extern convar_t	*gl_ignorehwgamma;
 extern convar_t	*gl_swapInterval;
 extern convar_t	*gl_check_errors;
 extern convar_t	*gl_round_down;
-extern convar_t	*gl_texturemode;
 extern convar_t	*gl_texture_lodbias;
-extern convar_t	*gl_showtextures;
+extern convar_t	*gl_texture_nearest;
 extern convar_t	*gl_compress_textures;
-extern convar_t	*gl_luminance_textures;
 extern convar_t	*gl_compensate_gamma_screenshots;
 extern convar_t	*gl_keeptjunctions;
 extern convar_t	*gl_detailscale;

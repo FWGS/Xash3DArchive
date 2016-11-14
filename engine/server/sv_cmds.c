@@ -35,9 +35,9 @@ void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... )
 	Q_vsprintf( string, fmt, argptr );
 	va_end( argptr );
 	
-	BF_WriteByte( &cl->netchan.message, svc_print );
-	BF_WriteByte( &cl->netchan.message, level );
-	BF_WriteString( &cl->netchan.message, string );
+	MSG_WriteByte( &cl->netchan.message, svc_print );
+	MSG_WriteByte( &cl->netchan.message, level );
+	MSG_WriteString( &cl->netchan.message, string );
 }
 
 /*
@@ -69,9 +69,9 @@ void SV_BroadcastPrintf( int level, char *fmt, ... )
 		if( cl->state != cs_spawned ) continue;
 		if( cl->fakeclient ) continue;
 
-		BF_WriteByte( &cl->netchan.message, svc_print );
-		BF_WriteByte( &cl->netchan.message, level );
-		BF_WriteString( &cl->netchan.message, string );
+		MSG_WriteByte( &cl->netchan.message, svc_print );
+		MSG_WriteByte( &cl->netchan.message, level );
+		MSG_WriteString( &cl->netchan.message, string );
 	}
 }
 
@@ -92,8 +92,8 @@ void SV_BroadcastCommand( char *fmt, ... )
 	Q_vsprintf( string, fmt, argptr );
 	va_end( argptr );
 
-	BF_WriteByte( &sv.reliable_datagram, svc_stufftext );
-	BF_WriteString( &sv.reliable_datagram, string );
+	MSG_WriteByte( &sv.reliable_datagram, svc_stufftext );
+	MSG_WriteString( &sv.reliable_datagram, string );
 }
 
 /*

@@ -24,7 +24,7 @@ GNU General Public License for more details.
 static dword	BitWriteMasks[32][33];
 static dword	ExtraMasks[32];
 
-short BF_BigShort( short swap )
+short MSG_BigShort( short swap )
 {
 	short *s = &swap;
 	
@@ -37,7 +37,7 @@ short BF_BigShort( short swap )
 	return *s;
 }
 
-void BF_InitMasks( void )
+void MSG_InitMasks( void )
 {
 	uint	startbit, endbit;
 	uint	maskBit, nBitsLeft;
@@ -57,14 +57,14 @@ void BF_InitMasks( void )
 		ExtraMasks[maskBit] = (uint)BIT( maskBit ) - 1;
 }
  
-void BF_InitExt( sizebuf_t *bf, const char *pDebugName, void *pData, int nBytes, int nMaxBits )
+void MSG_InitExt( sizebuf_t *bf, const char *pDebugName, void *pData, int nBytes, int nMaxBits )
 {
 	bf->pDebugName = pDebugName;
 
-	BF_StartWriting( bf, pData, nBytes, 0, nMaxBits );
+	MSG_StartWriting( bf, pData, nBytes, 0, nMaxBits );
 }
 
-void BF_StartWriting( sizebuf_t *bf, void *pData, int nBytes, int iStartBit, int nBits )
+void MSG_StartWriting( sizebuf_t *bf, void *pData, int nBytes, int iStartBit, int nBits )
 {
 	// make sure it's dword aligned and padded.
 	Assert(((dword)pData & 3 ) == 0 );
@@ -92,39 +92,39 @@ MSG_Clear
 for clearing overflowed buffer
 =======================
 */
-void BF_Clear( sizebuf_t *bf )
+void MSG_Clear( sizebuf_t *bf )
 {
 	bf->iCurBit = 0;
 	bf->bOverflow = false;
 }
 
-static qboolean BF_Overflow( sizebuf_t *bf, int nBits )
+static qboolean MSG_Overflow( sizebuf_t *bf, int nBits )
 {
 	if( bf->iCurBit + nBits > bf->nDataBits )
 		bf->bOverflow = true;
 	return bf->bOverflow;
 }
 
-qboolean BF_CheckOverflow( sizebuf_t *bf )
+qboolean MSG_CheckOverflow( sizebuf_t *bf )
 {
 	ASSERT( bf );
 	
-	return BF_Overflow( bf, 0 );
+	return MSG_Overflow( bf, 0 );
 }
 
-void BF_SeekToBit( sizebuf_t *bf, int bitPos )
+void MSG_SeekToBit( sizebuf_t *bf, int bitPos )
 {
 	bf->iCurBit = bitPos;
 }
 
-void BF_SeekToByte( sizebuf_t *bf, int bytePos )
+void MSG_SeekToByte( sizebuf_t *bf, int bytePos )
 {
 	bf->iCurBit = bytePos << 3;
 }
 
-void BF_WriteOneBit( sizebuf_t *bf, int nValue )
+void MSG_WriteOneBit( sizebuf_t *bf, int nValue )
 {
-	if( !BF_Overflow( bf, 1 ))
+	if( !MSG_Overflow( bf, 1 ))
 	{
 		if( nValue ) bf->pData[bf->iCurBit>>3] |= BIT( bf->iCurBit & 7 );
 		else bf->pData[bf->iCurBit>>3] &= ~BIT( bf->iCurBit & 7 );
@@ -133,7 +133,7 @@ void BF_WriteOneBit( sizebuf_t *bf, int nValue )
 	}
 }
 
-void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, qboolean bCheckRange )
+void MSG_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, qboolean bCheckRange )
 {
 	Assert( numbits >= 0 && numbits <= 32 );
 
@@ -151,7 +151,7 @@ void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, qboolean bCh
 		dword	iCurBitMasked;
 		int	nBitsWritten;
 
-		Assert(( iDWord * 4 + sizeof( long )) <= (uint)BF_GetMaxBytes( bf ));
+		Assert(( iDWord * 4 + sizeof( long )) <= (uint)MSG_GetMaxBytes( bf ));
 
 		iCurBitMasked = iCurBit & 31;
 		((dword *)bf->pData)[iDWord] &= BitWriteMasks[iCurBitMasked][nBitsLeft];
@@ -176,12 +176,12 @@ void BF_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, qboolean bCh
 
 /*
 =======================
-BF_WriteSBitLong
+MSG_WriteSBitLong
 
 sign bit comes first
 =======================
 */
-void BF_WriteSBitLong( sizebuf_t *bf, int data, int numbits )
+void MSG_WriteSBitLong( sizebuf_t *bf, int data, int numbits )
 {
 	// do we have a valid # of bits to encode with?
 	Assert( numbits >= 1 );
@@ -190,24 +190,24 @@ void BF_WriteSBitLong( sizebuf_t *bf, int data, int numbits )
 	// (Some old code writes direct integers right into the buffer).
 	if( data < 0 )
 	{
-		BF_WriteUBitLongExt( bf, (uint)( 0x80000000 + data ), numbits - 1, false );
-		BF_WriteOneBit( bf, 1 );
+		MSG_WriteUBitLongExt( bf, (uint)( 0x80000000 + data ), numbits - 1, false );
+		MSG_WriteOneBit( bf, 1 );
 	}
 	else
 	{
-		BF_WriteUBitLong( bf, (uint)data, numbits - 1 );
-		BF_WriteOneBit( bf, 0 );
+		MSG_WriteUBitLong( bf, (uint)data, numbits - 1 );
+		MSG_WriteOneBit( bf, 0 );
 	}
 }
 
-void BF_WriteBitLong( sizebuf_t *bf, uint data, int numbits, qboolean bSigned )
+void MSG_WriteBitLong( sizebuf_t *bf, uint data, int numbits, qboolean bSigned )
 {
 	if( bSigned )
-		BF_WriteSBitLong( bf, (int)data, numbits );
-	else BF_WriteUBitLong( bf, data, numbits );
+		MSG_WriteSBitLong( bf, (int)data, numbits );
+	else MSG_WriteUBitLong( bf, data, numbits );
 }
 
-qboolean BF_WriteBits( sizebuf_t *bf, const void *pData, int nBits )
+qboolean MSG_WriteBits( sizebuf_t *bf, const void *pData, int nBits )
 {
 	byte	*pOut = (byte *)pData;
 	int	nBitsLeft = nBits;
@@ -215,7 +215,7 @@ qboolean BF_WriteBits( sizebuf_t *bf, const void *pData, int nBits )
 	// get output dword-aligned.
 	while((( dword )pOut & 3 ) != 0 && nBitsLeft >= 8 )
 	{
-		BF_WriteUBitLongExt( bf, *pOut, 8, false );
+		MSG_WriteUBitLongExt( bf, *pOut, 8, false );
 
 		nBitsLeft -= 8;
 		++pOut;
@@ -224,7 +224,7 @@ qboolean BF_WriteBits( sizebuf_t *bf, const void *pData, int nBits )
 	// read dwords.
 	while( nBitsLeft >= 32 )
 	{
-		BF_WriteUBitLongExt( bf, *(( dword *)pOut ), 32, false );
+		MSG_WriteUBitLongExt( bf, *(( dword *)pOut ), 32, false );
 
 		pOut += sizeof( dword );
 		nBitsLeft -= 32;
@@ -233,7 +233,7 @@ qboolean BF_WriteBits( sizebuf_t *bf, const void *pData, int nBits )
 	// read the remaining bytes.
 	while( nBitsLeft >= 8 )
 	{
-		BF_WriteUBitLongExt( bf, *pOut, 8, false );
+		MSG_WriteUBitLongExt( bf, *pOut, 8, false );
 
 		nBitsLeft -= 8;
 		++pOut;
@@ -242,13 +242,13 @@ qboolean BF_WriteBits( sizebuf_t *bf, const void *pData, int nBits )
 	// Read the remaining bits.
 	if( nBitsLeft )
 	{
-		BF_WriteUBitLongExt( bf, *pOut, nBitsLeft, false );
+		MSG_WriteUBitLongExt( bf, *pOut, nBitsLeft, false );
 	}
 
 	return !bf->bOverflow;
 }
 
-void BF_WriteBitAngle( sizebuf_t *bf, float fAngle, int numbits )
+void MSG_WriteBitAngle( sizebuf_t *bf, float fAngle, int numbits )
 {
 	uint	mask, shift;
 	int	d;
@@ -263,25 +263,25 @@ void BF_WriteBitAngle( sizebuf_t *bf, float fAngle, int numbits )
 	d = (int)(( fAngle * shift ) / 360.0f );
 	d &= mask;
 
-	BF_WriteUBitLong( bf, (uint)d, numbits );
+	MSG_WriteUBitLong( bf, (uint)d, numbits );
 }
 
-void BF_WriteCoord( sizebuf_t *bf, float val )
+void MSG_WriteCoord( sizebuf_t *bf, float val )
 {
 	// g-cont. we loose precision here but keep old size of coord variable!
 	if( host.features & ENGINE_WRITE_LARGE_COORD )
-		BF_WriteShort( bf, (int)( val * 2.0f ));
-	else BF_WriteShort( bf, (int)( val * 8.0f ));
+		MSG_WriteShort( bf, (int)( val * 2.0f ));
+	else MSG_WriteShort( bf, (int)( val * 8.0f ));
 }
 
-void BF_WriteVec3Coord( sizebuf_t *bf, const float *fa )
+void MSG_WriteVec3Coord( sizebuf_t *bf, const float *fa )
 {
-	BF_WriteCoord( bf, fa[0] );
-	BF_WriteCoord( bf, fa[1] );
-	BF_WriteCoord( bf, fa[2] );
+	MSG_WriteCoord( bf, fa[0] );
+	MSG_WriteCoord( bf, fa[1] );
+	MSG_WriteCoord( bf, fa[2] );
 }
 
-void BF_WriteBitFloat( sizebuf_t *bf, float val )
+void MSG_WriteBitFloat( sizebuf_t *bf, float val )
 {
 	long	intVal;
 
@@ -289,62 +289,62 @@ void BF_WriteBitFloat( sizebuf_t *bf, float val )
 	ASSERT( sizeof( float ) == 4 );
 
 	intVal = *((long *)&val );
-	BF_WriteUBitLong( bf, intVal, 32 );
+	MSG_WriteUBitLong( bf, intVal, 32 );
 }
 
-void BF_WriteChar( sizebuf_t *bf, int val )
+void MSG_WriteChar( sizebuf_t *bf, int val )
 {
-	BF_WriteSBitLong( bf, val, sizeof( char ) << 3 );
+	MSG_WriteSBitLong( bf, val, sizeof( char ) << 3 );
 }
 
-void BF_WriteByte( sizebuf_t *bf, int val )
+void MSG_WriteByte( sizebuf_t *bf, int val )
 {
-	BF_WriteUBitLong( bf, val, sizeof( byte ) << 3 );
+	MSG_WriteUBitLong( bf, val, sizeof( byte ) << 3 );
 }
 
-void BF_WriteShort( sizebuf_t *bf, int val )
+void MSG_WriteShort( sizebuf_t *bf, int val )
 {
-	BF_WriteSBitLong( bf, val, sizeof(short ) << 3 );
+	MSG_WriteSBitLong( bf, val, sizeof(short ) << 3 );
 }
 
-void BF_WriteWord( sizebuf_t *bf, int val )
+void MSG_WriteWord( sizebuf_t *bf, int val )
 {
-	BF_WriteUBitLong( bf, val, sizeof( word ) << 3 );
+	MSG_WriteUBitLong( bf, val, sizeof( word ) << 3 );
 }
 
-void BF_WriteLong( sizebuf_t *bf, long val )
+void MSG_WriteLong( sizebuf_t *bf, long val )
 {
-	BF_WriteSBitLong( bf, val, sizeof( long ) << 3 );
+	MSG_WriteSBitLong( bf, val, sizeof( long ) << 3 );
 }
 
-void BF_WriteFloat( sizebuf_t *bf, float val )
+void MSG_WriteFloat( sizebuf_t *bf, float val )
 {
-	BF_WriteBits( bf, &val, sizeof( val ) << 3 );
+	MSG_WriteBits( bf, &val, sizeof( val ) << 3 );
 }
 
-qboolean BF_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes )
+qboolean MSG_WriteBytes( sizebuf_t *bf, const void *pBuf, int nBytes )
 {
-	return BF_WriteBits( bf, pBuf, nBytes << 3 );
+	return MSG_WriteBits( bf, pBuf, nBytes << 3 );
 }
 
-qboolean BF_WriteString( sizebuf_t *bf, const char *pStr )
+qboolean MSG_WriteString( sizebuf_t *bf, const char *pStr )
 {
 	if( pStr )
 	{
 		do
 		{
-			BF_WriteChar( bf, *pStr );
+			MSG_WriteChar( bf, *pStr );
 			pStr++;
 		} while( *( pStr - 1 ));
 	}
-	else BF_WriteChar( bf, 0 );
+	else MSG_WriteChar( bf, 0 );
 	
 	return !bf->bOverflow;
 }
 
-int BF_ReadOneBit( sizebuf_t *bf )
+int MSG_ReadOneBit( sizebuf_t *bf )
 {
-	if( !BF_Overflow( bf, 1 ))
+	if( !MSG_Overflow( bf, 1 ))
 	{
 		int value = bf->pData[bf->iCurBit >> 3] & (1 << ( bf->iCurBit & 7 ));
 		bf->iCurBit++;
@@ -353,14 +353,14 @@ int BF_ReadOneBit( sizebuf_t *bf )
 	return 0;
 }
 
-uint BF_ReadUBitLong( sizebuf_t *bf, int numbits )
+uint MSG_ReadUBitLong( sizebuf_t *bf, int numbits )
 {
 	int	idword1;
 	uint	dword1, ret;
 
 	if( numbits == 8 )
 	{
-		int leftBits = BF_GetNumBitsLeft( bf );
+		int leftBits = MSG_GetNumBitsLeft( bf );
 
 		if( leftBits >= 0 && leftBits < 8 )
 			return 0;	// end of message
@@ -401,7 +401,7 @@ uint BF_ReadUBitLong( sizebuf_t *bf, int numbits )
 	return ret;
 }
 
-float BF_ReadBitFloat( sizebuf_t *bf )
+float MSG_ReadBitFloat( sizebuf_t *bf )
 {
 	long	val;
 	int	bit, byte;
@@ -409,7 +409,7 @@ float BF_ReadBitFloat( sizebuf_t *bf )
 	ASSERT( sizeof( float ) == sizeof( long ));
 	ASSERT( sizeof( float ) == 4 );
 
-	if( BF_Overflow( bf, 32 ))
+	if( MSG_Overflow( bf, 32 ))
 		return 0.0f;
 
 	bit = bf->iCurBit & 0x7;
@@ -427,7 +427,7 @@ float BF_ReadBitFloat( sizebuf_t *bf )
 	return *((float *)&val);
 }
 
-qboolean BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits )
+qboolean MSG_ReadBits( sizebuf_t *bf, void *pOutData, int nBits )
 {
 	byte	*pOut = (byte *)pOutData;
 	int	nBitsLeft = nBits;
@@ -435,7 +435,7 @@ qboolean BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits )
 	// get output dword-aligned.
 	while((( dword )pOut & 3) != 0 && nBitsLeft >= 8 )
 	{
-		*pOut = (byte)BF_ReadUBitLong( bf, 8 );
+		*pOut = (byte)MSG_ReadUBitLong( bf, 8 );
 		++pOut;
 		nBitsLeft -= 8;
 	}
@@ -443,7 +443,7 @@ qboolean BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits )
 	// read dwords.
 	while( nBitsLeft >= 32 )
 	{
-		*((dword *)pOut) = BF_ReadUBitLong( bf, 32 );
+		*((dword *)pOut) = MSG_ReadUBitLong( bf, 32 );
 		pOut += sizeof( dword );
 		nBitsLeft -= 32;
 	}
@@ -451,7 +451,7 @@ qboolean BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits )
 	// read the remaining bytes.
 	while( nBitsLeft >= 8 )
 	{
-		*pOut = BF_ReadUBitLong( bf, 8 );
+		*pOut = MSG_ReadUBitLong( bf, 8 );
 		++pOut;
 		nBitsLeft -= 8;
 	}
@@ -459,20 +459,20 @@ qboolean BF_ReadBits( sizebuf_t *bf, void *pOutData, int nBits )
 	// read the remaining bits.
 	if( nBitsLeft )
 	{
-		*pOut = BF_ReadUBitLong( bf, nBitsLeft );
+		*pOut = MSG_ReadUBitLong( bf, nBitsLeft );
 	}
 
 	return !bf->bOverflow;
 }
 
-float BF_ReadBitAngle( sizebuf_t *bf, int numbits )
+float MSG_ReadBitAngle( sizebuf_t *bf, int numbits )
 {
 	float	fReturn, shift;
 	int	i;
 
 	shift = (float)( 1 << numbits );
 
-	i = BF_ReadUBitLong( bf, numbits );
+	i = MSG_ReadUBitLong( bf, numbits );
 	fReturn = (float)i * ( 360.0f / shift );
 
 	// clamp the finale angle
@@ -483,91 +483,91 @@ float BF_ReadBitAngle( sizebuf_t *bf, int numbits )
 }
 
 // Append numbits least significant bits from data to the current bit stream
-int BF_ReadSBitLong( sizebuf_t *bf, int numbits )
+int MSG_ReadSBitLong( sizebuf_t *bf, int numbits )
 {
 	int	r, sign;
 
-	r = BF_ReadUBitLong( bf, numbits - 1 );
+	r = MSG_ReadUBitLong( bf, numbits - 1 );
 
 	// NOTE: it does this wierdness here so it's bit-compatible with regular integer data in the buffer.
 	// (Some old code writes direct integers right into the buffer).
-	sign = BF_ReadOneBit( bf );
+	sign = MSG_ReadOneBit( bf );
 	if( sign ) r = -( BIT( numbits - 1 ) - r );
 
 	return r;
 }
 
-uint BF_ReadBitLong( sizebuf_t *bf, int numbits, qboolean bSigned )
+uint MSG_ReadBitLong( sizebuf_t *bf, int numbits, qboolean bSigned )
 {
 	if( bSigned )
-		return (uint)BF_ReadSBitLong( bf, numbits );
-	return BF_ReadUBitLong( bf, numbits );
+		return (uint)MSG_ReadSBitLong( bf, numbits );
+	return MSG_ReadUBitLong( bf, numbits );
 }
 
-int BF_ReadChar( sizebuf_t *bf )
+int MSG_ReadChar( sizebuf_t *bf )
 {
-	return BF_ReadSBitLong( bf, sizeof( char ) << 3 );
+	return MSG_ReadSBitLong( bf, sizeof( char ) << 3 );
 }
 
-int BF_ReadByte( sizebuf_t *bf )
+int MSG_ReadByte( sizebuf_t *bf )
 {
-	return BF_ReadUBitLong( bf, sizeof( byte ) << 3 );
+	return MSG_ReadUBitLong( bf, sizeof( byte ) << 3 );
 }
 
-int BF_ReadShort( sizebuf_t *bf )
+int MSG_ReadShort( sizebuf_t *bf )
 {
-	return BF_ReadSBitLong( bf, sizeof( short ) << 3 );
+	return MSG_ReadSBitLong( bf, sizeof( short ) << 3 );
 }
 
-int BF_ReadWord( sizebuf_t *bf )
+int MSG_ReadWord( sizebuf_t *bf )
 {
-	return BF_ReadUBitLong( bf, sizeof( word ) << 3 );
+	return MSG_ReadUBitLong( bf, sizeof( word ) << 3 );
 }
 
-float BF_ReadCoord( sizebuf_t *bf )
+float MSG_ReadCoord( sizebuf_t *bf )
 {
 	// g-cont. we loose precision here but keep old size of coord variable!
 	if( host.features & ENGINE_WRITE_LARGE_COORD )
-		return (float)(BF_ReadShort( bf ) * ( 1.0f / 2.0f ));
-	return (float)(BF_ReadShort( bf ) * ( 1.0f / 8.0f ));
+		return (float)(MSG_ReadShort( bf ) * ( 1.0f / 2.0f ));
+	return (float)(MSG_ReadShort( bf ) * ( 1.0f / 8.0f ));
 }
 
-void BF_ReadVec3Coord( sizebuf_t *bf, vec3_t fa )
+void MSG_ReadVec3Coord( sizebuf_t *bf, vec3_t fa )
 {
-	fa[0] = BF_ReadCoord( bf );
-	fa[1] = BF_ReadCoord( bf );
-	fa[2] = BF_ReadCoord( bf );
+	fa[0] = MSG_ReadCoord( bf );
+	fa[1] = MSG_ReadCoord( bf );
+	fa[2] = MSG_ReadCoord( bf );
 }
 
-long BF_ReadLong( sizebuf_t *bf )
+long MSG_ReadLong( sizebuf_t *bf )
 {
-	return BF_ReadSBitLong( bf, sizeof( long ) << 3 );
+	return MSG_ReadSBitLong( bf, sizeof( long ) << 3 );
 }
 
-float BF_ReadFloat( sizebuf_t *bf )
+float MSG_ReadFloat( sizebuf_t *bf )
 {
 	float	ret;
 	ASSERT( sizeof( ret ) == 4 );
 
-	BF_ReadBits( bf, &ret, 32 );
+	MSG_ReadBits( bf, &ret, 32 );
 
 	return ret;
 }
 
-qboolean BF_ReadBytes( sizebuf_t *bf, void *pOut, int nBytes )
+qboolean MSG_ReadBytes( sizebuf_t *bf, void *pOut, int nBytes )
 {
-	return BF_ReadBits( bf, pOut, nBytes << 3 );
+	return MSG_ReadBits( bf, pOut, nBytes << 3 );
 }
 
-char *BF_ReadStringExt( sizebuf_t *bf, qboolean bLine )
+char *MSG_ReadStringExt( sizebuf_t *bf, qboolean bLine )
 {
 	static char	string[MAX_SYSPATH];
 	int		l = 0, c;
 	
 	do
 	{
-		// use BF_ReadByte so -1 is out of bounds
-		c = BF_ReadByte( bf );
+		// use MSG_ReadByte so -1 is out of bounds
+		c = MSG_ReadByte( bf );
 
 		if( c == 0 ) break;
 		else if( bLine && c == '\n' )
@@ -585,20 +585,20 @@ char *BF_ReadStringExt( sizebuf_t *bf, qboolean bLine )
 	return string;
 }
 
-void BF_ExciseBits( sizebuf_t *bf, int startbit, int bitstoremove )
+void MSG_ExciseBits( sizebuf_t *bf, int startbit, int bitstoremove )
 {
 	int	i, endbit = startbit + bitstoremove;
 	int	remaining_to_end = bf->nDataBits - endbit;
 	sizebuf_t	temp;
 
-	BF_StartWriting( &temp, bf->pData, bf->nDataBits << 3, startbit, -1 );
-	BF_SeekToBit( bf, endbit );
+	MSG_StartWriting( &temp, bf->pData, bf->nDataBits << 3, startbit, -1 );
+	MSG_SeekToBit( bf, endbit );
 
 	for( i = 0; i < remaining_to_end; i++ )
 	{
-		BF_WriteOneBit( &temp, BF_ReadOneBit( bf ));
+		MSG_WriteOneBit( &temp, MSG_ReadOneBit( bf ));
 	}
 
-	BF_SeekToBit( bf, startbit );
+	MSG_SeekToBit( bf, startbit );
 	bf->nDataBits -= bitstoremove;
 }

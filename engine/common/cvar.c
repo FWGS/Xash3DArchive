@@ -400,7 +400,7 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 			return var;
 		}
 
-		if( var->flags & ( CVAR_LATCH|CVAR_LATCH_VIDEO ))
+		if( var->flags & CVAR_LATCH )
 		{
 			if( var->latched_string )
 			{
@@ -417,11 +417,6 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 			if( var->flags & CVAR_LATCH && Cvar_VariableInteger( "host_serverstate" ))
 			{
 				MsgDev( D_INFO, "%s will be changed upon restarting.\n", var->name );
-				var->latched_string = copystring( value );
-			}
-			else if( var->flags & CVAR_LATCH_VIDEO )
-			{
-				MsgDev( D_INFO, "%s will be changed upon restarting video.\n", var->name );
 				var->latched_string = copystring( value );
 			}
 			else
@@ -626,7 +621,7 @@ void Cvar_DirectSet( cvar_t *var, const char *value )
 
 	if( !value ) value = "0";
 
-	if( var->flags & ( CVAR_READ_ONLY|CVAR_GLCONFIG|CVAR_INIT|CVAR_RENDERINFO|CVAR_LATCH|CVAR_LATCH_VIDEO ))
+	if( var->flags & ( CVAR_READ_ONLY|CVAR_GLCONFIG|CVAR_INIT|CVAR_RENDERINFO|CVAR_LATCH ))
 	{
 		// Cvar_DirectSet cannot change these cvars at all
 		return;
@@ -1034,9 +1029,6 @@ void Cvar_List_f( void )
 		if( var->flags & CVAR_LATCH ) Msg( "LATCH " );
 		else Msg( " " );
 
-		if( var->flags & CVAR_LATCH_VIDEO ) Msg( "VIDEO " );
-		else Msg( " " );
-
 		if( var->flags & CVAR_GLCONFIG ) Msg( "OPENGL" );
 		else Msg( " " );
 
@@ -1125,41 +1117,6 @@ void Cvar_Latched_f( void )
 		}
 
 		if( var->flags & CVAR_LATCH && var->latched_string )
-		{
-			Cvar_FullSet( var->name, var->latched_string, var->flags );
-			Mem_Free( var->latched_string );
-			var->latched_string = NULL;
-		}
-		prev = &var->next;
-	}
-}
-
-/*
-============
-Cvar_LatchedVideo_f
-
-Now all latched video strings is valid
-============
-*/
-void Cvar_LatchedVideo_f( void )
-{
-	convar_t	*var;
-	convar_t	**prev;
-
-	prev = &cvar_vars;
-
-	while ( 1 )
-	{
-		var = *prev;
-		if( !var ) break;
-
-		if( var->flags & CVAR_EXTDLL )
-		{
-			prev = &var->next;
-			continue;
-		}
-
-		if( var->flags & CVAR_LATCH_VIDEO && var->latched_string )
 		{
 			Cvar_FullSet( var->name, var->latched_string, var->flags );
 			Mem_Free( var->latched_string );
@@ -1279,7 +1236,6 @@ void Cvar_Init( void )
 	Cmd_AddCommand ("seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg" );
 	Cmd_AddCommand ("reset", Cvar_Reset_f, "reset any type variable to initial value" );
 	Cmd_AddCommand ("latch", Cvar_Latched_f, "apply latched values" );
-	Cmd_AddCommand ("vidlatch", Cvar_LatchedVideo_f, "apply latched values for video subsystem" );
 	Cmd_AddCommand ("cvarlist", Cvar_List_f, "display all console variables beginning with the specified prefix" );
 	Cmd_AddCommand ("unsetall", Cvar_Restart_f, "reset all console variables to their default values" );
 	Cmd_AddCommand ("@unlink", Cvar_Unlink_f, "unlink static cvars defined in gamedll" );

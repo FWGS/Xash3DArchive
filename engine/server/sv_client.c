@@ -226,7 +226,7 @@ gotnewcl:
 
 	// initailize netchan here because SV_DropClient will clear network buffer
 	Netchan_Setup( NS_SERVER, &newcl->netchan, from, qport );
-	BF_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
+	MSG_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
 
 	// get the game a chance to reject this connection or modify the userinfo
 	if( !( SV_ClientConnect( ent, userinfo )))
@@ -427,7 +427,7 @@ void SV_DropClient( sv_client_t *drop )
 	// add the disconnect
 	if( !drop->fakeclient )
 	{
-		BF_WriteByte( &drop->netchan.message, svc_disconnect );
+		MSG_WriteByte( &drop->netchan.message, svc_disconnect );
 	}
 
 	// let the game known about client state
@@ -502,9 +502,9 @@ void SV_FlushRedirect( netadr_t adr, int dest, char *buf )
 		break;
 	case RD_CLIENT:
 		if( !svs.currentPlayer ) return; // client not set
-		BF_WriteByte( &svs.currentPlayer->netchan.message, svc_print );
-		BF_WriteByte( &svs.currentPlayer->netchan.message, PRINT_HIGH );
-		BF_WriteString( &svs.currentPlayer->netchan.message, buf );
+		MSG_WriteByte( &svs.currentPlayer->netchan.message, svc_print );
+		MSG_WriteByte( &svs.currentPlayer->netchan.message, PRINT_HIGH );
+		MSG_WriteString( &svs.currentPlayer->netchan.message, buf );
 		break;
 	case RD_NONE:
 		MsgDev( D_ERROR, "SV_FlushRedirect: %s: invalid destination\n", NET_AdrToString( adr ));
@@ -785,7 +785,7 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 	static char	outputbuf[2048];
 	int		i;
 
-	MsgDev( D_INFO, "Rcon from %s:\n%s\n", NET_AdrToString( from ), BF_GetData( msg ) + 4 );
+	MsgDev( D_INFO, "Rcon from %s:\n%s\n", NET_AdrToString( from ), MSG_GetData( msg ) + 4 );
 	SV_BeginRedirect( from, RD_PACKET, outputbuf, sizeof( outputbuf ) - 16, SV_FlushRedirect );
 
 	if( Rcon_Validate( ))
@@ -947,20 +947,20 @@ void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 
 	i = cl - svs.clients;
 
-	BF_WriteByte( msg, svc_updateuserinfo );
-	BF_WriteUBitLong( msg, i, MAX_CLIENT_BITS );
+	MSG_WriteByte( msg, svc_updateuserinfo );
+	MSG_WriteUBitLong( msg, i, MAX_CLIENT_BITS );
 
 	if( cl->name[0] )
 	{
-		BF_WriteOneBit( msg, 1 );
+		MSG_WriteOneBit( msg, 1 );
 
 		Q_strncpy( info, cl->userinfo, sizeof( info ));
 
 		// remove server passwords, etc.
 		Info_RemovePrefixedKeys( info, '_' );
-		BF_WriteString( msg, info );
+		MSG_WriteString( msg, info );
 	}
-	else BF_WriteOneBit( msg, 0 );
+	else MSG_WriteOneBit( msg, 0 );
 }
 
 /*
@@ -1096,8 +1096,8 @@ void SV_PutClientInServer( edict_t *ent )
 
 		if( svgame.globals->cdAudioTrack )
 		{
-			BF_WriteByte( &client->netchan.message, svc_stufftext );
-			BF_WriteString( &client->netchan.message, va( "cd loop %3d\n", svgame.globals->cdAudioTrack ));
+			MSG_WriteByte( &client->netchan.message, svc_stufftext );
+			MSG_WriteString( &client->netchan.message, va( "cd loop %3d\n", svgame.globals->cdAudioTrack ));
 			svgame.globals->cdAudioTrack = 0;
 		}
 	}
@@ -1110,18 +1110,18 @@ void SV_PutClientInServer( edict_t *ent )
 		// NOTE: we needs to setup angles on restore here
 		if( ent->v.fixangle == 1 )
 		{
-			BF_WriteByte( &client->netchan.message, svc_setangle );
-			BF_WriteBitAngle( &client->netchan.message, ent->v.angles[0], 16 );
-			BF_WriteBitAngle( &client->netchan.message, ent->v.angles[1], 16 );
-			BF_WriteBitAngle( &client->netchan.message, ent->v.angles[2], 16 );
+			MSG_WriteByte( &client->netchan.message, svc_setangle );
+			MSG_WriteBitAngle( &client->netchan.message, ent->v.angles[0], 16 );
+			MSG_WriteBitAngle( &client->netchan.message, ent->v.angles[1], 16 );
+			MSG_WriteBitAngle( &client->netchan.message, ent->v.angles[2], 16 );
 			ent->v.fixangle = 0;
 		}
 		ent->v.effects |= EF_NOINTERP;
 
 		// reset weaponanim
-		BF_WriteByte( &client->netchan.message, svc_weaponanim );
-		BF_WriteByte( &client->netchan.message, 0 );
-		BF_WriteByte( &client->netchan.message, 0 );
+		MSG_WriteByte( &client->netchan.message, svc_weaponanim );
+		MSG_WriteByte( &client->netchan.message, 0 );
+		MSG_WriteByte( &client->netchan.message, 0 );
 
 		// trigger_camera restored here
 		if( sv.viewentity > 0 && sv.viewentity < GI->max_edicts )
@@ -1139,14 +1139,14 @@ void SV_PutClientInServer( edict_t *ent )
 		int	viewEnt;
 
 		// resend the signon
-		BF_WriteBits( &client->netchan.message, BF_GetData( &sv.signon ), BF_GetNumBitsWritten( &sv.signon ));
+		MSG_WriteBits( &client->netchan.message, MSG_GetData( &sv.signon ), MSG_GetNumBitsWritten( &sv.signon ));
 
 		if( client->pViewEntity )
 			viewEnt = NUM_FOR_EDICT( client->pViewEntity );
 		else viewEnt = NUM_FOR_EDICT( client->edict );
 	
-		BF_WriteByte( &client->netchan.message, svc_setview );
-		BF_WriteWord( &client->netchan.message, viewEnt );
+		MSG_WriteByte( &client->netchan.message, svc_setview );
+		MSG_WriteWord( &client->netchan.message, viewEnt );
 	}
 
 	// clear any temp states
@@ -1172,8 +1172,8 @@ void SV_TogglePause( const char *msg )
 	if( msg ) SV_BroadcastPrintf( PRINT_HIGH, "%s", msg );
 
 	// send notification to all clients
-	BF_WriteByte( &sv.reliable_datagram, svc_setpause );
-	BF_WriteOneBit( &sv.reliable_datagram, sv.paused );
+	MSG_WriteByte( &sv.reliable_datagram, svc_setpause );
+	MSG_WriteOneBit( &sv.reliable_datagram, sv.paused );
 }
 
 /*
@@ -1205,18 +1205,18 @@ void SV_New_f( sv_client_t *cl )
 	playernum = cl - svs.clients;
 
 	// send the serverdata
-	BF_WriteByte( &cl->netchan.message, svc_serverdata );
-	BF_WriteLong( &cl->netchan.message, PROTOCOL_VERSION );
-	BF_WriteLong( &cl->netchan.message, svs.spawncount );
-	BF_WriteLong( &cl->netchan.message, sv.checksum );
-	BF_WriteByte( &cl->netchan.message, playernum );
-	BF_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
-	BF_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );
-	BF_WriteString( &cl->netchan.message, sv.name );
-	BF_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message )); // Map Message
-	BF_WriteOneBit( &cl->netchan.message, sv.background ); // tell client about background map
-	BF_WriteString( &cl->netchan.message, GI->gamefolder );
-	BF_WriteLong( &cl->netchan.message, host.features );
+	MSG_WriteByte( &cl->netchan.message, svc_serverdata );
+	MSG_WriteLong( &cl->netchan.message, PROTOCOL_VERSION );
+	MSG_WriteLong( &cl->netchan.message, svs.spawncount );
+	MSG_WriteLong( &cl->netchan.message, sv.checksum );
+	MSG_WriteByte( &cl->netchan.message, playernum );
+	MSG_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
+	MSG_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );
+	MSG_WriteString( &cl->netchan.message, sv.name );
+	MSG_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message )); // Map Message
+	MSG_WriteOneBit( &cl->netchan.message, sv.background ); // tell client about background map
+	MSG_WriteString( &cl->netchan.message, GI->gamefolder );
+	MSG_WriteLong( &cl->netchan.message, host.features );
 
 	// refresh userinfo on spawn
 	SV_RefreshUserinfo();
@@ -1234,14 +1234,14 @@ void SV_New_f( sv_client_t *cl )
 			Q_memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 
 			// begin fetching modellist
-			BF_WriteByte( &cl->netchan.message, svc_stufftext );
-			BF_WriteString( &cl->netchan.message, va( "cmd modellist %i %i\n", svs.spawncount, 0 ));
+			MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+			MSG_WriteString( &cl->netchan.message, va( "cmd modellist %i %i\n", svs.spawncount, 0 ));
 		}
 		else
 		{
 			// request resource list
-			BF_WriteByte( &cl->netchan.message, svc_stufftext );
-			BF_WriteString( &cl->netchan.message, va( "cmd getresourelist\n" ));
+			MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+			MSG_WriteString( &cl->netchan.message, va( "cmd getresourelist\n" ));
 		}
 	}
 }
@@ -1262,8 +1262,8 @@ void SV_ContinueLoading_f( sv_client_t *cl )
 	Q_memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 
 	// begin fetching modellist
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, va( "cmd modellist %i %i\n", svs.spawncount, 0 ));
+	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+	MSG_WriteString( &cl->netchan.message, va( "cmd modellist %i %i\n", svs.spawncount, 0 ));
 }
 
 /*
@@ -1318,19 +1318,19 @@ void SV_SendResourceList_f( sv_client_t *cl )
 		rescount++;
 	}
 
-	msg_size = BF_GetRealBytesWritten( &cl->netchan.message ); // start
+	msg_size = MSG_GetRealBytesWritten( &cl->netchan.message ); // start
 
-	BF_WriteByte( &cl->netchan.message, svc_resourcelist );
-	BF_WriteWord( &cl->netchan.message, rescount );
+	MSG_WriteByte( &cl->netchan.message, svc_resourcelist );
+	MSG_WriteWord( &cl->netchan.message, rescount );
 
 	for( index = 1; index < rescount; index++ )
 	{
-		BF_WriteWord( &cl->netchan.message, reslist.restype[index] );
-		BF_WriteString( &cl->netchan.message, reslist.resnames[index] );
+		MSG_WriteWord( &cl->netchan.message, reslist.restype[index] );
+		MSG_WriteString( &cl->netchan.message, reslist.resnames[index] );
 	}
 
 	Msg( "Count res: %d\n", rescount );
-	Msg( "ResList size: %s\n", Q_memprint( BF_GetRealBytesWritten( &cl->netchan.message ) - msg_size ));
+	Msg( "ResList size: %s\n", Q_memprint( MSG_GetRealBytesWritten( &cl->netchan.message ) - msg_size ));
 }
 
 /*
@@ -1360,13 +1360,13 @@ void SV_WriteModels_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_MODELS )
+	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_MODELS )
 	{
 		if( sv.model_precache[start][0] )
 		{
-			BF_WriteByte( &cl->netchan.message, svc_modelindex );
-			BF_WriteUBitLong( &cl->netchan.message, start, MAX_MODEL_BITS );
-			BF_WriteString( &cl->netchan.message, sv.model_precache[start] );
+			MSG_WriteByte( &cl->netchan.message, svc_modelindex );
+			MSG_WriteUBitLong( &cl->netchan.message, start, MAX_MODEL_BITS );
+			MSG_WriteString( &cl->netchan.message, sv.model_precache[start] );
 		}
 		start++;
 	}
@@ -1375,8 +1375,8 @@ void SV_WriteModels_f( sv_client_t *cl )
 	else Q_snprintf( cmd, MAX_STRING, "cmd modellist %i %i\n", svs.spawncount, start );
 
 	// send next command
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, cmd );
+	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+	MSG_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -1406,13 +1406,13 @@ void SV_WriteSounds_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_SOUNDS )
+	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_SOUNDS )
 	{
 		if( sv.sound_precache[start][0] )
 		{
-			BF_WriteByte( &cl->netchan.message, svc_soundindex );
-			BF_WriteUBitLong( &cl->netchan.message, start, MAX_SOUND_BITS );
-			BF_WriteString( &cl->netchan.message, sv.sound_precache[start] );
+			MSG_WriteByte( &cl->netchan.message, svc_soundindex );
+			MSG_WriteUBitLong( &cl->netchan.message, start, MAX_SOUND_BITS );
+			MSG_WriteString( &cl->netchan.message, sv.sound_precache[start] );
 		}
 		start++;
 	}
@@ -1421,8 +1421,8 @@ void SV_WriteSounds_f( sv_client_t *cl )
 	else Q_snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, start );
 
 	// send next command
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, cmd );
+	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+	MSG_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -1452,13 +1452,13 @@ void SV_WriteEvents_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_EVENTS )
+	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_EVENTS )
 	{
 		if( sv.event_precache[start][0] )
 		{
-			BF_WriteByte( &cl->netchan.message, svc_eventindex );
-			BF_WriteUBitLong( &cl->netchan.message, start, MAX_EVENT_BITS );
-			BF_WriteString( &cl->netchan.message, sv.event_precache[start] );
+			MSG_WriteByte( &cl->netchan.message, svc_eventindex );
+			MSG_WriteUBitLong( &cl->netchan.message, start, MAX_EVENT_BITS );
+			MSG_WriteString( &cl->netchan.message, sv.event_precache[start] );
 		}
 		start++;
 	}
@@ -1467,8 +1467,8 @@ void SV_WriteEvents_f( sv_client_t *cl )
 	else Q_snprintf( cmd, MAX_STRING, "cmd eventlist %i %i\n", svs.spawncount, start );
 
 	// send next command
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, cmd );
+	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+	MSG_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -1498,14 +1498,14 @@ void SV_WriteLightstyles_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_LIGHTSTYLES )
+	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_LIGHTSTYLES )
 	{
 		if( sv.lightstyles[start].pattern[0] )
 		{
-			BF_WriteByte( &cl->netchan.message, svc_lightstyle );
-			BF_WriteByte( &cl->netchan.message, start );
-			BF_WriteString( &cl->netchan.message, sv.lightstyles[start].pattern );
-			BF_WriteFloat( &cl->netchan.message, sv.lightstyles[start].time );
+			MSG_WriteByte( &cl->netchan.message, svc_lightstyle );
+			MSG_WriteByte( &cl->netchan.message, start );
+			MSG_WriteString( &cl->netchan.message, sv.lightstyles[start].pattern );
+			MSG_WriteFloat( &cl->netchan.message, sv.lightstyles[start].time );
 		}
 		start++;
 	}
@@ -1514,8 +1514,8 @@ void SV_WriteLightstyles_f( sv_client_t *cl )
 	else Q_snprintf( cmd, MAX_STRING, "cmd lightstyles %i %i\n", svs.spawncount, start );
 
 	// send next command
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, cmd );
+	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+	MSG_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -1546,15 +1546,15 @@ void SV_UserMessages_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_USER_MESSAGES )
+	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_USER_MESSAGES )
 	{
 		message = &svgame.msg[start];
 		if( message->name[0] )
 		{
-			BF_WriteByte( &cl->netchan.message, svc_usermessage );
-			BF_WriteByte( &cl->netchan.message, message->number );
-			BF_WriteByte( &cl->netchan.message, (byte)message->size );
-			BF_WriteString( &cl->netchan.message, message->name );
+			MSG_WriteByte( &cl->netchan.message, svc_usermessage );
+			MSG_WriteByte( &cl->netchan.message, message->number );
+			MSG_WriteByte( &cl->netchan.message, (byte)message->size );
+			MSG_WriteString( &cl->netchan.message, message->name );
 		}
 		start++;
 	}
@@ -1563,8 +1563,8 @@ void SV_UserMessages_f( sv_client_t *cl )
 	else Q_snprintf( cmd, MAX_STRING, "cmd usermsgs %i %i\n", svs.spawncount, start );
 
 	// send next command
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, cmd );
+	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+	MSG_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -1597,7 +1597,7 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 	fieldIndex = Q_atoi( Cmd_Argv( 3 ));
 
 	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && tableIndex < Delta_NumTables( ))
+	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && tableIndex < Delta_NumTables( ))
 	{
 		dt = Delta_FindStructByIndex( tableIndex );
 
@@ -1606,7 +1606,7 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 			Delta_WriteTableField( &cl->netchan.message, tableIndex, &dt->pFields[fieldIndex] );
 
 			// it's time to send another portion
-			if( BF_GetNumBytesWritten( &cl->netchan.message ) >= ( NET_MAX_PAYLOAD / 2 ))
+			if( MSG_GetNumBytesWritten( &cl->netchan.message ) >= ( NET_MAX_PAYLOAD / 2 ))
 				break;
 		}
 
@@ -1627,8 +1627,8 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 	else Q_snprintf( cmd, MAX_STRING, "cmd deltainfo %i %i %i\n", svs.spawncount, tableIndex, fieldIndex );
 
 	// send next command
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, cmd );
+	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+	MSG_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -1661,12 +1661,12 @@ void SV_Baselines_f( sv_client_t *cl )
 	Q_memset( &nullstate, 0, sizeof( nullstate ));
 
 	// write a packet full of data
-	while( BF_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < svgame.numEntities )
+	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < svgame.numEntities )
 	{
 		base = &svs.baselines[start];
-		if( base->number && ( base->modelindex || base->effects != EF_NODRAW ))
+		if(( !start || base->number ) && ( base->modelindex || base->effects != EF_NODRAW ))
 		{
-			BF_WriteByte( &cl->netchan.message, svc_spawnbaseline );
+			MSG_WriteByte( &cl->netchan.message, svc_spawnbaseline );
 			MSG_WriteDeltaEntity( &nullstate, base, &cl->netchan.message, true, SV_IsPlayerIndex( base->number ), sv.time );
 		}
 		start++;
@@ -1676,8 +1676,8 @@ void SV_Baselines_f( sv_client_t *cl )
 	else Q_snprintf( cmd, MAX_STRING, "cmd baselines %i %i\n", svs.spawncount, start );
 
 	// send next command
-	BF_WriteByte( &cl->netchan.message, svc_stufftext );
-	BF_WriteString( &cl->netchan.message, cmd );
+	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+	MSG_WriteString( &cl->netchan.message, cmd );
 }
 
 /*
@@ -1707,8 +1707,8 @@ void SV_Begin_f( sv_client_t *cl )
 	// if we are paused, tell the client
 	if( sv.paused )
 	{
-		BF_WriteByte( &sv.reliable_datagram, svc_setpause );
-		BF_WriteByte( &sv.reliable_datagram, sv.paused );
+		MSG_WriteByte( &sv.reliable_datagram, svc_setpause );
+		MSG_WriteByte( &sv.reliable_datagram, sv.paused );
 		SV_ClientPrintf( cl, PRINT_HIGH, "Server is paused.\n" );
 	}
 }
@@ -1845,7 +1845,7 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	else cl->netchan.rate = DEFAULT_RATE;
 	
 	// msg command
-	val = Info_ValueForKey( cl->userinfo, "msg" );
+	val = Info_ValueForKey( cl->userinfo, "cl_msglevel" );
 	if( Q_strlen( val )) cl->messagelevel = Q_atoi( val );
 
 	cl->local_weapons = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )) ? true : false;
@@ -1974,7 +1974,7 @@ void SV_SendRes_f( sv_client_t *cl )
 		return;
 	}
 
-	BF_Init( &msg, "SendResources", buffer, sizeof( buffer ));
+	MSG_Init( &msg, "SendResources", buffer, sizeof( buffer ));
 
 	SV_SendResources( &msg );
 	Netchan_CreateFragments( 1, &cl->netchan, &msg );
@@ -2071,43 +2071,43 @@ void SV_TSourceEngineQuery( netadr_t from )
 		}
 	}
 
-	BF_Init( &buf, "TSourceEngineQuery", answer, sizeof( answer ));
+	MSG_Init( &buf, "TSourceEngineQuery", answer, sizeof( answer ));
 
-	BF_WriteByte( &buf, 'm' );
-	BF_WriteString( &buf, NET_AdrToString( net_local ) );
-	BF_WriteString( &buf, hostname->string );
-	BF_WriteString( &buf, sv.name );
-	BF_WriteString( &buf, GI->gamefolder );
-	BF_WriteString( &buf, GI->title );
-	BF_WriteByte( &buf, count );
-	BF_WriteByte( &buf, sv_maxclients->integer );
-	BF_WriteByte( &buf, PROTOCOL_VERSION );
-	BF_WriteByte( &buf, host.type == HOST_DEDICATED ? 'D' : 'L');
-	BF_WriteByte( &buf, 'W' );
+	MSG_WriteByte( &buf, 'm' );
+	MSG_WriteString( &buf, NET_AdrToString( net_local ) );
+	MSG_WriteString( &buf, hostname->string );
+	MSG_WriteString( &buf, sv.name );
+	MSG_WriteString( &buf, GI->gamefolder );
+	MSG_WriteString( &buf, GI->title );
+	MSG_WriteByte( &buf, count );
+	MSG_WriteByte( &buf, sv_maxclients->integer );
+	MSG_WriteByte( &buf, PROTOCOL_VERSION );
+	MSG_WriteByte( &buf, host.type == HOST_DEDICATED ? 'D' : 'L');
+	MSG_WriteByte( &buf, 'W' );
 
 	if( Q_stricmp( GI->gamedir, "valve" ))
 	{
-		BF_WriteByte( &buf, 1 ); // mod
-		BF_WriteString( &buf, GI->game_url );
-		BF_WriteString( &buf, GI->update_url );
-		BF_WriteByte( &buf, 0 );
-		BF_WriteLong( &buf, (long)GI->version );
-		BF_WriteLong( &buf, GI->size );
+		MSG_WriteByte( &buf, 1 ); // mod
+		MSG_WriteString( &buf, GI->game_url );
+		MSG_WriteString( &buf, GI->update_url );
+		MSG_WriteByte( &buf, 0 );
+		MSG_WriteLong( &buf, (long)GI->version );
+		MSG_WriteLong( &buf, GI->size );
 
 		if( GI->gamemode == 2 )
-			BF_WriteByte( &buf, 1 ); // multiplayer_only
-		else BF_WriteByte( &buf, 0 );
+			MSG_WriteByte( &buf, 1 ); // multiplayer_only
+		else MSG_WriteByte( &buf, 0 );
 
 		if( Q_strstr( GI->game_dll, "hl." ))
-			BF_WriteByte( &buf, 0 ); // Half-Life DLL
-		else BF_WriteByte( &buf, 1 ); // Own DLL
+			MSG_WriteByte( &buf, 0 ); // Half-Life DLL
+		else MSG_WriteByte( &buf, 1 ); // Own DLL
 	}
-	else BF_WriteByte( &buf, 0 ); // Half-Life
+	else MSG_WriteByte( &buf, 0 ); // Half-Life
 
-	BF_WriteByte( &buf, GI->secure ); // unsecure
-	BF_WriteByte( &buf, bots );
+	MSG_WriteByte( &buf, GI->secure ); // unsecure
+	MSG_WriteByte( &buf, bots );
 
-	NET_SendPacket( NS_SERVER, BF_GetNumBytesWritten( &buf ), BF_GetData( &buf ), from );
+	NET_SendPacket( NS_SERVER, MSG_GetNumBytesWritten( &buf ), MSG_GetData( &buf ), from );
 }
 
 /*
@@ -2126,10 +2126,10 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	char	*c, buf[MAX_SYSPATH];
 	int	len = sizeof( buf );
 
-	BF_Clear( msg );
-	BF_ReadLong( msg );// skip the -1 marker
+	MSG_Clear( msg );
+	MSG_ReadLong( msg );// skip the -1 marker
 
-	args = BF_ReadStringLine( msg );
+	args = MSG_ReadStringLine( msg );
 	Cmd_TokenizeString( args );
 
 	c = Cmd_Argv( 0 );
@@ -2181,12 +2181,12 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	Q_memset( &nullcmd, 0, sizeof( usercmd_t ));
 	Q_memset( cmds, 0, sizeof( cmds ));
 
-	key = BF_GetRealBytesRead( msg );
-	checksum1 = BF_ReadByte( msg );
-	cl->packet_loss = BF_ReadByte( msg );
+	key = MSG_GetRealBytesRead( msg );
+	checksum1 = MSG_ReadByte( msg );
+	cl->packet_loss = MSG_ReadByte( msg );
 
-	numbackup = BF_ReadByte( msg );
-	newcmds = BF_ReadByte( msg );
+	numbackup = MSG_ReadByte( msg );
+	newcmds = MSG_ReadByte( msg );
 
 	numcmds = numbackup + newcmds;
 	net_drop = net_drop + 1 - newcmds;
@@ -2214,7 +2214,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	}
 
 	// if the checksum fails, ignore the rest of the packet
-	size = BF_GetRealBytesRead( msg ) - key - 1;
+	size = MSG_GetRealBytesRead( msg ) - key - 1;
 	checksum2 = CRC32_BlockSequence( msg->pData + key + 1, size, cl->netchan.incoming_sequence );
 
 	if( checksum2 != checksum1 )
@@ -2281,8 +2281,8 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	frame->latency -= cl->lastcmd.msec * 0.5f / 1000.0f;
 	frame->latency = max( 0.0f, frame->latency );
 
-	if( player->v.animtime > sv.time + host.frametime )
-		player->v.animtime = sv.time + host.frametime;
+	if( player->v.animtime > svgame.globals->time + host.frametime )
+		player->v.animtime = svgame.globals->time + host.frametime;
 }
 
 /*
@@ -2294,7 +2294,7 @@ Parse resource list
 */
 void SV_ParseResourceList( sv_client_t *cl, sizebuf_t *msg )
 {
-	Netchan_CreateFileFragments( true, &cl->netchan, BF_ReadString( msg ));
+	Netchan_CreateFileFragments( true, &cl->netchan, MSG_ReadString( msg ));
 	Netchan_FragSend( &cl->netchan );
 }
 
@@ -2307,11 +2307,11 @@ Parse a requested value from client cvar
 */
 void SV_ParseCvarValue( sv_client_t *cl, sizebuf_t *msg )
 {
-	const char *value = BF_ReadString( msg );
+	const char *value = MSG_ReadString( msg );
 
 	if( svgame.dllFuncs2.pfnCvarValue != NULL )
 		svgame.dllFuncs2.pfnCvarValue( cl->edict, value );
-	MsgDev( D_AICONSOLE, "Cvar query response: name:%s, value:%s\n", cl->name, value );
+	MsgDev( D_REPORT, "Cvar query response: name:%s, value:%s\n", cl->name, value );
 }
 
 /*
@@ -2324,13 +2324,13 @@ Parse a requested value from client cvar
 void SV_ParseCvarValue2( sv_client_t *cl, sizebuf_t *msg )
 {
 	string name, value;
-	int requestID = BF_ReadLong( msg );
-	Q_strcpy( name, BF_ReadString( msg ));
-	Q_strcpy( value, BF_ReadString( msg ));
+	int requestID = MSG_ReadLong( msg );
+	Q_strcpy( name, MSG_ReadString( msg ));
+	Q_strcpy( value, MSG_ReadString( msg ));
 
 	if( svgame.dllFuncs2.pfnCvarValue2 != NULL )
 		svgame.dllFuncs2.pfnCvarValue2( cl->edict, requestID, name, value );
-	MsgDev( D_AICONSOLE, "Cvar query response: name:%s, request ID %d, cvar:%s, value:%s\n", cl->name, requestID, name, value );
+	MsgDev( D_REPORT, "Cvar query response: name:%s, request ID %d, cvar:%s, value:%s\n", cl->name, requestID, name, value );
 }
 
 /*
@@ -2377,7 +2377,7 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 	// read optional clientCommand strings
 	while( cl->state != cs_zombie )
 	{
-		if( BF_CheckOverflow( msg ))
+		if( MSG_CheckOverflow( msg ))
 		{
 			MsgDev( D_ERROR, "SV_ReadClientMessage: clc_bad\n" );
 			SV_DropClient( cl );
@@ -2385,20 +2385,20 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 		}
 
 		// end of message
-		if( BF_GetNumBitsLeft( msg ) < 8 )
+		if( MSG_GetNumBitsLeft( msg ) < 8 )
 			break;
 
-		c = BF_ReadByte( msg );
+		c = MSG_ReadByte( msg );
 
 		switch( c )
 		{
 		case clc_nop:
 			break;
 		case clc_userinfo:
-			SV_UserinfoChanged( cl, BF_ReadString( msg ));
+			SV_UserinfoChanged( cl, MSG_ReadString( msg ));
 			break;
 		case clc_delta:
-			cl->delta_sequence = BF_ReadByte( msg );
+			cl->delta_sequence = MSG_ReadByte( msg );
 			break;
 		case clc_move:
 			if( move_issued ) return; // someone is trying to cheat...
@@ -2406,7 +2406,7 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 			SV_ParseClientMove( cl, msg );
 			break;
 		case clc_stringcmd:	
-			s = BF_ReadString( msg );
+			s = MSG_ReadString( msg );
 			// malicious users may try using too many string commands
 			if( ++stringCmdCount < 8 ) SV_ExecuteClientCommand( cl, s );
 			if( cl->state == cs_zombie ) return; // disconnect command

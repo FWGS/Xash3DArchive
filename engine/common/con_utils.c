@@ -563,61 +563,6 @@ qboolean Cmd_GetCustomList( const char *s, char *completedname, int length )
 
 /*
 =====================================
-Cmd_GetTexturemodes
-
-Prints or complete sound filename
-=====================================
-*/
-qboolean Cmd_GetTextureModes( const char *s, char *completedname, int length )
-{
-	int	i, numtexturemodes;
-	string	texturemodes[6];	// keep an actual ( sizeof( gl_texturemode) / sizeof( gl_texturemode[0] ))
-	string	matchbuf;
-
-	const char *gl_texturemode[] =
-	{
-	"GL_LINEAR",
-	"GL_LINEAR_MIPMAP_LINEAR",
-	"GL_LINEAR_MIPMAP_NEAREST",
-	"GL_NEAREST",
-	"GL_NEAREST_MIPMAP_LINEAR",
-	"GL_NEAREST_MIPMAP_NEAREST",
-	};
-
-	// compare texture filtering mode list with current keyword
-	for( i = 0, numtexturemodes = 0; i < 6; i++ )
-	{
-		if(( *s == '*' ) || !Q_strnicmp( gl_texturemode[i], s, Q_strlen( s )))
-			Q_strcpy( texturemodes[numtexturemodes++], gl_texturemode[i] ); 
-	}
-
-	if( !numtexturemodes ) return false;
-	Q_strncpy( matchbuf, texturemodes[0], MAX_STRING ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
-	if( numtexturemodes == 1 ) return true;
-
-	for( i = 0; i < numtexturemodes; i++ )
-	{
-		Q_strncpy( matchbuf, texturemodes[i], MAX_STRING ); 
-		Msg( "%16s\n", matchbuf );
-	}
-
-	Msg( "\n^3 %i filters found.\n", numtexturemodes );
-
-	// cut shortestMatch to the amount common with s
-	if( completedname && length )
-	{
-		for( i = 0; matchbuf[i]; i++ )
-		{
-			if( Q_tolower( completedname[i] ) != Q_tolower( matchbuf[i] ))
-				completedname[i] = 0;
-		}
-	}
-	return true;
-}
-
-/*
-=====================================
 Cmd_GetGameList
 
 Prints or complete gamedir name
@@ -872,7 +817,6 @@ qboolean Cmd_CheckMapsList( qboolean fRefresh )
 
 autocomplete_list_t cmd_list[] =
 {
-{ "gl_texturemode", Cmd_GetTextureModes },
 { "map_background", Cmd_GetMapList },
 { "changelevel", Cmd_GetMapList },
 { "playdemo", Cmd_GetDemoList, },

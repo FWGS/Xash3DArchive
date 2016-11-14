@@ -50,13 +50,13 @@ typedef struct wadtype_s
 typedef struct file_s
 {
 	int		handle;			// file descriptor
-	fs_offset_t	real_length;		// uncompressed file size (for files opened in "read" mode)
-	fs_offset_t	position;			// current position in the file
-	fs_offset_t	offset;			// offset into the package (0 if external file)
+	long		real_length;		// uncompressed file size (for files opened in "read" mode)
+	long		position;			// current position in the file
+	long		offset;			// offset into the package (0 if external file)
 	int		ungetc;			// single stored character from ungetc, cleared to EOF when read
 	time_t		filetime;			// pak, wad or real filetime
 						// Contents buffer
-	fs_offset_t	buff_ind, buff_len;		// buffer current index and length
+	long		buff_ind, buff_len;		// buffer current index and length
 	byte		buff[FILE_BUFF_SIZE];	// intermediate buffer
 };
 
@@ -75,8 +75,8 @@ typedef struct wfile_s
 typedef struct packfile_s
 {
 	char		name[56];
-	fs_offset_t	offset;
-	fs_offset_t	realsize;	// real file size (uncompressed)
+	long		offset;
+	long		realsize;	// real file size (uncompressed)
 } packfile_t;
 
 typedef struct pack_s
@@ -111,8 +111,8 @@ static void FS_InitMemory( void );
 const char *FS_FileExtension( const char *in );
 static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedironly );
 static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char matchtype );
-static packfile_t* FS_AddFileToPack( const char* name, pack_t *pack, fs_offset_t offset, fs_offset_t size );
-static byte *W_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly );
+static packfile_t* FS_AddFileToPack( const char* name, pack_t *pack, long offset, long size );
+static byte *W_LoadFile( const char *path, long *filesizeptr, qboolean gamedironly );
 static qboolean FS_SysFileExists( const char *path );
 static qboolean FS_SysFolderExists( const char *path );
 static long FS_SysFileTime( const char *filename );
@@ -285,7 +285,7 @@ FS_AddFileToPack
 Add a file to the list of files contained into a package
 ====================
 */
-static packfile_t* FS_AddFileToPack( const char* name, pack_t* pack, fs_offset_t offset, fs_offset_t size )
+static packfile_t* FS_AddFileToPack( const char* name, pack_t* pack, long offset, long size )
 {
 	int		left, right, middle;
 	packfile_t	*pfile;
@@ -2024,9 +2024,9 @@ FS_Write
 Write "datasize" bytes into a file
 ====================
 */
-fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize )
+long FS_Write( file_t *file, const void *data, size_t datasize )
 {
-	fs_offset_t	result;
+	long	result;
 
 	if( !file ) return 0;
 
@@ -2038,7 +2038,7 @@ fs_offset_t FS_Write( file_t *file, const void *data, size_t datasize )
 	FS_Purge( file );
 
 	// write the buffer and update the position
-	result = write( file->handle, data, (fs_offset_t)datasize );
+	result = write( file->handle, data, (long)datasize );
 	file->position = lseek( file->handle, 0, SEEK_CUR );
 	if( file->real_length < file->position )
 		file->real_length = file->position;
@@ -2055,10 +2055,10 @@ FS_Read
 Read up to "buffersize" bytes from a file
 ====================
 */
-fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize )
+long FS_Read( file_t *file, void *buffer, size_t buffersize )
 {
-	fs_offset_t	count, done;
-	fs_offset_t	nb;
+	long	count, done;
+	long	nb;
 
 	// nothing to copy
 	if( buffersize == 0 ) return 1;
@@ -2078,7 +2078,7 @@ fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize )
 	{
 		count = file->buff_len - file->buff_ind;
 
-		done += ((fs_offset_t)buffersize > count ) ? count : (fs_offset_t)buffersize;
+		done += ((long)buffersize > count ) ? count : (long)buffersize;
 		Q_memcpy( buffer, &file->buff[file->buff_ind], done );
 		file->buff_ind += done;
 
@@ -2095,8 +2095,8 @@ fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize )
 	// if we have a lot of data to get, put them directly into "buffer"
 	if( buffersize > sizeof( file->buff ) / 2 )
 	{
-		if( count > (fs_offset_t)buffersize )
-			count = (fs_offset_t)buffersize;
+		if( count > (long)buffersize )
+			count = (long)buffersize;
 		lseek( file->handle, file->offset + file->position, SEEK_SET );
 		nb = read (file->handle, &((byte *)buffer)[done], count );
 
@@ -2110,8 +2110,8 @@ fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize )
 	}
 	else
 	{
-		if( count > (fs_offset_t)sizeof( file->buff ))
-			count = (fs_offset_t)sizeof( file->buff );
+		if( count > (long)sizeof( file->buff ))
+			count = (long)sizeof( file->buff );
 		lseek( file->handle, file->offset + file->position, SEEK_SET );
 		nb = read( file->handle, file->buff, count );
 
@@ -2121,7 +2121,7 @@ fs_offset_t FS_Read( file_t *file, void *buffer, size_t buffersize )
 			file->position += nb;
 
 			// copy the requested data in "buffer" (as much as we can)
-			count = (fs_offset_t)buffersize > file->buff_len ? file->buff_len : (fs_offset_t)buffersize;
+			count = (long)buffersize > file->buff_len ? file->buff_len : (long)buffersize;
 			Q_memcpy( &((byte *)buffer)[done], file->buff, count );
 			file->buff_ind = count;
 			done += count;
@@ -2171,9 +2171,9 @@ Print a string into a file
 */
 int FS_VPrintf( file_t *file, const char* format, va_list ap )
 {
-	int		len;
-	fs_offset_t	buff_size = MAX_SYSPATH;
-	char		*tempbuff;
+	int	len;
+	long	buff_size = MAX_SYSPATH;
+	char	*tempbuff;
 
 	if( !file ) return 0;
 
@@ -2264,7 +2264,7 @@ FS_Seek
 Move the position index in a file
 ====================
 */
-int FS_Seek( file_t *file, fs_offset_t offset, int whence )
+int FS_Seek( file_t *file, long offset, int whence )
 {
 	// compute the file offset
 	switch( whence )
@@ -2308,7 +2308,7 @@ FS_Tell
 Give the current position in a file
 ====================
 */
-fs_offset_t FS_Tell( file_t* file )
+long FS_Tell( file_t* file )
 {
 	if( !file ) return 0;
 	return file->position - file->buff_len + file->buff_ind;
@@ -2349,11 +2349,11 @@ Filename are relative to the xash directory.
 Always appends a 0 byte.
 ============
 */
-byte *FS_LoadFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly )
+byte *FS_LoadFile( const char *path, long *filesizeptr, qboolean gamedironly )
 {
-	file_t		*file;
-	byte		*buf = NULL;
-	fs_offset_t	filesize = 0;
+	file_t	*file;
+	byte	*buf = NULL;
+	long	filesize = 0;
 
 	file = FS_Open( path, "rb", gamedironly );
 
@@ -2383,7 +2383,7 @@ FS_OpenFile
 Simply version of FS_Open
 ============
 */
-file_t *FS_OpenFile( const char *path, fs_offset_t *filesizeptr, qboolean gamedironly )
+file_t *FS_OpenFile( const char *path, long *filesizeptr, qboolean gamedironly )
 {
 	file_t	*file = FS_Open( path, "rb", gamedironly );
 
@@ -2402,7 +2402,7 @@ FS_WriteFile
 The filename will be prefixed by the current game directory
 ============
 */
-qboolean FS_WriteFile( const char *filename, const void *data, fs_offset_t len )
+qboolean FS_WriteFile( const char *filename, const void *data, long len )
 {
 	file_t *file;
 
@@ -2611,7 +2611,7 @@ FS_FileSize
 return size of file in bytes
 ==================
 */
-fs_offset_t FS_FileSize( const char *filename, qboolean gamedironly )
+long FS_FileSize( const char *filename, qboolean gamedironly )
 {
 	file_t	*fp;
 	int	length = 0;
@@ -2635,7 +2635,7 @@ FS_FileLength
 return size of file in bytes
 ==================
 */
-fs_offset_t FS_FileLength( file_t *f )
+long FS_FileLength( file_t *f )
 {
 	if( !f ) return 0;
 	return f->real_length;
@@ -2648,7 +2648,7 @@ FS_FileTime
 return time of creation file in seconds
 ==================
 */
-fs_offset_t FS_FileTime( const char *filename, qboolean gamedironly )
+long FS_FileTime( const char *filename, qboolean gamedironly )
 {
 	searchpath_t	*search;
 	int		pack_ind;
@@ -3399,7 +3399,7 @@ wfile_t *W_Open( const char *filename, const char *mode )
 
 void W_Close( wfile_t *wad )
 {
-	fs_offset_t	ofs;
+	long	ofs;
 
 	if( !wad ) return;
 
@@ -3432,7 +3432,7 @@ FILESYSTEM IMPLEMENTATION
 
 =============================================================================
 */
-static byte *W_LoadFile( const char *path, fs_offset_t *lumpsizeptr, qboolean gamedironly )
+static byte *W_LoadFile( const char *path, long *lumpsizeptr, qboolean gamedironly )
 {
 	searchpath_t	*search;
 	int		index;
