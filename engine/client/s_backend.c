@@ -361,7 +361,7 @@ int SNDDMA_Init( void *hInst )
 	else
 	{
 		if( snd_firsttime )
-			MsgDev( D_ERROR, "SNDDMA_Init: can't initialize sound device\n" );
+			MsgDev( D_ERROR, "Audio: can't initialize sound device\n" );
 		return false;
 	}
 

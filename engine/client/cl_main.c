@@ -905,6 +905,7 @@ void CL_ClearState( void )
 	cl.refdef.movevars = &clgame.movevars;
 	cl.maxclients = 1; // allow to drawing player in menu
 	cl.mtime[0] = cl.mtime[1] = 1.0f; // because level starts from 1.0f second
+	NetAPI_CancelAllRequests();
 	cl.scr_fov = 90.0f;
 
 	Cvar_SetFloat( "scr_download", 0.0f );
@@ -1044,6 +1045,11 @@ void CL_InternetServers_f( void )
 	Q_strcpy( &fullquery[22], GI->gamedir );
 
 	NET_SendPacket( NS_CLIENT, Q_strlen( GI->gamedir ) + 23, fullquery, adr );
+
+	// now we clearing the vgui request
+	if( clgame.master_request != NULL )
+		Q_memset( clgame.master_request, 0, sizeof( net_request_t ));
+	clgame.request_type = NET_REQUEST_GAMEUI;
 }
 
 /*
@@ -1166,6 +1172,70 @@ void CL_ParseStatusMessage( netadr_t from, sizebuf_t *msg )
 
 /*
 =================
+CL_FixupColorStringsForInfoString
+
+all the keys and values must be ends with ^7
+=================
+*/
+void CL_FixupColorStringsForInfoString( const char *in, char *out )
+{
+	qboolean	hasPrefix = false;
+	qboolean	endOfKeyVal = false;
+	int	color = 7;
+	int	count = 0;
+
+	if( *in == '\\' )
+	{
+		*out++ = *in++;
+		count++;
+	}
+
+	while( *in && count < MAX_INFO_STRING )
+	{
+		if( IsColorString( in ))
+			color = ColorIndex( *(in+1));
+
+		// color the not reset while end of key (or value) was found!
+		if( *in == '\\' && color != 7 )
+		{
+			if( IsColorString( out - 2 ))
+			{
+				*(out - 1) = '7';
+			}
+			else
+			{
+				*out++ = '^';
+				*out++ = '7';
+				count += 2;
+			}
+			color = 7;
+		}
+
+		*out++ = *in++;
+		count++;
+	}
+
+	// check the remaining value
+	if( color != 7 )
+	{
+		// if the ends with another color rewrite it
+		if( IsColorString( out - 2 ))
+		{
+			*(out - 1) = '7';
+		}
+		else
+		{
+			*out++ = '^';
+			*out++ = '7';
+			count += 2;
+		}
+	}
+
+	*out = '\0';
+}
+
+/*
+=================
 CL_ParseNETInfoMessage
 
 Handle a reply from a netinfo
@@ -1173,13 +1243,25 @@ Handle a reply from a netinfo
 */
 void CL_ParseNETInfoMessage( netadr_t from, sizebuf_t *msg )
 {
-	char		*s;
+	char		*s, *val;
 	net_request_t	*nr;
+	static char	infostring[MAX_INFO_STRING+8];
 	int		i, context, type;
+	int		errorBits = 0;
 
 	context = Q_atoi( Cmd_Argv( 1 ));
 	type = Q_atoi( Cmd_Argv( 2 ));
 	s = Cmd_Argv( 3 );
+
+	// check for errors
+	val = Info_ValueForKey( s, "neterror" );
+
+	if( !Q_stricmp( val, "protocol" ))
+		SetBits( errorBits, NET_ERROR_PROTO_UNSUPPORTED );
+	else if( !Q_stricmp( val, "undefined" ))
+		SetBits( errorBits, NET_ERROR_UNDEFINED );
+
+	CL_FixupColorStringsForInfoString( s, infostring );
 
 	// find a request with specified context
 	for( i = 0; i < MAX_REQUESTS; i++ )
@@ -1188,23 +1270,51 @@ void CL_ParseNETInfoMessage( netadr_t from, sizebuf_t *msg )
 
 		if( nr->resp.context == context && nr->resp.type == type )
 		{
-			if( nr->timeout > host.realtime )
-			{
-				// setup the answer
-				nr->resp.response = s;
-				nr->resp.remote_address = from;
-				nr->resp.error = NET_SUCCESS;
-				nr->resp.ping = host.realtime - nr->timesend;
-				nr->pfnFunc( &nr->resp );
+			// setup the answer
+			nr->resp.response = infostring;
+			nr->resp.remote_address = from;
+			nr->resp.error = NET_SUCCESS;
+			nr->resp.ping = host.realtime - nr->timesend;
 
-				if(!( nr->flags & FNETAPI_MULTIPLE_RESPONSE ))
-					Q_memset( nr, 0, sizeof( *nr )); // done
-			}
-			else
-			{
-				Q_memset( nr, 0, sizeof( *nr )); 
-			}
+			if( nr->timeout <= host.realtime )
+				SetBits( nr->resp.error, NET_ERROR_TIMEOUT );
+			SetBits( nr->resp.error, errorBits ); // misc error bits
+
+			nr->pfnFunc( &nr->resp );
+
+			if( !FBitSet( nr->flags, FNETAPI_MULTIPLE_RESPONSE ))
+				Q_memset( nr, 0, sizeof( *nr )); // done
 			return;
+		}
+	}
+}
+
+/*
+=================
+CL_ProcessNetRequests
+
+check for timeouts
+=================
+*/
+void CL_ProcessNetRequests( void )
+{
+	net_request_t	*nr;
+	int		i;
+
+	// find a request with specified context
+	for( i = 0; i < MAX_REQUESTS; i++ )
+	{
+		nr = &clgame.net_requests[i];
+		if( !nr->pfnFunc ) continue;	// not used
+
+		if( nr->timeout <= host.realtime )
+		{
+			// setup the answer
+			SetBits( nr->resp.error, NET_ERROR_TIMEOUT );
+			nr->resp.ping = host.realtime - nr->timesend;
+
+			nr->pfnFunc( &nr->resp );
+			Q_memset( nr, 0, sizeof( *nr )); // done
 		}
 	}
 }
@@ -1450,18 +1560,66 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !Q_strcmp( c, "f" ))
 	{
 		// serverlist got from masterserver
-		while( !msg->bOverflow )
+		while( MSG_GetNumBitsLeft( msg ) > 8 )
 		{
+			MSG_ReadBytes( msg, servadr.ip, sizeof( servadr.ip ));	// 4 bytes for IP
+			servadr.port = MSG_ReadShort( msg );			// 2 bytes for Port
 			servadr.type = NA_IP;
-			// 4 bytes for IP
-			MSG_ReadBytes( msg, servadr.ip, sizeof( servadr.ip ));
-			// 2 bytes for Port
-			servadr.port = MSG_ReadShort( msg );
 
-			if( !servadr.port ) break;
+			// list is ends here
+			if( !servadr.port )
+			{
+				if( clgame.request_type == NET_REQUEST_CLIENT && clgame.master_request != NULL )
+				{
+					net_request_t	*nr = clgame.master_request;
+					net_adrlist_t	*list, **prev;
 
-			NET_Config( true ); // allow remote
-			Netchan_OutOfBandPrint( NS_CLIENT, servadr, "info %i", PROTOCOL_VERSION );
+					// setup the answer
+					nr->resp.remote_address = from;
+					nr->resp.error = NET_SUCCESS;
+					nr->resp.ping = host.realtime - nr->timesend;
+
+					if( nr->timeout <= host.realtime )
+						SetBits( nr->resp.error, NET_ERROR_TIMEOUT );
+
+					MsgDev( D_INFO, "serverlist call: %s\n", NET_AdrToString( from ));
+					nr->pfnFunc( &nr->resp );
+
+					// throw the list, now it will be stored in user area
+					prev = &((net_adrlist_t *)nr->resp.response);
+
+					while( 1 )
+					{
+						list = *prev;
+						if( !list ) break;
+
+						// throw out any variables the game created
+						*prev = list->next;
+						Mem_Free( list );
+					}
+					Q_memset( nr, 0, sizeof( *nr )); // done
+					clgame.request_type = NET_REQUEST_CANCEL;
+					clgame.master_request = NULL;
+				}
+				break;
+			}
+
+			if( clgame.request_type == NET_REQUEST_CLIENT && clgame.master_request != NULL )
+			{
+				net_request_t	*nr = clgame.master_request;
+				net_adrlist_t	*list;
+
+				// adding addresses into list
+				list = Z_Malloc( sizeof( *list ));
+				list->remote_address = servadr;
+				list->next = nr->resp.response;
+				nr->resp.response = list;
+			}
+			else if( clgame.request_type == NET_REQUEST_GAMEUI )
+			{
+				NET_Config( true ); // allow remote
+				Netchan_OutOfBandPrint( NS_CLIENT, servadr, "info %i", PROTOCOL_VERSION );
+			}
 		}
 	}
 	else if( clgame.dllFuncs.pfnConnectionlessPacket( &from, args, buf, &len ))
@@ -1556,6 +1714,9 @@ void CL_ReadNetMessage( void )
 	}
 
 	Netchan_UpdateProgress( &cls.netchan );
+
+	// check requests for time-expire
+	CL_ProcessNetRequests();
 }
 
 void CL_ReadPackets( void )

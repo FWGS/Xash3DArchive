@@ -127,6 +127,7 @@ public:
 	virtual void setTitle( const char *title ) { }
 	virtual void createPopup( Panel* embeddedPanel ) { }
 	virtual bool isWithin( int x, int y ) { return true; }
+	virtual void GetMousePos( int &x, int &y );
 	virtual bool hasFocus( void );
 protected:
 	virtual int createNewTextureID( void );
@@ -158,6 +159,7 @@ protected:
 	int _drawTextPos[2];
 	int _drawColor[4];
 	int _drawTextColor[4];
+	bool _allowSetTextPos;
 	friend class App;
 	friend class Panel;
 };

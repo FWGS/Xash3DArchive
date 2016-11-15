@@ -2720,6 +2720,24 @@ void pfnSetLightmapScale( float scale )
 
 /*
 =============
+pfnParseFile
+
+handle colon separately
+=============
+*/
+char *pfnParseFile( char *data, char *token )
+{
+	char	*out;
+
+	host.com_handlecolon = true;
+	out = COM_ParseFile( data, token );
+	host.com_handlecolon = false;
+
+	return out;
+}
+
+/*
+=============
 pfnSPR_DrawGeneric
 
 =============
@@ -3128,7 +3146,7 @@ int TriSpriteTexture( model_t *pSpriteModel, int frame )
 	if( psprite->texFormat == SPR_ALPHTEST )
 	{
 		pglEnable( GL_ALPHA_TEST );
-		pglAlphaFunc( GL_GREATER, 0.0f );
+		pglAlphaFunc( GL_GEQUAL, 0.5f );
 	}
 
 	GL_Bind( GL_TEXTURE0, gl_texturenum );
@@ -3349,7 +3367,7 @@ void NetAPI_Status( net_status_t *status )
 	status->connected = NET_IsLocalAddress( cls.netchan.remote_address ) ? false : true;
 	status->connection_time = host.realtime - cls.netchan.connect_time;
 	status->remote_address = cls.netchan.remote_address;
-	status->packet_loss = cls.packet_loss / 100; // percent
+	status->packet_loss = cls.packet_loss / 100.0; // percent
 	status->latency = cl.frame.latency;
 	status->local_address = net_local;
 	status->rate = cls.netchan.rate;
@@ -3377,15 +3395,14 @@ void NetAPI_SendRequest( int context, int request, int flags, double timeout, ne
 	for( i = 0; i < MAX_REQUESTS; i++ )
 	{
 		nr = &clgame.net_requests[i];
-		if( !nr->pfnFunc || nr->timeout < host.realtime )
-			break;
+		if( !nr->pfnFunc ) break;
 	}
 
 	if( i == MAX_REQUESTS )
 	{
 		double	max_timeout = 0;
 
-		// no free requests? use older
+		// no free requests? use oldest
 		for( i = 0, nr = NULL; i < MAX_REQUESTS; i++ )
 		{
 			if(( host.realtime - clgame.net_requests[i].timesend ) > max_timeout )
@@ -3412,11 +3429,20 @@ void NetAPI_SendRequest( int context, int request, int flags, double timeout, ne
 
 	if( request == NETAPI_REQUEST_SERVERLIST )
 	{
-		// UNDONE: build request for master-server
+		char	fullquery[512] = "1\xFF" "0.0.0.0:0\0" "\\gamedir\\";
+
+		// make sure what port is specified
+		if( !nr->resp.remote_address.port ) nr->resp.remote_address.port = MSG_BigShort( PORT_MASTER );
+
+		// grab the list from the master server
+		Q_strcpy( &fullquery[22], GI->gamedir );
+		NET_SendPacket( NS_CLIENT, Q_strlen( GI->gamedir ) + 23, fullquery, nr->resp.remote_address );
+		clgame.request_type = NET_REQUEST_CLIENT;
+		clgame.master_request = nr; // holds the master request unitl the master acking
 	}
 	else
 	{
-		// send request over the net
+		// local servers request
 		Q_snprintf( req, sizeof( req ), "netinfo %i %i %i", PROTOCOL_VERSION, context, request );
 		Netchan_OutOfBandPrint( NS_CLIENT, nr->resp.remote_address, req );
 	}
@@ -3430,15 +3456,31 @@ NetAPI_CancelRequest
 */
 void NetAPI_CancelRequest( int context )
 {
-	int	i;
+	net_request_t	*nr;
+	int		i;
 
 	// find a specified request
 	for( i = 0; i < MAX_REQUESTS; i++ )
 	{
+		nr = &clgame.net_requests[i];
+
 		if( clgame.net_requests[i].resp.context == context )
 		{
-			MsgDev( D_NOTE, "Request with context %i cancelled\n", context );
+			if( nr->pfnFunc )
+			{
+				SetBits( nr->resp.error, NET_ERROR_TIMEOUT );
+				nr->resp.ping = host.realtime - nr->timesend;
+				nr->pfnFunc( &nr->resp );
+                              }
+
 			Q_memset( &clgame.net_requests[i], 0, sizeof( net_request_t ));
+
+			if( clgame.net_requests[i].resp.type == NETAPI_REQUEST_SERVERLIST && &clgame.net_requests[i] == clgame.master_request )
+			{
+				if( clgame.request_type == NET_REQUEST_CLIENT )
+					clgame.request_type = NET_REQUEST_CANCEL;
+				clgame.master_request = NULL;
+			}
 			break;
 		}
 	}
@@ -3452,7 +3494,22 @@ NetAPI_CancelAllRequests
 */
 void NetAPI_CancelAllRequests( void )
 {
+	net_request_t	*nr;
+	int		i;
+
+	// tell the user about cancel
+	for( i = 0; i < MAX_REQUESTS; i++ )
+	{
+		nr = &clgame.net_requests[i];
+		if( !nr->pfnFunc ) continue;	// not used
+		SetBits( nr->resp.error, NET_ERROR_TIMEOUT );
+		nr->resp.ping = host.realtime - nr->timesend;
+		nr->pfnFunc( &nr->resp );
+	}
+
 	Q_memset( clgame.net_requests, 0, sizeof( clgame.net_requests ));
+	clgame.request_type = NET_REQUEST_CANCEL;
+	clgame.master_request = NULL;
 }
 
 /*
@@ -3836,7 +3893,7 @@ static cl_enginefunc_t gEngfuncs =
 	VGui_GetPanel,
 	VGui_ViewportPaintBackground,
 	COM_LoadFile,
-	COM_ParseFile,
+	pfnParseFile,
 	COM_FreeFile,
 	&gTriApi,
 	&gEfxApi,

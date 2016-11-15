@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define MAX_CDTRACKS	32
 #define MAX_IMAGES		256	// SpriteTextures
 #define MAX_EFRAGS		4096
-#define MAX_REQUESTS	32
+#define MAX_REQUESTS	128
 
 // screenshot types
 #define VID_SCREENSHOT	0
@@ -354,6 +354,13 @@ typedef struct
 	model_t		*model;		// for catch model changes
 } remap_info_t;
 
+typedef enum
+{
+	NET_REQUEST_CANCEL = 0,	// request was cancelled for some reasons
+	NET_REQUEST_GAMEUI,		// called from GameUI
+	NET_REQUEST_CLIENT,		// called from Client
+} net_request_type_t;
+
 typedef struct
 {
 	net_response_t		resp;
@@ -415,7 +422,9 @@ typedef struct
 	client_textmessage_t *titles;			// title messages, not network messages
 	int		numTitles;
 
+	net_request_type_t	request_type;		// filter the requests
 	net_request_t	net_requests[MAX_REQUESTS];	// no reason to keep more
+	net_request_t	*master_request;		// queued master request
 
 	efrag_t		*free_efrags;		// linked efrags
 	cl_entity_t	viewent;			// viewmodel
@@ -677,6 +686,7 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize );
 client_textmessage_t *CL_TextMessageGet( const char *pName );
 int pfnDecalIndexFromName( const char *szDecalName );
 int pfnIndexFromTrace( struct pmtrace_s *pTrace );
+void NetAPI_CancelAllRequests( void );
 int CL_FindModelIndex( const char *m );
 HSPRITE pfnSPR_Load( const char *szPicName );
 HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags );

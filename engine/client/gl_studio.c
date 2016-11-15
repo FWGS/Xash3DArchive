@@ -2021,7 +2021,7 @@ static void R_StudioDrawPoints( void )
 		else if( g_nFaceFlags & STUDIO_NF_TRANSPARENT && R_StudioOpaque( g_iRenderMode ))
 		{
 			GL_SetRenderMode( kRenderTransAlpha );
-			pglAlphaFunc( GL_GREATER, 0.0f );
+			pglAlphaFunc( GL_GEQUAL, 0.5f );
 			alpha = 1.0f;
 		}
 		else if( g_nFaceFlags & STUDIO_NF_ADDITIVE )
@@ -2574,7 +2574,7 @@ static void R_StudioSetupRenderer( int rendermode )
 	if( glState.drawTrans && g_iRenderMode != kRenderTransAdd )
 		pglDepthMask( GL_TRUE );
 
-	pglAlphaFunc( GL_GREATER, 0.0f );
+	pglAlphaFunc( GL_GEQUAL, 0.5f );
 	pglShadeModel( GL_SMOOTH );
 
 	if( g_iBackFaceCull )

@@ -56,6 +56,17 @@ void CEngineSurface :: setCursor( Cursor *cursor )
 	VGUI_CursorSelect( cursor );
 }
 
+void CEngineSurface :: GetMousePos( int &x, int &y )
+{
+	POINT	curpos;
+
+	GetCursorPos( &curpos );
+	ScreenToClient( host.hWnd, &curpos );
+
+	x = curpos.x;
+	y = curpos.y;
+}
+
 void CEngineSurface :: SetupPaintState( const paintState_t &paintState )
 {
 	_translateX = paintState.iTranslateX;

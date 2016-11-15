@@ -693,18 +693,26 @@ void SV_BuildNetAnswer( netadr_t from )
 	type = Q_atoi( Cmd_Argv( 3 ));
 
 	if( version != PROTOCOL_VERSION )
-		return;
+	{
+		// handle the unsupported protocol
+		string[0] = '\0';
+		Info_SetValueForKey( string, "neterror", "protocol" );
 
+		// send error unsupported protocol
+		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, string );
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer );
+		return;
+	}
 	if( type == NETAPI_REQUEST_PING )
 	{
-		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i\n", context, type );
-		Netchan_OutOfBandPrint( NS_SERVER, from, answer ); // no info string
+		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, "" );
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer );
 	}
 	else if( type == NETAPI_REQUEST_RULES )
 	{
 		// send serverinfo
 		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, Cvar_Serverinfo( ));
-		Netchan_OutOfBandPrint( NS_SERVER, from, answer ); // no info string
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer );
 	}
 	else if( type == NETAPI_REQUEST_PLAYERS )
 	{
@@ -723,7 +731,7 @@ void SV_BuildNetAnswer( netadr_t from )
 
 		// send playernames
 		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, string );
-		Netchan_OutOfBandPrint( NS_SERVER, from, answer ); // no info string
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer );
 	}
 	else if( type == NETAPI_REQUEST_DETAILS )
 	{
@@ -740,7 +748,16 @@ void SV_BuildNetAnswer( netadr_t from )
 
 		// send serverinfo
 		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, string );
-		Netchan_OutOfBandPrint( NS_SERVER, from, answer ); // no info string
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer );
+	}
+	else
+	{
+		string[0] = '\0';
+		Info_SetValueForKey( string, "neterror", "undefined" );
+
+		// send error undefined request type
+		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, string );
+		Netchan_OutOfBandPrint( NS_SERVER, from, answer );
 	}
 }
 

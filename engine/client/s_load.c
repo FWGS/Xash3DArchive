@@ -68,8 +68,8 @@ void S_SoundList_f( void )
 // return true if char 'c' is one of 1st 2 characters in pch
 qboolean S_TestSoundChar( const char *pch, char c )
 {
-	int	i;
 	char	*pcht = (char *)pch;
+	int	i;
 
 	if( !pch || !*pch )
 		return false;
@@ -141,15 +141,11 @@ wavdata_t *S_LoadSound( sfx_t *sfx )
 
 	if( sc->rate < SOUND_11k ) // some bad sounds
 		Sound_Process( &sc, SOUND_11k, sc->width, SOUND_RESAMPLE );
-#if SOUND_DMA_SPEED > SOUND_11k
 	else if( sc->rate > SOUND_11k && sc->rate < SOUND_22k ) // some bad sounds
 		Sound_Process( &sc, SOUND_22k, sc->width, SOUND_RESAMPLE );
-#endif
-
-#if SOUND_DMA_SPEED > SOUND_32k
 	else if( sc->rate > SOUND_22k && sc->rate <= SOUND_32k ) // some bad sounds
 		Sound_Process( &sc, SOUND_44k, sc->width, SOUND_RESAMPLE );
-#endif
+
 	sfx->cache = sc;
 
 	return sfx->cache;
@@ -201,9 +197,7 @@ sfx_t *S_FindName( const char *pname, int *pfInCache )
 
 	// find a free sfx slot spot
 	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++)
-	{
 		if( !sfx->name[0] ) break; // free spot
-	}
 
 	if( i == s_numSfx )
 	{

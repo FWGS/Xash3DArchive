@@ -1188,7 +1188,8 @@ void R_DrawEntitiesOnList( void )
 
 	R_DrawViewModel();
 
-	CL_ExtraUpdate();
+	if( !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+		CL_ExtraUpdate();
 }
 
 /*
@@ -1216,7 +1217,8 @@ void R_RenderScene( const ref_params_t *fd )
 	R_CheckFog();
 	R_DrawWorld();
 
-	CL_ExtraUpdate ();	// don't let sound get messed up if going slow
+	if( !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+		CL_ExtraUpdate ();	// don't let sound get messed up if going slow
 
 	R_DrawEntitiesOnList();
 
@@ -1269,7 +1271,8 @@ void R_BeginFrame( qboolean clearScene )
 	// swapinterval stuff
 	GL_UpdateSwapInterval();
 
-	CL_ExtraUpdate ();
+	if( !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+		CL_ExtraUpdate ();
 }
 
 /*
