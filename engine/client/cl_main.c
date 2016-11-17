@@ -160,7 +160,7 @@ qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 		Q_strncpy( clgame.maptitle, maptitle, MAX_STRING );
 
 		// invalidate fonts so we can reloading them again
-		Q_memset( &cls.creditsFont, 0, sizeof( cls.creditsFont ));
+		memset( &cls.creditsFont, 0, sizeof( cls.creditsFont ));
 		SCR_InstallParticlePalette();
 		SCR_LoadCreditsFont();
 		Con_InvalidateFonts();
@@ -173,8 +173,8 @@ qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 			clgame.dllFuncs.IN_ActivateMouse();
 
 		// restore mlook state
-		if( mlook_active ) Cmd_ExecuteString( "+mlook\n", src_command );
-		if( jlook_active ) Cmd_ExecuteString( "+jlook\n", src_command );
+		if( mlook_active ) Cmd_ExecuteString( "+mlook\n" );
+		if( jlook_active ) Cmd_ExecuteString( "+jlook\n" );
 		return true;
 	}
 
@@ -204,7 +204,6 @@ static float CL_LerpPoint( void )
 	if( f > 0.1f )
 	{	
 		// dropped packet, or start of demo
-		MsgDev( D_WARN, "CL_LerpPoint: %f > 0.1\n", f );
 		cl.mtime[1] = cl.mtime[0] - 0.1f;
 		f = 0.1f;
 	}
@@ -385,7 +384,7 @@ void CL_CreateCmd( void )
 	if( ms > 250 ) ms = 100;	// time was unreasonable
 	else if( ms <= 0 ) ms = 1;	// keep time an actual
 
-	Q_memset( &cmd, 0, sizeof( cmd ));
+	memset( &cmd, 0, sizeof( cmd ));
 	input_override = 0;
 
 	CL_PushPMStates();
@@ -474,7 +473,7 @@ void CL_WriteUsercmd( sizebuf_t *msg, int from, int to )
 
 	if( from == -1 )
 	{
-		Q_memset( &nullcmd, 0, sizeof( nullcmd ));
+		memset( &nullcmd, 0, sizeof( nullcmd ));
 		f = &nullcmd;
 	}
 	else
@@ -897,10 +896,10 @@ void CL_ClearState( void )
 	CL_ClearPhysEnts ();
 
 	// wipe the entire cl structure
-	Q_memset( &cl, 0, sizeof( cl ));
+	memset( &cl, 0, sizeof( cl ));
 	MSG_Clear( &cls.netchan.message );
-	Q_memset( &clgame.fade, 0, sizeof( clgame.fade ));
-	Q_memset( &clgame.shake, 0, sizeof( clgame.shake ));
+	memset( &clgame.fade, 0, sizeof( clgame.fade ));
+	memset( &clgame.shake, 0, sizeof( clgame.shake ));
 	Cvar_FullSet( "cl_background", "0", CVAR_READ_ONLY );
 	cl.refdef.movevars = &clgame.movevars;
 	cl.maxclients = 1; // allow to drawing player in menu
@@ -1048,7 +1047,7 @@ void CL_InternetServers_f( void )
 
 	// now we clearing the vgui request
 	if( clgame.master_request != NULL )
-		Q_memset( clgame.master_request, 0, sizeof( net_request_t ));
+		memset( clgame.master_request, 0, sizeof( net_request_t ));
 	clgame.request_type = NET_REQUEST_GAMEUI;
 }
 
@@ -1241,17 +1240,17 @@ CL_ParseNETInfoMessage
 Handle a reply from a netinfo
 =================
 */
-void CL_ParseNETInfoMessage( netadr_t from, sizebuf_t *msg )
+void CL_ParseNETInfoMessage( netadr_t from, sizebuf_t *msg, const char *s )
 {
-	char		*s, *val;
 	net_request_t	*nr;
 	static char	infostring[MAX_INFO_STRING+8];
 	int		i, context, type;
 	int		errorBits = 0;
+	char		*val;
 
 	context = Q_atoi( Cmd_Argv( 1 ));
 	type = Q_atoi( Cmd_Argv( 2 ));
-	s = Cmd_Argv( 3 );
+	while( *s != '\\' ) s++; // fetching infostring
 
 	// check for errors
 	val = Info_ValueForKey( s, "neterror" );
@@ -1283,7 +1282,7 @@ void CL_ParseNETInfoMessage( netadr_t from, sizebuf_t *msg )
 			nr->pfnFunc( &nr->resp );
 
 			if( !FBitSet( nr->flags, FNETAPI_MULTIPLE_RESPONSE ))
-				Q_memset( nr, 0, sizeof( *nr )); // done
+				memset( nr, 0, sizeof( *nr )); // done
 			return;
 		}
 	}
@@ -1314,7 +1313,7 @@ void CL_ProcessNetRequests( void )
 			nr->resp.ping = host.realtime - nr->timesend;
 
 			nr->pfnFunc( &nr->resp );
-			Q_memset( nr, 0, sizeof( *nr )); // done
+			memset( nr, 0, sizeof( *nr )); // done
 		}
 	}
 }
@@ -1423,7 +1422,7 @@ void CL_PrepVideo( void )
 	CL_RegisterMuzzleFlashes ();
 
 	// invalidate all decal indexes
-	Q_memset( cl.decal_index, 0, sizeof( cl.decal_index ));
+	memset( cl.decal_index, 0, sizeof( cl.decal_index ));
 
 	CL_ClearWorld ();
 
@@ -1512,7 +1511,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !Q_strcmp( c, "netinfo" ))
 	{
 		// server responding to a status broadcast
-		CL_ParseNETInfoMessage( from, msg );
+		CL_ParseNETInfoMessage( from, msg, args );
 	}
 	else if( !Q_strcmp( c, "cmd" ))
 	{
@@ -1597,7 +1596,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 						*prev = list->next;
 						Mem_Free( list );
 					}
-					Q_memset( nr, 0, sizeof( *nr )); // done
+					memset( nr, 0, sizeof( *nr )); // done
 					clgame.request_type = NET_REQUEST_CANCEL;
 					clgame.master_request = NULL;
 				}
@@ -2033,13 +2032,13 @@ void Host_ClientFrame( void )
 	if( cls.demorecording && !cls.demowaiting )
 		cls.demotime += host.frametime;
 
-	if( menu.hInstance )
+	if( gameui.hInstance )
 	{
 		// menu time (not paused, not clamped)
-		menu.globals->time = host.realtime;
-		menu.globals->frametime = host.realframetime;
-		menu.globals->demoplayback = cls.demoplayback;
-		menu.globals->demorecording = cls.demorecording;
+		gameui.globals->time = host.realtime;
+		gameui.globals->frametime = host.realframetime;
+		gameui.globals->demoplayback = cls.demoplayback;
+		gameui.globals->demorecording = cls.demorecording;
 	}
 
 	// if in the debugger last frame, don't timeout

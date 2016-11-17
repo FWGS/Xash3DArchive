@@ -799,7 +799,7 @@ void CL_FlushEntityPacket( sizebuf_t *msg )
 	int		newnum;
 	entity_state_t	from, to;
 
-	Q_memset( &from, 0, sizeof( from ));
+	memset( &from, 0, sizeof( from ));
 
 	cl.frames[cl.parsecountmod].valid = false;
 	cl.validsequence = 0; // can't render a frame
@@ -849,7 +849,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	newframe->first_entity = cls.next_client_entities;
 	newframe->num_entities = 0;
 	newframe->valid = true; // assume valid
-	Q_memset( &newframe->graphdata, 0, sizeof( netbandwidthgraph_t ));
+	memset( &newframe->graphdata, 0, sizeof( netbandwidthgraph_t ));
 
 	if( delta )
 	{

@@ -95,7 +95,7 @@ void GL_BackendEndFrame( void )
 		break;
 	}
 
-	Q_memset( &r_stats, 0, sizeof( r_stats ));
+	memset( &r_stats, 0, sizeof( r_stats ));
 }
 
 /*
@@ -634,7 +634,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 		r_side->buffer = temp;
 
 		if( flags ) Image_Process( &r_side, 0, 0, 0.0f, flags, NULL );
-		Q_memcpy( buffer + (size * size * 3 * i), r_side->buffer, size * size * 3 );
+		memcpy( buffer + (size * size * 3 * i), r_side->buffer, size * size * 3 );
 	}
 
 	RI.params &= ~RP_ENVVIEW;

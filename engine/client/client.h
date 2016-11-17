@@ -449,7 +449,7 @@ typedef struct
 	long		logo_xres;
 	long		logo_yres;
 	float		logo_length;
-} menu_static_t;
+} gameui_static_t;
 
 typedef struct
 {
@@ -549,7 +549,7 @@ extern "C" {
 extern client_t		cl;
 extern client_static_t	cls;
 extern clgame_static_t	clgame;
-extern menu_static_t	menu;
+extern gameui_static_t	gameui;
 
 #ifdef __cplusplus
 }
@@ -690,7 +690,6 @@ void NetAPI_CancelAllRequests( void );
 int CL_FindModelIndex( const char *m );
 HSPRITE pfnSPR_Load( const char *szPicName );
 HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags );
-void TextAdjustSize( int *x, int *y, int *w, int *h );
 void PicAdjustSize( float *x, float *y, float *w, float *h );
 void CL_FillRGBA( int x, int y, int width, int height, int r, int g, int b, int a );
 void CL_FillRGBABlend( int x, int y, int width, int height, int r, int g, int b, int a );
@@ -729,7 +728,7 @@ void SCR_MakeScreenShot( void );
 void SCR_MakeLevelShot( void );
 void SCR_NetSpeeds( void );
 void SCR_RSpeeds( void );
-void SCR_DrawFPS( void );
+void SCR_DrawFPS( int height );
 
 //
 // cl_netgraph.c
@@ -873,7 +872,7 @@ void S_RenderFrame( struct ref_params_s *fd );
 void S_ExtraUpdate( void );
 
 //
-// cl_menu.c
+// cl_gameui.c
 //
 void UI_UnloadProgs( void );
 qboolean UI_LoadProgs( void );

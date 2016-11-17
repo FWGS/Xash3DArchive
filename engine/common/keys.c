@@ -46,18 +46,18 @@ keyname_t keynames[] =
 {"RIGHTARROW",	K_RIGHTARROW,	"+right"		},
 {"ALT",		K_ALT,		"+strafe"		},
 {"CTRL",		K_CTRL,		"+attack"		},
-{"SHIFT",		K_SHIFT,		"+speed"		}, // replace with +attack2 ?
+{"SHIFT",		K_SHIFT,		"+speed"		},
 {"CAPSLOCK",	K_CAPSLOCK,	""		},
 {"F1",		K_F1,		"cmd help"	},
 {"F2",		K_F2,		"menu_savegame"	},
 {"F3",		K_F3,		"menu_loadgame"	},
-{"F4",		K_F4,		"menu_keys"	},
-{"F5",		K_F5,		"menu_startserver"	},
+{"F4",		K_F4,		"menu_controls"	},
+{"F5",		K_F5,		"menu_creategame"	},
 {"F6",		K_F6,		"savequick"	},
 {"F7",		K_F7,		"loadquick"	},
 {"F8",		K_F8,		"stop"		},
 {"F9",		K_F9,		""		},
-{"F10",		K_F10,		"menu_quit"	},
+{"F10",		K_F10,		"menu_main"	},
 {"F11",		K_F11,		""		},
 {"F12",		K_F12,		"screenshot"	},
 {"INS",		K_INS,		""		},
@@ -556,8 +556,6 @@ void Key_Event( int key, qboolean down )
 	// escape is always handled special
 	if( key == K_ESCAPE && down )
 	{
-		kb = keys[key].binding;
-
 		switch( cls.key_dest )
 		{
 		case key_game:

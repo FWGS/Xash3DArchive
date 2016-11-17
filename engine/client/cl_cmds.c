@@ -70,7 +70,8 @@ void CL_PlayCDTrack_f( void )
 	if( Cmd_Argc() < 2 ) return;
 	command = Cmd_Argv( 1 );
 
-	if( !enabled && Q_stricmp( command, "on" )) return; // CD-player is disabled
+	if( !enabled && Q_stricmp( command, "on" ))
+		return; // CD-player is disabled
 
 	if( !Q_stricmp( command, "play" ))
 	{

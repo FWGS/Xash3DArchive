@@ -1981,7 +1981,7 @@ qboolean SV_InitPhysicsAPI( void )
 		}
 
 		// make sure what physic functions is cleared
-		Q_memset( &svgame.physFuncs, 0, sizeof( svgame.physFuncs ));
+		memset( &svgame.physFuncs, 0, sizeof( svgame.physFuncs ));
 
 		return false; // just tell user about problems
 	}

@@ -1348,7 +1348,10 @@ void R_EndFrame( void )
 	R_Set2DMode( false );
 
 	if( !pwglSwapBuffers( glw_state.hDC ))
-		Sys_Error( "wglSwapBuffers() failed!\n" );
+	{
+		Msg( "Error: WGL: failed to swap buffers\n" );
+		Host_NewInstance( va("#%s", GI->gamefolder ), "stopped" );
+	}
 }
 
 /*
@@ -1727,7 +1730,7 @@ Initialize client external rendering
 qboolean R_InitRenderAPI( void )
 {
 	// make sure what render functions is cleared
-	Q_memset( &clgame.drawFuncs, 0, sizeof( clgame.drawFuncs ));
+	memset( &clgame.drawFuncs, 0, sizeof( clgame.drawFuncs ));
 
 	if( clgame.dllFuncs.pfnGetRenderInterface )
 	{
@@ -1738,7 +1741,7 @@ qboolean R_InitRenderAPI( void )
 		}
 
 		// make sure what render functions is cleared
-		Q_memset( &clgame.drawFuncs, 0, sizeof( clgame.drawFuncs ));
+		memset( &clgame.drawFuncs, 0, sizeof( clgame.drawFuncs ));
 
 		return false; // just tell user about problems
 	}

@@ -156,11 +156,11 @@ SOURCE=.\client\cl_game.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\cl_main.c
+SOURCE=.\client\cl_gameui.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\cl_menu.c
+SOURCE=.\client\cl_main.c
 # End Source File
 # Begin Source File
 

@@ -93,7 +93,7 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack, long
 	// open stream
 	s_bgTrack.stream = FS_OpenStream( va( "media/%s", introTrack ));
 	Q_strncpy( s_bgTrack.current, introTrack, sizeof( s_bgTrack.current ));
-	Q_memset( &musicfade, 0, sizeof( musicfade )); // clear any soundfade
+	memset( &musicfade, 0, sizeof( musicfade )); // clear any soundfade
 	s_bgTrack.source = cls.key_dest;
 
 	if( position != 0 )
@@ -116,8 +116,8 @@ void S_StopBackgroundTrack( void )
 	if( !s_bgTrack.stream ) return;
 
 	FS_FreeStream( s_bgTrack.stream );
-	Q_memset( &s_bgTrack, 0, sizeof( bg_track_t ));
-	Q_memset( &musicfade, 0, sizeof( musicfade ));
+	memset( &s_bgTrack, 0, sizeof( bg_track_t ));
+	memset( &musicfade, 0, sizeof( musicfade ));
 }
 
 /*

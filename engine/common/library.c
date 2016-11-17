@@ -70,7 +70,7 @@ static void CopySections( const byte *data, PIMAGE_NT_HEADERS old_headers, PMEMO
 			{
 				dest = (byte *)VirtualAlloc((byte *)CALCULATE_ADDRESS(codeBase, section->VirtualAddress), size, MEM_COMMIT, PAGE_READWRITE );
 				section->Misc.PhysicalAddress = (DWORD)dest;
-				Q_memset( dest, 0, size );
+				memset( dest, 0, size );
 			}
 			// section is empty
 			continue;
@@ -78,7 +78,7 @@ static void CopySections( const byte *data, PIMAGE_NT_HEADERS old_headers, PMEMO
 
 		// commit memory block and copy data from dll
 		dest = (byte *)VirtualAlloc((byte *)CALCULATE_ADDRESS(codeBase, section->VirtualAddress), section->SizeOfRawData, MEM_COMMIT, PAGE_READWRITE );
-		Q_memcpy( dest, (byte *)CALCULATE_ADDRESS(data, section->PointerToRawData), section->SizeOfRawData );
+		memcpy( dest, (byte *)CALCULATE_ADDRESS(data, section->PointerToRawData), section->SizeOfRawData );
 		section->Misc.PhysicalAddress = (DWORD)dest;
 	}
 }
@@ -147,7 +147,7 @@ static void FinalizeSections( MEMORYMODULE *module )
 		{         
 			// change memory access flags
 			if( !VirtualProtect((LPVOID)section->Misc.PhysicalAddress, size, protect, &oldProtect ))
-				Sys_Error( "Com_FinalizeSections: error protecting memory page\n" );
+				Sys_Error( "FinalizeSections: error protecting memory page\n" );
 		}
 	}
 }
@@ -421,7 +421,7 @@ void *MemoryLoadLibrary( const char *name )
 	headers = (byte *)VirtualAlloc( code, old_header->OptionalHeader.SizeOfHeaders, MEM_COMMIT, PAGE_READWRITE );
 	
 	// copy PE header to code
-	Q_memcpy( headers, dos_header, dos_header->e_lfanew + old_header->OptionalHeader.SizeOfHeaders );
+	memcpy( headers, dos_header, dos_header->e_lfanew + old_header->OptionalHeader.SizeOfHeaders );
 	result->headers = (PIMAGE_NT_HEADERS)&((const byte *)(headers))[dos_header->e_lfanew];
 
 	// update position

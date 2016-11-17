@@ -26,7 +26,7 @@ CL_ResetEvent
 */
 void CL_ResetEvent( event_info_t *ei )
 {
-	Q_memset( ei, 0, sizeof( *ei ));
+	memset( ei, 0, sizeof( *ei ));
 }
 
 /*
@@ -111,7 +111,7 @@ void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook func )
 	// clear existing or allocate new one
 	if( !clgame.events[lastnum] )
 		clgame.events[lastnum] = Mem_Alloc( cls.mempool, sizeof( cl_user_event_t ));
-	else Q_memset( clgame.events[lastnum], 0, sizeof( cl_user_event_t ));
+	else memset( clgame.events[lastnum], 0, sizeof( cl_user_event_t ));
 
 	ev = clgame.events[lastnum];
 
@@ -299,7 +299,7 @@ void CL_ParseReliableEvent( sizebuf_t *msg )
 	float		delay = 0.0f;
 	cl_entity_t	*pEnt;
 
-	Q_memset( &nullargs, 0, sizeof( nullargs ));
+	memset( &nullargs, 0, sizeof( nullargs ));
 
 	event_index = MSG_ReadUBitLong( msg, MAX_EVENT_BITS );
 
@@ -340,7 +340,7 @@ void CL_ParseEvent( sizebuf_t *msg )
 	cl_entity_t	*pEnt;
 	float		delay;
 
-	Q_memset( &nullargs, 0, sizeof( nullargs ));
+	memset( &nullargs, 0, sizeof( nullargs ));
 
 	num_events = MSG_ReadUBitLong( msg, 5 );
 
@@ -348,7 +348,7 @@ void CL_ParseEvent( sizebuf_t *msg )
 	for( i = 0 ; i < num_events; i++ )
 	{
 		event_index = MSG_ReadUBitLong( msg, MAX_EVENT_BITS );
-		Q_memset( &args, 0, sizeof( args ));
+		memset( &args, 0, sizeof( args ));
 		has_update = false;
 
 		if( MSG_ReadOneBit( msg ))

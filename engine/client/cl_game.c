@@ -409,30 +409,6 @@ static void SPR_AdjustSize( float *x, float *y, float *w, float *h )
 
 /*
 ====================
-TextAdjustSize
-
-draw hudsprite routine
-====================
-*/
-void TextAdjustSize( int *x, int *y, int *w, int *h )
-{
-	float	xscale, yscale;
-
-	if( !clgame.ds.adjust_size ) return;
-	if( !x && !y && !w && !h ) return;
-
-	// scale for screen sizes
-	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
-
-	if( x ) *x *= xscale;
-	if( y ) *y *= yscale;
-	if( w ) *w *= xscale;
-	if( h ) *h *= yscale;
-}
-
-/*
-====================
 PictAdjustSize
 
 draw hudsprite routine
@@ -649,7 +625,7 @@ void CL_DrawScreenFade( void )
 	// all done?
 	if(( cl.time > sf->fadeReset ) && ( cl.time > sf->fadeEnd ))
 	{
-		Q_memset( &clgame.fade, 0, sizeof( clgame.fade ));
+		memset( &clgame.fade, 0, sizeof( clgame.fade ));
 		return;
 	}
 
@@ -1495,7 +1471,7 @@ static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 		clgame.scrInfo.iSize = pscrinfo->iSize;
 
 	// copy screeninfo out
-	Q_memcpy( pscrinfo, &clgame.scrInfo, clgame.scrInfo.iSize );
+	memcpy( pscrinfo, &clgame.scrInfo, clgame.scrInfo.iSize );
 
 	return 1;
 }
@@ -1604,7 +1580,7 @@ static void pfnGetPlayerInfo( int ent_num, hud_player_info_t *pinfo )
 
 	if( ent_num >= cl.maxclients || ent_num < 0 || !cl.players[ent_num].name[0] )
 	{
-		Q_memset( pinfo, 0, sizeof( *pinfo ));
+		memset( pinfo, 0, sizeof( *pinfo ));
 		return;
 	}
 
@@ -1959,7 +1935,7 @@ void pfnCalcShake( void )
 
 	if(( cl.time > clgame.shake.time ) || clgame.shake.amplitude <= 0 || clgame.shake.frequency <= 0 )
 	{
-		Q_memset( &clgame.shake, 0, sizeof( clgame.shake ));
+		memset( &clgame.shake, 0, sizeof( clgame.shake ));
 		return;
 	}
 
@@ -3416,7 +3392,7 @@ void NetAPI_SendRequest( int context, int request, int flags, double timeout, ne
 	ASSERT( nr != NULL );
 
 	// clear slot
-	Q_memset( nr, 0, sizeof( *nr ));
+	memset( nr, 0, sizeof( *nr ));
 
 	// create a new request
 	nr->timesend = host.realtime;
@@ -3473,7 +3449,7 @@ void NetAPI_CancelRequest( int context )
 				nr->pfnFunc( &nr->resp );
                               }
 
-			Q_memset( &clgame.net_requests[i], 0, sizeof( net_request_t ));
+			memset( &clgame.net_requests[i], 0, sizeof( net_request_t ));
 
 			if( clgame.net_requests[i].resp.type == NETAPI_REQUEST_SERVERLIST && &clgame.net_requests[i] == clgame.master_request )
 			{
@@ -3507,7 +3483,7 @@ void NetAPI_CancelAllRequests( void )
 		nr->pfnFunc( &nr->resp );
 	}
 
-	Q_memset( clgame.net_requests, 0, sizeof( clgame.net_requests ));
+	memset( clgame.net_requests, 0, sizeof( clgame.net_requests ));
 	clgame.request_type = NET_REQUEST_CANCEL;
 	clgame.master_request = NULL;
 }
@@ -3827,10 +3803,10 @@ static cl_enginefunc_t gEngfuncs =
 	CL_FillRGBA,
 	pfnGetScreenInfo,
 	pfnSetCrosshair,
-	pfnCvar_RegisterVariable,
+	pfnCvar_RegisterClientVariable,
 	Cvar_VariableValue,
 	Cvar_VariableString,
-	pfnAddClientCommand,
+	Cmd_AddClientCommand,
 	pfnHookUserMsg,
 	pfnServerCmd,
 	pfnClientCmd,
@@ -3971,9 +3947,9 @@ void CL_UnloadProgs( void )
 	Com_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
-	Q_memset( &clgame, 0, sizeof( clgame ));
+	memset( &clgame, 0, sizeof( clgame ));
 
-	Cvar_Unlink();
+	Cvar_Unlink( CVAR_CLIENTDLL );
 	Cmd_Unlink( CMD_CLIENTDLL );
 }
 

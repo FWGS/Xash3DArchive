@@ -104,7 +104,7 @@ ClearStudioCache
 */
 void Mod_ClearStudioCache( void )
 {
-	Q_memset( cache_studio, 0, sizeof( cache_studio ));
+	memset( cache_studio, 0, sizeof( cache_studio ));
 	cache_current_hull = cache_current_plane = 0;
 
 	cache_current = 0;
@@ -131,16 +131,16 @@ void Mod_AddToStudioCache( float frame, int sequence, vec3_t angles, vec3_t orig
 	VectorCopy( origin, pCache->origin );
 	VectorCopy( size, pCache->size );
 
-	Q_memcpy( pCache->controler, pcontroller, 4 );
-	Q_memcpy( pCache->blending, pblending, 2 );
+	memcpy( pCache->controler, pcontroller, 4 );
+	memcpy( pCache->blending, pblending, 2 );
 
 	pCache->model = model;
 	pCache->current_hull = cache_current_hull;
 	pCache->current_plane = cache_current_plane;
 
-	Q_memcpy( &cache_hull[cache_current_hull], hull, numhitboxes * sizeof( hull_t ));
-	Q_memcpy( &cache_planes[cache_current_plane], studio_planes, numhitboxes * sizeof( mplane_t ) * 6 );
-	Q_memcpy( &cache_hull_hitgroup[cache_current_hull], studio_hull_hitgroup, numhitboxes * sizeof( uint ));
+	memcpy( &cache_hull[cache_current_hull], hull, numhitboxes * sizeof( hull_t ));
+	memcpy( &cache_planes[cache_current_plane], studio_planes, numhitboxes * sizeof( mplane_t ) * 6 );
+	memcpy( &cache_hull_hitgroup[cache_current_hull], studio_hull_hitgroup, numhitboxes * sizeof( uint ));
 
 	cache_current_hull += numhitboxes;
 	cache_current_plane += numhitboxes * 6;
@@ -163,7 +163,7 @@ mstudiocache_t *Mod_CheckStudioCache( model_t *model, float frame, int sequence,
 
 		if( pCache->model == model && pCache->frame == frame && pCache->sequence == sequence &&
 		VectorCompare( angles, pCache->angles ) && VectorCompare( origin, pCache->origin ) && VectorCompare( size, pCache->size ) &&
-		!Q_memcmp( pCache->controler, pcontroller, 4 ) && !Q_memcmp( pCache->blending, pblending, 2 ))
+		!memcmp( pCache->controler, pcontroller, 4 ) && !memcmp( pCache->blending, pblending, 2 ))
 		{
 			return pCache;
 		}
@@ -218,9 +218,9 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 
 		if( bonecache != NULL )
 		{
-			Q_memcpy( studio_planes, &cache_planes[bonecache->current_plane], bonecache->numhitboxes * sizeof( mplane_t ) * 6 );
-			Q_memcpy( studio_hull_hitgroup, &cache_hull_hitgroup[bonecache->current_hull], bonecache->numhitboxes * sizeof( uint ));
-			Q_memcpy( studio_hull, &cache_hull[bonecache->current_hull], bonecache->numhitboxes * sizeof( hull_t ));
+			memcpy( studio_planes, &cache_planes[bonecache->current_plane], bonecache->numhitboxes * sizeof( mplane_t ) * 6 );
+			memcpy( studio_hull_hitgroup, &cache_hull_hitgroup[bonecache->current_hull], bonecache->numhitboxes * sizeof( uint ));
+			memcpy( studio_hull, &cache_hull[bonecache->current_hull], bonecache->numhitboxes * sizeof( hull_t ));
 
 			*numhitboxes = bonecache->numhitboxes;
 			return studio_hull;
@@ -623,7 +623,7 @@ static mstudioanim_t *Mod_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t 
 		MsgDev( D_INFO, "loading: %s\n", filepath );
 
 		paSequences[pseqdesc->seqgroup].data = Mem_Alloc( com_studiocache, filesize );
-		Q_memcpy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
+		memcpy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
 		Mem_Free( buf );
 	}
 	return (mstudioanim_t *)((byte *)paSequences[pseqdesc->seqgroup].data + pseqdesc->animindex);

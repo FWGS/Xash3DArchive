@@ -253,7 +253,7 @@ void Host_Exec_f( void )
 
 	// adds \n\0 at end of the file
 	txt = Z_Malloc( len + 2 );
-	Q_memcpy( txt, f, len );
+	memcpy( txt, f, len );
 	Q_strncat( txt, "\n", len + 2 );
 	Mem_Free( f );
 
@@ -349,7 +349,7 @@ void Host_InitDecals( void )
 	search_t	*t;
 	int	i, num_decals = 0;
 
-	Q_memset( host.draw_decals, 0, sizeof( host.draw_decals ));
+	memset( host.draw_decals, 0, sizeof( host.draw_decals ));
 
 	// lookup all decals in decals.wad
 	t = FS_Search( "decals.wad/*.*", true, false );
@@ -807,7 +807,7 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	GlobalMemoryStatus( &lpBuffer );
 
 	if( !GetCurrentDirectory( sizeof( host.rootdir ), host.rootdir ))
-		Sys_Error( "couldn't determine current directory" );
+		Sys_Error( "couldn't determine current directory\n" );
 
 	if( host.rootdir[Q_strlen( host.rootdir ) - 1] == '/' )
 		host.rootdir[Q_strlen( host.rootdir ) - 1] = 0;
@@ -818,7 +818,7 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	host.state = HOST_INIT; // initialzation started
 	host.developer = host.old_developer = 0;
 
-	CRT_Init(); // init some CRT functions
+	Memory_Init(); // init memory subsystem
 
 	// some commands may turn engine into infinity loop,
 	// e.g. xash.exe +game xash -game xash
@@ -1043,7 +1043,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	Cmd_RemoveCommand( "setgl" );
 
 	// we need to execute it again here
-	Cmd_ExecuteString( "exec config.cfg\n", src_command );
+	Cmd_ExecuteString( "exec config.cfg\n" );
 	oldtime = Sys_DoubleTime();
 	SCR_CheckStartupVids();	// must be last
 

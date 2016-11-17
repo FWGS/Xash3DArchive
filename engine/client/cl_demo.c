@@ -340,7 +340,7 @@ void CL_WriteDemoHeader( const char *name )
 	cls.demorecording = true;
 	cls.demowaiting = true;	// don't start saving messages until a non-delta compressed message is received
 
-	Q_memset( &demo.header, 0, sizeof( demo.header ));
+	memset( &demo.header, 0, sizeof( demo.header ));
 
 	demo.header.id = IDEMOHEADER;
 	demo.header.dem_protocol = DEMO_PROTOCOL;
@@ -444,7 +444,7 @@ void CL_StopRecord( void )
 	cls.demofile = NULL;
 	cls.demorecording = false;
 	cls.demoname[0] = '\0';
-	menu.globals->demoname[0] = '\0';
+	gameui.globals->demoname[0] = '\0';
 
 	Msg( "Completed demo\n" );
 	MsgDev( D_INFO, "Recording time: %02d:%02d", (int)(cls.demotime / 60.0f ), (int)fmod( cls.demotime, 60.0f ));
@@ -525,7 +525,7 @@ void CL_ReadDemoUserCmd( qboolean discard )
 		sizebuf_t		buf;
 		demoangle_t	*a;
 
-		Q_memset( &nullcmd, 0, sizeof( nullcmd ));
+		memset( &nullcmd, 0, sizeof( nullcmd ));
 		MSG_Init( &buf, "UserCmd", data, sizeof( data ));
 
 		pcmd = &cl.commands[cmdnumber & CL_UPDATE_MASK];
@@ -805,8 +805,8 @@ void CL_DemoFindInterpolatedViewAngles( float t, float *frac, demoangle_t **prev
 	float	at;
 
 	imod = demo.angle_position - 1;
-	i0 = (imod + 1) & HISTORY_MASK;
-	i1 = (imod + 0) & HISTORY_MASK;
+	i0 = (imod + 1) & ANGLE_MASK;
+	i1 = (imod + 0) & ANGLE_MASK;
 
 	if( demo.cmds[i0].starttime >= t )
 	{
@@ -896,7 +896,7 @@ void CL_StopPlayback( void )
 	demo.entry = NULL;
 
 	cls.demoname[0] = '\0';	// clear demoname too
-	menu.globals->demoname[0] = '\0';
+	gameui.globals->demoname[0] = '\0';
 
 	if( cls.changedemo )
 	{
@@ -1121,7 +1121,7 @@ void CL_Record_f( void )
 	// write demoshot for preview
 	Cbuf_AddText( va( "demoshot \"%s\"\n", demoname ));
 	Q_strncpy( cls.demoname, demoname, sizeof( cls.demoname ));
-	Q_strncpy( menu.globals->demoname, demoname, sizeof( menu.globals->demoname ));
+	Q_strncpy( gameui.globals->demoname, demoname, sizeof( gameui.globals->demoname ));
 	
 	CL_WriteDemoHeader( demopath );
 }
@@ -1168,7 +1168,7 @@ void CL_PlayDemo_f( void )
 
 	cls.demofile = FS_Open( filename, "rb", true );
 	Q_strncpy( cls.demoname, demoname, sizeof( cls.demoname ));
-	Q_strncpy( menu.globals->demoname, demoname, sizeof( menu.globals->demoname ));
+	Q_strncpy( gameui.globals->demoname, demoname, sizeof( gameui.globals->demoname ));
 
 	// read in the m_DemoHeader
 	FS_Read( cls.demofile, &demo.header, sizeof( demoheader_t ));
@@ -1249,7 +1249,7 @@ void CL_PlayDemo_f( void )
 
 	Netchan_Setup( NS_CLIENT, &cls.netchan, net_from, Cvar_VariableValue( "net_qport" ));
 
-	Q_memset( demo.cmds, 0, sizeof( demo.cmds ));
+	memset( demo.cmds, 0, sizeof( demo.cmds ));
 	demo.angle_position = 1;
 	demo.framecount = 0;
 	cls.lastoutgoingcommand = -1;

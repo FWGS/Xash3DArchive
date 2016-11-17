@@ -45,7 +45,6 @@ typedef struct sizebuf_s
 	int		nDataBits;
 } sizebuf_t;
 
-#define MSG_WriteUBitLong( bf, data, bits )	MSG_WriteUBitLongExt( bf, data, bits, true );
 #define MSG_StartReading			MSG_StartWriting
 #define MSG_GetNumBytesRead			MSG_GetNumBytesWritten
 #define MSG_GetRealBytesRead			MSG_GetRealBytesWritten
@@ -71,7 +70,7 @@ void MSG_Clear( sizebuf_t *bf );
 
 // Bit-write functions
 void MSG_WriteOneBit( sizebuf_t *bf, int nValue );
-void MSG_WriteUBitLongExt( sizebuf_t *bf, uint curData, int numbits, qboolean bCheckRange );
+void MSG_WriteUBitLong( sizebuf_t *bf, uint curData, int numbits );
 void MSG_WriteSBitLong( sizebuf_t *bf, int data, int numbits );
 void MSG_WriteBitLong( sizebuf_t *bf, uint data, int numbits, qboolean bSigned );
 qboolean MSG_WriteBits( sizebuf_t *bf, const void *pData, int nBits );
@@ -84,6 +83,7 @@ void MSG_WriteByte( sizebuf_t *bf, int val );
 void MSG_WriteShort( sizebuf_t *bf, int val );
 void MSG_WriteWord( sizebuf_t *bf, int val );
 void MSG_WriteLong( sizebuf_t *bf, long val );
+void MSG_WriteDword( sizebuf_t *sb, dword val );
 void MSG_WriteCoord( sizebuf_t *bf, float val );
 void MSG_WriteFloat( sizebuf_t *bf, float val );
 void MSG_WriteVec3Coord( sizebuf_t *bf, const float *fa );

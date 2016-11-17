@@ -150,7 +150,7 @@ int R_AllocateMirrorTexture( void )
 	if( !texture )
 	{
 		// not initialized ?
-		Q_memset( &r_screen, 0, sizeof( r_screen ));
+		memset( &r_screen, 0, sizeof( r_screen ));
 		Q_snprintf( txName, sizeof( txName ), "*screen%i", i );
 
 		r_screen.width = RI.viewport[2];

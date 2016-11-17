@@ -217,8 +217,8 @@ qboolean CL_CopyEntityToPhysEnt( physent_t *pe, cl_entity_t *ent )
 	pe->frame = ent->curstate.frame;
 	pe->sequence = ent->curstate.sequence;
 
-	Q_memcpy( &pe->controller[0], &ent->curstate.controller[0], 4 * sizeof( byte ));
-	Q_memcpy( &pe->blending[0], &ent->curstate.blending[0], 2 * sizeof( byte ));
+	memcpy( &pe->controller[0], &ent->curstate.controller[0], 4 * sizeof( byte ));
+	memcpy( &pe->blending[0], &ent->curstate.blending[0], 2 * sizeof( byte ));
 
 	pe->movetype = ent->curstate.movetype;
 	pe->takedamage = ( pe->player ) ? DAMAGE_AIM : DAMAGE_YES;
@@ -766,8 +766,8 @@ void CL_InitClientMove( void )
 			clgame.player_maxs[i][0], clgame.player_maxs[i][1], clgame.player_maxs[i][2] );
 	}
 
-	Q_memcpy( clgame.pmove->player_mins, clgame.player_mins, sizeof( clgame.player_mins ));
-	Q_memcpy( clgame.pmove->player_maxs, clgame.player_maxs, sizeof( clgame.player_maxs ));
+	memcpy( clgame.pmove->player_mins, clgame.player_mins, sizeof( clgame.player_mins ));
+	memcpy( clgame.pmove->player_maxs, clgame.player_maxs, sizeof( clgame.player_maxs ));
 
 	// common utilities
 	clgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;
@@ -959,7 +959,7 @@ void CL_RunUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qboole
 	local_state_t	temp;
 	usercmd_t		split;
 
-	Q_memset( &temp, 0, sizeof( temp ));
+	memset( &temp, 0, sizeof( temp ));
 
 	while( u->msec > 50 )
 	{
@@ -1045,9 +1045,9 @@ void CL_PostRunCmd( usercmd_t *ucmd, int random_seed )
 {
 	local_state_t	from, to;
 
-	Q_memset( &from, 0, sizeof( local_state_t ));
-	Q_memset( &to, 0, sizeof( local_state_t ));
-	Q_memcpy( from.weapondata, cl.frame.weapondata, sizeof( from.weapondata ));
+	memset( &from, 0, sizeof( local_state_t ));
+	memset( &to, 0, sizeof( local_state_t ));
+	memcpy( from.weapondata, cl.frame.weapondata, sizeof( from.weapondata ));
 	from.playerstate = cl.frame.playerstate[cl.playernum];
 	from.client = cl.frame.client;
 	to = from;
@@ -1133,7 +1133,7 @@ void CL_PredictMovement( void )
 		from = &cl.predict[cl.parsecountmod];
 		from->playerstate = cl.frame.playerstate[cl.playernum];
 		from->client = cl.frame.client;
-		Q_memcpy( from->weapondata, cl.frame.weapondata, sizeof( from->weapondata ));
+		memcpy( from->weapondata, cl.frame.weapondata, sizeof( from->weapondata ));
 
 		time = cl.frame.time;
 
@@ -1172,7 +1172,7 @@ void CL_PredictMovement( void )
 	outgoing_command = cls.netchan.outgoing_sequence;
 
 	from = &cl.predict[cl.parsecountmod];
-	Q_memcpy( from->weapondata, cl.frame.weapondata, sizeof( from->weapondata ));
+	memcpy( from->weapondata, cl.frame.weapondata, sizeof( from->weapondata ));
 	from->playerstate = cl.frame.playerstate[cl.playernum];
 	from->client = cl.frame.client;
 

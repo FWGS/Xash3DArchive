@@ -180,7 +180,7 @@ int matchpattern( const char *in, const char *pattern, qboolean caseinsensitive 
 
 void stringlistinit( stringlist_t *list )
 {
-	Q_memset( list, 0, sizeof( *list ));
+	memset( list, 0, sizeof( *list ));
 }
 
 void stringlistfreecontents( stringlist_t *list )
@@ -209,13 +209,13 @@ void stringlistappend( stringlist_t *list, char *text )
 		oldstrings = list->strings;
 		list->maxstrings += 4096;
 		list->strings = Mem_Alloc( fs_mempool, list->maxstrings * sizeof( *list->strings ));
-		if( list->numstrings ) Q_memcpy( list->strings, oldstrings, list->numstrings * sizeof( *list->strings ));
+		if( list->numstrings ) memcpy( list->strings, oldstrings, list->numstrings * sizeof( *list->strings ));
 		if( oldstrings ) Mem_Free( oldstrings );
 	}
 
 	textlen = Q_strlen( text ) + 1;
 	list->strings[list->numstrings] = Mem_Alloc( fs_mempool, textlen );
-	Q_memcpy( list->strings[list->numstrings], text, textlen );
+	memcpy( list->strings[list->numstrings], text, textlen );
 	list->numstrings++;
 }
 
@@ -310,7 +310,7 @@ static packfile_t* FS_AddFileToPack( const char* name, pack_t* pack, long offset
 
 	// We have to move the right of the list by one slot to free the one we need
 	pfile = &pack->files[left];
-	Q_memmove( pfile + 1, pfile, (pack->numfiles - left) * sizeof( *pfile ));
+	memmove( pfile + 1, pfile, (pack->numfiles - left) * sizeof( *pfile ));
 	pack->numfiles++;
 
 	Q_strncpy( pfile->name, name, sizeof( pfile->name ));
@@ -804,7 +804,7 @@ void FS_ExtractFilePath( const char* const path, char* dest )
 
 	if( src != path )
 	{
-		Q_memcpy( dest, path, src - path );
+		memcpy( dest, path, src - path );
 		dest[src - path - 1] = 0; // cutoff backslash
 	}
 	else Q_strcpy( dest, "" ); // file without path
@@ -927,7 +927,7 @@ static qboolean FS_ParseVector( char **pfile, float *v, size_t size )
 	if( v == NULL || size == 0 )
 		return false;
 
-	Q_memset( v, 0, sizeof( *v ) * size );
+	memset( v, 0, sizeof( *v ) * size );
 
 	if( size == 1 )
 	{
@@ -1079,7 +1079,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 {
 	gameinfo_t	defGI;
 
-	Q_memset( &defGI, 0, sizeof( defGI ));
+	memset( &defGI, 0, sizeof( defGI ));
 
 	// setup default values
 	defGI.max_edicts = 900;	// default value if not specified
@@ -1262,7 +1262,7 @@ void FS_ConvertGameInfo( const char *gamedir, const char *gameinfo_path, const c
 {
 	gameinfo_t	GameInfo;
 
-	Q_memset( &GameInfo, 0, sizeof( GameInfo ));
+	memset( &GameInfo, 0, sizeof( GameInfo ));
 
 	if( FS_ParseLiblistGam( liblist_path, gamedir, &GameInfo ))
 	{
@@ -1618,7 +1618,7 @@ void FS_Shutdown( void )
 	for( i = 0; i < SI.numgames; i++ )
 		if( SI.games[i] ) Mem_Free( SI.games[i] );
 
-	Q_memset( &SI, 0, sizeof( sysinfo_t ));
+	memset( &SI, 0, sizeof( sysinfo_t ));
 
 	FS_ClearSearchPath(); // release all wad files too
 	Mem_FreePool( &fs_mempool );
@@ -1735,7 +1735,7 @@ file_t *FS_OpenPackedFile( pack_t *pack, int pack_ind )
 		return NULL;
 
 	file = (file_t *)Mem_Alloc( fs_mempool, sizeof( *file ));
-	Q_memset( file, 0, sizeof( *file ));
+	memset( file, 0, sizeof( *file ));
 	file->handle = dup_handle;
 	file->real_length = pfile->realsize;
 	file->offset = pfile->offset;
@@ -1888,7 +1888,7 @@ static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedir
 
 		// clear searchpath
 		search = &fs_directpath;
-		Q_memset( search, 0, sizeof( searchpath_t ));
+		memset( search, 0, sizeof( searchpath_t ));
 
 		// root folder has a more priority than netpath
 		Q_strncpy( search->filename, host.rootdir, sizeof( search->filename ));
@@ -2079,7 +2079,7 @@ long FS_Read( file_t *file, void *buffer, size_t buffersize )
 		count = file->buff_len - file->buff_ind;
 
 		done += ((long)buffersize > count ) ? count : (long)buffersize;
-		Q_memcpy( buffer, &file->buff[file->buff_ind], done );
+		memcpy( buffer, &file->buff[file->buff_ind], done );
 		file->buff_ind += done;
 
 		buffersize -= done;
@@ -2122,7 +2122,7 @@ long FS_Read( file_t *file, void *buffer, size_t buffersize )
 
 			// copy the requested data in "buffer" (as much as we can)
 			count = (long)buffersize > file->buff_len ? file->buff_len : (long)buffersize;
-			Q_memcpy( &((byte *)buffer)[done], file->buff, count );
+			memcpy( &((byte *)buffer)[done], file->buff, count );
 			file->buff_ind = count;
 			done += count;
 		}
@@ -2781,7 +2781,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 	separator = max( separator, colon );
 	basepathlength = separator ? (separator + 1 - pattern) : 0;
 	basepath = Mem_Alloc( fs_mempool, basepathlength + 1 );
-	if( basepathlength ) Q_memcpy( basepath, pattern, basepathlength );
+	if( basepathlength ) memcpy( basepath, pattern, basepathlength );
 	basepath[basepathlength] = 0;
 
 	// search through the path, one element at a time
@@ -2949,7 +2949,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 
 			search->filenames[numfiles] = search->filenamesbuffer + numchars;
 			textlen = Q_strlen(resultlist.strings[resultlistindex]) + 1;
-			Q_memcpy( search->filenames[numfiles], resultlist.strings[resultlistindex], textlen );
+			memcpy( search->filenames[numfiles], resultlist.strings[resultlistindex], textlen );
 			numfiles++;
 			numchars += (int)textlen;
 		}

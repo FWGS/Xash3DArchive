@@ -79,7 +79,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			dheader_t		*header;
 			dextrahdr_t	*hdrext;
 
-			Q_memset( buf, 0, sizeof( buf ));
+			memset( buf, 0, sizeof( buf ));
 			FS_Read( f, buf, sizeof( buf ));
 			header = (dheader_t *)buf;
 			ver = header->version;
@@ -713,7 +713,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			int	num_spawnpoints = 0;
 			dheader_t	*header;
 
-			Q_memset( buf, 0, MAX_SYSPATH );
+			memset( buf, 0, MAX_SYSPATH );
 			FS_Read( f, buf, MAX_SYSPATH );
 			ver = *(uint *)buf;
                               

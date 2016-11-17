@@ -158,7 +158,7 @@ void SV_CreateCustomizationList( sv_client_t *cl )
 
 		for( pCust = cl->customization.pNext; pCust != NULL; pCust = pCust->pNext )
 		{
-			if( !Q_memcmp( pCust->resource.rgucMD5_hash, pRes->rgucMD5_hash, 16 ))
+			if( !memcmp( pCust->resource.rgucMD5_hash, pRes->rgucMD5_hash, 16 ))
 			{
 				duplicated = true;
 				break;
@@ -279,13 +279,13 @@ int SV_TransferConsistencyInfo( void )
 					Host_Error( "Mod_GetStudioBounds: couldn't get bounds for %s\n", filepath );
 
 				res->rguc_reserved[0x00] = check->force_state;
-				Q_memcpy( &res->rguc_reserved[0x01], mins, sizeof( mins ));
-				Q_memcpy( &res->rguc_reserved[0x0D], maxs, sizeof( maxs ));
+				memcpy( &res->rguc_reserved[0x01], mins, sizeof( mins ));
+				memcpy( &res->rguc_reserved[0x0D], maxs, sizeof( maxs ));
 				break;
 			case force_model_specifybounds:
 				res->rguc_reserved[0x00] = check->force_state;
-				Q_memcpy( &res->rguc_reserved[0x01], check->mins, sizeof( check->mins ));
-				Q_memcpy( &res->rguc_reserved[0x0D], check->maxs, sizeof( check->maxs ));
+				memcpy( &res->rguc_reserved[0x01], check->mins, sizeof( check->mins ));
+				memcpy( &res->rguc_reserved[0x0D], check->maxs, sizeof( check->maxs ));
 				break;
 			}
 		}
@@ -330,7 +330,7 @@ void SV_SendResources( sizebuf_t *msg )
 	byte	nullrguc[32];
 	int	i;
 
-	Q_memset( nullrguc, 0, sizeof( nullrguc ));
+	memset( nullrguc, 0, sizeof( nullrguc ));
 
 	MSG_WriteByte( msg, svc_customization );
 	MSG_WriteLong( msg, svs.spawncount );
@@ -351,7 +351,7 @@ void SV_SendResources( sizebuf_t *msg )
 			MSG_WriteBits( msg, sv.resources[i].rgucMD5_hash, sizeof( sv.resources[i].rgucMD5_hash ));
 		}
 
-		if( Q_memcmp( nullrguc, sv.resources[i].rguc_reserved, sizeof( nullrguc )))
+		if( memcmp( nullrguc, sv.resources[i].rguc_reserved, sizeof( nullrguc )))
 		{
 			MSG_WriteOneBit( msg, 1 );
 			MSG_WriteBits( msg, sv.resources[i].rguc_reserved, sizeof( sv.resources[i].rguc_reserved ));

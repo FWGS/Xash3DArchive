@@ -325,7 +325,7 @@ void SV_ActivateServer( void )
 	}
 
 	// invoke to refresh all movevars
-	Q_memset( &svgame.oldmovevars, 0, sizeof( movevars_t ));
+	memset( &svgame.oldmovevars, 0, sizeof( movevars_t ));
 	svgame.globals->changelevel = false; // changelevel ends here
 
 	// setup hostflags
@@ -492,7 +492,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	if( sv.state == ss_dead )
 		SV_InitGame(); // the game is just starting
 	else if( !sv_maxclients->modified )
-		Cmd_ExecuteString( "latch\n", src_command );
+		Cmd_ExecuteString( "latch\n" );
 	else MsgDev( D_ERROR, "SV_SpawnServer: while 'maxplayers' was modified.\n" );
 
 	sv_maxclients->modified = false;
@@ -518,7 +518,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 
 	sv.state = ss_dead;
 	Host_SetServerState( sv.state );
-	Q_memset( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure
+	memset( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure
 
 	// restore state
 	sv.paused = paused;
@@ -631,7 +631,7 @@ void SV_InitGame( void )
 	}
 
 	// now apply latched commands
-	Cmd_ExecuteString( "latch\n", src_command );
+	Cmd_ExecuteString( "latch\n" );
 
 	if( Cvar_VariableValue( "coop" ) && Cvar_VariableValue ( "deathmatch" ) && Cvar_VariableValue( "teamplay" ))
 	{

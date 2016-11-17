@@ -32,7 +32,7 @@ Startup VGUI backend
 */
 void VGUI_DrawInit( void )
 {
-	Q_memset( g_textures, 0, sizeof( g_textures ));
+	memset( g_textures, 0, sizeof( g_textures ));
 	g_textureId = g_iBoundTexture = 0;
 
 	vgui_colorstrings = Cvar_Get( "vgui_colorstrings", "0", CVAR_ARCHIVE, "allow colorstrings in VGUI texts" );
@@ -65,7 +65,7 @@ generate unique texture number
 int VGUI_GenerateTexture( void )
 {
 	if( ++g_textureId >= VGUI_MAX_TEXTURES )
-		Sys_Error( "VGUI_GenerateTexture: VGUI_MAX_TEXTURES limit exceeded\n" );
+		Host_Error( "VGUI_GenerateTexture: VGUI_MAX_TEXTURES limit exceeded\n" );
 	return g_textureId;
 }
 
@@ -88,7 +88,7 @@ void VGUI_UploadTexture( int id, const char *buffer, int width, int height )
 	}
 
 	Q_snprintf( texName, sizeof( texName ), "*vgui%i", id );
-	Q_memset( &r_image, 0, sizeof( r_image ));
+	memset( &r_image, 0, sizeof( r_image ));
 
 	r_image.width = width;
 	r_image.height = height;
@@ -120,7 +120,7 @@ void VGUI_CreateTexture( int id, int width, int height )
 	}
 
 	Q_snprintf( texName, sizeof( texName ), "*vgui%i", id );
-	Q_memset( &r_image, 0, sizeof( r_image ));
+	memset( &r_image, 0, sizeof( r_image ));
 
 	r_image.width = width;
 	r_image.height = height;

@@ -143,6 +143,7 @@ extern convar_t	*scr_width;
 extern convar_t	*scr_height;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_download;
+extern convar_t	*cmd_scripting;
 extern convar_t	*cl_allow_levelshots;
 extern convar_t	*mod_allow_materials;
 extern convar_t	*host_limitlocal;
@@ -444,9 +445,9 @@ typedef enum
 	PF_BGRA_32,	// big endian RGBA (MacOS)
 	PF_RGB_24,	// uncompressed dds or another 24-bit image 
 	PF_BGR_24,	// big-endian RGB (MacOS)
-	PF_DXT1,		// nvidia DXT1 format
-	PF_DXT3,		// nvidia DXT3 format
-	PF_DXT5,		// nvidia DXT5 format
+	PF_DXT1,		// s3tc DXT1 format
+	PF_DXT3,		// s3tc DXT3 format
+	PF_DXT5,		// s3tc DXT5 format
 	PF_TOTALCOUNT,	// must be last
 } pixformat_t;
 
@@ -689,15 +690,16 @@ qboolean SV_Active( void );
 
 ==============================================================
 */
-cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags );
+cvar_t *pfnCvar_RegisterClientVariable( const char *szName, const char *szValue, int flags );
+cvar_t *pfnCvar_RegisterGameUIVariable( const char *szName, const char *szValue, int flags );
 char *COM_MemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
 byte* COM_LoadFileForMe( const char *filename, int *pLength );
 cvar_t *pfnCVarGetPointer( const char *szVarName );
 int pfnDrawConsoleString( int x, int y, char *string );
 void pfnDrawSetTextColor( float r, float g, float b );
 void pfnDrawConsoleStringLen( const char *pText, int *length, int *height );
-int pfnAddClientCommand( const char *cmd_name, xcommand_t func );
 void *Cache_Check( byte *mempool, struct cache_user_s *c );
+void COM_TrimSpace( const char *source, char *dest );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 void pfnGetModelBounds( model_t *mod, float *mins, float *maxs );
 void pfnGetGameDir( char *szGetGameDir );

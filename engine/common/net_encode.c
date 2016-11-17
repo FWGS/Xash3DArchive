@@ -747,10 +747,7 @@ void Delta_InitFields( void )
 	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		dt = Delta_FindStruct( token );
-		if( dt == NULL )
-		{
-			Sys_Error( "delta.lst: unknown struct %s\n", token );
-		}
+		if( dt == NULL ) Sys_Error( "delta.lst: unknown struct %s\n", token );
 
 		pfile = COM_ParseFile( pfile, encodeDll );
 
@@ -760,10 +757,7 @@ void Delta_InitFields( void )
 
 		// jump to '{'
 		pfile = COM_ParseFile( pfile, token );
-		if( token[0] != '{' )
-		{
-			Sys_Error( "delta.lst: missing '{' in section %s\n", dt->pName );
-		}			
+		if( token[0] != '{' ) Sys_Error( "delta.lst: missing '{' in section %s\n", dt->pName );
 
 		Delta_ParseTable( &pfile, dt, encodeDll, encodeFunc );
 	}
@@ -826,6 +820,7 @@ void Delta_Init( void )
 	Delta_AddField( "movevars_t", "skyangle", DT_ANGLE, 16, 1.0f, 1.0f ); // 0 - 360
 	Delta_AddField( "movevars_t", "wateralpha", DT_FLOAT|DT_SIGNED, 16, 32.0f, 1.0f );
 	Delta_AddField( "movevars_t", "fog_settings", DT_INTEGER, 32, 1.0f, 1.0f );
+
 	// now done
 	dt->bInitialized = true;
 }
@@ -1739,7 +1734,7 @@ qboolean MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state
 	if( fRemoveType )
 	{
 		// check for a remove
-		Q_memset( to, 0, sizeof( *to ));
+		memset( to, 0, sizeof( *to ));
 
 		if( fRemoveType & 1 )
 		{

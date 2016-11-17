@@ -470,7 +470,7 @@ rgbdata_t *Image_Quantize( rgbdata_t *pic )
 	}
 
 	pic->buffer = Mem_Realloc( host.imagepool, pic->buffer, image.size );
-	Q_memcpy( pic->buffer, image.tempbuffer, image.size );
+	memcpy( pic->buffer, image.tempbuffer, image.size );
 	pic->type = PF_INDEXED_24;
 	pic->size = image.size;
 

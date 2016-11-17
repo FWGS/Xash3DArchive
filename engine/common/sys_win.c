@@ -85,7 +85,7 @@ void Sys_SetClipboardData( const byte *buffer, size_t size )
 		HGLOBAL hResult = GlobalAlloc( GMEM_MOVEABLE, size ); 
 		byte *bufferCopy = (byte *)GlobalLock( hResult ); 
 
-		Q_memcpy( bufferCopy, buffer, size ); 
+		memcpy( bufferCopy, buffer, size ); 
 		GlobalUnlock( hResult ); 
 
 		if( SetClipboardData( CF_DIB, hResult ) == NULL )

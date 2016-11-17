@@ -27,8 +27,7 @@ COM_IsSingleChar
 interpert this character as single
 ==============
 */
-
-qboolean COM_IsSingleChar( char c )
+static int COM_IsSingleChar( char c )
 {
 	if( c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ',' )
 		return true;
@@ -37,6 +36,21 @@ qboolean COM_IsSingleChar( char c )
 		return true;
 
 	return false;
+}
+
+/*
+==============
+COM_IsWhiteSpace
+
+interpret symbol as whitespace
+==============
+*/
+
+static int COM_IsWhiteSpace( char space )
+{
+	if( space == ' ' || space == '\t' || space == '\r' || space == '\n' )
+		return 1;
+	return 0;
 }
 
 /*
@@ -183,6 +197,39 @@ int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBu
 }
 
 /*
+=============
+COM_TrimSpace
+
+trims all whitespace from the front
+and end of a string
+=============
+*/
+void COM_TrimSpace( const char *source, char *dest )
+{
+	int	start, end, length;
+
+	start = 0;
+	end = Q_strlen( source );
+
+	while( source[start] && COM_IsWhiteSpace( source[start] ))
+		start++;
+	end--;
+
+	while( end > 0 && COM_IsWhiteSpace( source[end] ))
+		end--;
+	end++;
+
+	length = end - start;
+
+	if( length > 0 )
+		memcpy( dest, source + start, length );
+	else length = 0;
+
+	// terminate the dest string
+	dest[length] = 0;
+}
+
+/*
 ============
 COM_FixSlashes
 
@@ -232,7 +279,6 @@ char *COM_MemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, i
 		i++;
 	}
 
-
 	// if we actually advanced the pointer, copy it over
 	if( i != *filePos )
 	{
@@ -240,7 +286,7 @@ char *COM_MemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, i
 		int	size = i - *filePos;
 
 		// copy it out
-		Q_memcpy( pBuffer, pMemFile + *filePos, size );
+		memcpy( pBuffer, pMemFile + *filePos, size );
 		
 		// If the buffer isn't full, terminate (this is always true)
 		if( size < bufferSize ) pBuffer[size] = 0;
@@ -285,7 +331,8 @@ byte* COM_LoadFileForMe( const char *filename, int *pLength )
 
 	if( !filename || !*filename )
 	{
-		if( pLength ) *pLength = 0;
+		if( pLength )
+			*pLength = 0;
 		return NULL;
 	}
 
@@ -298,8 +345,11 @@ byte* COM_LoadFileForMe( const char *filename, int *pLength )
 	if( pfile )
 	{
 		file = malloc( iLength + 1 );
-		Q_memcpy( file, pfile, iLength );
-		file[iLength] = '\0';
+		if( file != NULL )
+		{
+			memcpy( file, pfile, iLength );
+			file[iLength] = '\0';
+		}
 		Mem_Free( pfile );
 		pfile = file;
 	}
@@ -315,34 +365,7 @@ COM_LoadFile
 */
 byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
 {
-	string	name;
-	byte	*file, *pfile;
-	int	iLength;
-
-	ASSERT( usehunk == 5 );
-
-	if( !filename || !*filename )
-	{
-		if( pLength ) *pLength = 0;
-		return NULL;
-	}
-
-	Q_strncpy( name, filename, sizeof( name ));
-	COM_FixSlashes( name );
-
-	pfile = FS_LoadFile( name, &iLength, false );
-	if( pLength ) *pLength = iLength;
-
-	if( pfile )
-	{
-		file = malloc( iLength + 1 );
-		Q_memcpy( file, pfile, iLength );
-		file[iLength] = '\0';
-		Mem_Free( pfile );
-		pfile = file;
-	}
-
-	return pfile;
+	return COM_LoadFileForMe( filename, pLength );
 }
 
 /*
@@ -395,11 +418,24 @@ pfnCvar_RegisterVariable
 
 =============
 */
-cvar_t *pfnCvar_RegisterVariable( const char *szName, const char *szValue, int flags )
+cvar_t *pfnCvar_RegisterClientVariable( const char *szName, const char *szValue, int flags )
 {
-	if( flags & FCVAR_GLCONFIG )
+	if( FBitSet( flags, FCVAR_GLCONFIG ))
 		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( "enable or disable %s", szName ));
 	return (cvar_t *)Cvar_Get( szName, szValue, flags|CVAR_CLIENTDLL, "client cvar" );
+}
+
+/*
+=============
+pfnCvar_RegisterVariable
+
+=============
+*/
+cvar_t *pfnCvar_RegisterGameUIVariable( const char *szName, const char *szValue, int flags )
+{
+	if( FBitSet( flags, FCVAR_GLCONFIG ))
+		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( "enable or disable %s", szName ));
+	return (cvar_t *)Cvar_Get( szName, szValue, flags|CVAR_GAMEUIDLL, "GameUI cvar" );
 }
 
 /*
@@ -411,28 +447,7 @@ can return NULL
 */
 cvar_t *pfnCVarGetPointer( const char *szVarName )
 {
-	cvar_t	*cvPtr;
-
-	cvPtr = (cvar_t *)Cvar_FindVar( szVarName );
-
-	return cvPtr;
-}
-
-/*
-=============
-pfnAddClientCommand
-
-=============
-*/
-int pfnAddClientCommand( const char *cmd_name, xcommand_t func )
-{
-	if( !cmd_name || !*cmd_name )
-		return 0;
-
-	// NOTE: if( func == NULL ) cmd will be forwarded to a server
-	Cmd_AddClientCommand( cmd_name, func );
-
-	return 1;
+	return (cvar_t *)Cvar_FindVar( szVarName );
 }
 
 /*
@@ -450,7 +465,7 @@ void Con_Printf( char *szFmt, ... )
 		return;
 
 	va_start( args, szFmt );
-	Q_vsnprintf( buffer, 16384, szFmt, args );
+	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
 	va_end( args );
 
 	Sys_Print( buffer );
@@ -471,7 +486,7 @@ void Con_DPrintf( char *szFmt, ... )
 		return;
 
 	va_start( args, szFmt );
-	Q_vsnprintf( buffer, 16384, szFmt, args );
+	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
 	va_end( args );
 
 	Sys_Print( buffer );

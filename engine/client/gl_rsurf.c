@@ -213,7 +213,7 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 	}
 
 	// copy first vertex to last
-	Q_memcpy( poly->verts[i+1], poly->verts[1], sizeof( poly->verts[0] ));
+	memcpy( poly->verts[i+1], poly->verts[1], sizeof( poly->verts[0] ));
 }
 
 void GL_SetupFogColorForSurfaces( void )
@@ -560,7 +560,7 @@ void R_SetCacheState( msurface_t *surf )
 */
 static void LM_InitBlock( void )
 {
-	Q_memset( gl_lms.allocated, 0, sizeof( gl_lms.allocated ));
+	memset( gl_lms.allocated, 0, sizeof( gl_lms.allocated ));
 }
 
 static int LM_AllocBlock( int w, int h, int *x, int *y )
@@ -627,7 +627,7 @@ static void LM_UploadBlock( qboolean dynamic )
 		i = gl_lms.current_lightmap_texture;
 
 		// upload static lightmaps only during loading
-		Q_memset( &r_lightmap, 0, sizeof( r_lightmap ));
+		memset( &r_lightmap, 0, sizeof( r_lightmap ));
 		Q_snprintf( lmName, sizeof( lmName ), "*lightmap%i", i );
 
 		r_lightmap.width = BLOCK_SIZE;
@@ -664,7 +664,7 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 
 	lm = surf->samples;
 
-	Q_memset( r_blocklights, 0, sizeof( uint ) * size * 3 );
+	memset( r_blocklights, 0, sizeof( uint ) * size * 3 );
 
 	// add all the lightmaps
 	for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255 && lm; map++ )
@@ -1421,7 +1421,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( R_CullBox( mins, maxs, RI.clipFlags ))
 		return;
 
-	Q_memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
+	memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
 	gl_lms.dynamic_surfaces = NULL;
 
 	if( rotated ) R_RotateForEntity( e );
@@ -1899,9 +1899,9 @@ void R_DrawWorld( void )
 		return;
 
 	VectorCopy( RI.cullorigin, tr.modelorg );
-	Q_memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
-	Q_memset( fullbright_polys, 0, sizeof( fullbright_polys ));
-	Q_memset( detail_surfaces, 0, sizeof( detail_surfaces ));
+	memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
+	memset( fullbright_polys, 0, sizeof( fullbright_polys ));
+	memset( detail_surfaces, 0, sizeof( detail_surfaces ));
 
 	RI.currentWaveHeight = RI.waveHeight;
 	GL_SetRenderMode( kRenderNormal );
@@ -1987,7 +1987,7 @@ void R_MarkLeaves( void )
 	{
 		int	longs = ( cl.worldmodel->numleafs + 31 ) >> 5;
 
-		Q_memcpy( visbytes, vis, longs << 2 );
+		memcpy( visbytes, vis, longs << 2 );
 		vis = Mod_LeafPVS( r_viewleaf2, cl.worldmodel );
 
 		for( i = 0; i < longs; i++ )
@@ -2074,7 +2074,7 @@ void GL_RebuildLightmaps( void )
 		GL_FreeTexture( tr.lightmapTextures[i] );
 	}
 
-	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
+	memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
 	gl_lms.current_lightmap_texture = 0;
 
 	// setup all the lightstyles
@@ -2131,10 +2131,10 @@ void GL_BuildLightmaps( void )
 		GL_FreeTexture( tr.mirrorTextures[i] );
 	}
 
-	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
-	Q_memset( tr.mirror_entities, 0, sizeof( tr.mirror_entities ));
-	Q_memset( tr.mirrorTextures, 0, sizeof( tr.mirrorTextures ));
-	Q_memset( visbytes, 0x00, sizeof( visbytes ));
+	memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
+	memset( tr.mirror_entities, 0, sizeof( tr.mirror_entities ));
+	memset( tr.mirrorTextures, 0, sizeof( tr.mirrorTextures ));
+	memset( visbytes, 0x00, sizeof( visbytes ));
 	
 	skychain = NULL;
 

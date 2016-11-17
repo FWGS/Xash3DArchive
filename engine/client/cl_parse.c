@@ -383,7 +383,7 @@ void CL_ParseMovevars( sizebuf_t *msg )
 	if( Q_strcmp( clgame.oldmovevars.skyName, clgame.movevars.skyName ) && cl.video_prepped )
 		R_SetupSky( clgame.movevars.skyName );
 
-	Q_memcpy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
+	memcpy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
 	// keep features an actual!
 	clgame.oldmovevars.features = clgame.movevars.features = host.features;
 }
@@ -440,7 +440,7 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 	cl_entity_t	*ent;
 	int		i;
 
-	Q_memset( &state, 0, sizeof( state ));
+	memset( &state, 0, sizeof( state ));
 
 	state.modelindex = MSG_ReadShort( msg );
 	state.sequence = MSG_ReadByte( msg );
@@ -636,8 +636,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	cl.refdef.viewentity = cl.playernum + 1; // always keep viewent an actual
 
-	menu.globals->maxClients = cl.maxclients;
-	Q_strncpy( menu.globals->maptitle, clgame.maptitle, sizeof( menu.globals->maptitle ));
+	gameui.globals->maxClients = cl.maxclients;
+	Q_strncpy( gameui.globals->maptitle, clgame.maptitle, sizeof( gameui.globals->maptitle ));
 
 	if( !cls.changelevel && !cls.changedemo )
 		CL_InitEdicts (); // re-arrange edicts
@@ -684,8 +684,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.video_prepped = false;
 	cl.audio_prepped = false;
 
-	Q_memset( &clgame.movevars, 0, sizeof( clgame.movevars ));
-	Q_memset( &clgame.oldmovevars, 0, sizeof( clgame.oldmovevars ));
+	memset( &clgame.movevars, 0, sizeof( clgame.movevars ));
+	memset( &clgame.oldmovevars, 0, sizeof( clgame.oldmovevars ));
 }
 
 /*
@@ -842,7 +842,7 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	if( newnum >= clgame.maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
 
 	ent = CL_EDICT_NUM( newnum );
-	Q_memset( &ent->prevstate, 0, sizeof( ent->prevstate ));
+	memset( &ent->prevstate, 0, sizeof( ent->prevstate ));
 	ent->index = newnum;
 
 	if( cls.state == ca_active )
@@ -965,9 +965,9 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 		player->topcolor = Q_atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
 		player->bottomcolor = Q_atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
 
-		if( slot == cl.playernum ) Q_memcpy( &menu.playerinfo, player, sizeof( player_info_t ));
+		if( slot == cl.playernum ) memcpy( &gameui.playerinfo, player, sizeof( player_info_t ));
 	}
-	else Q_memset( player, 0, sizeof( *player ));
+	else memset( player, 0, sizeof( *player ));
 }
 
 /*
@@ -1139,7 +1139,7 @@ void CL_ParseResourceList( sizebuf_t *msg )
 {
 	int	i = 0;
 
-	Q_memset( &reslist, 0, sizeof( resourcelist_t ));
+	memset( &reslist, 0, sizeof( resourcelist_t ));
 
 	reslist.rescount = MSG_ReadWord( msg ) - 1;
 

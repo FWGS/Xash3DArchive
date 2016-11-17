@@ -609,7 +609,7 @@ void SV_WriteEntityPatch( const char *filename )
 	f = FS_Open( va( "maps/%s.bsp", filename ), "rb", false );
 	if( !f ) return;
 
-	Q_memset( buf, 0, MAX_SYSPATH );
+	memset( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
 	ver = *(uint *)buf;
                               
@@ -676,7 +676,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 
 	*flags |= MAP_IS_EXIST;
 
-	Q_memset( buf, 0, MAX_SYSPATH );
+	memset( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
 	ver = *(uint *)buf;
                               
@@ -820,7 +820,7 @@ void SV_InitEdict( edict_t *pEdict )
 	ASSERT( pEdict );
 
 	SV_FreePrivateData( pEdict );
-	Q_memset( &pEdict->v, 0, sizeof( entvars_t ));
+	memset( &pEdict->v, 0, sizeof( entvars_t ));
 
 	// g-cont. trying to setup controllers here...
 	pEdict->v.controller[0] = 0x7F;
@@ -961,7 +961,7 @@ void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, eve
 {
 	event_args_t nullargs;
 
-	Q_memset( &nullargs, 0, sizeof( nullargs ));
+	memset( &nullargs, 0, sizeof( nullargs ));
 
 	MSG_WriteByte( msg, svc_event_reliable );
 
@@ -1056,7 +1056,7 @@ void SV_BaselineForEntity( edict_t *pEdict )
 	}
 
 	// take current state as baseline
-	Q_memset( &baseline, 0, sizeof( baseline )); 
+	memset( &baseline, 0, sizeof( baseline )); 
 	baseline.number = NUM_FOR_EDICT( pEdict );
 
 	svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
@@ -1473,7 +1473,7 @@ int SV_CheckClientPVS( int check, qboolean bMergePVS )
 	VectorAdd( ent->v.origin, ent->v.view_ofs, view );
 	leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
 	pvs = Mod_LeafPVS( leaf, sv.worldmodel );
-	Q_memcpy( clientpvs, pvs, pvsbytes );
+	memcpy( clientpvs, pvs, pvsbytes );
 
 	// transition in progress
 	if( !cl ) return i;
@@ -3487,7 +3487,7 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 	svs.currentPlayerNum = (svs.currentPlayer - svs.clients);
 	svs.currentPlayer->timebase = (sv.time + host.frametime) - (msec / 1000.0f);
 
-	Q_memset( &cmd, 0, sizeof( cmd ));
+	memset( &cmd, 0, sizeof( cmd ));
 	if( v_angle ) VectorCopy( v_angle, cmd.viewangles );
 	cmd.forwardmove = fmove;
 	cmd.sidemove = smove;
@@ -3679,7 +3679,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		return;		
 	}
 
-	Q_memset( &args, 0, sizeof( args ));
+	memset( &args, 0, sizeof( args ));
 
 	if( origin && !VectorIsNull( origin ))
 	{
@@ -3893,7 +3893,7 @@ byte *pfnSetFatPVS( const float *org )
 		else VectorCopy( org, viewPos );
 
 		// build a new PVS frame
-		Q_memset( bitvector, 0, fatbytes );
+		memset( bitvector, 0, fatbytes );
 
 		SV_AddToFatPVS( viewPos, DVIS_PVS, sv.worldmodel->nodes );
 		VectorCopy( viewPos, viewPoint[svs.currentPlayerNum] );
@@ -3945,7 +3945,7 @@ byte *pfnSetFatPAS( const float *org )
 		else VectorCopy( org, viewPos );
 
 		// build a new PHS frame
-		Q_memset( bitvector, 0, fatbytes );
+		memset( bitvector, 0, fatbytes );
 
 		SV_AddToFatPVS( viewPos, DVIS_PHS, sv.worldmodel->nodes );
 	}
@@ -4517,7 +4517,7 @@ static enginefuncs_t gEngfuncs =
 	Cvar_DirectSet,
 	pfnForceUnmodified,
 	pfnGetPlayerStats,
-	Cmd_AddGameCommand,
+	Cmd_AddServerCommand,
 	pfnVoice_GetClientListening,
 	pfnVoice_SetClientListening,
 	pfnGetPlayerAuthId,
@@ -4783,14 +4783,14 @@ void SV_UnloadProgs( void )
 
 	// must unlink all game cvars,
 	// before pointers on them will be lost...
-	Cmd_ExecuteString( "@unlink\n", src_command );
-	Cmd_Unlink( CMD_EXTDLL );
+	Cvar_Unlink( CVAR_SERVERDLL );
+	Cmd_Unlink( CMD_SERVERDLL );
 
 	Mod_ResetStudioAPI ();
 
 	Com_FreeLibrary( svgame.hInstance );
 	Mem_FreePool( &svgame.mempool );
-	Q_memset( &svgame, 0, sizeof( svgame ));
+	memset( &svgame, 0, sizeof( svgame ));
 }
 
 qboolean SV_LoadProgs( const char *name )
@@ -4815,13 +4815,13 @@ qboolean SV_LoadProgs( const char *name )
 	if( !svgame.hInstance ) return false;
 
 	// make sure what new dll functions is cleared
-	Q_memset( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
+	memset( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
 
 	// make sure what physic functions is cleared
-	Q_memset( &svgame.physFuncs, 0, sizeof( svgame.physFuncs ));
+	memset( &svgame.physFuncs, 0, sizeof( svgame.physFuncs ));
 
 	// make local copy of engfuncs to prevent overwrite it with bots.dll
-	Q_memcpy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
+	memcpy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
 
 	GetEntityAPI = (APIFUNCTION)Com_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
 	GetEntityAPI2 = (APIFUNCTION2)Com_GetProcAddress( svgame.hInstance, "GetEntityAPI2" );
@@ -4856,7 +4856,7 @@ qboolean SV_LoadProgs( const char *name )
 		{
 			if( version != NEW_DLL_FUNCTIONS_VERSION )
 				MsgDev( D_WARN, "SV_LoadProgs: new interface version %i should be %i\n", NEW_DLL_FUNCTIONS_VERSION, version );
-			Q_memset( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
+			memset( &svgame.dllFuncs2, 0, sizeof( svgame.dllFuncs2 ));
 		}
 	}
 

@@ -144,7 +144,7 @@ void S_FreeChannel( channel_t *ch )
 	ch->isSentence = false;
 
 	// clear mixer
-	Q_memset( &ch->pMixer, 0, sizeof( ch->pMixer ));
+	memset( &ch->pMixer, 0, sizeof( ch->pMixer ));
 
 	SND_CloseMouth( ch );
 }
@@ -891,7 +891,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	}
 
 	// spatialize
-	Q_memset( target_chan, 0, sizeof( *target_chan ));
+	memset( target_chan, 0, sizeof( *target_chan ));
 
 	VectorCopy( pos, target_chan->origin );
 	target_chan->staticsound = ( ent == 0 ) ? true : false;
@@ -1016,7 +1016,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 	}
 
 	// spatialize
-	Q_memset( target_chan, 0, sizeof( *target_chan ));
+	memset( target_chan, 0, sizeof( *target_chan ));
 
 	VectorCopy( pos, target_chan->origin );
 	target_chan->staticsound = ( ent == 0 ) ? true : false;
@@ -1747,7 +1747,7 @@ void S_ClearBuffer( void )
 	S_ClearRawChannels();
 
 	SNDDMA_BeginPainting ();
-	if( dma.buffer ) Q_memset( dma.buffer, 0, dma.samples * 2 );
+	if( dma.buffer ) memset( dma.buffer, 0, dma.samples * 2 );
 	SNDDMA_Submit ();
 
 	MIX_ClearAllPaintBuffers( PAINTBUFFER_SIZE, true );
@@ -1790,7 +1790,7 @@ void S_StopAllSounds( void )
 	DSP_ClearState();
 
 	// clear all the channels
-	Q_memset( channels, 0, sizeof( channels ));
+	memset( channels, 0, sizeof( channels ));
 
 	// restart the ambient sounds
 	S_InitAmbientChannels ();
@@ -1798,7 +1798,7 @@ void S_StopAllSounds( void )
 	S_ClearBuffer ();
 
 	// clear any remaining soundfade
-	Q_memset( &soundfade, 0, sizeof( soundfade ));
+	memset( &soundfade, 0, sizeof( soundfade ));
 }
 
 //=============================================================================
@@ -2168,7 +2168,7 @@ qboolean S_Init( void )
 	paintedtime = 0;
 
 	// clear ambient sounds
-	Q_memset( ambient_sfx, 0, sizeof( ambient_sfx ));
+	memset( ambient_sfx, 0, sizeof( ambient_sfx ));
 
 	MIX_InitAllPaintbuffers ();
 

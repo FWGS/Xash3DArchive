@@ -90,7 +90,7 @@ static _inline void Huff_PrepareTree( tree_t tree )
 {
 	void	**node;
 	
-	Q_memset( tree, 0, sizeof( tree_t ));
+	memset( tree, 0, sizeof( tree_t ));
 	
 	// create first node
 	node = &tree[263];
@@ -532,7 +532,7 @@ void Huff_CompressPacket( sizebuf_t *msg, int offset )
 	
 	outLen = (huffBitPos >> 3) + 1;
 	msg->iCurBit = (offset + outLen) << 3;
-	Q_memcpy( data, buffer, outLen );
+	memcpy( data, buffer, outLen );
 }
 
 /*
@@ -588,7 +588,7 @@ void Huff_DecompressPacket( sizebuf_t *msg, int offset )
 	}
 
 	msg->nDataBits = ( offset + outLen ) << 3;
-	Q_memcpy( data, buffer, outLen );
+	memcpy( data, buffer, outLen );
 }
 
 /*

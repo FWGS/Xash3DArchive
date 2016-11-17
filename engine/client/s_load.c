@@ -210,7 +210,7 @@ sfx_t *S_FindName( const char *pname, int *pfInCache )
 	}
 	
 	sfx = &s_knownSfx[i];
-	Q_memset( sfx, 0, sizeof( *sfx ));
+	memset( sfx, 0, sizeof( *sfx ));
 	if( pfInCache ) *pfInCache = false;
 	Q_strncpy( sfx->name, name, MAX_STRING );
 	sfx->touchFrame = s_registration_sequence;
@@ -252,7 +252,7 @@ void S_FreeSound( sfx_t *sfx )
 	}
 
 	if( sfx->cache ) FS_FreeSound( sfx->cache );
-	Q_memset( sfx, 0, sizeof( *sfx ));
+	memset( sfx, 0, sizeof( *sfx ));
 }
 
 /*
@@ -386,8 +386,8 @@ void S_FreeSounds( void )
 	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++ )
 		S_FreeSound( sfx );
 
-	Q_memset( s_knownSfx, 0, sizeof( s_knownSfx ));
-	Q_memset( s_sfxHashList, 0, sizeof( s_sfxHashList ));
+	memset( s_knownSfx, 0, sizeof( s_knownSfx ));
+	memset( s_sfxHashList, 0, sizeof( s_sfxHashList ));
 
 	s_numSfx = 0;
 }

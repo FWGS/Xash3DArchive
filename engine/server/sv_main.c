@@ -256,7 +256,7 @@ void SV_UpdateMovevars( qboolean initialize )
 	if( initialize ) return; // too early
 
 	if( MSG_WriteDeltaMovevars( &sv.reliable_datagram, &svgame.oldmovevars, &svgame.movevars ))
-		Q_memcpy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
+		memcpy( &svgame.oldmovevars, &svgame.movevars, sizeof( movevars_t )); // oldstate changed
 
 	physinfo->modified = false;
 }
@@ -885,7 +885,7 @@ void SV_Shutdown( qboolean reconnect )
 	else SV_DeactivateServer ();
 
 	// free current level
-	Q_memset( &sv, 0, sizeof( sv ));
+	memset( &sv, 0, sizeof( sv ));
 	Host_SetServerState( sv.state );
 
 	// free server static data

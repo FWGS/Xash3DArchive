@@ -44,21 +44,21 @@ static qboolean	scr_init = false;
 SCR_DrawFPS
 ==============
 */
-void SCR_DrawFPS( void )
+void SCR_DrawFPS( int height )
 {
 	float		calc;
 	rgba_t		color;
+	double		newtime;
 	static double	nexttime = 0, lasttime = 0;
 	static double	framerate = 0;
 	static int	framecount = 0;
 	static int	minfps = 9999;
 	static int	maxfps = 0;
-	double		newtime;
 	char		fpsstring[64];
 	int		offset;
 
-	if( cls.state != ca_active ) return; 
-	if( !cl_showfps->integer || cl.background ) return;
+	if( cls.state != ca_active || !cl_showfps->integer || cl.background )
+		return; 
 
 	switch( cls.scrshot_action )
 	{
@@ -74,12 +74,12 @@ void SCR_DrawFPS( void )
 	{
 		framerate = framecount / (newtime - lasttime);
 		lasttime = newtime;
-		nexttime = max( nexttime + 1, lasttime - 1 );
+		nexttime = Q_max( nexttime + 1.0, lasttime - 1.0 );
 		framecount = 0;
 	}
 
-	framecount++;
 	calc = framerate;
+	framecount++;
 
 	if( calc < 1.0f )
 	{
@@ -100,7 +100,7 @@ void SCR_DrawFPS( void )
           }
 
 	Con_DrawStringLen( fpsstring, &offset, NULL );
-	Con_DrawString( scr_width->integer - offset - 3, 4, fpsstring, color );
+	Con_DrawString( scr_width->integer - offset - 4, height, fpsstring, color );
 }
 
 /*
@@ -555,13 +555,13 @@ SCR_VidInit
 */
 void SCR_VidInit( void )
 {
-	Q_memset( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
-	Q_memset( &menu.ds, 0, sizeof( menu.ds )); // reset a draw state
-	Q_memset( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
+	memset( &clgame.ds, 0, sizeof( clgame.ds )); // reset a draw state
+	memset( &gameui.ds, 0, sizeof( gameui.ds )); // reset a draw state
+	memset( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
 
 	// update screen sizes for menu
-	menu.globals->scrWidth = scr_width->integer;
-	menu.globals->scrHeight = scr_height->integer;
+	gameui.globals->scrWidth = scr_width->integer;
+	gameui.globals->scrHeight = scr_height->integer;
 
 	SCR_RebuildGammaTable();
 	VGui_Startup ();
@@ -569,7 +569,7 @@ void SCR_VidInit( void )
 	clgame.load_sequence++; // now all hud sprites are invalid
 	
 	// vid_state has changed
-	if( menu.hInstance ) menu.dllFuncs.pfnVidInit();
+	if( gameui.hInstance ) gameui.dllFuncs.pfnVidInit();
 	if( clgame.hInstance ) clgame.dllFuncs.pfnVidInit();
 
 	// restart console size
@@ -605,7 +605,7 @@ void SCR_Init( void )
 
 	if( host.state != HOST_RESTART && !UI_LoadProgs( ))
 	{
-		Msg( "^1Error: ^7can't initialize menu.dll\n" ); // there is non fatal for us
+		Msg( "^1Error: ^7can't initialize gameui.dll\n" ); // there is non fatal for us
 		if( !host.developer ) host.developer = 1; // we need console, because menu is missing
 	}
 

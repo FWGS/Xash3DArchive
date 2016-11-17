@@ -290,7 +290,7 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 	int		count, ent_index;
 	int		i, j, ev;
 
-	Q_memset( &nullargs, 0, sizeof( nullargs ));
+	memset( &nullargs, 0, sizeof( nullargs ));
 
 	es = &cl->events;
 
@@ -369,7 +369,7 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 				MSG_WriteOneBit( msg, 1 );
 				MSG_WriteUBitLong( msg, info->packet_index, MAX_ENTITY_BITS );
 
-				if( !Q_memcmp( &nullargs, &info->args, sizeof( event_args_t )))
+				if( !memcmp( &nullargs, &info->args, sizeof( event_args_t )))
 				{
 					MSG_WriteOneBit( msg, 0 );
 				}
@@ -443,7 +443,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	edict_t		*clent;
 	int		i;
 
-	Q_memset( &nullcd, 0, sizeof( nullcd ));
+	memset( &nullcd, 0, sizeof( nullcd ));
 
 	clent = cl->edict;
 	frame = &cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK];
@@ -478,7 +478,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 
 	clent->v.fixangle = 0; // reset fixangle
 	clent->v.pushmsec = 0; // reset net framenum
-	Q_memset( &frame->clientdata, 0, sizeof( frame->clientdata ));
+	memset( &frame->clientdata, 0, sizeof( frame->clientdata ));
 
 	// update clientdata_t
 	svgame.dllFuncs.pfnUpdateClientData( clent, cl->local_weapons, &frame->clientdata );
@@ -505,7 +505,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 
 	if( cl->local_weapons && svgame.dllFuncs.pfnGetWeaponData( clent, frame->weapondata ))
 	{
-		Q_memset( &nullwd, 0, sizeof( nullwd ));
+		memset( &nullwd, 0, sizeof( nullwd ));
 
 		for( i = 0; i < 64; i++ )
 		{
@@ -607,7 +607,7 @@ void SV_SendClientDatagram( sv_client_t *cl )
 	svs.currentPlayer = cl;
 	svs.currentPlayerNum = (cl - svs.clients);
 
-	Q_memset( msg_buf, 0, NET_MAX_PAYLOAD );
+	memset( msg_buf, 0, NET_MAX_PAYLOAD );
 	MSG_Init( &msg, "Datagram", msg_buf, sizeof( msg_buf ));
 
 	// always send servertime at new frame

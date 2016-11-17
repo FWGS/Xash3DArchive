@@ -177,8 +177,8 @@ Starts sound crackling system
 */
 void SX_Init( void )
 {
-	Q_memset( rgsxdly, 0, sizeof( rgsxdly ) );
-	Q_memset( rgsxlp,  0, sizeof( rgsxlp  ) );
+	memset( rgsxdly, 0, sizeof( rgsxdly ) );
+	memset( rgsxlp,  0, sizeof( rgsxlp  ) );
 
 	sxamodr = sxamodl = sxamodrt = sxamodlt = 255;
 
@@ -443,7 +443,7 @@ void DLY_CheckNewDelayVal( void )
 
 			if( dly->lpdelayline )
 			{
-				Q_memset( dly->lpdelayline, 0, dly->cdelaysamplesmax * sizeof( int ) );
+				memset( dly->lpdelayline, 0, dly->cdelaysamplesmax * sizeof( int ) );
 				dly->lp0 = dly->lp1 = dly->lp2 = 0;
 			}
 

@@ -1335,7 +1335,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 
 	if( !GL_UploadTexture( tex, pic ))
 	{
-		Q_memset( tex, 0, sizeof( gltexture_t ));
+		memset( tex, 0, sizeof( gltexture_t ));
 		FS_FreeImage( pic ); // release source texture
 		return 0;
 	}
@@ -1450,7 +1450,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 		{
 			// create new image
 			pic = Mem_Alloc( host.imagepool, sizeof( rgbdata_t ));
-			Q_memcpy( pic, src, sizeof( rgbdata_t ));
+			memcpy( pic, src, sizeof( rgbdata_t ));
 
 			// expand pic buffer for all layers
 			pic->buffer = Mem_Alloc( host.imagepool, pic->size * numLayers );
@@ -1464,7 +1464,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 			int width = max( 1, ( pic->width >> j ));
 			int height = max( 1, ( pic->height >> j ));
 			mipsize = GL_CalcImageSize( pic->type, width, height, 1 );
-			Q_memcpy( pic->buffer + dstsize + mipsize * i, src->buffer + srcsize, mipsize );
+			memcpy( pic->buffer + dstsize + mipsize * i, src->buffer + srcsize, mipsize );
 			dstsize += mipsize * numLayers;
 			srcsize += mipsize;
 		}
@@ -1510,7 +1510,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	GL_ProcessImage( tex, pic, filter );
 	if( !GL_UploadTexture( tex, pic ))
 	{
-		Q_memset( tex, 0, sizeof( gltexture_t ));
+		memset( tex, 0, sizeof( gltexture_t ));
 		FS_FreeImage( pic ); // release source texture
 		return 0;
 	}
@@ -1597,7 +1597,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	GL_ProcessImage( tex, pic, NULL );
 	if( !GL_UploadTexture( tex, pic ))
 	{
-		Q_memset( tex, 0, sizeof( gltexture_t ));
+		memset( tex, 0, sizeof( gltexture_t ));
 		FS_FreeImage( pic ); // release source texture
 		return 0;
 	}
@@ -1627,7 +1627,7 @@ int GL_CreateTexture( const char *name, int width, int height, const void *buffe
 	rgbdata_t	r_empty;
 	int	texture;
 
-	Q_memset( &r_empty, 0, sizeof( r_empty ));
+	memset( &r_empty, 0, sizeof( r_empty ));
 	r_empty.width = width;
 	r_empty.height = height;
 	r_empty.type = PF_RGBA_32;
@@ -1672,7 +1672,7 @@ int GL_CreateTextureArray( const char *name, int width, int height, int depth, c
 	rgbdata_t	r_empty;
 	int	texture;
 
-	Q_memset( &r_empty, 0, sizeof( r_empty ));
+	memset( &r_empty, 0, sizeof( r_empty ));
 	r_empty.width = width;
 	r_empty.height = height;
 	r_empty.depth = depth;
@@ -1876,7 +1876,7 @@ void R_FreeImage( gltexture_t *image )
 		FS_FreeImage( image->original );
 
 	pglDeleteTextures( 1, &image->texnum );
-	Q_memset( image, 0, sizeof( *image ));
+	memset( image, 0, sizeof( *image ));
 }
 
 /*
@@ -2191,7 +2191,7 @@ static rgbdata_t *R_InitAttenuationTextureNoAtten( texFlags_t *flags )
 	r_image.type = PF_RGBA_32;
 	r_image.size = r_image.width * r_image.height * 4;
 
-	Q_memset( data2D, 0xFF, r_image.size );
+	memset( data2D, 0xFF, r_image.size );
 	*flags = TF_UNCOMPRESSED|TF_NOMIPMAP|TF_CLAMP|TF_TEXTURE_1D;
 
 	return &r_image;
@@ -2261,7 +2261,7 @@ static rgbdata_t *R_InitDlightTexture( texFlags_t *flags )
 	r_image.size = r_image.width * r_image.height * 4;
 	r_image.buffer = data2D;
 
-	Q_memset( data2D, 0x00, r_image.size );
+	memset( data2D, 0x00, r_image.size );
 
 	*flags = TF_NOPICMIP|TF_UNCOMPRESSED|TF_NOMIPMAP;
 
@@ -2278,7 +2278,7 @@ static rgbdata_t *R_InitDlightTexture2( texFlags_t *flags )
 	r_image.size = r_image.width * r_image.height * 4;
 	r_image.buffer = data2D;
 
-	Q_memset( data2D, 0x00, r_image.size );
+	memset( data2D, 0x00, r_image.size );
 
 	*flags = TF_NOPICMIP|TF_UNCOMPRESSED|TF_NOMIPMAP;
 
@@ -2401,7 +2401,7 @@ static rgbdata_t *R_InitGrayCubemap( texFlags_t *flags )
 		return NULL;
 
 	// gray cubemap - just stub for pointlights
-	Q_memset( dataCM, 0x7F, size * size * 6 * 4 );
+	memset( dataCM, 0x7F, size * size * 6 * 4 );
 
 	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
 
@@ -2428,7 +2428,7 @@ static rgbdata_t *R_InitWhiteCubemap( texFlags_t *flags )
 		return NULL;
 
 	// white cubemap - just stub for pointlights
-	Q_memset( dataCM, 0xFF, size * size * 6 * 4 );
+	memset( dataCM, 0xFF, size * size * 6 * 4 );
 
 	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
 
@@ -2522,8 +2522,8 @@ static void R_InitBuiltinTextures( void )
 
 	for( i = 0; i < num_builtin_textures; i++ )
 	{
-		Q_memset( &r_image, 0, sizeof( rgbdata_t ));
-		Q_memset( data2D, 0xFF, sizeof( data2D ));
+		memset( &r_image, 0, sizeof( rgbdata_t ));
+		memset( data2D, 0xFF, sizeof( data2D ));
 
 		pic = textures[i].init( &flags );
 		if( pic == NULL ) continue;
@@ -2740,8 +2740,8 @@ void R_InitImages( void )
 	uint	i, hash;
 	float	f;
 
-	Q_memset( r_textures, 0, sizeof( r_textures ));
-	Q_memset( r_texturesHashTable, 0, sizeof( r_texturesHashTable ));
+	memset( r_textures, 0, sizeof( r_textures ));
+	memset( r_texturesHashTable, 0, sizeof( r_texturesHashTable ));
 	r_numTextures = 0;
 
 	// create unused 0-entry
@@ -2786,8 +2786,8 @@ void R_ShutdownImages( void )
 	for( i = 0, image = r_textures; i < r_numTextures; i++, image++ )
 		R_FreeImage( image );
 
-	Q_memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
-	Q_memset( r_texturesHashTable, 0, sizeof( r_texturesHashTable ));
-	Q_memset( r_textures, 0, sizeof( r_textures ));
+	memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
+	memset( r_texturesHashTable, 0, sizeof( r_texturesHashTable ));
+	memset( r_textures, 0, sizeof( r_textures ));
 	r_numTextures = 0;
 }

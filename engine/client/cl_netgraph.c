@@ -139,7 +139,7 @@ void NetGraph_GetFrameData( int *choke_count, int *loss_count, int *biggest_mess
 			}
 		}
 
-		Q_memcpy( g, &f->graphdata, sizeof( netbandwidthgraph_t ));
+		memcpy( g, &f->graphdata, sizeof( netbandwidthgraph_t ));
 
 		if( *biggest_message < g->msgbytes )
 			*biggest_message = g->msgbytes;
@@ -302,17 +302,17 @@ void NetGraph_ColorForHeight( struct packet_latency_t *packet, byte color[3], by
 	switch( packet->latency )
 	{
 	case 9999:
-		Q_memcpy( color, netcolors[0], sizeof( byte ) * 3 ); // dropped
+		memcpy( color, netcolors[0], sizeof( byte ) * 3 ); // dropped
 		*ping = 0;
 		*alpha = netcolors[0][3];
 		break;
 	case 9998:
-		Q_memcpy( color, netcolors[1], sizeof( byte ) * 3 ); // invalid
+		memcpy( color, netcolors[1], sizeof( byte ) * 3 ); // invalid
 		*alpha = netcolors[1][3];
 		*ping = 0;
 		break;
 	case 9997:
-		Q_memcpy( color, netcolors[2], sizeof( byte ) * 3 ); // skipped
+		memcpy( color, netcolors[2], sizeof( byte ) * 3 ); // skipped
 		*alpha = netcolors[2][3];
 		*ping = 0;
 		break;
@@ -320,12 +320,12 @@ void NetGraph_ColorForHeight( struct packet_latency_t *packet, byte color[3], by
 		*ping = 1;
 		if( packet->choked )
 		{
-			Q_memcpy( color, netcolors[3], sizeof( byte ) * 3 );
+			memcpy( color, netcolors[3], sizeof( byte ) * 3 );
 			*alpha = netcolors[3][3];
 		}
 		else
 		{
-			Q_memcpy( color, netcolors[4], sizeof( byte ) * 3 );
+			memcpy( color, netcolors[4], sizeof( byte ) * 3 );
 			*alpha = netcolors[4][3];
 		}
 	}

@@ -342,7 +342,7 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size, qboolean 
 	mod->maxs[2] = h / 2;
 
 	// create a temporary pic
-	Q_memset( &temp, 0, sizeof( temp ));
+	memset( &temp, 0, sizeof( temp ));
 	temp.width = w;
 	temp.height = h;
 	temp.type = pix->type;
@@ -443,7 +443,7 @@ void Mod_UnloadSpriteModel( model_t *mod )
 	}
 
 	Mem_FreePool( &mod->mempool );
-	Q_memset( mod, 0, sizeof( *mod ));
+	memset( mod, 0, sizeof( *mod ));
 }
 
 /*

@@ -144,7 +144,7 @@ float ApproachVal( float target, float value, float speed );
 // matrixlib.c
 //
 #define Matrix3x4_LoadIdentity( mat )		Matrix3x4_Copy( mat, matrix3x4_identity )
-#define Matrix3x4_Copy( out, in )		Q_memcpy( out, in, sizeof( matrix3x4 ))
+#define Matrix3x4_Copy( out, in )		memcpy( out, in, sizeof( matrix3x4 ))
 
 void Matrix3x4_VectorTransform( const matrix3x4 in, const float v[3], float out[3] );
 void Matrix3x4_VectorITransform( const matrix3x4 in, const float v[3], float out[3] );
@@ -160,7 +160,7 @@ void Matrix3x4_OriginFromMatrix( const matrix3x4 in, float *out );
 void Matrix3x4_AnglesFromMatrix( const matrix3x4 in, vec3_t out );
 
 #define Matrix4x4_LoadIdentity( mat )	Matrix4x4_Copy( mat, matrix4x4_identity )
-#define Matrix4x4_Copy( out, in )	Q_memcpy( out, in, sizeof( matrix4x4 ))
+#define Matrix4x4_Copy( out, in )	memcpy( out, in, sizeof( matrix4x4 ))
 
 void Matrix4x4_VectorTransform( const matrix4x4 in, const float v[3], float out[3] );
 void Matrix4x4_VectorITransform( const matrix4x4 in, const float v[3], float out[3] );

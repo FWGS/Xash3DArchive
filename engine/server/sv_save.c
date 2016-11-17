@@ -232,7 +232,7 @@ qboolean SaveRestore_Write( SAVERESTOREDATA *pSaveData, const void *pData, int n
 		return false;
 	}
 
-	Q_memcpy( pSaveData->pCurrentData, pData, nBytes );
+	memcpy( pSaveData->pCurrentData, pData, nBytes );
 	SaveRestore_MoveCurPos( pSaveData, nBytes );
 
 	return true;
@@ -249,7 +249,7 @@ qboolean SaveRestore_Read( SAVERESTOREDATA *pSaveData, void *pOutput, int nBytes
 		return false;
 	}
 
-	if( pOutput ) Q_memcpy( pOutput, pSaveData->pCurrentData, nBytes );
+	if( pOutput ) memcpy( pOutput, pSaveData->pCurrentData, nBytes );
 	SaveRestore_MoveCurPos( pSaveData, nBytes );
 
 	return true;
@@ -974,7 +974,7 @@ void SV_ParseSaveTables( SAVERESTOREDATA *pSaveData, SAVE_HEADER *pHeader, int s
 	}
 
 	if( setupLightstyles )
-		Q_memset( sv.lightstyles, 0, sizeof( sv.lightstyles ));
+		memset( sv.lightstyles, 0, sizeof( sv.lightstyles ));
 
 	for( i = 0; i < pHeader->lightStyleCount; i++ )
 	{
@@ -1083,7 +1083,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	FS_Write( pFile, &id, sizeof( int ));
 	FS_Write( pFile, &version, sizeof( int ));
 
-	Q_memset( &sections, -1, sizeof( sections ));
+	memset( &sections, -1, sizeof( sections ));
 	header_offset = FS_Tell( pFile );	// save header offset
 
 	// write offsets (will be merged later)
@@ -1321,7 +1321,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 		FS_Read( pFile, &sv.num_static_entities, sizeof( int ));
 
 		// clear old entities
-		Q_memset( sv.static_entities, 0, sizeof( sv.static_entities ));
+		memset( sv.static_entities, 0, sizeof( sv.static_entities ));
 
 		for( i = 0; i < sv.num_static_entities; i++ )
 		{
@@ -1815,7 +1815,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 	qboolean		foundprevious = false;
 	vec3_t		landmarkOrigin;
 	
-	Q_memset( &currentLevelData, 0, sizeof( SAVERESTOREDATA ));
+	memset( &currentLevelData, 0, sizeof( SAVERESTOREDATA ));
 	svgame.globals->pSaveData = &currentLevelData;
 
 	// build the adjacent map list

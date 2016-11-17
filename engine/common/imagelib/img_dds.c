@@ -247,7 +247,7 @@ qboolean Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
-	Q_memcpy( &header, buffer, sizeof( dds_t ));
+	memcpy( &header, buffer, sizeof( dds_t ));
 
 	if( header.dwIdent != DDSHEADER )
 		return false; // it's not a dds file, just skip it
@@ -324,7 +324,7 @@ qboolean Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
 
 	// dds files will be uncompressed on a render. requires minimal of info for set this
 	image.rgba = Mem_Alloc( host.imagepool, image.size ); 
-	Q_memcpy( image.rgba, fin, image.size );
+	memcpy( image.rgba, fin, image.size );
 	image.flags |= IMAGE_DDS_FORMAT;
 
 	return true;

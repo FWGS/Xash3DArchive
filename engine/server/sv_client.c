@@ -164,7 +164,7 @@ void SV_DirectConnect( netadr_t from )
 	Info_SetValueForKey( userinfo, "ip", NET_AdrToString( from ));
 
 	newcl = &temp;
-	Q_memset( newcl, 0, sizeof( sv_client_t ));
+	memset( newcl, 0, sizeof( sv_client_t ));
 
 	// if there is already a slot for this ip, reuse it
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
@@ -323,7 +323,7 @@ edict_t *SV_FakeConnect( const char *netname )
 
 	// find a client slot
 	newcl = &temp;
-	Q_memset( newcl, 0, sizeof( sv_client_t ));
+	memset( newcl, 0, sizeof( sv_client_t ));
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -449,8 +449,8 @@ void SV_DropClient( sv_client_t *drop )
 	Netchan_Clear( &drop->netchan );
 
 	// clean client data on disconnect
-	Q_memset( drop->userinfo, 0, MAX_INFO_STRING );
-	Q_memset( drop->physinfo, 0, MAX_INFO_STRING );
+	memset( drop->userinfo, 0, MAX_INFO_STRING );
+	memset( drop->physinfo, 0, MAX_INFO_STRING );
 	drop->edict->v.frags = 0;
 
 	// send notification to all other clients
@@ -813,7 +813,7 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 			Q_strcat( remaining, Cmd_Argv( i ));
 			Q_strcat( remaining, " " );
 		}
-		Cmd_ExecuteString( remaining, src_command );
+		Cmd_ExecuteString( remaining );
 	}
 	else MsgDev( D_ERROR, "Bad rcon_password.\n" );
 
@@ -1007,7 +1007,7 @@ void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg )
 {
 	movevars_t	nullmovevars;
 
-	Q_memset( &nullmovevars, 0, sizeof( nullmovevars ));
+	memset( &nullmovevars, 0, sizeof( nullmovevars ));
 	MSG_WriteDeltaMovevars( msg, &nullmovevars, &svgame.movevars );
 }
 
@@ -1248,7 +1248,7 @@ void SV_New_f( sv_client_t *cl )
 		// NOTE: custom resources download is disabled until is done
 		if( /*sv_maxclients->integer ==*/ 1 )
 		{
-			Q_memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
+			memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 
 			// begin fetching modellist
 			MSG_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1276,7 +1276,7 @@ void SV_ContinueLoading_f( sv_client_t *cl )
 		return;
 	}
 
-	Q_memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
+	memset( &cl->lastcmd, 0, sizeof( cl->lastcmd ));
 
 	// begin fetching modellist
 	MSG_WriteByte( &cl->netchan.message, svc_stufftext );
@@ -1298,7 +1298,7 @@ void SV_SendResourceList_f( sv_client_t *cl )
 	resourcelist_t	reslist;	// g-cont. what about stack???
 	size_t		msg_size;
 
-	Q_memset( &reslist, 0, sizeof( resourcelist_t ));
+	memset( &reslist, 0, sizeof( resourcelist_t ));
 
 	reslist.restype[rescount] = t_world; // terminator
 	Q_strcpy( reslist.resnames[rescount], "NULL" );
@@ -1675,7 +1675,7 @@ void SV_Baselines_f( sv_client_t *cl )
 	
 	start = Q_atoi( Cmd_Argv( 2 ));
 
-	Q_memset( &nullstate, 0, sizeof( nullstate ));
+	memset( &nullstate, 0, sizeof( nullstate ));
 
 	// write a packet full of data
 	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < svgame.numEntities )
@@ -1806,7 +1806,7 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 
 	val = Info_ValueForKey( cl->userinfo, "name" );
 	Q_strncpy( temp2, val, sizeof( temp2 ));
-	TrimSpace( temp2, temp1 );
+	COM_TrimSpace( temp2, temp1 );
 
 	if( !Q_stricmp( temp1, "console" )) // keyword came from OSHLDS
 	{
@@ -2195,8 +2195,8 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	player = cl->edict;
 
 	frame = &cl->frames[cl->netchan.incoming_acknowledged & SV_UPDATE_MASK];
-	Q_memset( &nullcmd, 0, sizeof( usercmd_t ));
-	Q_memset( cmds, 0, sizeof( cmds ));
+	memset( &nullcmd, 0, sizeof( usercmd_t ));
+	memset( cmds, 0, sizeof( cmds ));
 
 	key = MSG_GetRealBytesRead( msg );
 	checksum1 = MSG_ReadByte( msg );

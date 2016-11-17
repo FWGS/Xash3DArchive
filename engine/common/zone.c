@@ -115,7 +115,7 @@ loopcontinue:;
 		pool->realsize += sizeof( memclump_t );
 		clump = malloc( sizeof( memclump_t ));
 		if( clump == NULL ) Sys_Error( "Mem_Alloc: out of memory (alloc at %s:%i)\n", filename, fileline );
-		_Q_memset( clump, 0, sizeof( memclump_t ), filename, fileline );
+		memset( clump, 0, sizeof( memclump_t ));
 		*clumpchainpointer = clump;
 		clump->sentinel1 = MEMCLUMP_SENTINEL;
 		clump->sentinel2 = MEMCLUMP_SENTINEL;
@@ -153,7 +153,7 @@ choseclump:
 	mem->prev = NULL;
 	pool->chain = mem;
 	if( mem->next ) mem->next->prev = mem;
-	_Q_memset((void *)((byte *)mem + sizeof( memheader_t )), 0, mem->size, filename, fileline );
+	memset((void *)((byte *)mem + sizeof( memheader_t )), 0, mem->size );
 
 	return (void *)((byte *)mem + sizeof( memheader_t ));
 }
@@ -239,7 +239,7 @@ static void Mem_FreeBlock( memheader_t *mem, const char *filename, int fileline 
 			}
 
 			pool->realsize -= sizeof( memclump_t );
-			_Q_memset( clump, 0xBF, sizeof( memclump_t ), filename, fileline );
+			memset( clump, 0xBF, sizeof( memclump_t ));
 			free( clump );
 		}
 		else
@@ -279,11 +279,8 @@ void *_Mem_Realloc( byte *poolptr, void *memptr, size_t size, const char *filena
 
 	if( memptr ) // first allocate?
 	{ 
-		size_t	newsize;
-
-		// get size of old block
-		newsize = memhdr->size < size ? memhdr->size : size; // upper data can be trucnated!
-		_Q_memcpy( nb, memptr, newsize, filename, fileline );
+		size_t newsize = memhdr->size < size ? memhdr->size : size; // upper data can be trucnated!
+		memcpy( nb, memptr, newsize );
 		_Mem_Free( memptr, filename, fileline ); // free unused old block
           }
 
@@ -296,7 +293,7 @@ byte *_Mem_AllocPool( const char *name, const char *filename, int fileline )
 
 	pool = (mempool_t *)malloc( sizeof( mempool_t ));
 	if( pool == NULL ) Sys_Error( "Mem_AllocPool: out of memory (allocpool at %s:%i)\n", filename, fileline );
-	_Q_memset( pool, 0, sizeof( mempool_t ), filename, fileline );
+	memset( pool, 0, sizeof( mempool_t ));
 
 	// fill header
 	pool->sentinel1 = MEMHEADER_SENTINEL1;
@@ -322,15 +319,15 @@ void _Mem_FreePool( byte **poolptr, const char *filename, int fileline )
 	{
 		// unlink pool from chain
 		for( chainaddress = &poolchain; *chainaddress && *chainaddress != pool; chainaddress = &((*chainaddress)->next));
-		if( *chainaddress != pool) Sys_Error("Mem_FreePool: pool already free (freepool at %s:%i)\n", filename, fileline );
-		if( pool->sentinel1 != MEMHEADER_SENTINEL1 ) Sys_Error("Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline );
-		if( pool->sentinel2 != MEMHEADER_SENTINEL1 ) Sys_Error("Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline );
+		if( *chainaddress != pool ) Sys_Error( "Mem_FreePool: pool already free (freepool at %s:%i)\n", filename, fileline );
+		if( pool->sentinel1 != MEMHEADER_SENTINEL1 ) Sys_Error( "Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline );
+		if( pool->sentinel2 != MEMHEADER_SENTINEL1 ) Sys_Error( "Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline );
 		*chainaddress = pool->next;
 
 		// free memory owned by the pool
 		while( pool->chain ) Mem_FreeBlock( pool->chain, filename, fileline );
 		// free the pool itself
-		_Q_memset( pool, 0xBF, sizeof( mempool_t ), filename, fileline );
+		memset( pool, 0xBF, sizeof( mempool_t ));
 		free( pool );
 		*poolptr = NULL;
 	}
@@ -386,13 +383,15 @@ void Mem_CheckHeaderSentinels( void *data, const char *filename, int fileline )
 {
 	memheader_t *mem;
 
-	if (data == NULL) Sys_Error( "Mem_CheckSentinels: data == NULL (sentinel check at %s:%i)\n", filename, fileline );
+	if( data == NULL ) Sys_Error( "Mem_CheckSentinels: data == NULL (sentinel check at %s:%i)\n", filename, fileline );
 	mem = (memheader_t *)((byte *) data - sizeof(memheader_t));
+
 	if( mem->sentinel1 != MEMHEADER_SENTINEL1 )
 	{
 		mem->filename = Mem_CheckFilename( mem->filename ); // make sure what we don't crash var_args
 		Sys_Error( "Mem_CheckSentinels: trashed header sentinel 1 (block allocated at %s:%i, sentinel check at %s:%i)\n", mem->filename, mem->fileline, filename, fileline );
 	}
+
 	if( *((byte *) mem + sizeof(memheader_t) + mem->size) != MEMHEADER_SENTINEL2 )
 	{	
 		mem->filename = Mem_CheckFilename( mem->filename ); // make sure what we don't crash var_args

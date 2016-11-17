@@ -319,7 +319,7 @@ void R_ParseTexFilters( const char *filename )
 	{
 		imgfilter_t	filter;
 
-		Q_memset( &filter, 0, sizeof( filter ));
+		memset( &filter, 0, sizeof( filter ));
 		Q_strncpy( texname, token, sizeof( texname ));
 
 		// parse filter
