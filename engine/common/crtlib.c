@@ -71,6 +71,29 @@ int Q_strlen( const char *string )
 	return len;
 }
 
+int Q_colorstr( const char *string )
+{
+	int		len;
+	const char	*p;
+
+	if( !string ) return 0;
+
+	len = 0;
+	p = string;
+	while( *p )
+	{
+		if( IsColorString( p ))
+		{
+			len += 2;
+			p += 2;
+			continue;
+		}
+		p++;
+	}
+
+	return len;
+}
+
 char Q_toupper( const char in )
 {
 	char	out;

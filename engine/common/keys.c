@@ -726,9 +726,7 @@ void Key_ClearStates( void )
 	}
 
 	if( clgame.hInstance )
-	{
 		clgame.dllFuncs.IN_ClearStates();
-	}
 }
 
 /*

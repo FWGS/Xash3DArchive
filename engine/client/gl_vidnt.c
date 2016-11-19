@@ -1562,7 +1562,7 @@ void VID_CheckChanges( void )
  
 	if( renderinfo->modified )
 	{
-		if( !VID_SetMode())
+		if( !VID_SetMode( ))
 		{
 			Msg( "Error: can't initialize video subsystem\n" );
 			Host_NewInstance( va("#%s", GI->gamefolder ), "stopped" );
@@ -1620,8 +1620,6 @@ GL_SetDefaults
 */
 static void GL_SetDefaults( void )
 {
-	int	i;
-
 	pglFinish();
 
 	pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
@@ -1645,19 +1643,8 @@ static void GL_SetDefaults( void )
 	pglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	pglPolygonOffset( -1.0f, -2.0f );
 
-	// properly disable multitexturing at startup
-	for( i = (MAX_TEXTURE_UNITS - 1); i > 0; i-- )
-	{
-		if( i >= GL_MaxTextureUnits( ))
-			continue;
+	GL_CleanupAllTextureUnits();
 
-		GL_SelectTexture( i );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		pglDisable( GL_BLEND );
-		pglDisable( GL_TEXTURE_2D );
-	}
-
-	GL_SelectTexture( 0 );
 	pglDisable( GL_BLEND );
 	pglDisable( GL_ALPHA_TEST );
 	pglDisable( GL_POLYGON_OFFSET_FILL );
@@ -2035,6 +2022,7 @@ qboolean R_Init( void )
 
 	GL_InitCommands();
 	GL_SetDefaultState();
+	R_InitLookupTables();
 
 	// create the window and set up the context
 	if( !R_Init_OpenGL( ))

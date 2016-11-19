@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define MAX_CDTRACKS	32
 #define MAX_IMAGES		256	// SpriteTextures
 #define MAX_EFRAGS		4096
-#define MAX_REQUESTS	128
+#define MAX_REQUESTS	64
 
 // screenshot types
 #define VID_SCREENSHOT	0
@@ -831,6 +831,7 @@ extern convar_t *con_fontsize;
 qboolean Con_Visible( void );
 void Con_Init( void );
 void Con_VidInit( void );
+void Con_Shutdown( void );
 void Con_ToggleConsole_f( void );
 void Con_ClearNotify( void );
 void Con_DrawDebug( void );
@@ -848,7 +849,7 @@ void Con_CharEvent( int key );
 void Con_RestoreFont( void );
 void Key_Console( int key );
 void Key_Message( int key );
-void Con_Close( void );
+void Con_FastClose( void );
 
 //
 // s_main.c

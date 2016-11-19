@@ -53,10 +53,10 @@ typedef BOOL (WINAPI *DllEntryProc)( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID
 
 static void CopySections( const byte *data, PIMAGE_NT_HEADERS old_headers, PMEMORYMODULE module )
 {
-	int i, size;
-	byte *dest;
-	byte *codeBase = module->codeBase;
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION( module->headers );
+	PIMAGE_SECTION_HEADER	section = IMAGE_FIRST_SECTION( module->headers );
+	byte			*codeBase = module->codeBase;
+	int			i, size;
+	byte			*dest;
 
 	for( i = 0; i < module->headers->FileHeader.NumberOfSections; i++, section++ )
 	{
@@ -85,9 +85,9 @@ static void CopySections( const byte *data, PIMAGE_NT_HEADERS old_headers, PMEMO
 
 static void FreeSections( PIMAGE_NT_HEADERS old_headers, PMEMORYMODULE module )
 {
-	int	i, size;
-	byte	*codeBase = module->codeBase;
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(module->headers);
+	PIMAGE_SECTION_HEADER	section = IMAGE_FIRST_SECTION(module->headers);
+	byte			*codeBase = module->codeBase;
+	int			i, size;
 
 	for( i = 0; i < module->headers->FileHeader.NumberOfSections; i++, section++ )
 	{
@@ -96,13 +96,13 @@ static void FreeSections( PIMAGE_NT_HEADERS old_headers, PMEMORYMODULE module )
 			size = old_headers->OptionalHeader.SectionAlignment;
 			if( size > 0 )
 			{
-				VirtualFree( codeBase + section->VirtualAddress, size, MEM_DECOMMIT );
+				VirtualFree((byte *)CALCULATE_ADDRESS( codeBase, section->VirtualAddress ), size, MEM_DECOMMIT );
 				section->Misc.PhysicalAddress = 0;
 			}
 			continue;
 		}
 
-		VirtualFree( codeBase + section->VirtualAddress, section->SizeOfRawData, MEM_DECOMMIT );
+		VirtualFree((byte *)CALCULATE_ADDRESS( codeBase, section->VirtualAddress ), section->SizeOfRawData, MEM_DECOMMIT );
 		section->Misc.PhysicalAddress = 0;
 	}
 }
@@ -154,9 +154,9 @@ static void FinalizeSections( MEMORYMODULE *module )
 
 static void PerformBaseRelocation( MEMORYMODULE *module, DWORD delta )
 {
-	DWORD	i;
-	byte	*codeBase = module->codeBase;
-	PIMAGE_DATA_DIRECTORY directory = GET_HEADER_DICTIONARY( module, IMAGE_DIRECTORY_ENTRY_BASERELOC );
+	PIMAGE_DATA_DIRECTORY	directory = GET_HEADER_DICTIONARY( module, IMAGE_DIRECTORY_ENTRY_BASERELOC );
+	byte			*codeBase = module->codeBase;
+	DWORD			i;
 
 	if( directory->Size > 0 )
 	{
@@ -200,12 +200,12 @@ static void PerformBaseRelocation( MEMORYMODULE *module, DWORD delta )
 
 static FARPROC MemoryGetProcAddress( void *module, const char *name )
 {
-	int	idx = -1;
-	DWORD	i, *nameRef;
-	WORD	*ordinal;
-	PIMAGE_EXPORT_DIRECTORY exports;
-	byte	*codeBase = ((PMEMORYMODULE)module)->codeBase;
-	PIMAGE_DATA_DIRECTORY directory = GET_HEADER_DICTIONARY((MEMORYMODULE *)module, IMAGE_DIRECTORY_ENTRY_EXPORT );
+	PIMAGE_DATA_DIRECTORY	directory = GET_HEADER_DICTIONARY((MEMORYMODULE *)module, IMAGE_DIRECTORY_ENTRY_EXPORT );
+	byte			*codeBase = ((PMEMORYMODULE)module)->codeBase;
+	PIMAGE_EXPORT_DIRECTORY	exports;
+	int			idx = -1;
+	DWORD			i, *nameRef;
+	WORD			*ordinal;
 
 	if( directory->Size == 0 )
 	{
@@ -253,9 +253,9 @@ static FARPROC MemoryGetProcAddress( void *module, const char *name )
 
 static int BuildImportTable( MEMORYMODULE *module )
 {
-	int	result=1;
-	byte	*codeBase = module->codeBase;
-	PIMAGE_DATA_DIRECTORY directory = GET_HEADER_DICTIONARY( module, IMAGE_DIRECTORY_ENTRY_IMPORT );
+	PIMAGE_DATA_DIRECTORY	directory = GET_HEADER_DICTIONARY( module, IMAGE_DIRECTORY_ENTRY_IMPORT );
+	byte			*codeBase = module->codeBase;
+	int			result = 1;
 
 	if( directory->Size > 0 )
 	{

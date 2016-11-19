@@ -36,6 +36,7 @@ extern "C" {
 #define MAX_STRING		256	// generic string
 #define MAX_INFO_STRING	256	// infostrings are transmitted across network
 #define MAX_SYSPATH		1024	// system filepath
+#define MAX_PRINT_MSG	8192	// how many symbols can handle single call of Msg or MsgDev
 #define MAX_MODS		512	// environment games that engine can keep visible
 #define EXPORT		__declspec( dllexport )
 #define BIT( n )		(1<<( n ))
@@ -225,7 +226,6 @@ typedef enum
 	HOST_ERR_FATAL,	// sys error
 	HOST_SLEEP,	// sleeped by different reason, e.g. minimize window
 	HOST_NOFOCUS,	// same as HOST_FRAME, but disable mouse
-	HOST_RESTART,	// during the changes video mode
 	HOST_CRASHED	// an exception handler called
 } host_state;
 
@@ -370,15 +370,16 @@ void FS_LoadGameInfo( const char *rootfolder );
 void FS_FileBase( const char *in, char *out );
 const char *FS_FileExtension( const char *in );
 void FS_DefaultExtension( char *path, const char *extension );
-void FS_ExtractFilePath( const char* const path, char* dest );
+void FS_ExtractFilePath( const char *path, char *dest );
 const char *FS_GetDiskPath( const char *name, qboolean gamedironly );
 const char *FS_FileWithoutPath( const char *in );
-wfile_t *W_Open( const char *filename, const char *mode );
+wfile_t *W_Open( const char *filename, const char *mode, int *errorcode );
 byte *W_LoadLump( wfile_t *wad, const char *lumpname, size_t *lumpsizeptr, const char type );
 void W_Close( wfile_t *wad );
 file_t *FS_OpenFile( const char *path, long *filesizeptr, qboolean gamedironly );
 byte *FS_LoadFile( const char *path, long *filesizeptr, qboolean gamedironly );
 qboolean FS_WriteFile( const char *filename, const void *data, long len );
+qboolean COM_ParseVector( char **pfile, float *v, size_t size );
 int COM_FileSize( const char *filename );
 void COM_FixSlashes( char *pname );
 void COM_FreeFile( void *buffer );
@@ -396,7 +397,7 @@ long FS_FileTime( const char *filename, qboolean gamedironly );
 int FS_Print( file_t *file, const char *msg );
 qboolean FS_Rename( const char *oldname, const char *newname );
 qboolean FS_FileExists( const char *filename, qboolean gamedironly );
-void FS_FileCopy( file_t *pOutput, file_t *pInput, int fileSize );
+qboolean FS_FileCopy( file_t *pOutput, file_t *pInput, int fileSize );
 qboolean FS_Delete( const char *path );
 int FS_UnGetc( file_t *file, byte c );
 void FS_StripExtension( char *path );
@@ -913,8 +914,6 @@ void S_StopAllSounds( void );
 void BuildGammaTable( float gamma, float texGamma );
 byte TextureToTexGamma( byte b );
 byte TextureToGamma( byte b );
-float TextureToLinear( int c );
-int LinearToTexture( float f );
 
 #ifdef __cplusplus
 }

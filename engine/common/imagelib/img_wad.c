@@ -257,24 +257,12 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	if( Q_stristr( name, "palette.lmp" ))
 		return Image_LoadPAL( name, buffer, filesize );
 
-	// greatest hack from id software
-	if( image.hint != IL_HINT_HL && Q_stristr( name, "conchars" ))
-	{
-		image.width = image.height = 128;
-		image.flags |= IMAGE_HAS_ALPHA;
-		rendermode = LUMP_QFONT;
-		filesize += sizeof(lmp);
-		fin = (byte *)buffer;
-	}
-	else
-	{
-		fin = (byte *)buffer;
-		memcpy( &lmp, fin, sizeof( lmp ));
-		image.width = lmp.width;
-		image.height = lmp.height;
-		rendermode = LUMP_NORMAL;
-		fin += sizeof(lmp);
-	}
+	fin = (byte *)buffer;
+	memcpy( &lmp, fin, sizeof( lmp ));
+	image.width = lmp.width;
+	image.height = lmp.height;
+	rendermode = LUMP_NORMAL;
+	fin += sizeof( lmp );
 
 	pixels = image.width * image.height;
 

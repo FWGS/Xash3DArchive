@@ -969,6 +969,7 @@ void Cvar_List_f( void )
 {
 	convar_t	*var;
 	char	*match = NULL;
+	char	*value;
 	int	i = 0;
 
 	if( Cmd_Argc() > 1 )
@@ -982,9 +983,13 @@ void Cvar_List_f( void )
 		if( match && !Q_stricmpext( match, var->name ))
 			continue;
 
+		if( Q_colorstr( var->string ))
+			value = va( "\"%s\"", var->string );
+		else value = va( "\"^2%s^7\"", var->string );
+
 		if( FBitSet( var->flags, CVAR_SERVERDLL ))
-			Msg( " %-*s \"^2%s^7\" ^3%s^7\n", 32, var->name, var->string, "server cvar" );
-		else Msg( " %-*s \"^2%s^7\" ^3%s^7\n", 32, var->name, var->string, var->description );
+			Msg( " %-*s %s ^3%s^7\n", 32, var->name, value, "server cvar" );
+		else Msg( " %-*s %s ^3%s^7\n", 32, var->name, value, var->description );
 		i++;
 	}
 

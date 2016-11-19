@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #define SKYCLOUDS_QUALITY	12
 #define MAX_CLIP_VERTS	128 // skybox clip vertices
 #define TURBSCALE		( 256.0f / ( M_PI2 ))
+#define R_TurbSin( x )	( R_FastSin( x * 0.02f + cl.time ))
 static const char*		r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" };
 static const int		r_skyTexOrder[6] = { 0, 2, 1, 3, 4, 5 };
 
@@ -800,8 +801,7 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull )
 		{
 			if( waveHeight )
 			{
-				nv = v[2] + waveHeight + ( waveHeight * sin(v[0] * 0.02f + cl.time)
-					* sin(v[1] * 0.02 + cl.time) * sin(v[2] * 0.02f + cl.time));
+				nv = v[2] + waveHeight + ( waveHeight * R_TurbSin( v[0] ) * R_TurbSin( v[1] ) * R_TurbSin( v[2] ));
 				nv -= waveHeight;
 			}
 			else nv = v[2];

@@ -1155,22 +1155,6 @@ void CL_Reconnect_f( void )
 
 /*
 =================
-CL_ParseStatusMessage
-
-Handle a reply from a info
-=================
-*/
-void CL_ParseStatusMessage( netadr_t from, sizebuf_t *msg )
-{
-	char	*s = MSG_ReadString( msg );
-
-	// more info about servers
-	MsgDev( D_INFO, "Server: %s, Game: %s\n", NET_AdrToString( from ), Info_ValueForKey( s, "gamedir" ));
-	UI_AddServerToList( from, s );
-}
-
-/*
-=================
 CL_FixupColorStringsForInfoString
 
 all the keys and values must be ends with ^7
@@ -1231,6 +1215,26 @@ void CL_FixupColorStringsForInfoString( const char *in, char *out )
 	}
 
 	*out = '\0';
+}
+
+/*
+=================
+CL_ParseStatusMessage
+
+Handle a reply from a info
+=================
+*/
+void CL_ParseStatusMessage( netadr_t from, sizebuf_t *msg )
+{
+	static char	infostring[MAX_INFO_STRING+8];
+	char		*s = MSG_ReadString( msg );
+
+	CL_FixupColorStringsForInfoString( s, infostring );
+
+	// more info about servers
+	MsgDev( D_INFO, "Server: %s, Game: %s\n", NET_AdrToString( from ), Info_ValueForKey( infostring, "gamedir" ));
+
+	UI_AddServerToList( from, infostring );
 }
 
 /*
@@ -2153,4 +2157,6 @@ void CL_Shutdown( void )
 	SCR_FreeCinematic (); // release AVI's *after* client.dll because custom renderer may use them
 	S_Shutdown ();
 	R_Shutdown ();
+
+	Con_Shutdown ();
 }

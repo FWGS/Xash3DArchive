@@ -67,6 +67,30 @@ int ColorStrlen( const char *str )
 	return len;
 }
 
+int ColorPrexfixCount( const char *str )
+{
+	const char *p;
+
+	if( !str )
+		return 0;
+
+	int len = 0;
+	p = str;
+
+	while( *p )
+	{
+		if( IsColorString( p ))
+		{
+			len += 2;
+			p += 2;
+			continue;
+		}
+		p++;
+	}
+
+	return len;
+}
+
 void StringConcat( char *dst, const char *src, size_t size )
 {
 	register char *d = dst;

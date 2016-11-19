@@ -379,6 +379,8 @@ void Matrix4x4_CreateScale3( matrix4x4 out, float x, float y, float z );
 void Matrix4x4_CreateProjection(matrix4x4 out, float xMax, float xMin, float yMax, float yMin, float zNear, float zFar);
 void Matrix4x4_CreateOrtho(matrix4x4 m, float xLeft, float xRight, float yBottom, float yTop, float zNear, float zFar);
 void Matrix4x4_CreateModelview( matrix4x4 out );
+void R_InitLookupTables( void );
+float R_FastSin( float t );
 
 //
 // gl_rmisc.

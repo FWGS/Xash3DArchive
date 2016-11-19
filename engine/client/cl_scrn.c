@@ -603,7 +603,7 @@ void SCR_Init( void )
 	Cmd_AddCommand( "sizeup", SCR_SizeUp_f, "screen size up to 10 points" );
 	Cmd_AddCommand( "sizedown", SCR_SizeDown_f, "screen size down to 10 points" );
 
-	if( host.state != HOST_RESTART && !UI_LoadProgs( ))
+	if( !UI_LoadProgs( ))
 	{
 		Msg( "^1Error: ^7can't initialize gameui.dll\n" ); // there is non fatal for us
 		if( !host.developer ) host.developer = 1; // we need console, because menu is missing
@@ -616,12 +616,9 @@ void SCR_Init( void )
 	CL_InitNetgraph();
 	SCR_VidInit();
 
-	if( host.state != HOST_RESTART )
-          {
-		if( host.developer && Sys_CheckParm( "-toconsole" ))
-			Cbuf_AddText( "toggleconsole\n" );
-		else UI_SetActiveMenu( true );
-	}
+	if( host.developer && Sys_CheckParm( "-toconsole" ))
+		Cbuf_AddText( "toggleconsole\n" );
+	else UI_SetActiveMenu( true );
 
 	scr_init = true;
 }
@@ -635,9 +632,7 @@ void SCR_Shutdown( void )
 	Cmd_RemoveCommand( "skyname" );
 	Cmd_RemoveCommand( "viewpos" );
 	UI_SetActiveMenu( false );
-
-	if( host.state != HOST_RESTART )
-		UI_UnloadProgs();
+	UI_UnloadProgs();
 
 	scr_init = false;
 }

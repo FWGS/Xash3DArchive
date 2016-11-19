@@ -234,10 +234,10 @@ void Host_Exec_f( void )
 		return;
 	}
 
-	// HACKHACK: don't execute listenserver.cfg in singleplayer
+	// don't execute listenserver.cfg in singleplayer
 	if( !Q_stricmp( Cvar_VariableString( "lservercfgfile" ),  Cmd_Argv( 1 )))
 	{
-		if( Cvar_VariableValue( "maxplayers" ) == 1.0f )
+		if( Cvar_VariableInteger( "maxplayers" ) == 1 )
 			return;
 	}
 
@@ -828,7 +828,9 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 
 	host.mempool = Mem_AllocPool( "Zone Engine" );
 
-	if( Sys_CheckParm( "-console" )) host.developer = 1;
+	if( Sys_CheckParm( "-console" ))
+		host.developer = 1;
+
 	if( Sys_CheckParm( "-dev" ))
 	{
 		if( Sys_GetParmFromCmdLine( "-dev", dev_level ))
@@ -1044,8 +1046,8 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 
 	// we need to execute it again here
 	Cmd_ExecuteString( "exec config.cfg\n" );
-	oldtime = Sys_DoubleTime();
-	SCR_CheckStartupVids();	// must be last
+	oldtime = Sys_DoubleTime() - 0.1;
+	SCR_CheckStartupVids(); // must be last
 
 	// main window message loop
 	while( !host.crashed )

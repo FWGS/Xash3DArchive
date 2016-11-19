@@ -534,8 +534,8 @@ print into window console
 void Sys_Print( const char *pMsg )
 {
 	const char	*msg;
-	char		buffer[32768];
-	char		logbuf[32768];
+	char		buffer[MAX_PRINT_MSG];
+	char		logbuf[MAX_PRINT_MSG];
 	char		*b = buffer;
 	char		*c = logbuf;	
 	int		i = 0;
@@ -604,7 +604,7 @@ formatted message
 void Msg( const char *pMsg, ... )
 {
 	va_list	argptr;
-	char	text[8192];
+	char	text[MAX_PRINT_MSG];
 	
 	va_start( argptr, pMsg );
 	Q_vsnprintf( text, sizeof( text ), pMsg, argptr );
@@ -623,7 +623,7 @@ formatted developer message
 void MsgDev( int level, const char *pMsg, ... )
 {
 	va_list	argptr;
-	char	text[8192];
+	char	text[MAX_PRINT_MSG];
 
 	if( host.developer < level ) return;
 

@@ -1224,7 +1224,7 @@ void CL_PlayDemo_f( void )
 		CL_Disconnect();
 		Host_ShutdownServer();
 
-		Con_Close();
+		Con_FastClose();
 		UI_SetActiveMenu( false );
 	}
 

@@ -133,6 +133,56 @@ skipwhite:
 }
 
 /*
+================
+COM_ParseVector
+
+================
+*/
+qboolean COM_ParseVector( char **pfile, float *v, size_t size )
+{
+	string	token;
+	qboolean	bracket = false;
+	char	*saved;
+	uint	i;
+
+	if( v == NULL || size == 0 )
+		return false;
+
+	memset( v, 0, sizeof( *v ) * size );
+
+	if( size == 1 )
+	{
+		*pfile = COM_ParseFile( *pfile, token );
+		v[0] = Q_atof( token );
+		return true;
+	}
+
+	saved = *pfile;
+
+	if(( *pfile = COM_ParseFile( *pfile, token )) == NULL )
+		return false;
+
+	if( token[0] == '(' )
+		bracket = true;
+	else *pfile = saved; // restore token to right get it again
+
+	for( i = 0; i < size; i++ )
+	{
+		*pfile = COM_ParseFile( *pfile, token );
+		v[i] = Q_atof( token );
+	}
+
+	if( !bracket ) return true;	// done
+
+	if(( *pfile = COM_ParseFile( *pfile, token )) == NULL )
+		return false;
+
+	if( token[0] == ')' )
+		return true;
+	return false;
+}
+
+/*
 =============
 COM_FileSize
 
