@@ -536,15 +536,14 @@ SV_FindTouchedLeafs
 */
 void SV_FindTouchedLeafs( edict_t *ent, mnode_t *node, int *headnode )
 {
-	mplane_t	*splitplane;
-	int	sides, leafnum;
+	int	sides;
 	mleaf_t	*leaf;
 
-	if( !node || node->contents == CONTENTS_SOLID )
+	if( node->contents == CONTENTS_SOLID )
 		return;
 	
 	// add an efrag if the node is a leaf
-	if(  node->contents < 0 )
+	if( node->contents < 0 )
 	{
 		if( ent->num_leafs > ( MAX_ENT_LEAFS - 1 ))
 		{
@@ -555,53 +554,21 @@ void SV_FindTouchedLeafs( edict_t *ent, mnode_t *node, int *headnode )
 		else
 		{
 			leaf = (mleaf_t *)node;
-			leafnum = leaf - sv.worldmodel->leafs - 1;
-			ent->leafnums[ent->num_leafs] = leafnum;
+			ent->leafnums[ent->num_leafs] = leaf->cluster;
 			ent->num_leafs++;			
 		}
 		return;
 	}
 	
 	// NODE_MIXED
-	splitplane = node->plane;
-	sides = BOX_ON_PLANE_SIDE( ent->v.absmin, ent->v.absmax, splitplane );
+	sides = BOX_ON_PLANE_SIDE( ent->v.absmin, ent->v.absmax, node->plane );
 
-	if( sides == 3 && *headnode == -1 )
+	if(( sides == 3 ) && ( *headnode == -1 ))
 		*headnode = node - sv.worldmodel->nodes;
 	
 	// recurse down the contacted sides
 	if( sides & 1 ) SV_FindTouchedLeafs( ent, node->children[0], headnode );
 	if( sides & 2 ) SV_FindTouchedLeafs( ent, node->children[1], headnode );
-}
-
-/*
-=============
-SV_HeadnodeVisible
-=============
-*/
-qboolean SV_HeadnodeVisible( mnode_t *node, byte *visbits, int *lastleaf )
-{
-	int	leafnum;
-
-	if( !node || node->contents == CONTENTS_SOLID )
-		return false;
-
-	if( node->contents < 0 )
-	{
-		leafnum = ((mleaf_t *)node - sv.worldmodel->leafs) - 1;
-
-		if(!( visbits[leafnum >> 3] & (1<<( leafnum & 7 ))))
-			return false;
-
-		if( lastleaf )
-			*lastleaf = leafnum;
-		return true;
-	}
-
-	if( SV_HeadnodeVisible( node->children[0], visbits, lastleaf ))
-		return true;
-
-	return SV_HeadnodeVisible( node->children[1], visbits, lastleaf );
 }
 
 /*
@@ -623,9 +590,9 @@ void SV_LinkEdict( edict_t *ent, qboolean touch_triggers )
 
 	if( ent->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( ent->v.aiment ))
 	{
-		ent->headnode = ent->v.aiment->headnode;
-		ent->num_leafs = ent->v.aiment->num_leafs;
 		memcpy( ent->leafnums, ent->v.aiment->leafnums, sizeof( ent->leafnums ));
+		ent->num_leafs = ent->v.aiment->num_leafs;
+		ent->headnode = ent->v.aiment->headnode;
 	}
 	else
 	{
@@ -1560,7 +1527,7 @@ void SV_RunLightStyles( void )
 	// run lightstyles animation
 	for( i = 0, ls = sv.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
-		ls->time += host.frametime;
+		ls->time += sv.frametime;
 		ofs = (ls->time * 10);
 
 		if( ls->length == 0 ) ls->value = scale; // disable this light

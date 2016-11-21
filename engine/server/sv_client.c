@@ -97,10 +97,10 @@ A connection request that did not come from the master
 void SV_DirectConnect( netadr_t from )
 {
 	char		userinfo[MAX_INFO_STRING];
+	char		physinfo[MAX_PHYSINFO_STRING];
 	sv_client_t	temp, *cl, *newcl;
-	char		physinfo[512];
-	int		i, edictnum;
 	int		qport, version;
+	int		i, edictnum;
 	int		count = 0;
 	int		challenge;
 	edict_t		*ent;
@@ -245,9 +245,9 @@ gotnewcl:
 	Netchan_OutOfBandPrint( NS_SERVER, from, "client_connect" );
 
 	newcl->state = cs_connected;
-	newcl->cl_updaterate = 0.05;	// 20 fps as default
 	newcl->lastmessage = host.realtime;
 	newcl->lastconnect = host.realtime;
+	newcl->cl_updaterate = 0.05;	// 20 fps as default
 	newcl->delta_sequence = -1;
 
 	// parse some info from the info strings (this can override cl_updaterate)
@@ -280,16 +280,7 @@ void SV_DisconnectClient( edict_t *pClient )
 	// don't send to other clients
 	pClient->v.modelindex = 0;
 
-	if( pClient->pvPrivateData != NULL )
-	{
-		// NOTE: new interface can be missing
-		if( svgame.dllFuncs2.pfnOnFreeEntPrivateData != NULL )
-			svgame.dllFuncs2.pfnOnFreeEntPrivateData( pClient );
-
-		// clear any dlls data but keep engine data
-		Mem_Free( pClient->pvPrivateData );
-		pClient->pvPrivateData = NULL;
-	}
+	SV_FreePrivateData( pClient );
 
 	// invalidate serial number
 	pClient->serialnumber++;
@@ -355,9 +346,9 @@ edict_t *SV_FakeConnect( const char *netname )
 	ent = EDICT_NUM( edictnum );
 	newcl->edict = ent;
 	newcl->challenge = -1;		// fake challenge
-	newcl->fakeclient = true;
 	newcl->delta_sequence = -1;
 	newcl->userid = g_userid++;		// create unique userid
+	SetBits( newcl->flags, FCL_FAKECLIENT );
 
 	// get the game a chance to reject this connection or modify the userinfo
 	if( !SV_ClientConnect( ent, userinfo ))
@@ -371,11 +362,11 @@ edict_t *SV_FakeConnect( const char *netname )
 
 	MsgDev( D_NOTE, "Bot %i connecting with challenge %p\n", i, -1 );
 
-	ent->v.flags |= FL_FAKECLIENT;	// mark it as fakeclient
+	SetBits( ent->v.flags, FL_FAKECLIENT );	// mark it as fakeclient
 	newcl->state = cs_spawned;
 	newcl->lastmessage = host.realtime;	// don't timeout
 	newcl->lastconnect = host.realtime;
-	newcl->sendinfo = true;
+	SetBits( newcl->flags, FCL_RESEND_USERINFO );
 	
 	return ent;
 }
@@ -425,21 +416,19 @@ void SV_DropClient( sv_client_t *drop )
 		return;	// already dropped
 
 	// add the disconnect
-	if( !drop->fakeclient )
-	{
+	if( !FBitSet( drop->flags, FCL_FAKECLIENT ))
 		MSG_WriteByte( &drop->netchan.message, svc_disconnect );
-	}
 
 	// let the game known about client state
 	SV_DisconnectClient( drop->edict );
 
-	drop->fakeclient = false;
-	drop->hltv_proxy = false;
+	ClearBits( drop->flags, FCL_FAKECLIENT );
+	ClearBits( drop->flags, FCL_HLTV_PROXY );
 	drop->state = cs_zombie; // become free in a few seconds
 	drop->name[0] = 0;
 
 	if( drop->frames )
-		Mem_Free( drop->frames );	// fakeclients doesn't have frames
+		Mem_Free( drop->frames ); // release delta
 	drop->frames = NULL;
 
 	if( NET_CompareBaseAdr( drop->netchan.remote_address, host.rd.address ) )
@@ -492,7 +481,7 @@ void SV_BeginRedirect( netadr_t adr, int target, char *buffer, int buffersize, v
 
 void SV_FlushRedirect( netadr_t adr, int dest, char *buf )
 {
-	if( svs.currentPlayer && svs.currentPlayer->fakeclient )
+	if( svs.currentPlayer && FBitSet( svs.currentPlayer->flags, FCL_FAKECLIENT ))
 		return;
 
 	switch( dest )
@@ -703,6 +692,7 @@ void SV_BuildNetAnswer( netadr_t from )
 		Netchan_OutOfBandPrint( NS_SERVER, from, answer );
 		return;
 	}
+
 	if( type == NETAPI_REQUEST_PING )
 	{
 		Q_snprintf( answer, sizeof( answer ), "netinfo %i %i %s\n", context, type, "" );
@@ -798,8 +788,8 @@ Redirect all printfs
 */
 void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 {
-	char		remaining[1024];
 	static char	outputbuf[2048];
+	char		remaining[1024];
 	int		i;
 
 	MsgDev( D_INFO, "Rcon from %s:\n%s\n", NET_AdrToString( from ), MSG_GetData( msg ) + 4 );
@@ -834,7 +824,7 @@ int SV_CalcPing( sv_client_t *cl )
 	client_frame_t	*frame;
 
 	// bots don't have a real ping
-	if( cl->fakeclient || !cl->frames )
+	if( FBitSet( cl->flags, FCL_FAKECLIENT ) || !cl->frames )
 		return 5;
 
 	count = 0;
@@ -988,11 +978,14 @@ SV_RefreshUserinfo
 */
 void SV_RefreshUserinfo( void )
 {
-	int		i;
 	sv_client_t	*cl;
+	int		i;
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
-		if( cl->state >= cs_connected ) cl->sendinfo = true;
+	{
+		if( cl->state >= cs_connected )
+			SetBits( cl->flags, FCL_RESEND_USERINFO );
+	}
 }
 
 /*
@@ -1021,10 +1014,10 @@ if this person needs ping data.
 */
 qboolean SV_ShouldUpdatePing( sv_client_t *cl )
 {
-	if( !cl->hltv_proxy )
+	if( !FBitSet( cl->flags, FCL_HLTV_PROXY ))
 	{
 		SV_CalcPing( cl );
-		return cl->lastcmd.buttons & IN_SCORE;	// they are viewing the scoreboard.  Send them pings.
+		return FBitSet( cl->lastcmd.buttons, IN_SCORE );	// they are viewing the scoreboard.  Send them pings.
 	}
 
 	if( host.realtime > cl->next_checkpingtime )
@@ -1085,85 +1078,85 @@ Called when a player connects to a server or respawns in
 a deathmatch.
 ============
 */
-void SV_PutClientInServer( edict_t *ent )
+void SV_PutClientInServer( sv_client_t *cl )
 {
-	sv_client_t	*client;
+	edict_t	*ent = cl->edict;
 
-	client = SV_ClientFromEdict( ent, true );
-	ASSERT( client != NULL );
+	// now client is spawned
+	cl->state = cs_spawned;
 
 	if( !sv.loadgame )
 	{	
-		client->hltv_proxy = Q_atoi( Info_ValueForKey( client->userinfo, "hltv" )) ? true : false;
+		if( Q_atoi( Info_ValueForKey( cl->userinfo, "hltv" )))
+			SetBits( cl->flags, FCL_HLTV_PROXY );
 
-		if( client->hltv_proxy )
-			ent->v.flags |= FL_PROXY;
+		if( FBitSet( cl->flags, FCL_HLTV_PROXY ))
+			SetBits( ent->v.flags, FL_PROXY );
 		else ent->v.flags = 0;
 
-		ent->v.netname = MAKE_STRING( client->name );
+		ent->v.netname = MAKE_STRING( cl->name );
 
 		// fisrt entering
 		svgame.globals->time = sv.time;
 		svgame.dllFuncs.pfnClientPutInServer( ent );
 
 		if( sv.background )	// don't attack player in background mode
-			ent->v.flags |= (FL_GODMODE|FL_NOTARGET);
+			SetBits( ent->v.flags, FL_GODMODE|FL_NOTARGET );
 
-		client->pViewEntity = NULL; // reset pViewEntity
+		cl->pViewEntity = NULL; // reset pViewEntity
 
 		if( svgame.globals->cdAudioTrack )
 		{
-			MSG_WriteByte( &client->netchan.message, svc_stufftext );
-			MSG_WriteString( &client->netchan.message, va( "cd loop %3d\n", svgame.globals->cdAudioTrack ));
+			MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+			MSG_WriteString( &cl->netchan.message, va( "cd loop %3d\n", svgame.globals->cdAudioTrack ));
 			svgame.globals->cdAudioTrack = 0;
 		}
 	}
 	else
 	{
 		// enable dev-mode to prevent crash cheat-protecting from Invasion mod
-		if( ent->v.flags & (FL_GODMODE|FL_NOTARGET) && !Q_stricmp( GI->gamefolder, "invasion" ))
-			SV_ExecuteClientCommand( client, "test\n" );
+		if( FBitSet( ent->v.flags, FL_GODMODE|FL_NOTARGET ) && !Q_stricmp( GI->gamefolder, "invasion" ))
+			SV_ExecuteClientCommand( cl, "test\n" );
 
 		// NOTE: we needs to setup angles on restore here
 		if( ent->v.fixangle == 1 )
 		{
-			MSG_WriteByte( &client->netchan.message, svc_setangle );
-			MSG_WriteBitAngle( &client->netchan.message, ent->v.angles[0], 16 );
-			MSG_WriteBitAngle( &client->netchan.message, ent->v.angles[1], 16 );
-			MSG_WriteBitAngle( &client->netchan.message, ent->v.angles[2], 16 );
+			MSG_WriteByte( &cl->netchan.message, svc_setangle );
+			MSG_WriteBitAngle( &cl->netchan.message, ent->v.angles[0], 16 );
+			MSG_WriteBitAngle( &cl->netchan.message, ent->v.angles[1], 16 );
+			MSG_WriteBitAngle( &cl->netchan.message, ent->v.angles[2], 16 );
 			ent->v.fixangle = 0;
 		}
-		ent->v.effects |= EF_NOINTERP;
+		SetBits( ent->v.effects, EF_NOINTERP );
 
 		// reset weaponanim
-		MSG_WriteByte( &client->netchan.message, svc_weaponanim );
-		MSG_WriteByte( &client->netchan.message, 0 );
-		MSG_WriteByte( &client->netchan.message, 0 );
+		MSG_WriteByte( &cl->netchan.message, svc_weaponanim );
+		MSG_WriteByte( &cl->netchan.message, 0 );
+		MSG_WriteByte( &cl->netchan.message, 0 );
 
 		// trigger_camera restored here
 		if( sv.viewentity > 0 && sv.viewentity < GI->max_edicts )
-			client->pViewEntity = EDICT_NUM( sv.viewentity );
-		else client->pViewEntity = NULL;
+			cl->pViewEntity = EDICT_NUM( sv.viewentity );
+		else cl->pViewEntity = NULL;
 	}
 
 	// reset client times
-	client->last_cmdtime = 0.0;
-	client->last_movetime = 0.0;
-	client->next_movetime = 0.0;
+	cl->last_cmdtime = 0.0;
+	cl->last_movetime = 0.0;
+	cl->next_movetime = 0.0;
 
-	if( !client->fakeclient )
+	if( !FBitSet( cl->flags, FCL_FAKECLIENT ))
 	{
 		int	viewEnt;
 
-		// resend the signon
-		MSG_WriteBits( &client->netchan.message, MSG_GetData( &sv.signon ), MSG_GetNumBitsWritten( &sv.signon ));
+		MSG_WriteBits( &cl->netchan.message, MSG_GetData( &sv.signon ), MSG_GetNumBitsWritten( &sv.signon ));
 
-		if( client->pViewEntity )
-			viewEnt = NUM_FOR_EDICT( client->pViewEntity );
-		else viewEnt = NUM_FOR_EDICT( client->edict );
+		if( cl->pViewEntity )
+			viewEnt = NUM_FOR_EDICT( cl->pViewEntity );
+		else viewEnt = NUM_FOR_EDICT( cl->edict );
 	
-		MSG_WriteByte( &client->netchan.message, svc_setview );
-		MSG_WriteWord( &client->netchan.message, viewEnt );
+		MSG_WriteByte( &cl->netchan.message, svc_setview );
+		MSG_WriteWord( &cl->netchan.message, viewEnt );
 	}
 
 	// clear any temp states
@@ -1186,7 +1179,7 @@ void SV_TogglePause( const char *msg )
 
 	sv.paused ^= 1;
 
-	if( msg ) SV_BroadcastPrintf( PRINT_HIGH, "%s", msg );
+	if( msg ) SV_BroadcastPrintf( NULL, PRINT_HIGH, "%s", msg );
 
 	// send notification to all clients
 	MSG_WriteByte( &sv.reliable_datagram, svc_setpause );
@@ -1211,11 +1204,10 @@ This will be sent on the initial connection and upon each server load.
 void SV_New_f( sv_client_t *cl )
 {
 	int	playernum;
-	edict_t	*ent;
 
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "new is not valid from the console\n" );
+		MsgDev( D_INFO, "'new' is not valid from the console\n" );
 		return;
 	}
 
@@ -1242,8 +1234,7 @@ void SV_New_f( sv_client_t *cl )
 	if( sv.state == ss_active )
 	{
 		// set up the entity for the client
-		ent = EDICT_NUM( playernum + 1 );
-		cl->edict = ent;
+		cl->edict = EDICT_NUM( playernum + 1 );
 
 		// NOTE: custom resources download is disabled until is done
 		if( /*sv_maxclients->integer ==*/ 1 )
@@ -1272,7 +1263,7 @@ void SV_ContinueLoading_f( sv_client_t *cl )
 {
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "continueloading is not valid from the console\n" );
+		MsgDev( D_INFO, "'continueloading' is not valid from the console\n" );
 		return;
 	}
 
@@ -1362,14 +1353,14 @@ void SV_WriteModels_f( sv_client_t *cl )
 
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "modellist is not valid from the console\n" );
+		MsgDev( D_INFO, "'modellist' is not valid from the console\n" );
 		return;
 	}
 
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "modellist from different level\n" );
+		MsgDev( D_INFO, "'modellist' from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
@@ -1408,14 +1399,14 @@ void SV_WriteSounds_f( sv_client_t *cl )
 
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "soundlist is not valid from the console\n" );
+		MsgDev( D_INFO, "'soundlist' is not valid from the console\n" );
 		return;
 	}
 
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "soundlist from different level\n" );
+		MsgDev( D_INFO, "'soundlist' from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
@@ -1454,14 +1445,14 @@ void SV_WriteEvents_f( sv_client_t *cl )
 
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "eventlist is not valid from the console\n" );
+		MsgDev( D_INFO, "'eventlist' is not valid from the console\n" );
 		return;
 	}
 
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "eventlist from different level\n" );
+		MsgDev( D_INFO, "'eventlist' from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
@@ -1500,14 +1491,14 @@ void SV_WriteLightstyles_f( sv_client_t *cl )
 
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "lightstyles is not valid from the console\n" );
+		MsgDev( D_INFO, "'lightstyles' is not valid from the console\n" );
 		return;
 	}
 
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "lightstyles from different level\n" );
+		MsgDev( D_INFO, "'lightstyles' from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
@@ -1548,14 +1539,14 @@ void SV_UserMessages_f( sv_client_t *cl )
 
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "usermessages is not valid from the console\n" );
+		MsgDev( D_INFO, "'usermsgs' is not valid from the console\n" );
 		return;
 	}
 	
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "usermessages from different level\n" );
+		MsgDev( D_INFO, "'usermsgs' from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
@@ -1598,14 +1589,14 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "deltainfo is not valid from the console\n" );
+		MsgDev( D_INFO, "'deltainfo' is not valid from the console\n" );
 		return;
 	}
 	
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "deltainfo from different level\n" );
+		MsgDev( D_INFO, "'deltainfo' from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
@@ -1661,14 +1652,14 @@ void SV_Baselines_f( sv_client_t *cl )
 
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "baselines is not valid from the console\n" );
+		MsgDev( D_INFO, "'baselines' is not valid from the console\n" );
 		return;
 	}
 	
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "baselines from different level\n" );
+		MsgDev( D_INFO, "'baselines' from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
@@ -1706,20 +1697,19 @@ void SV_Begin_f( sv_client_t *cl )
 {
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "begin is not valid from the console\n" );
+		MsgDev( D_INFO, "'begin' is not valid from the console\n" );
 		return;
 	}
 
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		Msg( "begin from different level\n" );
+		Msg( "'begin' from different level\n" );
 		SV_New_f( cl );
 		return;
 	}
 
-	cl->state = cs_spawned;
-	SV_PutClientInServer( cl->edict );
+	SV_PutClientInServer( cl );
 
 	// if we are paused, tell the client
 	if( sv.paused )
@@ -1771,7 +1761,7 @@ void SV_Pause_f( sv_client_t *cl )
 		return;
 	}
 
-	if( cl->hltv_proxy )
+	if( FBitSet( cl->flags, FCL_HLTV_PROXY ))
 	{
 		SV_ClientPrintf( cl, PRINT_HIGH, "Spectators can not pause.\n" );
 		return;
@@ -1796,7 +1786,7 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 {
 	int		i, dupc = 1;
 	edict_t		*ent = cl->edict;
-	string		temp1, temp2;	
+	string		name1, name2;	
 	sv_client_t	*current;
 	char		*val;
 
@@ -1805,26 +1795,26 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	Q_strncpy( cl->userinfo, userinfo, sizeof( cl->userinfo ));
 
 	val = Info_ValueForKey( cl->userinfo, "name" );
-	Q_strncpy( temp2, val, sizeof( temp2 ));
-	COM_TrimSpace( temp2, temp1 );
+	Q_strncpy( name2, val, sizeof( name2 ));
+	COM_TrimSpace( name2, name1 );
 
-	if( !Q_stricmp( temp1, "console" )) // keyword came from OSHLDS
+	if( !Q_stricmp( name1, "console" ))
 	{
 		Info_SetValueForKey( cl->userinfo, "name", "unnamed" );
 		val = Info_ValueForKey( cl->userinfo, "name" );
 	}
-	else if( Q_strcmp( temp1, val ))
+	else if( Q_strcmp( name1, val ))
 	{
-		Info_SetValueForKey( cl->userinfo, "name", temp1 );
+		Info_SetValueForKey( cl->userinfo, "name", name1 );
 		val = Info_ValueForKey( cl->userinfo, "name" );
 	}
 
-	if( !Q_strlen( temp1 ) )
+	if( !Q_strlen( name1 ))
 	{
 		Info_SetValueForKey( cl->userinfo, "name", "unnamed" );
 		val = Info_ValueForKey( cl->userinfo, "name" );
-		Q_strncpy( temp2, "unnamed", sizeof( temp2 ));
-		Q_strncpy( temp1, "unnamed", sizeof( temp1 ));
+		Q_strncpy( name2, "unnamed", sizeof( name2 ));
+		Q_strncpy( name1, "unnamed", sizeof( name1 ));
 	}
 
 	// check to see if another user by the same name exists
@@ -1842,15 +1832,15 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 		if( i != sv_maxclients->integer )
 		{
 			// dup name
-			Q_snprintf( temp2, sizeof( temp2 ), "%s (%u)", temp1, dupc++ );
-			Info_SetValueForKey( cl->userinfo, "name", temp2 );
+			Q_snprintf( name2, sizeof( name2 ), "%s (%u)", name1, dupc++ );
+			Info_SetValueForKey( cl->userinfo, "name", name2 );
 			val = Info_ValueForKey( cl->userinfo, "name" );
-			Q_strncpy( cl->name, temp2, sizeof( cl->name ));
+			Q_strncpy( cl->name, name2, sizeof( cl->name ));
 		}
 		else
 		{
 			if( dupc == 1 ) // unchanged
-				Q_strncpy( cl->name, temp1, sizeof( cl->name ));
+				Q_strncpy( cl->name, name1, sizeof( cl->name ));
 			break;
 		}
 	}
@@ -1865,15 +1855,28 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	val = Info_ValueForKey( cl->userinfo, "cl_msglevel" );
 	if( Q_strlen( val )) cl->messagelevel = Q_atoi( val );
 
-	cl->local_weapons = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )) ? true : false;
-	cl->lag_compensation = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lc" )) ? true : false;
+	if( Q_atoi( Info_ValueForKey( cl->userinfo, "cl_predict" )))
+		SetBits( cl->flags, FCL_PREDICT_MOVEMENT );
+	else ClearBits( cl->flags, FCL_PREDICT_MOVEMENT );
+
+	if( Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lc" )))
+		SetBits( cl->flags, FCL_LAG_COMPENSATION );
+	else ClearBits( cl->flags, FCL_LAG_COMPENSATION );
+
+	if( Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )))
+		SetBits( cl->flags, FCL_LOCAL_WEAPONS );
+	else ClearBits( cl->flags, FCL_LOCAL_WEAPONS );
 
 	val = Info_ValueForKey( cl->userinfo, "cl_updaterate" );
 
 	if( Q_strlen( val ))
 	{
-		int i = bound( 10, Q_atoi( val ), 300 );
-		cl->cl_updaterate = 1.0f / i;
+		if( Q_atoi( val ) != 0 )
+		{
+			int i = bound( 10, Q_atoi( val ), 300 );
+			cl->cl_updaterate = 1.0 / i;
+		}
+		else cl->cl_updaterate = 0.0;
 	}
 
 	if( sv_maxclients->integer > 1 )
@@ -1900,7 +1903,7 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	svgame.dllFuncs.pfnClientUserInfoChanged( cl->edict, cl->userinfo );
 	ent->v.netname = MAKE_STRING( cl->name );
 
-	if( cl->state >= cs_connected ) cl->sendinfo = true; // needs for update client info 
+	if( cl->state >= cs_connected ) SetBits( cl->flags, FCL_RESEND_USERINFO ); // needs for update client info 
 }
 
 /*
@@ -1951,7 +1954,7 @@ static void SV_Godmode_f( sv_client_t *cl )
 
 	pEntity->v.flags = pEntity->v.flags ^ FL_GODMODE;
 
-	if ( !( pEntity->v.flags & FL_GODMODE ))
+	if( !FBitSet( pEntity->v.flags, FL_GODMODE ))
 		SV_ClientPrintf( cl, PRINT_HIGH, "godmode OFF\n" );
 	else SV_ClientPrintf( cl, PRINT_HIGH, "godmode ON\n" );
 }
@@ -1970,7 +1973,7 @@ static void SV_Notarget_f( sv_client_t *cl )
 
 	pEntity->v.flags = pEntity->v.flags ^ FL_NOTARGET;
 
-	if ( !( pEntity->v.flags & FL_NOTARGET ))
+	if( !FBitSet( pEntity->v.flags, FL_NOTARGET ))
 		SV_ClientPrintf( cl, PRINT_HIGH, "notarget OFF\n" );
 	else SV_ClientPrintf( cl, PRINT_HIGH, "notarget ON\n" );
 }
@@ -1982,12 +1985,12 @@ SV_SendRes_f
 */
 void SV_SendRes_f( sv_client_t *cl )
 {
-	sizebuf_t		msg;
 	static byte	buffer[65535];
+	sizebuf_t		msg;
 
 	if( cl->state != cs_connected )
 	{
-		MsgDev( D_INFO, "sendres is not valid from the console\n" );
+		MsgDev( D_INFO, "'sendres' is not valid from the console\n" );
 		return;
 	}
 
@@ -2072,7 +2075,8 @@ void SV_TSourceEngineQuery( netadr_t from )
 {
 	// A2S_INFO
 	char	answer[1024] = "";
-	int	count = 0, bots = 0, index;
+	int	count = 0, bots = 0;
+	int	index;
 	sizebuf_t	buf;
 
 	if( svs.clients )
@@ -2081,7 +2085,7 @@ void SV_TSourceEngineQuery( netadr_t from )
 		{
 			if( svs.clients[index].state >= cs_connected )
 			{
-				if( svs.clients[index].fakeclient )
+				if( FBitSet( svs.clients[index].flags, FCL_FAKECLIENT ))
 					bots++;
 				else count++;
 			}
@@ -2188,8 +2192,8 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	client_frame_t	*frame;
 	int		key, size, checksum1, checksum2;
 	int		i, numbackup, newcmds, numcmds;
-	usercmd_t		nullcmd, *from;
-	usercmd_t		cmds[32], *to;
+	usercmd_t		nullcmd, *to, *from;
+	usercmd_t		cmds[32];
 	edict_t		*player;
 
 	player = cl->edict;
@@ -2215,7 +2219,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 		return;
 	}
 
-	from = &nullcmd;	// first cmd are starting from null-comressed usercmd_t
+	from = &nullcmd;	// first cmd are starting from null-compressed usercmd_t
 
 	for( i = numcmds - 1; i >= 0; i-- )
 	{
@@ -2296,7 +2300,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	// adjust latency time by 1/2 last client frame since
 	// the message probably arrived 1/2 through client's frame loop
 	frame->latency -= cl->lastcmd.msec * 0.5f / 1000.0f;
-	frame->latency = max( 0.0f, frame->latency );
+	frame->latency = Q_max( 0.0f, frame->latency );
 
 	if( player->v.animtime > svgame.globals->time + host.frametime )
 		player->v.animtime = svgame.globals->time + host.frametime;
@@ -2367,7 +2371,7 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 	// calc ping time
 	frame = &cl->frames[cl->netchan.incoming_acknowledged & SV_UPDATE_MASK];
 
-	// raw ping doesn't factor in message interval, either
+	// ping time doesn't factor in message interval, either
 	frame->ping_time = host.realtime - frame->senttime - cl->cl_updaterate;
 
 	// on first frame ( no senttime ) don't skew ping

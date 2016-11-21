@@ -200,7 +200,7 @@ qboolean SV_RunThink( edict_t *ent )
 	if(!( ent->v.flags & FL_KILLME ))
 	{
 		thinktime = ent->v.nextthink;
-		if( thinktime <= 0.0f || thinktime > sv.time + host.frametime )
+		if( thinktime <= 0.0f || thinktime > sv.time + sv.frametime )
 			return true;
 		
 		if( thinktime < sv.time )
@@ -703,8 +703,8 @@ void SV_AddGravity( edict_t *ent )
 	else ent_gravity = 1.0f;
 
 	// add gravity incorrectly
-	ent->v.velocity[2] -= ( ent_gravity * sv_gravity->value * host.frametime );
-	ent->v.velocity[2] += ( ent->v.basevelocity[2] * host.frametime );
+	ent->v.velocity[2] -= ( ent_gravity * sv_gravity->value * sv.frametime );
+	ent->v.velocity[2] += ( ent->v.basevelocity[2] * sv.frametime );
 	ent->v.basevelocity[2] = 0.0f;
 
 	// bound velocity
@@ -727,7 +727,7 @@ void SV_AddHalfGravity( edict_t *ent, float timestep )
 
 	// Add 1/2 of the total gravitational effects over this timestep
 	ent->v.velocity[2] -= ( 0.5f * ent_gravity * sv_gravity->value * timestep );
-	ent->v.velocity[2] += ( ent->v.basevelocity[2] * host.frametime );
+	ent->v.velocity[2] += ( ent->v.basevelocity[2] * sv.frametime );
 	ent->v.basevelocity[2] = 0.0f;
 	
 	// bound velocity
@@ -1128,12 +1128,12 @@ void SV_Physics_Pusher( edict_t *ent )
 	oldtime = ent->v.ltime;
 	thinktime = ent->v.nextthink;
 
-	if( thinktime < oldtime + host.frametime )
+	if( thinktime < oldtime + sv.frametime )
 	{
 		movetime = thinktime - oldtime;
 		if( movetime < 0.0f ) movetime = 0.0f;
 	}
-	else movetime = host.frametime;
+	else movetime = sv.frametime;
 
 	if( movetime )
 	{
@@ -1247,7 +1247,7 @@ void SV_Physics_Compound( edict_t *ent )
 	{
 		VectorCopy( parent->v.origin, ent->v.oldorigin );
 		VectorCopy( parent->v.angles, ent->v.avelocity );
-		ent->v.ltime = host.frametime;
+		ent->v.ltime = sv.frametime;
 		return;
 	}
 
@@ -1303,8 +1303,8 @@ void SV_Physics_Noclip( edict_t *ent )
 
 	SV_CheckWater( ent );	
 
-	VectorMA( ent->v.origin, host.frametime, ent->v.velocity,  ent->v.origin );
-	VectorMA( ent->v.angles, host.frametime, ent->v.avelocity, ent->v.angles );
+	VectorMA( ent->v.origin, sv.frametime, ent->v.velocity,  ent->v.origin );
+	VectorMA( ent->v.angles, sv.frametime, ent->v.avelocity, ent->v.angles );
 
 	// noclip ents never touch triggers
 	SV_LinkEdict( ent, false );
@@ -1444,10 +1444,10 @@ void SV_Physics_Toss( edict_t *ent )
 	{
 	case MOVETYPE_TOSS:
 	case MOVETYPE_BOUNCE:
-		SV_AngularMove( ent, host.frametime, ent->v.friction );
+		SV_AngularMove( ent, sv.frametime, ent->v.friction );
 		break;         
 	default:
-		SV_AngularMove( ent, host.frametime, 0.0f );
+		SV_AngularMove( ent, sv.frametime, 0.0f );
 		break;
 	}
 
@@ -1457,7 +1457,7 @@ void SV_Physics_Toss( edict_t *ent )
 	VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 
 	SV_CheckVelocity( ent );
-	VectorScale( ent->v.velocity, host.frametime, move );
+	VectorScale( ent->v.velocity, sv.frametime, move );
 
 	VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 
@@ -1496,7 +1496,7 @@ void SV_Physics_Toss( edict_t *ent )
 		VectorAdd( ent->v.velocity, ent->v.basevelocity, move );
 		vel = DotProduct( move, move );
 
-		if( ent->v.velocity[2] < sv_gravity->value * host.frametime )
+		if( ent->v.velocity[2] < sv_gravity->value * sv.frametime )
 		{
 			// we're rolling on the ground, add static friction.
 			ent->v.groundentity = trace.ent;
@@ -1513,8 +1513,8 @@ void SV_Physics_Toss( edict_t *ent )
 		}
 		else
 		{
-			VectorScale( ent->v.velocity, (1.0f - trace.fraction) * host.frametime * 0.9f, move );
-			VectorMA( move, (1.0f - trace.fraction) * host.frametime * 0.9f, ent->v.basevelocity, move );
+			VectorScale( ent->v.velocity, (1.0f - trace.fraction) * sv.frametime * 0.9f, move );
+			VectorMA( move, (1.0f - trace.fraction) * sv.frametime * 0.9f, ent->v.basevelocity, move );
 			trace = SV_PushEntity( ent, move, vec3_origin, NULL );
 			if( ent->free ) return;
 		}
@@ -1561,7 +1561,7 @@ void SV_Physics_Step( edict_t *ent )
 
 	if( ent->v.flags & FL_FLOAT && ent->v.waterlevel > 0 )
 	{
-		float buoyancy = SV_Submerged( ent ) * ent->v.skin * host.frametime;
+		float buoyancy = SV_Submerged( ent ) * ent->v.skin * sv.frametime;
 
 		SV_AddGravity( ent );
 		ent->v.velocity[2] += buoyancy;
@@ -1592,7 +1592,7 @@ void SV_Physics_Step( edict_t *ent )
 				if( wasonmover ) friction *= 0.5f; // add a little friction
 
 				control = (speed < sv_stopspeed->value) ? sv_stopspeed->value : speed;
-				newspeed = speed - (host.frametime * control * friction);
+				newspeed = speed - (sv.frametime * control * friction);
 				if( newspeed < 0 ) newspeed = 0;
 				newspeed /= speed;
 
@@ -1604,7 +1604,7 @@ void SV_Physics_Step( edict_t *ent )
 		VectorAdd( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 		SV_CheckVelocity( ent );
 
-		SV_FlyMove( ent, host.frametime, NULL );
+		SV_FlyMove( ent, sv.frametime, NULL );
 		if( ent->free ) return;
 
 		SV_CheckVelocity( ent );
@@ -1685,7 +1685,7 @@ static void SV_Physics_Entity( edict_t *ent )
 	if(!( ent->v.flags & FL_BASEVELOCITY ) && !VectorIsNull( ent->v.basevelocity ))
 	{
 		// Apply momentum (add in half of the previous frame of velocity first)
-		VectorMA( ent->v.velocity, 1.0f + (host.frametime * 0.5f), ent->v.basevelocity, ent->v.velocity );
+		VectorMA( ent->v.velocity, 1.0f + (sv.frametime * 0.5f), ent->v.basevelocity, ent->v.velocity );
 		VectorClear( ent->v.basevelocity );
 	}
 
@@ -1777,7 +1777,7 @@ void SV_Physics( void )
 	if( sv_skyspeed->value )
 	{
 		// evaluate sky rotation.
-		float skyAngle = sv_skyangle->value + sv_skyspeed->value * host.frametime;
+		float skyAngle = sv_skyangle->value + sv_skyspeed->value * sv.frametime;
 		Cvar_SetFloat( "sv_skyangle", anglemod( skyAngle ));
 	}
 
@@ -1809,7 +1809,7 @@ Inplementation for new physics interface
 */
 double SV_GetFrameTime( void )
 {
-	return host.frametime;
+	return sv.frametime;
 }
 
 /*

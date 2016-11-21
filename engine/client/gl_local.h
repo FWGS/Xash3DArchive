@@ -114,6 +114,8 @@ typedef struct
 	int		viewport[4];
 	mplane_t		frustum[6];
 
+	mleaf_t		*viewleaf;
+	mleaf_t		*oldviewleaf;
 	vec3_t		pvsorigin;
 	vec3_t		vieworg;		// locked vieworigin
 	vec3_t		vforward;
@@ -150,6 +152,8 @@ typedef struct
 	matrix4x4		worldviewProjectionMatrix;	// worldviewMatrix * projectionMatrix
 	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
 	float		lightcache[MAX_LIGHTSTYLES];
+
+	byte		visbytes[(MAX_MAP_LEAFS+7)/8];// actual PVS for current frame
 
 	float		viewplanedist;
 	mplane_t		clipPlane;

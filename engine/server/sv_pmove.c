@@ -148,7 +148,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 
 void SV_GetTrueOrigin( sv_client_t *cl, int edictnum, vec3_t origin )
 {
-	if( !cl->lag_compensation || !sv_unlag->integer )
+	if( !FBitSet( cl->flags, FCL_LAG_COMPENSATION ) || !sv_unlag->integer )
 		return;
 
 	// don't allow unlag in singleplayer
@@ -165,7 +165,7 @@ void SV_GetTrueOrigin( sv_client_t *cl, int edictnum, vec3_t origin )
 
 void SV_GetTrueMinMax( sv_client_t *cl, int edictnum, vec3_t mins, vec3_t maxs )
 {
-	if( !cl->lag_compensation || !sv_unlag->integer )
+	if( !FBitSet( cl->flags, FCL_LAG_COMPENSATION ) || !sv_unlag->integer )
 		return;
 
 	// don't allow unlag in singleplayer
@@ -225,12 +225,12 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 			continue;
 
 		// ignore monsterclip brushes
-		if(( check->v.flags & FL_MONSTERCLIP ) && check->v.solid == SOLID_BSP )
+		if( FBitSet( check->v.flags, FL_MONSTERCLIP ) && check->v.solid == SOLID_BSP )
 			continue;
 
 		if( check == pl ) continue;	// himself
 
-		if((( check->v.flags & FL_CLIENT ) && check->v.health <= 0 ) || check->v.deadflag == DEAD_DEAD )
+		if(( FBitSet( check->v.flags, FL_CLIENT|FL_FAKECLIENT ) && check->v.health <= 0.0f ) || check->v.deadflag == DEAD_DEAD )
 			continue;	// dead body
 
 		if( VectorIsNull( check->v.size ))
@@ -239,7 +239,7 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 		VectorCopy( check->v.absmin, mins );
 		VectorCopy( check->v.absmax, maxs );
 
-		if( check->v.flags & FL_CLIENT )
+		if( FBitSet( check->v.flags, FL_CLIENT ))
 		{
 			// trying to get interpolated values
 			if( svs.currentPlayer )
@@ -620,14 +620,14 @@ static void PM_CheckMovingGround( edict_t *ent, float frametime )
 		SV_UpdateBaseVelocity( ent );
 	}
 
-	if( !( ent->v.flags & FL_BASEVELOCITY ))
+	if( !FBitSet( ent->v.flags, FL_BASEVELOCITY ))
 	{
 		// apply momentum (add in half of the previous frame of velocity first)
 		VectorMA( ent->v.velocity, 1.0f + (frametime * 0.5f), ent->v.basevelocity, ent->v.velocity );
 		VectorClear( ent->v.basevelocity );
 	}
 
-	ent->v.flags &= ~FL_BASEVELOCITY;
+	ClearBits( ent->v.flags, FL_BASEVELOCITY );
 }
 
 static void SV_SetupPMove( playermove_t *pmove, sv_client_t *cl, usercmd_t *ucmd, const char *physinfo )
@@ -827,7 +827,7 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 		return;
 
 	// unlag disabled for current client
-	if( !cl->lag_compensation )
+	if( !FBitSet( cl->flags, FCL_LAG_COMPENSATION ))
 		return;
 
 	has_update = true;
@@ -986,7 +986,7 @@ void SV_RestoreMoveInterpolant( sv_client_t *cl )
 		return;
 
 	// unlag disabled for current client
-	if( !cl->lag_compensation )
+	if( !FBitSet( cl->flags, FCL_LAG_COMPENSATION ))
 		return;
 
 	for( i = 0, check = svs.clients; i < sv_maxclients->integer; i++, check++ )
@@ -1050,7 +1050,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 		return;
 	}
 
-	if( !cl->fakeclient )
+	if( !FBitSet( cl->flags, FCL_FAKECLIENT ))
 	{
 		SV_SetupMoveInterpolant( cl );
 	}
@@ -1127,7 +1127,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 	svgame.dllFuncs.pfnPlayerPostThink( clent );
 	svgame.dllFuncs.pfnCmdEnd( clent );
 
-	if( !cl->fakeclient )
+	if( !FBitSet( cl->flags, FCL_FAKECLIENT ))
 	{
 		SV_RestoreMoveInterpolant( cl );
 	}

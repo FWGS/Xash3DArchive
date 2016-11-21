@@ -48,8 +48,15 @@ create buffer, that contain clipboard
 */
 char *Sys_GetClipboardData( void )
 {
-	char	*data = NULL;
-	char	*cliptext;
+	static char	*data = NULL;
+	char		*cliptext;
+
+	if( data )
+	{
+		// release previous cbd
+		Z_Free( data );
+		data = NULL;
+	}
 
 	if( OpenClipboard( NULL ) != 0 )
 	{
@@ -66,6 +73,7 @@ char *Sys_GetClipboardData( void )
 		}
 		CloseClipboard();
 	}
+
 	return data;
 }
 
@@ -259,9 +267,9 @@ qboolean _Sys_GetParmFromCmdLine( char *parm, char *out, size_t size )
 {
 	int	argc = Sys_CheckParm( parm );
 
-	if( !argc ) return false;
-	if( !out ) return false;	
-	if( !host.argv[argc + 1] ) return false;
+	if( !argc || !out || !host.argv[argc + 1] )
+		return false;
+
 	Q_strncpy( out, host.argv[argc+1], size );
 
 	return true;
@@ -554,22 +562,20 @@ void Sys_Print( const char *pMsg )
 		if( msg[i] == '\n' && msg[i+1] == '\r' )
 		{
 			b[0] = '\r';
-			b[1] = '\n';
-			c[0] = '\n';
+			b[1] = c[0] = '\n';
 			b += 2, c++;
 			i++;
 		}
 		else if( msg[i] == '\r' )
 		{
-			b[0] = '\r';
+			b[0] = c[0] = '\r';
 			b[1] = '\n';
-			b += 2;
+			b += 2, c++;
 		}
 		else if( msg[i] == '\n' )
 		{
 			b[0] = '\r';
-			b[1] = '\n';
-			c[0] = '\n';
+			b[1] = c[0] = '\n';
 			b += 2, c++;
 		}
 		else if( msg[i] == '\35' || msg[i] == '\36' || msg[i] == '\37' )
@@ -588,7 +594,7 @@ void Sys_Print( const char *pMsg )
 		i++;
 	}
 
-	*b = *c = 0; // cutoff garbage
+	*b = *c = 0; // terminator
 
 	Sys_PrintLog( logbuf );
 	Con_WinPrint( buffer );

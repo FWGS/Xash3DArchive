@@ -204,94 +204,50 @@ void Mod_SetupHulls( vec3_t mins[MAX_MAP_HULLS], vec3_t maxs[MAX_MAP_HULLS] )
 
 /*
 ===================
-Mod_CompressVis
-===================
-*/
-byte *Mod_CompressVis( const byte *in, size_t *size )
-{
-	int	j, rep;
-	int	visrow;
-	byte	*dest_p;
-
-	if( !worldmodel )
-	{
-		Host_Error( "Mod_CompressVis: no worldmodel\n" );
-		return NULL;
-	}
-	
-	dest_p = visdata;
-	visrow = (worldmodel->numleafs + 7) >> 3;
-	
-	for( j = 0; j < visrow; j++ )
-	{
-		*dest_p++ = in[j];
-		if( in[j] ) continue;
-
-		rep = 1;
-		for( j++; j < visrow; j++ )
-		{
-			if( in[j] || rep == 255 )
-				break;
-			else rep++;
-		}
-		*dest_p++ = rep;
-		j--;
-	}
-
-	if( size ) *size = dest_p - visdata;
-
-	return visdata;
-}
-
-/*
-===================
 Mod_DecompressVis
 ===================
 */
-byte *Mod_DecompressVis( const byte *in )
+static void Mod_DecompressVis( const byte *in, const byte *inend, byte *out, byte *outend )
 {
-	int	c, row;
-	byte	*out;
+	byte	*outstart = out;
+	int	c;
 
-	if( !worldmodel )
+	while( out < outend )
 	{
-		Host_Error( "Mod_DecompressVis: no worldmodel\n" );
-		return NULL;
+		if( in == inend )
+		{
+			MsgDev( D_WARN, "Mod_DecompressVis: input underrun (decompressed %i of %i output bytes)\n",
+			(int)(out - outstart), (int)(outend - outstart));
+			return;
+		}
+
+		c = *in++;
+
+		if( c )
+		{
+			*out++ = c;
+		}
+		else
+		{
+			if( in == inend )
+			{
+				MsgDev( D_WARN, "Mod_DecompressVis: input underrun (during zero-run) (decompressed %i of %i output bytes)\n",
+				(int)(out - outstart), (int)(outend - outstart));
+				return;
+			}
+
+			for( c = *in++; c > 0; c-- )
+			{
+				if( out == outend )
+				{
+					MsgDev( D_WARN, "Mod_DecompressVis: output overrun (decompressed %i of %i output bytes)\n",
+					(int)(out - outstart), (int)(outend - outstart));
+					return;
+				}
+				*out++ = 0;
+			}
+		}
 	}
-
-	row = (worldmodel->numleafs + 7) >> 3;	
-	out = visdata;
-
-	if( !in )
-	{	
-		// no vis info, so make all visible
-		while( row )
-		{
-			*out++ = 0xff;
-			row--;
-		}
-		return visdata;
-	}
-
-	do
-	{
-		if( *in )
-		{
-			*out++ = *in++;
-			continue;
-		}
-
-		c = in[1];
-		in += 2;
-
-		while( c )
-		{
-			*out++ = 0;
-			c--;
-		}
-	} while( out - visdata < row );
-
-	return visdata;
 }
 
 /*
@@ -317,41 +273,99 @@ mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node )
 
 /*
 ==================
-Mod_LeafPVS
+Mod_GetPVSForPoint
 
+Returns PVS data for a given point
+NOTE: can return NULL
 ==================
 */
-byte *Mod_LeafPVS( mleaf_t *leaf, model_t *model )
+byte *Mod_GetPVSForPoint( const vec3_t p )
 {
-	if( !model || !leaf || leaf == model->leafs || !model->visdata )
-		return Mod_DecompressVis( NULL );
-	return Mod_DecompressVis( leaf->compressed_vis );
+	mnode_t	*node;
+	mleaf_t	*leaf = NULL;
+
+	ASSERT( worldmodel != NULL );
+
+	node = worldmodel->nodes;
+
+	while( 1 )
+	{
+		if( node->contents < 0 )
+		{
+			leaf = (mleaf_t *)node;
+			break; // we found a leaf
+		}
+		node = node->children[PlaneDiff( p, node->plane ) < 0];
+	}
+
+	if( leaf && leaf->cluster >= 0 )
+		return world.visdata + leaf->cluster * world.visbytes;
+	return NULL;
 }
 
 /*
 ==================
-Mod_LeafPHS
+Mod_FatPVS_RecursiveBSPNode
 
 ==================
 */
-byte *Mod_LeafPHS( mleaf_t *leaf, model_t *model )
+static void Mod_FatPVS_RecursiveBSPNode( const vec3_t org, float radius, byte *visbuffer, int visbytes, mnode_t *node )
 {
-	if( !model || !leaf || leaf == model->leafs || !model->visdata )
-		return Mod_DecompressVis( NULL );
-	return Mod_DecompressVis( leaf->compressed_pas );
+	int	i;
+
+	while( node->contents >= 0 )
+	{
+		float d = PlaneDiff( org, node->plane );
+
+		if( d > radius )
+			node = node->children[0];
+		else if( d < -radius )
+			node = node->children[1];
+		else
+		{
+			// go down both sides
+			Mod_FatPVS_RecursiveBSPNode( org, radius, visbuffer, visbytes, node->children[0] );
+			node = node->children[1];
+		}
+	}
+
+	// if this leaf is in a cluster, accumulate the vis bits
+	if(((mleaf_t *)node)->cluster >= 0 )
+	{
+		byte	*vis = world.visdata + ((mleaf_t *)node)->cluster * world.visbytes;
+
+		for( i = 0; i < visbytes; i++ )
+			visbuffer[i] |= vis[i];
+	}
 }
 
 /*
 ==================
-Mod_PointLeafnum
+Mod_FatPVS_RecursiveBSPNode
 
+Calculates a PVS that is the inclusive or of all leafs
+within radius pixels of the given point.
 ==================
 */
-int Mod_PointLeafnum( const vec3_t p )
+int Mod_FatPVS( const vec3_t org, float radius, byte *visbuffer, int visbytes, qboolean merge, qboolean fullvis )
 {
-	// map not loaded
-	if ( !worldmodel ) return 0;
-	return Mod_PointInLeaf( p, worldmodel->nodes ) - worldmodel->leafs;
+	mleaf_t	*leaf = Mod_PointInLeaf( org, worldmodel->nodes );
+	int	bytes = world.visbytes;
+
+	bytes = Q_min( bytes, visbytes );
+
+	// enable full visibility for some reasons
+	if( fullvis || !world.visclusters || !leaf || leaf->cluster < 0 )
+	{
+		memset( visbuffer, 0xFF, bytes );
+		return bytes;
+	}
+
+	if( !merge ) memset( visbuffer, 0x00, bytes );
+
+	Mod_FatPVS_RecursiveBSPNode( org, radius, visbuffer, bytes, worldmodel->nodes );
+
+	return bytes;
 }
 
 /*
@@ -363,8 +377,7 @@ LEAF LISTING
 */
 static void Mod_BoxLeafnums_r( leaflist_t *ll, mnode_t *node )
 {
-	mplane_t	*plane;
-	int	s;
+	int	sides;
 
 	while( 1 )
 	{
@@ -382,18 +395,17 @@ static void Mod_BoxLeafnums_r( leaflist_t *ll, mnode_t *node )
 				return;
 			}
 
-			ll->list[ll->count++] = leaf - worldmodel->leafs - 1;
+			ll->list[ll->count++] = leaf->cluster;
 			return;
 		}
 	
-		plane = node->plane;
-		s = BOX_ON_PLANE_SIDE( ll->mins, ll->maxs, plane );
+		sides = BOX_ON_PLANE_SIDE( ll->mins, ll->maxs, node->plane );
 
-		if( s == 1 )
+		if( sides == 1 )
 		{
 			node = node->children[0];
 		}
-		else if( s == 2 )
+		else if( sides == 2 )
 		{
 			node = node->children[1];
 		}
@@ -421,11 +433,12 @@ int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int list
 
 	VectorCopy( mins, ll.mins );
 	VectorCopy( maxs, ll.maxs );
-	ll.count = 0;
+
 	ll.maxcount = listsize;
-	ll.list = list;
-	ll.topnode = -1;
 	ll.overflowed = false;
+	ll.topnode = -1;
+	ll.list = list;
+	ll.count = 0;
 
 	Mod_BoxLeafnums_r( &ll, worldmodel->nodes );
 
@@ -453,11 +466,38 @@ qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbi
 
 	for( i = 0; i < count; i++ )
 	{
-		int	leafnum = leafList[i];
-
-		if( leafnum != -1 && visbits[leafnum>>3] & (1<<( leafnum & 7 )))
+		if( CHECKVISBIT( visbits, leafList[i] ))
 			return true;
 	}
+	return false;
+}
+
+/*
+=============
+Mod_HeadnodeVisible
+=============
+*/
+qboolean Mod_HeadnodeVisible( mnode_t *node, const byte *visbits, short *lastleaf )
+{
+	if( !node || node->contents == CONTENTS_SOLID )
+		return false;
+
+	if( node->contents < 0 )
+	{
+		if( !CHECKVISBIT( visbits, ((mleaf_t *)node)->cluster ))
+			return false;
+
+		if( lastleaf )
+			*lastleaf = ((mleaf_t *)node)->cluster;
+		return true;
+	}
+
+	if( Mod_HeadnodeVisible( node->children[0], visbits, lastleaf ))
+		return true;
+
+	if( Mod_HeadnodeVisible( node->children[1], visbits, lastleaf ))
+		return true;
+
 	return false;
 }
 
@@ -477,6 +517,41 @@ void Mod_AmbientLevels( const vec3_t p, byte *pvolumes )
 
 	leaf = Mod_PointInLeaf( p, worldmodel->nodes );
 	*(int *)pvolumes = *(int *)leaf->ambient_sound_level;
+}
+
+/*
+==================
+Mod_CheckWaterAlphaSupport
+
+converted maps potential may don't
+support water transparency
+==================
+*/
+static qboolean Mod_CheckWaterAlphaSupport( void )
+{
+	mleaf_t		*leaf;
+	int		i, j;
+	const byte	*pvs;
+
+	if( world.visdatasize <= 0 ) return true;
+
+	// check all liquid leafs to see if they can see into empty leafs, if any
+	// can we can assume this map supports r_wateralpha
+	for( i = 0, leaf = loadmodel->leafs; i < loadmodel->numleafs; i++, leaf++ )
+	{
+		if(( leaf->contents == CONTENTS_WATER || leaf->contents == CONTENTS_SLIME ) && leaf->cluster >= 0 )
+		{
+			pvs = world.visdata + leaf->cluster * world.visbytes;
+
+			for( j = 0; j < loadmodel->numleafs; j++ )
+			{
+				if( CHECKVISBIT( pvs, loadmodel->leafs[j].cluster ) && loadmodel->leafs[j].contents == CONTENTS_EMPTY )
+					return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 /*
@@ -618,7 +693,7 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 	{
 		for( j = 0; j < 3; j++ )
 		{
-			// spread the mins / maxs by a pixel
+			// spread the mins / maxs by a unit
 			out->mins[j] = in->mins[j] - 1.0f;
 			out->maxs[j] = in->maxs[j] + 1.0f;
 			out->origin[j] = in->origin[j];
@@ -640,7 +715,7 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 			VectorAverage( out->mins, out->maxs, out->origin );
 		}
 
-		world.max_surfaces = max( world.max_surfaces, out->numfaces ); 
+		world.max_surfaces = Q_max( world.max_surfaces, out->numfaces ); 
 	}
 
 	if( world.loading )
@@ -924,11 +999,11 @@ static void Mod_LoadTextures( const dlump_t *l )
 	{
 		tx = loadmodel->textures[i];
 
-		if( !tx || tx->name[0] != '+' )
+		if( tx->name[0] != '+' || tx->name[1] == 0 || tx->name[2] == 0 )
 			continue;
 
 		if( tx->anim_next )
-			continue;	// allready sequenced
+			continue;	// already sequenced
 
 		// find the number of frames in the animation
 		memset( anims, 0, sizeof( anims ));
@@ -951,23 +1026,22 @@ static void Mod_LoadTextures( const dlump_t *l )
 			altanims[altmax] = tx;
 			altmax++;
 		}
-		else Host_Error( "Mod_LoadTextures: bad animating texture %s\n", tx->name );
+		else MsgDev( D_ERROR, "Mod_LoadTextures: bad animating texture %s\n", tx->name );
 
 		for( j = i + 1; j < loadmodel->numtextures; j++ )
 		{
 			tx2 = loadmodel->textures[j];
-			if( !tx2 || tx2->name[0] != '+' )
-				continue;
 
-			if( Q_strcmp( tx2->name + 2, tx->name + 2 ))
+			if( tx2->name[0] != '+' || Q_strcmp( tx2->name + 2, tx->name + 2 ))
 				continue;
 
 			num = tx2->name[1];
+
 			if( num >= '0' && num <= '9' )
 			{
 				num -= '0';
 				anims[num] = tx2;
-				if (num+1 > max)
+				if( num + 1 > max )
 					max = num + 1;
 			}
 			else if( num >= 'a' && num <= 'j' )
@@ -977,14 +1051,21 @@ static void Mod_LoadTextures( const dlump_t *l )
 				if( num + 1 > altmax )
 					altmax = num + 1;
 			}
-			else Host_Error( "Mod_LoadTextures: bad animating texture %s\n", tx->name );
+			else MsgDev( D_ERROR, "Mod_LoadTextures: bad animating texture %s\n", tx->name );
 		}
 
 		// link them all together
 		for( j = 0; j < max; j++ )
 		{
 			tx2 = anims[j];
-			if( !tx2 ) Host_Error( "Mod_LoadTextures: missing frame %i of %s\n", j, tx->name );
+
+			if( !tx2 )
+			{
+				MsgDev( D_ERROR, "Mod_LoadTextures: missing frame %i of %s\n", j, tx->name );
+				tx->anim_total = 0;
+				break;
+			}
+
 			tx2->anim_total = max * ANIM_CYCLE;
 			tx2->anim_min = j * ANIM_CYCLE;
 			tx2->anim_max = (j + 1) * ANIM_CYCLE;
@@ -995,7 +1076,14 @@ static void Mod_LoadTextures( const dlump_t *l )
 		for( j = 0; j < altmax; j++ )
 		{
 			tx2 = altanims[j];
-			if( !tx2 ) Host_Error( "Mod_LoadTextures: missing frame %i of %s\n", j, tx->name );
+
+			if( !tx2 )
+			{
+				MsgDev( D_ERROR, "Mod_LoadTextures: missing frame %i of %s\n", j, tx->name );
+				tx->anim_total = 0;
+				break;
+			}
+
 			tx2->anim_total = altmax * ANIM_CYCLE;
 			tx2->anim_min = j * ANIM_CYCLE;
 			tx2->anim_max = (j+1) * ANIM_CYCLE;
@@ -1009,11 +1097,11 @@ static void Mod_LoadTextures( const dlump_t *l )
 	{
 		tx = loadmodel->textures[i];
 
-		if( !tx || tx->name[0] != '-' )
+		if( tx->name[0] != '-' || tx->name[1] == 0 || tx->name[2] == 0 )
 			continue;
 
 		if( tx->anim_next )
-			continue;	// allready sequenced
+			continue;	// already sequenced
 
 		// find the number of frames in the sequence
 		memset( anims, 0, sizeof( anims ));
@@ -1026,33 +1114,39 @@ static void Mod_LoadTextures( const dlump_t *l )
 			anims[max] = tx;
 			max++;
 		}
-		else Host_Error( "Mod_LoadTextures: bad detail texture %s\n", tx->name );
+		else MsgDev( D_ERROR, "Mod_LoadTextures: bad detail texture %s\n", tx->name );
 
 		for( j = i + 1; j < loadmodel->numtextures; j++ )
 		{
 			tx2 = loadmodel->textures[j];
-			if( !tx2 || tx2->name[0] != '-' )
-				continue;
 
-			if( Q_strcmp( tx2->name + 2, tx->name + 2 ))
+			if( tx2->name[0] != '-' || Q_strcmp( tx2->name + 2, tx->name + 2 ))
 				continue;
 
 			num = tx2->name[1];
+
 			if( num >= '0' && num <= '9' )
 			{
 				num -= '0';
 				anims[num] = tx2;
-				if( num+1 > max )
+				if( num + 1 > max )
 					max = num + 1;
 			}
-			else Host_Error( "Mod_LoadTextures: bad detail texture %s\n", tx->name );
+			else MsgDev( D_ERROR, "Mod_LoadTextures: bad detail texture %s\n", tx->name );
 		}
 
 		// link them all together
 		for( j = 0; j < max; j++ )
 		{
 			tx2 = anims[j];
-			if( !tx2 ) Host_Error( "Mod_LoadTextures: missing frame %i of %s\n", j, tx->name );
+
+			if( !tx2 )
+			{
+				MsgDev( D_ERROR, "Mod_LoadTextures: missing frame %i of %s\n", j, tx->name );
+				tx->anim_total = 0;
+				break;
+			}
+
 			tx2->anim_total = -( max * ANIM_CYCLE ); // to differentiate from animations
 			tx2->anim_min = j * ANIM_CYCLE;
 			tx2->anim_max = (j + 1) * ANIM_CYCLE;
@@ -1272,7 +1366,7 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 		surf->texturemins[i] = bmins[i] * LM_SAMPLE_SIZE;
 		surf->extents[i] = (bmaxs[i] - bmins[i]) * LM_SAMPLE_SIZE;
 
-		if(!( tex->flags & TEX_SPECIAL ) && surf->extents[i] > 4096 )
+		if( !FBitSet( tex->flags, TEX_SPECIAL ) && surf->extents[i] > 4096 )
 			MsgDev( D_ERROR, "Bad surface extents %i\n", surf->extents[i] );
 	}
 }
@@ -2095,6 +2189,17 @@ static void Mod_LoadLeafs( const dlump_t *l )
 	loadmodel->leafs = out;
 	loadmodel->numleafs = count;
 
+	if( world.loading )
+	{
+		// get visleafs from the submodel data
+		world.visclusters = loadmodel->submodels[0].visleafs;
+		world.visbytes = (world.visclusters + 7) >> 3;
+		world.visdata = (byte *)Mem_Alloc( loadmodel->mempool, world.visclusters * world.visbytes );
+
+		// enable full visibility as default
+		memset( world.visdata, 0xFF, world.visclusters * world.visbytes );
+	}
+
 	for( i = 0; i < count; i++, in++, out++ )
 	{
 		for( j = 0; j < 3; j++ )
@@ -2106,6 +2211,29 @@ static void Mod_LoadLeafs( const dlump_t *l )
 		out->contents = in->contents;
 	
 		p = in->visofs;
+
+		if( world.loading )
+		{
+			out->cluster = ( i - 1 ); // solid leaf 0 has no visdata
+			if( out->cluster >= world.visclusters )
+				out->cluster = -1;
+
+			// ignore visofs errors on leaf 0 (solid)
+			if( p >= 0 && out->cluster >= 0 && loadmodel->visdata )
+			{
+				if( p < world.visdatasize )
+				{
+					byte	*inrow =  loadmodel->visdata + p;
+					byte	*inrowend = loadmodel->visdata + world.visdatasize;
+					byte	*outrow = world.visdata + out->cluster * world.visbytes;
+					byte	*outrowend = world.visdata + (out->cluster + 1) * world.visbytes;
+
+					Mod_DecompressVis( inrow, inrowend, outrow, outrowend );
+				}
+				else MsgDev( D_WARN, "Mod_LoadLeafs: invalid visofs for leaf #%i\n", i );
+			}
+	          }
+		else out->cluster = -1; // no visclusters on bmodels
 
 		if( p == -1 ) out->compressed_vis = NULL;
 		else out->compressed_vis = loadmodel->visdata + p;
@@ -2130,6 +2258,14 @@ static void Mod_LoadLeafs( const dlump_t *l )
 
 	if( loadmodel->leafs[0].contents != CONTENTS_SOLID )
 		Host_Error( "Mod_LoadLeafs: Map %s has leaf 0 is not CONTENTS_SOLID\n", loadmodel->name );
+
+	// do some final things for world
+	if( world.loading )
+	{
+		// store size of fat pvs
+		world.fatbytes = (world.visclusters + 31) >> 3;
+		world.water_alpha = Mod_CheckWaterAlphaSupport();
+	}
 }
 
 /*
@@ -2161,6 +2297,9 @@ static void Mod_LoadPlanes( const dlump_t *l )
 			if( out->normal[j] < 0.0f )
 				out->signbits |= 1<<j;
 		}
+
+		if( VectorIsNull( out->normal ))
+			Host_Error( "Mod_LoadPlanes: bad normal for plane #%i\n", i );
 
 		out->dist = in->dist;
 		out->type = in->type;
@@ -2497,135 +2636,6 @@ static void Mod_MakeHull0( void )
 
 /*
 =================
-Mod_CalcPHS
-=================
-*/
-void Mod_CalcPHS( void )
-{
-	int	hcount, vcount;
-	int	i, j, k, l, index, num;
-	int	rowbytes, rowwords;
-	int	bitbyte, rowsize;
-	int	*visofs, total_size = 0;
-	byte	*vismap, *vismap_p;
-	byte	*uncompressed_vis;
-	byte	*uncompressed_pas;
-	byte	*compressed_pas;
-	byte	*scan, *comp;
-	uint	*dest, *src;
-	double	timestart;
-	size_t	phsdatasize;
-
-	// no worldmodel or no visdata
-	if( !world.loading || !worldmodel || !worldmodel->visdata )
-		return;
-
-	MsgDev( D_NOTE, "Building PAS...\n" );
-	timestart = Sys_DoubleTime();
-
-	// NOTE: first leaf is skipped becuase is a outside leaf. Now all leafs have shift up by 1.
-	// and last leaf (which equal worldmodel->numleafs) has no visdata! Add one extra leaf
-	// to avoid this situation.
-	num = worldmodel->numleafs;
-	rowwords = (num + 31) >> 5;
-	rowbytes = rowwords * 4;
-
-	// typically PHS reqiured more room because RLE fails on multiple 1 not 0
-	phsdatasize = world.visdatasize * 32; // empirically determined
-
-	// allocate pvs and phs data single array
-	visofs = Mem_Alloc( worldmodel->mempool, num * sizeof( int ));
-	uncompressed_vis = Mem_Alloc( worldmodel->mempool, rowbytes * num * 2 );
-	uncompressed_pas = uncompressed_vis + rowbytes * num;
-	compressed_pas = Mem_Alloc( worldmodel->mempool, phsdatasize );
-	vismap = vismap_p = compressed_pas; // compressed PHS buffer
-	scan = uncompressed_vis;
-	vcount = 0;
-
-	// uncompress pvs first
-	for( i = 0; i < num; i++, scan += rowbytes )
-	{
-		memcpy( scan, Mod_LeafPVS( worldmodel->leafs + i, worldmodel ), rowbytes );
-		if( i == 0 ) continue;
-
-		for( j = 0; j < num; j++ )
-		{
-			if( scan[j>>3] & (1<<( j & 7 )))
-				vcount++;
-		}
-	}
-
-	scan = uncompressed_vis;
-	hcount = 0;
-
-	dest = (uint *)uncompressed_pas;
-
-	for( i = 0; i < num; i++, dest += rowwords, scan += rowbytes )
-	{
-		memcpy( dest, scan, rowbytes );
-
-		for( j = 0; j < rowbytes; j++ )
-		{
-			bitbyte = scan[j];
-			if( !bitbyte ) continue;
-
-			for( k = 0; k < 8; k++ )
-			{
-				if(!( bitbyte & ( 1<<k )))
-					continue;
-				// or this pvs row into the phs
-				// +1 because pvs is 1 based
-				index = ((j<<3) + k + 1);
-				if( index >= num ) continue;
-
-				src = (uint *)uncompressed_vis + index * rowwords;
-				for( l = 0; l < rowwords; l++ )
-					dest[l] |= src[l];
-			}
-		}
-
-		// compress PHS data back
-		comp = Mod_CompressVis( (byte *)dest, &rowsize );
-		visofs[i] = vismap_p - vismap; // leaf 0 is a common solid 
-		total_size += rowsize;
-
-		if( total_size > phsdatasize )
-		{
-			Host_Error( "CalcPHS: vismap expansion overflow %s > %s\n", Q_memprint( total_size ), Q_memprint( phsdatasize ));
-		}
-
-		memcpy( vismap_p, comp, rowsize );
-		vismap_p += rowsize; // move pointer
-
-		if( i == 0 ) continue;
-
-		for( j = 0; j < num; j++ )
-		{
-			if(((byte *)dest)[j>>3] & (1<<( j & 7 )))
-				hcount++;
-		}
-	}
-
-	// adjust compressed pas data to fit the size
-	compressed_pas = Mem_Realloc( worldmodel->mempool, compressed_pas, total_size );
-
-	// apply leaf pointers
-	for( i = 0; i < worldmodel->numleafs; i++ )
-		worldmodel->leafs[i].compressed_pas = compressed_pas + visofs[i];
-
-	// release uncompressed data
-	Mem_Free( uncompressed_vis );
-	Mem_Free( visofs );	// release vis offsets
-
-	// NOTE: we don't need to store off pointer to compressed pas-data
-	// because this is will be automatiaclly frees by mempool internal pointer
-	// and we never use this pointer after this point
-	MsgDev( D_NOTE, "Average leaves visible / audible / total: %i / %i / %i\n", vcount / num, hcount / num, num );
-	MsgDev( D_NOTE, "PAS building time: %g secs\n", Sys_DoubleTime() - timestart );
-}
-
-/*
-=================
 Mod_UnloadBrushModel
 
 Release all uploaded textures
@@ -2739,6 +2749,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	if( world.version <= 29 && world.mapversion == 220 && (header->lumps[LUMP_LIGHTING].filelen % 3) == 0 )
 		world.version = bmodel_version = HLBSP_VERSION;
 
+	Mod_LoadSubmodels( &header->lumps[LUMP_MODELS] );
 	Mod_LoadVertexes( &header->lumps[LUMP_VERTEXES] );
 	Mod_LoadEdges( &header->lumps[LUMP_EDGES] );
 	Mod_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
@@ -2754,7 +2765,6 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	if( bmodel_version == XTBSP_VERSION )
 		Mod_LoadClipnodes31( &header->lumps[LUMP_CLIPNODES], &header->lumps[LUMP_CLIPNODES2], &header->lumps[LUMP_CLIPNODES3] );
 	else Mod_LoadClipnodes( &header->lumps[LUMP_CLIPNODES] );
-	Mod_LoadSubmodels( &header->lumps[LUMP_MODELS] );
 
 	Mod_MakeHull0 ();
 	
@@ -2786,12 +2796,14 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		if( i != 0 )
 		{
 			// HACKHACK: c2a1 issues
-			if( !bm->origin[0] && !bm->origin[1] ) mod->flags |= MODEL_HAS_ORIGIN;
+			if( !bm->origin[0] && !bm->origin[1] )
+				SetBits( mod->flags, MODEL_HAS_ORIGIN );
 
 			Mod_FindModelOrigin( ents, va( "*%i", i ), bm->origin );
 
 			// flag 2 is indicated model with origin brush!
-			if( !VectorIsNull( bm->origin )) mod->flags |= MODEL_HAS_ORIGIN;
+			if( !VectorIsNull( bm->origin ))
+				SetBits( mod->flags, MODEL_HAS_ORIGIN );
 		}
 
 		for( j = 0; i != 0 && j < mod->nummodelsurfaces; j++ )
@@ -2810,7 +2822,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 				if( surf->plane->type == PLANE_Z )
 				{
 					// kill bottom plane too
-					if( info->mins[2] == bm->mins[2] + 1 )
+					if( info->mins[2] == bm->mins[2] + 1.0f )
 						surf->flags |= SURF_WATERCSG;
 				}
 				else
@@ -3005,7 +3017,6 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean multiplayer )
 
 	// now replacement table is invalidate
 	memset( com_models, 0, sizeof( com_models ));
-
 	com_models[1] = cm_models; // make link to world
 
 	// update the lightmap blocksize
@@ -3026,7 +3037,6 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean multiplayer )
 	}
 
 	// clear all studio submodels on restart
-	// HACKHACK: throw all external BSP-models to refresh their lightmaps properly
 	for( i = 1; i < cm_nummodels; i++ )
 	{
 		if( cm_models[i].type == mod_studio )
@@ -3047,9 +3057,6 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean multiplayer )
 	world.loading = false;
 
 	if( checksum ) *checksum = world.checksum;
-		
-	// calc Potentially Hearable Set and compress it
-	Mod_CalcPHS();
 }
 
 /*
@@ -3239,9 +3246,4 @@ model_t *Mod_Handle( int handle )
 		return NULL;
 	}
 	return com_models[handle];
-}
-
-wadlist_t *Mod_WadList( void )
-{
-	return &wadlist;
 }

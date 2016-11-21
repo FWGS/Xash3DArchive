@@ -169,7 +169,7 @@ typedef struct mleaf_s
 
 	msurface_t	**firstmarksurface;
 	int		nummarksurfaces;
-	byte		*compressed_pas;
+	int		cluster;		// helper to acess to uncompressed visdata
 	byte		ambient_sound_level[NUM_AMBIENTS];
 
 } mleaf_t;

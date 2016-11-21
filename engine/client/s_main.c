@@ -699,25 +699,12 @@ using a 'fat' radius
 */
 qboolean SND_CheckPHS( channel_t *ch )
 {
-	mleaf_t	*leaf;
-	int	leafnum;
-	byte	*mask = NULL;
+	mleaf_t	*leaf = Mod_PointInLeaf( ch->origin, cl.worldmodel->nodes );
 
-	// cull sounds by PHS
-	if( !s_phs->integer )
+	if( CHECKVISBIT( s_listener.pasbytes, leaf->cluster ))
 		return true;
 
-	leaf = Mod_PointInLeaf( ch->origin, cl.worldmodel->nodes );
-	mask = Mod_LeafPHS( leaf, cl.worldmodel );
-
-	if( mask )
-	{
-		leafnum = Mod_PointLeafnum( s_listener.origin ) - 1;
-
-		if( leafnum != -1 && (!(mask[leafnum>>3] & (1<<( leafnum & 7 )))))
-			return false;
-	}
-	return true;
+	return false;
 }
 
 /*
@@ -1884,6 +1871,9 @@ void S_RenderFrame( ref_params_t *fd )
 	VectorCopy( fd->simvel, s_listener.velocity );
 	AngleVectors( fd->viewangles, s_listener.forward, s_listener.right, s_listener.up );
 
+	if( cl.worldmodel != NULL )
+		Mod_FatPVS( s_listener.origin, FATPHS_RADIUS, s_listener.pasbytes, world.visbytes, false, !s_phs->integer );
+
 	// update general area ambient sound sources
 	S_UpdateAmbientSounds();
 
@@ -1961,9 +1951,9 @@ void S_RenderFrame( ref_params_t *fd )
 
 		// to differentiate modes
 		if( s_cull->integer && s_phs->integer )
-			VectorSet( info.color, 1.0f, 1.0f, 0.0f );
-		else if( s_phs->integer )
 			VectorSet( info.color, 0.0f, 1.0f, 0.0f );
+		else if( s_phs->integer )
+			VectorSet( info.color, 1.0f, 1.0f, 0.0f );
 		else if( s_cull->integer )
 			VectorSet( info.color, 1.0f, 0.0f, 0.0f );
 		else VectorSet( info.color, 1.0f, 1.0f, 1.0f );

@@ -384,10 +384,6 @@ SOURCE=.\common\net_encode.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\net_huff.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\common\network.c
 # End Source File
 # Begin Source File

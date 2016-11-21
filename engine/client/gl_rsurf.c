@@ -31,7 +31,6 @@ typedef struct
 static int		nColinElim; // stats
 static vec2_t		world_orthocenter;
 static vec2_t		world_orthohalf;
-static byte		visbytes[MAX_MAP_LEAFS/8];
 static uint		r_blocklights[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*3];
 static glpoly_t		*fullbright_polys[MAX_TEXTURES];
 static qboolean		draw_fullbrights = false;
@@ -44,7 +43,7 @@ static void LM_UploadBlock( int lightmapnum );
 
 byte *Mod_GetCurrentVis( void )
 {
-	return Mod_LeafPVS( r_viewleaf, cl.worldmodel );
+	return RI.visbytes;
 }
 
 void Mod_SetOrthoBounds( float *mins, float *maxs )
@@ -1944,7 +1943,6 @@ Mark the leaves and nodes that are in the PVS for the current leaf
 */
 void R_MarkLeaves( void )
 {
-	byte	*vis;
 	mnode_t	*node;
 	int	i;
 
@@ -1955,21 +1953,20 @@ void R_MarkLeaves( void )
 		// force recalc viewleaf
 		r_novis->modified = false;
 		tr.fResetVis = false;
-		r_viewleaf = NULL;
+		RI.viewleaf = NULL;
 	}
 
-	if( r_viewleaf == r_oldviewleaf && r_viewleaf2 == r_oldviewleaf2 && !r_novis->integer && r_viewleaf != NULL )
+	if( RI.viewleaf == RI.oldviewleaf && !r_novis->integer && RI.viewleaf != NULL )
 		return;
 
 	// development aid to let you run around
 	// and see exactly where the pvs ends
 	if( r_lockpvs->integer ) return;
 
+	RI.oldviewleaf = RI.viewleaf;
 	tr.visframecount++;
-	r_oldviewleaf = r_viewleaf;
-	r_oldviewleaf2 = r_viewleaf2;
-		
-	if( r_novis->integer || RI.drawOrtho || !r_viewleaf || !cl.worldmodel->visdata )
+
+	if( r_novis->integer || RI.drawOrtho || !RI.viewleaf || !cl.worldmodel->visdata )
 	{
 		// mark everything
 		for( i = 0; i < cl.worldmodel->numleafs; i++ )
@@ -1979,26 +1976,11 @@ void R_MarkLeaves( void )
 		return;
 	}
 
-	// may have to combine two clusters
-	// because of solid water boundaries
-	vis = Mod_LeafPVS( r_viewleaf, cl.worldmodel );
-
-	if( r_viewleaf != r_viewleaf2 )
-	{
-		int	longs = ( cl.worldmodel->numleafs + 31 ) >> 5;
-
-		memcpy( visbytes, vis, longs << 2 );
-		vis = Mod_LeafPVS( r_viewleaf2, cl.worldmodel );
-
-		for( i = 0; i < longs; i++ )
-			((int *)visbytes)[i] |= ((int *)vis)[i];
-
-		vis = visbytes;
-	}
+	Mod_FatPVS( RI.pvsorigin, REFPVS_RADIUS, RI.visbytes, world.visbytes, FBitSet( RI.params, RP_OLDVIEWLEAF ), r_novis->integer );
 
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
 	{
-		if( vis[i>>3] & ( 1<<( i & 7 )))
+		if( CHECKVISBIT( RI.visbytes, i ))
 		{
 			node = (mnode_t *)&cl.worldmodel->leafs[i+1];
 			do
@@ -2134,7 +2116,7 @@ void GL_BuildLightmaps( void )
 	memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
 	memset( tr.mirror_entities, 0, sizeof( tr.mirror_entities ));
 	memset( tr.mirrorTextures, 0, sizeof( tr.mirrorTextures ));
-	memset( visbytes, 0x00, sizeof( visbytes ));
+	memset( &RI, 0, sizeof( RI ));
 	
 	skychain = NULL;
 

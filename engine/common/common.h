@@ -102,6 +102,7 @@ typedef enum
 // HOST_FIXED_FRAMERATE stuff
 #define HOST_MINFPS		20.0
 #define HOST_MAXFPS		72.0
+#define GAME_FPS		20.0
 #define HOST_FPS		60.0		// client and the server clamped at 60.0 fps max. Render clamped at fps_max cvar
 #define HOST_FRAMETIME	( 1.0 / HOST_FPS )
 

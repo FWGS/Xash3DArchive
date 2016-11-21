@@ -215,6 +215,8 @@ typedef struct
 	qboolean		paused;
 	qboolean		streaming;	// playing AVI-file
 	qboolean		stream_paused;	// pause only background track
+
+	byte		pasbytes[(MAX_MAP_LEAFS+7)/8];// actual PHS for current frame
 } listener_t;
 
 typedef struct

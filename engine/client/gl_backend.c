@@ -76,7 +76,7 @@ void GL_BackendEndFrame( void )
 		break;		
 	case 2:
 		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "visible leafs:\n%3i leafs\ncurrent leaf %3i",
-		r_stats.c_world_leafs, r_viewleaf - cl.worldmodel->leafs );
+		r_stats.c_world_leafs, Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes ) - cl.worldmodel->leafs );
 		break;
 	case 3:
 		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i studio models drawn\n%3i sprites drawn",

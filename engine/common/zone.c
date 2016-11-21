@@ -15,8 +15,8 @@ GNU General Public License for more details.
 
 #include "common.h"
 
-#define MEMCLUMPSIZE	(65536 - 1536)	// give malloc padding so we can't waste most of a page at the end
 #define MEMUNIT		8		// smallest unit we care about is this many bytes
+#define MEMCLUMPSIZE	(65536 - 1536)	// give malloc padding so we can't waste most of a page at the end
 #define MEMBITS		(MEMCLUMPSIZE / MEMUNIT)
 #define MEMBITINTS		(MEMBITS / 32)
 
@@ -71,7 +71,7 @@ void *_Mem_Alloc( byte *poolptr, size_t size, const char *filename, int fileline
 	int		i, j, k, needed, endbit, largest;
 	memclump_t	*clump, **clumpchainpointer;
 	memheader_t	*mem;
-	mempool_t		*pool = (mempool_t *)((byte *)poolptr);
+	mempool_t		*pool = (mempool_t *)poolptr;
 
 	if( size <= 0 ) return NULL;
 	if( poolptr == NULL ) Sys_Error( "Mem_Alloc: pool == NULL (alloc at %s:%i)\n", filename, fileline );
@@ -165,16 +165,9 @@ static const char *Mem_CheckFilename( const char *filename )
 	int		i;
 
 	if( !out ) return dummy;
-
 	for( i = 0; i < 128; i++, out++ )
-	{
-		if( *out == '\0' )
-			break; // valid name
-	}
-
-	if( i == 128 )
-		return dummy;
-
+		if( out == '\0' ) break; // valid name
+	if( i == 128 ) return dummy;
 	return filename;
 }
 
@@ -264,8 +257,8 @@ void _Mem_Free( void *data, const char *filename, int fileline )
 
 void *_Mem_Realloc( byte *poolptr, void *memptr, size_t size, const char *filename, int fileline )
 {
-	char		*nb;
 	memheader_t	*memhdr = NULL;
+	char		*nb;
 
 	if( size <= 0 ) return memptr; // no need to reallocate
 
@@ -307,12 +300,12 @@ byte *_Mem_AllocPool( const char *name, const char *filename, int fileline )
 	pool->next = poolchain;
 	poolchain = pool;
 
-	return (byte *)((mempool_t *)pool);
+	return (byte *)pool;
 }
 
 void _Mem_FreePool( byte **poolptr, const char *filename, int fileline )
 {
-	mempool_t	*pool = (mempool_t *)((byte *)*poolptr );
+	mempool_t	*pool = (mempool_t *)*poolptr;
 	mempool_t	**chainaddress;
           
 	if( pool )
@@ -335,7 +328,7 @@ void _Mem_FreePool( byte **poolptr, const char *filename, int fileline )
 
 void _Mem_EmptyPool( byte *poolptr, const char *filename, int fileline )
 {
-	mempool_t *pool = (mempool_t *)((byte *)poolptr);
+	mempool_t *pool = (mempool_t *)poolptr;
 	if( poolptr == NULL ) Sys_Error( "Mem_EmptyPool: pool == NULL (emptypool at %s:%i)\n", filename, fileline );
 
 	if( pool->sentinel1 != MEMHEADER_SENTINEL1 ) Sys_Error( "Mem_EmptyPool: trashed pool sentinel 1 (allocpool at %s:%i, emptypool at %s:%i)\n", pool->filename, pool->fileline, filename, fileline );
@@ -374,7 +367,7 @@ Check pointer for memory
 qboolean Mem_IsAllocatedExt( byte *poolptr, void *data )
 {
 	mempool_t	*pool = NULL;
-	if( poolptr ) pool = (mempool_t *)((byte *)poolptr);
+	if( poolptr ) pool = (mempool_t *)poolptr;
 
 	return Mem_CheckAlloc( pool, data );
 }
@@ -383,7 +376,9 @@ void Mem_CheckHeaderSentinels( void *data, const char *filename, int fileline )
 {
 	memheader_t *mem;
 
-	if( data == NULL ) Sys_Error( "Mem_CheckSentinels: data == NULL (sentinel check at %s:%i)\n", filename, fileline );
+	if( data == NULL )
+		Sys_Error( "Mem_CheckSentinels: data == NULL (sentinel check at %s:%i)\n", filename, fileline );
+
 	mem = (memheader_t *)((byte *) data - sizeof(memheader_t));
 
 	if( mem->sentinel1 != MEMHEADER_SENTINEL1 )

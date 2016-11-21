@@ -71,7 +71,7 @@ typedef struct frame_s
 
 	clientdata_t	client;		// local client private data
 	entity_state_t	playerstate[MAX_CLIENTS];
-	weapon_data_t	weapondata[64];
+	weapon_data_t	weapondata[MAX_LOCAL_WEAPONS];
 	netbandwidthgraph_t graphdata;
 
 	int		num_entities;

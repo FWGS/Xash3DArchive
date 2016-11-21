@@ -28,8 +28,6 @@ static byte fatpvs[MAX_MAP_LEAFS/8];
 static byte fatphs[MAX_MAP_LEAFS/8];
 static byte clientpvs[MAX_MAP_LEAFS/8];	// for find client in PVS
 static vec3_t viewPoint[MAX_CLIENTS];
-static byte *bitvector;
-static int fatbytes;
 
 // exports
 typedef void (__cdecl *LINK_ENTITY_FUNC)( entvars_t *pev );
@@ -218,35 +216,37 @@ Check visibility through client camera, portal camera, etc
 */
 qboolean SV_CheckClientVisiblity( sv_client_t *cl, const byte *mask )
 {
-	int	i, leafnum, clientnum;
-	float	*viewOrg = NULL;
+	int	i, clientnum;
+	vec3_t	vieworg;
+	mleaf_t	*leaf;
 
 	if( !mask ) return true; // full visibility
 
 	clientnum = cl - svs.clients;
-	viewOrg = viewPoint[clientnum];
+	VectorCopy( viewPoint[clientnum], vieworg );
 
 	// Invasion issues: wrong camera position received in ENGINE_SET_PVS
-	if( cl->pViewEntity && !VectorCompare( viewOrg, cl->pViewEntity->v.origin ))
-		viewOrg = cl->pViewEntity->v.origin;
+	if( cl->pViewEntity && !VectorCompare( vieworg, cl->pViewEntity->v.origin ))
+		VectorCopy( cl->pViewEntity->v.origin, vieworg );
 
-	// -1 is because pvs rows are 1 based, not 0 based like leafs
-	leafnum = Mod_PointLeafnum( viewOrg ) - 1;
-	if( leafnum == -1 || (mask[leafnum>>3] & (1<<( leafnum & 7 ))))
+	leaf = Mod_PointInLeaf( vieworg, sv.worldmodel->nodes );
+
+	if( CHECKVISBIT( mask, leaf->cluster ))
 		return true; // visible from player view or camera view
 
 	// now check all the portal cameras
-	for( i = 0; i < cl->num_cameras; i++ )
+	for( i = 0; i < cl->num_viewents; i++ )
 	{
-		edict_t *cam = cl->cameras[i];
+		edict_t	*view = cl->viewentity[i];
 
-		if( !SV_IsValidEdict( cam ))
+		if( !SV_IsValidEdict( view ))
 			continue;
 
-		leafnum = Mod_PointLeafnum( cam->v.origin ) - 1;
-		// g-cont. probably camera in bad leaf... allow to send message here?
-		if( leafnum == -1 || (mask[leafnum>>3] & (1<<( leafnum & 7 ))))
-			return true;
+		VectorAdd( view->v.origin, view->v.view_ofs, vieworg );
+		leaf = Mod_PointInLeaf( vieworg, sv.worldmodel->nodes );
+
+		if( CHECKVISBIT( mask, leaf->cluster ))
+			return true; // visible from portal camera view
 	}
 
 	// not visible from any viewpoint
@@ -263,7 +263,7 @@ then clears sv.multicast.
 MSG_ONE	send to one client (ent can't be NULL)
 MSG_ALL	same as broadcast (origin can be NULL)
 MSG_PVS	send to clients potentially visible from org
-MSG_PHS	send to clients potentially hearable from org
+MSG_PHS	send to clients potentially audible from org
 =================
 */
 qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean usermessage )
@@ -274,7 +274,6 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean us
 	qboolean		reliable = false;
 	qboolean		specproxy = false;
 	int		numsends = 0;
-	mleaf_t		*leaf;
 
 	switch( dest )
 	{
@@ -298,16 +297,15 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean us
 		// intentional fallthrough
 	case MSG_PAS:
 		if( origin == NULL ) return false;
-		leaf = Mod_PointInLeaf( origin, sv.worldmodel->nodes );
-		mask = Mod_LeafPHS( leaf, sv.worldmodel );
+		Mod_FatPVS( origin, FATPHS_RADIUS, fatphs, world.fatbytes, false, false );
+		mask = fatphs; // using the FatPVS like a PHS
 		break;
 	case MSG_PVS_R:
 		reliable = true;
 		// intentional fallthrough
 	case MSG_PVS:
 		if( origin == NULL ) return false;
-		leaf = Mod_PointInLeaf( origin, sv.worldmodel->nodes );
-		mask = Mod_LeafPVS( leaf, sv.worldmodel );
+		mask = Mod_GetPVSForPoint( origin );
 		break;
 	case MSG_ONE:
 		reliable = true;
@@ -336,10 +334,10 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean us
 		if( cl->state != cs_spawned && ( !reliable || usermessage ))
 			continue;
 
-		if( specproxy && !cl->hltv_proxy )
+		if( specproxy && !FBitSet( cl->flags, FCL_HLTV_PROXY ))
 			continue;
 
-		if( !cl->edict || cl->fakeclient )
+		if( !cl->edict || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;
 
 		if( ent != NULL && ent->v.groupinfo && cl->edict->v.groupinfo )
@@ -359,7 +357,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean us
 
 	MSG_Clear( &sv.multicast );
 
-	return numsends;	// debug
+	return numsends; // just for debug
 }
 
 /*
@@ -525,57 +523,6 @@ void SV_RestartStaticEnts( void )
 }
 
 /*
-=============================================================================
-
-The PVS must include a small area around the client to allow head bobbing
-or other small motion on the client side.  Otherwise, a bob might cause an
-entity that should be visible to not show up, especially when the bob
-crosses a waterline.
-
-=============================================================================
-*/
-static void SV_AddToFatPVS( const vec3_t org, int type, mnode_t *node )
-{
-	byte	*vis;
-	float	d;
-
-	while( 1 )
-	{
-		// if this is a leaf, accumulate the pvs bits
-		if( node->contents < 0 )
-		{
-			if( node->contents != CONTENTS_SOLID )
-			{
-				mleaf_t	*leaf;
-				int	i;
-
-				leaf = (mleaf_t *)node;			
-
-				if( type == DVIS_PVS )
-					vis = Mod_LeafPVS( leaf, sv.worldmodel );
-				else if( type == DVIS_PHS )
-					vis = Mod_LeafPHS( leaf, sv.worldmodel );
-				else vis = Mod_DecompressVis( NULL ); // get full visibility
-
-				for( i = 0; i < fatbytes; i++ )
-					bitvector[i] |= vis[i];
-			}
-			return;
-		}
-	
-		d = PlaneDiff( org, node->plane );
-		if( d > 8.0f ) node = node->children[0];
-		else if( d < -8.0f ) node = node->children[1];
-		else
-		{
-			// go down both
-			SV_AddToFatPVS( org, type, node->children[0] );
-			node = node->children[1];
-		}
-	}
-}
-
-/*
 ==============
 SV_BoxInPVS
 
@@ -584,8 +531,7 @@ check brush boxes in fat pvs
 */
 static qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
 {
-	mleaf_t	*leaf = Mod_PointInLeaf( org, sv.worldmodel->nodes );
-	byte	*vis = Mod_LeafPVS( leaf, sv.worldmodel );
+	byte	*vis = Mod_GetPVSForPoint( org );
 
 	if( !Mod_BoxVisible( absmin, absmax, vis ))
 		return false;
@@ -834,7 +780,7 @@ void SV_InitEdict( edict_t *pEdict )
 
 void SV_FreeEdict( edict_t *pEdict )
 {
-	ASSERT( pEdict );
+	ASSERT( pEdict != NULL );
 	ASSERT( pEdict->free == false );
 
 	// unlink from world
@@ -1033,7 +979,10 @@ void SV_BaselineForEntity( edict_t *pEdict )
 	float		*mins, *maxs;
 	sv_client_t	*cl;
 
-	if( pEdict->v.flags & FL_CLIENT && ( cl = SV_ClientFromEdict( pEdict, false )))
+	if( !SV_IsValidEdict( pEdict ))
+		return;
+
+	if( FBitSet( pEdict->v.flags, FL_CLIENT ) && ( cl = SV_ClientFromEdict( pEdict, false )))
 	{
 		usehull = ( pEdict->v.flags & FL_DUCKING ) ? true : false;
 		modelindex = cl->modelindex ? cl->modelindex : pEdict->v.modelindex;
@@ -1435,31 +1384,27 @@ build the new client PVS
 int SV_CheckClientPVS( int check, qboolean bMergePVS )
 {
 	byte		*pvs;
-	edict_t		*ent;
-	mleaf_t		*leaf;
-	vec3_t		view;
+	vec3_t		vieworg;
 	sv_client_t	*cl;
 	int		i, j, k;
-	int		pvsbytes;
+	edict_t		*ent = NULL;
 
 	// cycle to the next one
 	check = bound( 1, check, svgame.globals->maxClients );
 
 	if( check == svgame.globals->maxClients )
-		i = 1;
+		i = 1; // reset cycle
 	else i = check + 1;
 
 	for( ;; i++ )
 	{
-		if( i == svgame.globals->maxClients + 1 )
+		if( i == ( svgame.globals->maxClients + 1 ))
 			i = 1;
 
 		ent = EDICT_NUM( i );
+		if( i == check ) break; // didn't find anything else
 
-		if( i == check )
-			break; // didn't find anything else
-
-		if( ent->free || !ent->pvPrivateData || ( ent->v.flags & FL_NOTARGET ))
+		if( ent->free || !ent->pvPrivateData || FBitSet( ent->v.flags, FL_NOTARGET ))
 			continue;
 
 		// anything that is a client, or has a client as an enemy
@@ -1467,31 +1412,28 @@ int SV_CheckClientPVS( int check, qboolean bMergePVS )
 	}
 
 	cl = SV_ClientFromEdict( ent, true );
-	pvsbytes = (sv.worldmodel->numleafs + 7) >> 3;
+	memset( clientpvs, 0xFF, world.visbytes );
 
 	// get the PVS for the entity
-	VectorAdd( ent->v.origin, ent->v.view_ofs, view );
-	leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
-	pvs = Mod_LeafPVS( leaf, sv.worldmodel );
-	memcpy( clientpvs, pvs, pvsbytes );
+	VectorAdd( ent->v.origin, ent->v.view_ofs, vieworg );
+	pvs = Mod_GetPVSForPoint( vieworg );
+	if( pvs ) memcpy( clientpvs, pvs, world.visbytes );
 
 	// transition in progress
 	if( !cl ) return i;
 
-	// now merge PVS with all portal cameras
-	for( k = 0; k < cl->num_cameras && bMergePVS; k++ )
+	// now merge PVS with all the portal cameras
+	for( k = 0; k < cl->num_viewents && bMergePVS; k++ )
 	{
-		edict_t *cam = cl->cameras[k];
+		edict_t	*view = cl->viewentity[k];
 
-		if( !SV_IsValidEdict( cam ))
+		if( !SV_IsValidEdict( view ))
 			continue;
 
-		VectorAdd( cam->v.origin, cam->v.view_ofs, view );
-		leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
-		if( leaf == NULL ) continue; // skip outside cameras
-		pvs = Mod_LeafPVS( leaf, sv.worldmodel );
+		VectorAdd( view->v.origin, view->v.view_ofs, vieworg );
+		pvs = Mod_GetPVSForPoint( vieworg );
 
-		for( j = 0; j < pvsbytes; j++ )
+		for( j = 0; j < world.visbytes && pvs; j++ )
 			clientpvs[j] |= pvs[j];
 	}
 
@@ -1511,7 +1453,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 	float	delta;
 	model_t	*mod;
 	qboolean	bMergePVS;
-	int	i;
+	mleaf_t	*leaf;
 
 	if( !SV_IsValidEdict( pEdict ))
 		return svgame.edicts;
@@ -1519,7 +1461,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 	delta = ( sv.time - sv.lastchecktime );
 
 	// don't merge visibility for portal entity, only for monsters
-	bMergePVS = (pEdict->v.flags & FL_MONSTER) ? true : false;
+	bMergePVS = FBitSet( pEdict->v.flags, FL_MONSTER ) ? true : false;
 
 	// find a new check if on a new frame
 	if( delta < 0.0f || delta >= 0.1f )
@@ -1530,6 +1472,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 
 	// return check if it might be visible	
 	pClient = EDICT_NUM( sv.lastcheck );
+
 	if( !SV_ClientFromEdict( pClient, true ))
 		return svgame.edicts;
 
@@ -1537,7 +1480,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 
 	// portals & monitors
 	// NOTE: this specific break "radiaton tick" in normal half-life. use only as feature
-	if(( host.features & ENGINE_TRANSFORM_TRACE_AABB ) && mod && mod->type == mod_brush && !( mod->flags & MODEL_HAS_ORIGIN ))
+	if( FBitSet( host.features, ENGINE_TRANSFORM_TRACE_AABB ) && mod && mod->type == mod_brush && !FBitSet( mod->flags, MODEL_HAS_ORIGIN ))
 	{
 		// handle PVS origin for bmodels
 		VectorAverage( pEdict->v.mins, pEdict->v.maxs, view );
@@ -1551,13 +1494,12 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 	if( pEdict->v.effects & EF_INVLIGHT )
 		view[2] -= 1.0f; // HACKHACK for barnacle
 
-	i = Mod_PointLeafnum( view ) - 1;
+	leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
 
-	if( i < 0 || !((clientpvs[i>>3]) & (1 << (i & 7))))
-		return svgame.edicts;
+	if( CHECKVISBIT( clientpvs, leaf->cluster ))
+		return pClient; // client which currently in PVS
 
-	// client which currently in PVS
-	return pClient;
+	return svgame.edicts;
 }
 
 /*
@@ -2341,7 +2283,7 @@ pfnClientCommand
 */
 void pfnClientCommand( edict_t* pEdict, char* szFmt, ... )
 {
-	sv_client_t	*client;
+	sv_client_t	*cl;
 	string		buffer;
 	va_list		args;
 
@@ -2351,13 +2293,13 @@ void pfnClientCommand( edict_t* pEdict, char* szFmt, ... )
 		return;
 	}
 
-	if(( client = SV_ClientFromEdict( pEdict, true )) == NULL )
+	if(( cl = SV_ClientFromEdict( pEdict, true )) == NULL )
 	{
 		MsgDev( D_ERROR, "SV_ClientCommand: client is not spawned!\n" );
 		return;
 	}
 
-	if( client->fakeclient )
+	if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 		return;
 
 	va_start( args, szFmt );
@@ -2366,8 +2308,8 @@ void pfnClientCommand( edict_t* pEdict, char* szFmt, ... )
 
 	if( SV_IsValidCmd( buffer ))
 	{
-		MSG_WriteByte( &client->netchan.message, svc_stufftext );
-		MSG_WriteString( &client->netchan.message, buffer );
+		MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+		MSG_WriteString( &cl->netchan.message, buffer );
 	}
 	else MsgDev( D_ERROR, "Tried to stuff bad command %s\n", buffer );
 }
@@ -2390,18 +2332,20 @@ void pfnParticleEffect( const float *org, const float *dir, float color, float c
 		return;
 	}
 
-	MSG_WriteByte( &sv.datagram, svc_particle );
-	MSG_WriteVec3Coord( &sv.datagram, org );
+	MSG_WriteByte( &sv.multicast, svc_particle );
+	MSG_WriteVec3Coord( &sv.multicast, org );
 
 	for( i = 0; i < 3; i++ )
 	{
 		v = bound( -128, dir[i] * 16.0f, 127 );
-		MSG_WriteChar( &sv.datagram, v );
+		MSG_WriteChar( &sv.multicast, v );
 	}
 
-	MSG_WriteByte( &sv.datagram, count );
-	MSG_WriteByte( &sv.datagram, color );
-	MSG_WriteByte( &sv.datagram, 0 );
+	MSG_WriteByte( &sv.multicast, count );
+	MSG_WriteByte( &sv.multicast, color );
+	MSG_WriteByte( &sv.multicast, 0 );
+
+	SV_Send( MSG_PVS, org, NULL, false );
 }
 
 /*
@@ -2821,7 +2765,7 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 =============
 pfnEngineFprintf
 
-legacy. probably was a part of early save\restore system
+legacy. probably was a part of early version of save\restore system
 =============
 */
 static void pfnEngineFprintf( FILE *pfile, char *szFmt, ... )
@@ -3198,15 +3142,18 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 	switch( ptype )
 	{
 	case print_console:
-		if( client->fakeclient ) MsgDev( D_INFO, "%s", szMsg );
+		if( FBitSet( client->flags, FCL_FAKECLIENT ))
+			MsgDev( D_INFO, "%s", szMsg );
 		else SV_ClientPrintf( client, PRINT_HIGH, "%s", szMsg );
 		break;
 	case print_chat:
-		if( client->fakeclient ) return;
+		if( FBitSet( client->flags, FCL_FAKECLIENT ))
+			return;
 		SV_ClientPrintf( client, PRINT_CHAT, "%s", szMsg );
 		break;
 	case print_center:
-		if( client->fakeclient ) return;
+		if( FBitSet( client->flags, FCL_FAKECLIENT ))
+			return;
 		MSG_WriteByte( &client->netchan.message, svc_centerprint );
 		MSG_WriteString( &client->netchan.message, szMsg );
 		break;
@@ -3223,7 +3170,7 @@ void pfnServerPrint( const char *szMsg )
 {
 	// while loading in-progress we can sending message only for local client
 	if( sv.state != ss_active ) MsgDev( D_INFO, "%s", szMsg );	
-	else SV_BroadcastPrintf( PRINT_HIGH, "%s", szMsg );
+	else SV_BroadcastPrintf( NULL, PRINT_HIGH, "%s", szMsg );
 }
 
 /*
@@ -3273,7 +3220,8 @@ void pfnCrosshairAngle( const edict_t *pClient, float pitch, float yaw )
 	}
 
 	// fakeclients ignores it silently
-	if( client->fakeclient ) return;
+	if( FBitSet( client->flags, FCL_FAKECLIENT ))
+		return;
 
 	if( pitch > 180.0f ) pitch -= 360;
 	if( pitch < -180.0f ) pitch += 360;
@@ -3317,7 +3265,8 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 	else client->pViewEntity = (edict_t *)pViewent;
 
 	// fakeclients ignore to send client message (but can see into the trigger_camera through the PVS)
-	if( client->fakeclient ) return;
+	if( FBitSet( client->flags, FCL_FAKECLIENT ))
+		return;
 
 	MSG_WriteByte( &client->netchan.message, svc_setview );
 	MSG_WriteWord( &client->netchan.message, NUM_FOR_EDICT( pViewent ));
@@ -3370,22 +3319,7 @@ pfnGetPlayerWONId
 */
 uint pfnGetPlayerWONId( edict_t *e )
 {
-	sv_client_t	*cl;
-	int		i;
-
-	if( sv.state != ss_active )
-		return -1;
-
-	if( !SV_ClientFromEdict( e, false ))
-		return -1;
-
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
-	{
-		if( cl->edict == e && cl->authentication_method == 0 )
-			return cl->WonID;
-	}
-
-	return -1;
+	return 0xFFFFFFFF;
 }
 
 /*
@@ -3428,7 +3362,8 @@ void pfnFadeClientVolume( const edict_t *pEdict, int fadePercent, int fadeOutSec
 		return;
 	}
 
-	if( cl->fakeclient ) return;
+	if( FBitSet( cl->flags, FCL_FAKECLIENT ))
+		return;
 
 	MSG_WriteByte( &cl->netchan.message, svc_soundfade );
 	MSG_WriteByte( &cl->netchan.message, fadePercent );
@@ -3478,14 +3413,14 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 		return;
 	}
 
-	if( !cl->fakeclient )
-		return;	// only fakeclients allows
+	if( !FBitSet( cl->flags, FCL_FAKECLIENT ))
+		return; // only fakeclients allows
 
 	oldcl = svs.currentPlayer;
 
 	svs.currentPlayer = SV_ClientFromEdict( pClient, true );
 	svs.currentPlayerNum = (svs.currentPlayer - svs.clients);
-	svs.currentPlayer->timebase = (sv.time + host.frametime) - (msec / 1000.0f);
+	svs.currentPlayer->timebase = (sv.time + sv.frametime) - (msec / 1000.0f);
 
 	memset( &cmd, 0, sizeof( cmd ));
 	if( v_angle ) VectorCopy( v_angle, cmd.viewangles );
@@ -3559,16 +3494,20 @@ pfnSetClientKeyValue
 */
 void pfnSetClientKeyValue( int clientIndex, char *infobuffer, char *key, char *value )
 {
+	sv_client_t	*cl;
+
 	clientIndex -= 1;
 
-	if( clientIndex < 0 || clientIndex >= sv_maxclients->integer )
+	if( !svs.clients || clientIndex < 0 || clientIndex >= sv_maxclients->integer )
 		return;
 
-	if( svs.clients[clientIndex].state < cs_spawned || infobuffer == NULL )
+	cl = &svs.clients[clientIndex]; 
+
+	if( cl->state < cs_spawned || infobuffer == NULL )
 		return;
 
 	Info_SetValueForKey( infobuffer, key, value );
-	svs.clients[clientIndex].sendinfo = true;
+	SetBits( cl->flags, FCL_RESEND_USERINFO );
 }
 
 /*
@@ -3662,7 +3601,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	byte		*mask = NULL;
 	vec3_t		pvspoint;
 
-	if( flags & FEV_CLIENT )
+	if( FBitSet( flags, FEV_CLIENT ))
 		return;	// someone stupid joke
 
 	// first check event for out of bounds
@@ -3710,14 +3649,14 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		args.entindex = invokerIndex = NUM_FOR_EDICT( pInvoker );
 
 		// g-cont. allow 'ducking' param for all entities
-		args.ducking = (pInvoker->v.flags & FL_DUCKING) ? true : false;
+		args.ducking = FBitSet( pInvoker->v.flags, FL_DUCKING ) ? true : false;
 
 		// this will be send only for reliable event
-		if(!( args.flags & FEVENT_ORIGIN ))
+		if( !FBitSet( args.flags, FEVENT_ORIGIN ))
 			VectorCopy( pInvoker->v.origin, args.origin );
 
 		// this will be send only for reliable event
-		if(!( args.flags & FEVENT_ANGLES ))
+		if( !FBitSet( args.flags, FEVENT_ANGLES ))
 			VectorCopy( pInvoker->v.angles, args.angles );
 
 		if( sv_sendvelocity->integer )
@@ -3730,54 +3669,50 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		invokerIndex = -1;
 	}
 
-	if(!( flags & FEV_GLOBAL ) && VectorIsNull( pvspoint ))
+	if( !FBitSet( flags, FEV_GLOBAL ) && VectorIsNull( pvspoint ))
           {
 		MsgDev( D_ERROR, "%s: not a FEV_GLOBAL event missing origin. Ignored.\n", sv.event_precache[eventindex] );
 		return;
 	}
 
 	// check event for some user errors
-	if( flags & (FEV_NOTHOST|FEV_HOSTONLY))
+	if( FBitSet( flags, FEV_NOTHOST|FEV_HOSTONLY ))
 	{
 		if( !SV_ClientFromEdict( pInvoker, true ))
 		{
 			const char *ev_name = sv.event_precache[eventindex];
-			if( flags & FEV_NOTHOST )
+
+			if( FBitSet( flags, FEV_NOTHOST ))
 			{
 				MsgDev( D_WARN, "%s: specified FEV_NOTHOST when invoker not a client\n", ev_name );
-				flags &= ~FEV_NOTHOST;
+				ClearBits( flags, FEV_NOTHOST );
 			}
 
-			if( flags & FEV_HOSTONLY )
+			if( FBitSet( flags, FEV_HOSTONLY ))
 			{
 				MsgDev( D_WARN, "%s: specified FEV_HOSTONLY when invoker not a client\n", ev_name );
-				flags &= ~FEV_HOSTONLY;
+				ClearBits( flags, FEV_HOSTONLY );
 			}
 		}
 	}
 
-	flags |= FEV_SERVER;		// it's a server event!
+	SetBits( flags, FEV_SERVER );		// it's a server event!
 	if( delay < 0.0f ) delay = 0.0f;	// fixup negative delays
 
-	if(!( flags & FEV_GLOBAL ))
-	{
-		mleaf_t	*leaf;
-
-		// setup pvs cluster for invoker
-		leaf = Mod_PointInLeaf( pvspoint, sv.worldmodel->nodes );
-		mask = Mod_LeafPVS( leaf, sv.worldmodel );
-	}
+	// setup pvs cluster for invoker
+	if( !FBitSet( flags, FEV_GLOBAL ))
+		mask = Mod_GetPVSForPoint( pvspoint );
 
 	// process all the clients
 	for( slot = 0, cl = svs.clients; slot < sv_maxclients->integer; slot++, cl++ )
 	{
-		if( cl->state != cs_spawned || !cl->edict || cl->fakeclient )
+		if( cl->state != cs_spawned || !cl->edict || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;
 
 		if( SV_IsValidEdict( pInvoker ) && pInvoker->v.groupinfo && cl->edict->v.groupinfo )
 		{
-			if(( svs.groupop == 0 && (cl->edict->v.groupinfo & pInvoker->v.groupinfo) == 0 )
-			|| ( svs.groupop == 1 && (cl->edict->v.groupinfo & pInvoker->v.groupinfo) == 1 ))
+			if(( svs.groupop == 0 && FBitSet( cl->edict->v.groupinfo, pInvoker->v.groupinfo ) == 0 )
+			|| ( svs.groupop == 1 && FBitSet( cl->edict->v.groupinfo, pInvoker->v.groupinfo ) == 1 ))
 				continue;
 		}
 
@@ -3787,16 +3722,16 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 				continue;
 		}
 
-		if( flags & FEV_NOTHOST && cl == svs.currentPlayer && cl->local_weapons )
+		if( FBitSet( flags, FEV_NOTHOST ) && cl == svs.currentPlayer && FBitSet( cl->flags, FCL_LOCAL_WEAPONS ))
 			continue;	// will be played on client side
 
-		if( flags & FEV_HOSTONLY && cl->edict != pInvoker )
+		if( FBitSet( flags, FEV_HOSTONLY ) && cl->edict != pInvoker )
 			continue;	// sending only to invoker
 
 		// all checks passed, send the event
 
 		// reliable event
-		if( flags & FEV_RELIABLE )
+		if( FBitSet( flags, FEV_RELIABLE ))
 		{
 			// skipping queue, write direct into reliable datagram
 			SV_PlaybackReliableEvent( &cl->netchan.message, eventindex, delay, &args );
@@ -3807,11 +3742,12 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		es = &cl->events;
 		bestslot = -1;
 
-		if( flags & FEV_UPDATE )
+		if( FBitSet( flags, FEV_UPDATE ))
 		{
 			for( j = 0; j < MAX_EVENT_QUEUE; j++ )
 			{
 				ei = &es->ei[j];
+
 				if( ei->index == eventindex && invokerIndex != -1 && invokerIndex == ei->entity_index )
 				{
 					bestslot = j;
@@ -3864,16 +3800,15 @@ so we can't use a single PVS point
 */
 byte *pfnSetFatPVS( const float *org )
 {
+	qboolean	fullvis = false;
+
 	if( !sv.worldmodel->visdata || sv_novis->integer || !org || CL_DisableVisibility( ))
-		return Mod_DecompressVis( NULL );
+		fullvis = true;
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
 
-	fatbytes = (sv.worldmodel->numleafs+31)>>3;
-	bitvector = fatpvs;
-
 	// portals can't change viewpoint!
-	if(!( sv.hostflags & SVF_PORTALPASS ))
+	if( !FBitSet( sv.hostflags, SVF_MERGE_VISIBILITY ))
 	{
 		vec3_t	viewPos, offset;
 
@@ -3885,7 +3820,7 @@ byte *pfnSetFatPVS( const float *org )
 		// }
 		// so we have unneeded duck calculations who have affect when player
 		// is ducked into water. Remove offset to restore right PVS position
-		if( svs.currentPlayer->edict->v.flags & FL_DUCKING )
+		if( FBitSet( svs.currentPlayer->edict->v.flags, FL_DUCKING ))
 		{
 			VectorSubtract( svgame.pmove->player_mins[0], svgame.pmove->player_mins[1], offset );
 			VectorSubtract( org, offset, viewPos );
@@ -3893,17 +3828,16 @@ byte *pfnSetFatPVS( const float *org )
 		else VectorCopy( org, viewPos );
 
 		// build a new PVS frame
-		memset( bitvector, 0, fatbytes );
-
-		SV_AddToFatPVS( viewPos, DVIS_PVS, sv.worldmodel->nodes );
+		Mod_FatPVS( viewPos, FATPVS_RADIUS, fatpvs, world.fatbytes, false, fullvis );
 		VectorCopy( viewPos, viewPoint[svs.currentPlayerNum] );
 	}
 	else
 	{
-		SV_AddToFatPVS( org, DVIS_PVS, sv.worldmodel->nodes );
+		// merge PVS
+		Mod_FatPVS( org, FATPVS_RADIUS, fatpvs, world.fatbytes, true, fullvis );
 	}
 
-	return bitvector;
+	return fatpvs;
 }
 
 /*
@@ -3916,16 +3850,15 @@ so we can't use a single PHS point
 */
 byte *pfnSetFatPAS( const float *org )
 {
+	qboolean	fullvis = false;
+
 	if( !sv.worldmodel->visdata || sv_novis->integer || !org || CL_DisableVisibility( ))
-		return Mod_DecompressVis( NULL );
+		fullvis = true;
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
 
-	fatbytes = (sv.worldmodel->numleafs+31)>>3;
-	bitvector = fatphs;
-
 	// portals can't change viewpoint!
-	if(!( sv.hostflags & SVF_PORTALPASS ))
+	if( !FBitSet( sv.hostflags, SVF_MERGE_VISIBILITY ))
 	{
 		vec3_t	viewPos, offset;
 
@@ -3937,7 +3870,7 @@ byte *pfnSetFatPAS( const float *org )
 		// }
 		// so we have unneeded duck calculations who have affect when player
 		// is ducked into water. Remove offset to restore right PVS position
-		if( svs.currentPlayer->edict->v.flags & FL_DUCKING )
+		if( FBitSet( svs.currentPlayer->edict->v.flags, FL_DUCKING ))
 		{
 			VectorSubtract( svgame.pmove->player_mins[0], svgame.pmove->player_mins[1], offset );
 			VectorSubtract( org, offset, viewPos );
@@ -3945,17 +3878,15 @@ byte *pfnSetFatPAS( const float *org )
 		else VectorCopy( org, viewPos );
 
 		// build a new PHS frame
-		memset( bitvector, 0, fatbytes );
-
-		SV_AddToFatPVS( viewPos, DVIS_PHS, sv.worldmodel->nodes );
+		Mod_FatPVS( viewPos, FATPHS_RADIUS, fatphs, world.fatbytes, false, fullvis );
 	}
 	else
 	{
-		// merge PVS
-		SV_AddToFatPVS( org, DVIS_PHS, sv.worldmodel->nodes );
+		// merge PHS
+		Mod_FatPVS( org, FATPHS_RADIUS, fatphs, world.fatbytes, true, fullvis );
 	}
 
-	return bitvector;
+	return fatphs;
 }
 
 /*
@@ -3977,7 +3908,7 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	// vis not set - fullvis enabled
 	if( !pset ) return 1;
 
-	if( ent->v.flags & FL_CUSTOMENTITY && ent->v.owner && ent->v.owner->v.flags & FL_CLIENT )
+	if( FBitSet( ent->v.flags, FL_CUSTOMENTITY ) && ent->v.owner && FBitSet( ent->v.owner->v.flags, FL_CLIENT ))
 		ent = ent->v.owner;	// upcast beams to my owner
 
 	if( ent->headnode < 0 )
@@ -3985,7 +3916,7 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 		// check individual leafs
 		for( i = 0; i < ent->num_leafs; i++ )
 		{
-			if( pset[ent->leafnums[i] >> 3] & (1 << (ent->leafnums[i] & 7 )))
+			if( CHECKVISBIT( pset, ent->leafnums[i] ))
 				return 1;	// visible passed by leaf
 		}
 
@@ -3993,18 +3924,19 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	}
 	else
 	{
-		int	leafnum;
+		short	leafnum;
 
 		for( i = 0; i < MAX_ENT_LEAFS; i++ )
 		{
 			leafnum = ent->leafnums[i];
 			if( leafnum == -1 ) break;
-			if( pset[leafnum >> 3] & (1 << ( leafnum & 7 )))
+
+			if( CHECKVISBIT( pset, leafnum ))
 				return 1;	// visible passed by leaf
 		}
 
 		// too many leafs for individual check, go by headnode
-		if( !SV_HeadnodeVisible( &sv.worldmodel->nodes[ent->headnode], pset, &leafnum ))
+		if( !Mod_HeadnodeVisible( &sv.worldmodel->nodes[ent->headnode], pset, &leafnum ))
 			return 0;
 
 		((edict_t *)ent)->leafnums[ent->num_leafs] = leafnum;
@@ -4027,7 +3959,7 @@ int pfnCanSkipPlayer( const edict_t *player )
 	if(( cl = SV_ClientFromEdict( player, false )) == NULL )
 		return false;
 
-	return cl->local_weapons;
+	return FBitSet( cl->flags, FCL_LOCAL_WEAPONS );
 }
 
 /*
@@ -4038,9 +3970,7 @@ pfnGetCurrentPlayer
 */
 int pfnGetCurrentPlayer( void )
 {
-	if( svs.currentPlayer )
-		return (svs.currentPlayer - svs.clients);
-	return -1;
+	return svs.currentPlayerNum;
 }
 
 /*
@@ -4256,7 +4186,7 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 	{
 		if( cl->edict == e )
 		{
-			if( cl->fakeclient )
+			if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 				Q_strncat( result, "BOT", sizeof( result ));
 			else if( cl->authentication_method == 0 )
 				Q_snprintf( result, sizeof( result ), "%u", (uint)cl->WonID );

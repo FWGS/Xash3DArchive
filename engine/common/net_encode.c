@@ -747,7 +747,11 @@ void Delta_InitFields( void )
 	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		dt = Delta_FindStruct( token );
-		if( dt == NULL ) Sys_Error( "delta.lst: unknown struct %s\n", token );
+
+		if( dt == NULL )
+		{
+			Sys_Error( "%s: unknown struct %s\n", DELTA_PATH, token );
+		}
 
 		pfile = COM_ParseFile( pfile, encodeDll );
 
@@ -757,7 +761,11 @@ void Delta_InitFields( void )
 
 		// jump to '{'
 		pfile = COM_ParseFile( pfile, token );
-		if( token[0] != '{' ) Sys_Error( "delta.lst: missing '{' in section %s\n", dt->pName );
+	
+		if( token[0] != '{' )
+		{
+			Sys_Error( "%s: missing '{' in section %s\n", DELTA_PATH, dt->pName );
+		}
 
 		Delta_ParseTable( &pfile, dt, encodeDll, encodeFunc );
 	}
@@ -1026,7 +1034,7 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to, float timeba
 		if( pField->multiplier != 1.0f ) fromF *= pField->multiplier;
 		if( pField->multiplier != 1.0f ) toF *= pField->multiplier;
 	}
-	else if( pField->flags & ( DT_FLOAT|DT_ANGLE ))
+	else if( pField->flags & ( DT_ANGLE|DT_FLOAT ))
 	{
 		// don't convert floats to integers
 		fromF = *((int *)((byte *)from + pField->offset ));
@@ -1144,7 +1152,7 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 	else if( pField->flags & DT_TIMEWINDOW_BIG )
 	{
 		flValue = *(float *)((byte *)to + pField->offset );
-		flTime = (timebase * pField->multiplier) - (flValue * pField->multiplier);
+		flTime = Q_rint( timebase * pField->multiplier ) - Q_rint( flValue * pField->multiplier );
 		iValue = (uint)abs( flTime );
 
 		MSG_WriteBitLong( msg, iValue, pField->bits, bSigned );
@@ -1665,10 +1673,11 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 	MSG_WriteWord( msg, to->number );
 	MSG_WriteUBitLong( msg, 0, 2 ); // alive
 
-	if( to->entityType != from->entityType )
+	if( force || ( to->entityType != from->entityType ))
 	{
 		MSG_WriteOneBit( msg, 1 );
 		MSG_WriteUBitLong( msg, to->entityType, 2 );
+		numChanges++;
 	}
 	else MSG_WriteOneBit( msg, 0 ); 
 

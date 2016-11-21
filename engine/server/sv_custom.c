@@ -302,7 +302,7 @@ void SV_SendConsistencyList( sizebuf_t *msg )
 	int		lastIndex;
 	int		i;
 
-	if( mp_consistency->integer && ( sv.num_consistency_resources > 0 ) && !svs.currentPlayer->hltv_proxy )
+	if( mp_consistency->integer && ( sv.num_consistency_resources > 0 ) && !FBitSet( svs.currentPlayer->flags, FCL_HLTV_PROXY ))
 	{
 		lastIndex = 0;
 		MSG_WriteOneBit( msg, 1 );

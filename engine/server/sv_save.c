@@ -32,7 +32,7 @@ half-life implementation of saverestore system
 #define SAVEGAME_VERSION		0x0065				// Version 0.65
 #define CLIENT_SAVEGAME_VERSION	0x0068				// Version 0.68
 
-#define SAVE_AGED_COUNT		1
+#define SAVE_AGED_COUNT		2
 #define SAVENAME_LENGTH		128				// matches with MAX_OSPATH
 
 #define LUMP_DECALS_OFFSET		0
@@ -723,7 +723,8 @@ void SV_DirectoryCopy( const char *pPath, file_t *pFile )
 
 void SV_DirectoryExtract( file_t *pFile, int fileCount )
 {
-	char	szName[SAVENAME_LENGTH], fileName[SAVENAME_LENGTH];
+	char	szName[SAVENAME_LENGTH];
+	char	fileName[SAVENAME_LENGTH];
 	int	i, fileSize;
 	file_t	*pCopy;
 

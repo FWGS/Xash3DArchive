@@ -30,9 +30,6 @@ float		gldepthmin, gldepthmax;
 ref_params_t	r_lastRefdef;
 ref_instance_t	RI, prevRI;
 
-mleaf_t		*r_viewleaf, *r_oldviewleaf;
-mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
-
 static int R_RankForRenderMode( cl_entity_t *ent )
 {
 	switch( ent->curstate.rendermode )
@@ -745,35 +742,8 @@ R_FindViewLeaf
 */
 void R_FindViewLeaf( void )
 {
-	float	height;
-	mleaf_t	*leaf;
-	vec3_t	tmp;
-
-	r_oldviewleaf = r_viewleaf;
-	r_oldviewleaf2 = r_viewleaf2;
-	leaf = Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes );
-	r_viewleaf2 = r_viewleaf = leaf;
-	height = RI.waveHeight ? RI.waveHeight : 16;
-
-	// check above and below so crossing solid water doesn't draw wrong
-	if( leaf->contents == CONTENTS_EMPTY )
-	{
-		// look down a bit
-		VectorCopy( RI.pvsorigin, tmp );
-		tmp[2] -= height;
-		leaf = Mod_PointInLeaf( tmp, cl.worldmodel->nodes );
-		if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
-		r_viewleaf2 = leaf;
-	}
-	else
-	{
-		// look up a bit
-		VectorCopy( RI.pvsorigin, tmp );
-		tmp[2] += height;
-		leaf = Mod_PointInLeaf( tmp, cl.worldmodel->nodes );
-		if(( leaf->contents != CONTENTS_SOLID ) && ( leaf != r_viewleaf2 ))
-		r_viewleaf2 = leaf;
-	}
+	RI.oldviewleaf = RI.viewleaf;
+	RI.viewleaf = Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes );
 }
 
 /*
@@ -822,9 +792,7 @@ static void R_SetupFrame( void )
 	{
 		RI.waveHeight = cl.refdef.movevars->waveHeight * 2.0f;	// set global waveheight
 		RI.isSkyVisible = false; // unknown at this moment
-
-		if(!( RI.params & RP_OLDVIEWLEAF ))
-			R_FindViewLeaf();
+		R_FindViewLeaf();
 	}
 }
 
@@ -999,13 +967,13 @@ static void R_CheckFog( void )
 
 	RI.fogEnabled = false;
 
-	if( RI.refdef.waterlevel < 2 || !RI.drawWorld || !r_viewleaf )
+	if( RI.refdef.waterlevel < 2 || !RI.drawWorld || !RI.viewleaf )
 		return;
 
 	ent = CL_GetWaterEntity( RI.vieworg );
 	if( ent && ent->model && ent->model->type == mod_brush && ent->curstate.skin < 0 )
 		cnt = ent->curstate.skin;
-	else cnt = r_viewleaf->contents;
+	else cnt = RI.viewleaf->contents;
 
 	if( IsLiquidContents( RI.cached_contents ) && !IsLiquidContents( cnt ))
 	{
@@ -1038,8 +1006,8 @@ static void R_CheckFog( void )
 		}
 		else
 		{
-			tex = R_RecursiveFindWaterTexture( r_viewleaf->parent, NULL, false );
-			if( tex ) RI.cached_contents = r_viewleaf->contents;
+			tex = R_RecursiveFindWaterTexture( RI.viewleaf->parent, NULL, false );
+			if( tex ) RI.cached_contents = RI.viewleaf->contents;
 		}
 
 		if( !tex ) return;	// no valid fogs
@@ -1390,7 +1358,7 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 
 	R_RenderScene( fd );
 
-	r_oldviewleaf = r_viewleaf = NULL;		// force markleafs next frame
+	RI.oldviewleaf = RI.viewleaf = NULL;		// force markleafs next frame
 }
 
 static int GL_RenderGetParm( int parm, int arg )

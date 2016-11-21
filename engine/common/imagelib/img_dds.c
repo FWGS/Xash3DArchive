@@ -14,6 +14,7 @@ GNU General Public License for more details.
 */
 
 #include "imagelib.h"
+#include "mathlib.h"
 
 qboolean Image_CheckDXT3Alpha( dds_t *hdr, byte *fin )
 {
@@ -175,10 +176,10 @@ size_t Image_DXTCalcMipmapSize( dds_t *hdr )
 	int	i, width, height;
 		
 	// now correct buffer size
-	for( i = 0; i < max( 1, ( hdr->dwMipMapCount )); i++ )
+	for( i = 0; i < Q_max( 1, ( hdr->dwMipMapCount )); i++ )
 	{
-		width = max( 1, ( hdr->dwWidth >> i ));
-		height = max( 1, ( hdr->dwHeight >> i ));
+		width = Q_max( 1, ( hdr->dwWidth >> i ));
+		height = Q_max( 1, ( hdr->dwHeight >> i ));
 		buffsize += Image_DXTGetLinearSize( image.type, width, height, image.depth );
 	}
 
@@ -295,21 +296,22 @@ qboolean Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
 	switch( image.encode )
 	{
 	case DXT_ENCODE_COLOR_YCoCg:
-		image.flags |= IMAGE_HAS_COLOR;
+		SetBits( image.flags, IMAGE_HAS_COLOR );
 		break;
 	case DXT_ENCODE_NORMAL_AG_ORTHO:
 	case DXT_ENCODE_NORMAL_AG_STEREO:
 	case DXT_ENCODE_NORMAL_AG_PARABOLOID:
 	case DXT_ENCODE_NORMAL_AG_QUARTIC:
 	case DXT_ENCODE_NORMAL_AG_AZIMUTHAL:
-		image.flags |= IMAGE_HAS_COLOR;
+		SetBits( image.flags, IMAGE_HAS_COLOR );
 		break;
 	default:	// check for real alpha-pixels
 		if( image.type == PF_DXT3 && Image_CheckDXT3Alpha( &header, fin ))
-			image.flags |= IMAGE_HAS_ALPHA;
+			SetBits( image.flags, IMAGE_HAS_ALPHA );
 		else if( image.type == PF_DXT5 && Image_CheckDXT5Alpha( &header, fin ))
-			image.flags |= IMAGE_HAS_ALPHA;
-		image.flags |= IMAGE_HAS_COLOR;
+			SetBits( image.flags, IMAGE_HAS_ALPHA );
+		if( !FBitSet( header.dsPixelFormat.dwFlags, DDS_LUMINANCE ))
+			SetBits( image.flags, IMAGE_HAS_COLOR ); // FIXME: analyze colors
 		break;
 	}
 

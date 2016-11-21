@@ -113,7 +113,7 @@ void SV_CalcPings( void )
 	{
 		cl = &svs.clients[i];
 
-		if( cl->state != cs_spawned || cl->fakeclient )
+		if( cl->state != cs_spawned || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;
 
 		total = count = 0;
@@ -152,7 +152,7 @@ int SV_CalcPacketLoss( sv_client_t *cl )
 	lost  = 0;
 	count = 0;
 
-	if( cl->fakeclient )
+	if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 		return 0;
 
 	numsamples = SV_UPDATE_BACKUP / 2;
@@ -160,9 +160,9 @@ int SV_CalcPacketLoss( sv_client_t *cl )
 	for( i = 0; i < numsamples; i++ )
 	{
 		frame = &cl->frames[(cl->netchan.incoming_acknowledged - 1 - i) & SV_UPDATE_MASK];
-		count++;
 		if( frame->latency == -1 )
 			lost++;
+		count++;
 	}
 
 	if( !count ) return 100;
@@ -370,7 +370,7 @@ void SV_ReadPackets( void )
 		// check for packets from connected clients
 		for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 		{
-			if( cl->state == cs_free || cl->fakeclient )
+			if( cl->state == cs_free || FBitSet( cl->flags, FCL_FAKECLIENT ))
 				continue;
 
 			if( !NET_CompareBaseAdr( net_from, cl->netchan.remote_address ))
@@ -381,21 +381,21 @@ void SV_ReadPackets( void )
 
 			if( cl->netchan.remote_address.port != net_from.port )
 			{
-				MsgDev( D_INFO, "SV_ReadPackets: fixing up a translated port\n");
+				MsgDev( D_NOTE, "SV_ReadPackets: fixing up a translated port\n");
 				cl->netchan.remote_address.port = net_from.port;
 			}
 
 			if( Netchan_Process( &cl->netchan, &net_message ))
 			{	
-				if( sv_maxclients->integer == 1 || cl->state != cs_spawned )
-					cl->send_message = true; // reply at end of frame
+				if(( sv_maxclients->integer == 1 && !FBitSet( host.features, ENGINE_FIXED_FRAMERATE )) || cl->state != cs_spawned )
+					SetBits( cl->flags, FCL_SEND_NET_MESSAGE ); // reply at end of frame
 
 				// this is a valid, sequenced packet, so process it
 				if( cl->state != cs_zombie )
 				{
 					cl->lastmessage = host.realtime; // don't timeout
 					SV_ExecuteClientMessage( cl, &net_message );
-					svgame.globals->frametime = host.frametime;
+					svgame.globals->frametime = sv.frametime;
 					svgame.globals->time = sv.time;
 				}
 			}
@@ -449,12 +449,13 @@ void SV_CheckTimeouts( void )
 	{
 		if( cl->state >= cs_connected )
 		{
-			if( cl->edict && !( cl->edict->v.flags & (FL_SPECTATOR|FL_FAKECLIENT)))
+			if( cl->edict && !FBitSet( cl->edict->v.flags, FL_SPECTATOR|FL_FAKECLIENT ))
 				numclients++;
                     }
 
 		// fake clients do not timeout
-		if( cl->fakeclient ) cl->lastmessage = host.realtime;
+		if( FBitSet( cl->flags, FCL_FAKECLIENT ))
+			cl->lastmessage = host.realtime;
 
 		// message times may be wrong across a changelevel
 		if( cl->lastmessage > host.realtime )
@@ -466,11 +467,14 @@ void SV_CheckTimeouts( void )
 			continue;
 		}
 
-		if(( cl->state == cs_connected || cl->state == cs_spawned ) && cl->lastmessage < droppoint && !NET_IsLocalAddress( cl->netchan.remote_address ))
+		if(( cl->state == cs_connected || cl->state == cs_spawned ) && cl->lastmessage < droppoint )
 		{
-			SV_BroadcastPrintf( PRINT_HIGH, "%s timed out\n", cl->name );
-			SV_DropClient( cl ); 
-			cl->state = cs_free; // don't bother with zombie state
+			if( !NET_IsLocalAddress( cl->netchan.remote_address ))
+			{
+				SV_BroadcastPrintf( NULL, PRINT_HIGH, "%s timed out\n", cl->name );
+				SV_DropClient( cl ); 
+				cl->state = cs_free; // don't bother with zombie state
+			}
 		}
 	}
 
@@ -499,7 +503,7 @@ void SV_PrepWorldFrame( void )
 		ent = EDICT_NUM( i );
 		if( ent->free ) continue;
 
-		ent->v.effects &= ~(EF_MUZZLEFLASH|EF_NOINTERP);
+		ClearBits( ent->v.effects, EF_MUZZLEFLASH|EF_NOINTERP );
 	}
 }
 
@@ -528,12 +532,15 @@ qboolean SV_IsSimulating( void )
 		return true; // force simulating for background map
 	}
 
-	if( sv.hostflags & SVF_PLAYERSONLY )
+	if( FBitSet( sv.hostflags, SVF_PLAYERSONLY ))
 		return false;
+
 	if( !SV_HasActivePlayers())
 		return false;
+
 	if( !sv.paused && CL_IsInGame( ))
 		return true;
+
 	return false;
 }
 
@@ -542,13 +549,38 @@ qboolean SV_IsSimulating( void )
 SV_RunGameFrame
 =================
 */
-void SV_RunGameFrame( void )
+/*
+=================
+SV_RunGameFrame
+=================
+*/
+qboolean SV_RunGameFrame( void )
 {
-	if( !SV_IsSimulating( )) return;
+	int	numFrames = 0;
 
-	SV_Physics();
+	if( !( sv.simulating = SV_IsSimulating( )))
+		return true;
 
-	sv.time += host.frametime;
+	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+	{
+		while( sv.time_residual >= sv.frametime )
+		{
+			SV_Physics();
+
+			sv.time_residual -= sv.frametime;
+			sv.time += sv.frametime;
+			numFrames++;
+		}
+		return (numFrames != 0);
+	}
+	else
+	{
+		SV_Physics();
+
+		sv.time += sv.frametime;
+
+		return true;
+	}
 }
 
 /*
@@ -562,7 +594,14 @@ void Host_ServerFrame( void )
 	// if server is not active, do nothing
 	if( !svs.initialized ) return;
 
-	svgame.globals->frametime = host.frametime;
+	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+		sv.frametime = ( 1.0 / (double)( GAME_FPS - 0.01 )); // FP issues
+	else sv.frametime = host.frametime;
+
+	if( sv.simulating || sv.state != ss_active )
+		sv.time_residual += host.frametime;
+
+	svgame.globals->frametime = sv.frametime;
 
 	// check timeouts
 	SV_CheckTimeouts ();
@@ -583,7 +622,7 @@ void Host_ServerFrame( void )
 	SV_UpdateMovevars ( false );
 
 	// let everything in the world think and move
-	SV_RunGameFrame ();
+	if( !SV_RunGameFrame ()) return;
 		
 	// send messages back to the clients that had packets read this frame
 	SV_SendClientMessages ();
@@ -678,7 +717,7 @@ void SV_AddToMaster( netadr_t from, sizebuf_t *msg )
 		{
 			if( svs.clients[index].state >= cs_connected )
 			{
-				if( svs.clients[index].fakeclient )
+				if( FBitSet( svs.clients[index].flags, FCL_FAKECLIENT ))
 					bots++;
 				else clients++;
 			}
@@ -848,11 +887,11 @@ void SV_FinalMessage( char *message, qboolean reconnect )
 	// send it twice
 	// stagger the packets to crutch operating system limited buffers
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
-		if( cl->state >= cs_connected && !cl->fakeclient )
+		if( cl->state >= cs_connected && !FBitSet( cl->flags, FCL_FAKECLIENT ))
 			Netchan_Transmit( &cl->netchan, MSG_GetNumBytesWritten( &msg ), MSG_GetData( &msg ));
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
-		if( cl->state >= cs_connected && !cl->fakeclient )
+		if( cl->state >= cs_connected && !FBitSet( cl->flags, FCL_FAKECLIENT ))
 			Netchan_Transmit( &cl->netchan, MSG_GetNumBytesWritten( &msg ), MSG_GetData( &msg ));
 }
 

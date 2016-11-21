@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "netchan.h"
 #include "mathlib.h"
 #include "net_encode.h"
+#include "protocol.h"
 
 #define MAKE_FRAGID( id, count )	((( id & 0xffff ) << 16 ) | ( count & 0xffff ))
 #define FRAG_GETID( fragid )		(( fragid >> 16 ) & 0xffff )
@@ -121,7 +122,6 @@ void Netchan_Init( void )
 
 	net_mempool = Mem_AllocPool( "Network Pool" );
 
-	Huff_Init ();	// initialize huffman compression
 	MSG_InitMasks ();	// initialize bit-masks
 }
 
@@ -163,7 +163,6 @@ void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport )
 	chan->incoming_sequence = 0;
 	chan->outgoing_sequence = 1;
 	chan->rate = DEFAULT_RATE;
-	chan->compress = false;	// work but low efficiency
 	chan->qport = qport;
 
 	MSG_Init( &chan->message, "NetData", chan->message_buf, sizeof( chan->message_buf ));
@@ -1166,8 +1165,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	qboolean	send_reliable_fragment;
 	qboolean	send_resending = false;
 	qboolean	send_reliable;
-	size_t	size1, size2;
-	uint	w1, w2, hdr_size;
+	uint	w1, w2;
 	int	i, j;
 	float	fRate;
 
@@ -1351,9 +1349,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	}
 
 	if( send_reliable && send_reliable_fragment )
-	{
-		w1 |= ( 1 << 30 );
-	}
+		SetBits( w1, BIT( 30 ));
 
 	chan->outgoing_sequence++;
 	chan->last_sent = host.realtime;
@@ -1385,8 +1381,6 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 		}
 	}
 
-	hdr_size = MSG_GetNumBytesWritten( &send );
-
 	// copy the reliable message to the packet first
 	if( send_reliable )
 	{
@@ -1396,16 +1390,11 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 
 	// is there room for the unreliable payload?
 	if( MSG_GetNumBitsLeft( &send ) >= length )
-	{
 		MSG_WriteBits( &send, data, length );
-	}
-	else
-	{
-		MsgDev( D_WARN, "Netchan_Transmit: unreliable message overflow\n" );
-	}
+	else MsgDev( D_WARN, "Netchan_Transmit: unreliable message overflow\n" );
 
 	// deal with packets that are too small for some networks
-	if( MSG_GetNumBytesWritten( &send ) < 16 ) // packet too small for some networks
+	if( MSG_GetNumBytesWritten( &send ) < 16 && !NET_IsLocalAddress( chan->remote_address )) // packet too small for some networks
 	{
 		int	i;
 
@@ -1413,7 +1402,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 		for( i = MSG_GetNumBytesWritten( &send ); i < 16; i++ )		
 		{
 			// NOTE: that the server can parse svc_nop, too.
-			MSG_WriteByte( &send, 1 );
+			MSG_WriteByte( &send, svc_nop );
 		}
 	}
 
@@ -1424,12 +1413,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 
 	Netchan_UpdateFlow( chan );
 
-	size1 = MSG_GetNumBytesWritten( &send );
-	if( chan->compress ) Huff_CompressPacket( &send, hdr_size );
-	size2 = MSG_GetNumBytesWritten( &send );
-
-	chan->total_sended += size2;
-	chan->total_sended_uncompressed += size1;
+	chan->total_sended += MSG_GetNumBytesWritten( &send );
 
 	// send the datagram
 	if( !CL_IsPlaybackDemo( ))
@@ -1488,21 +1472,18 @@ modifies net_message so that it points to the packet payload
 */
 qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 {
-	uint	sequence, sequence_ack, hdr_size;
+	uint	sequence, sequence_ack;
 	uint	reliable_ack, reliable_message;
 	uint	fragid[MAX_STREAMS] = { 0, 0 };
 	qboolean	frag_message[MAX_STREAMS] = { false, false };
 	int	frag_offset[MAX_STREAMS] = { 0, 0 };
 	int	frag_length[MAX_STREAMS] = { 0, 0 };
 	qboolean	message_contains_fragments;
-	size_t	size1, size2;
 	int	i, qport;
 
 	if( !CL_IsPlaybackDemo() && !NET_CompareAdr( net_from, chan->remote_address ))
-	{
 		return false;
-	}
-	
+
 	// get sequence numbers
 	MSG_Clear( msg );
 	sequence = MSG_ReadLong( msg );
@@ -1517,7 +1498,7 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	reliable_message = sequence >> 31;
 	reliable_ack = sequence_ack >> 31;
 
-	message_contains_fragments = sequence & ( 1 << 30 ) ? true : false;
+	message_contains_fragments = FBitSet( sequence, BIT( 30 )) ? true : false;
 
 	if( message_contains_fragments )
 	{
@@ -1533,9 +1514,9 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 		}
 	}
 
-	sequence &= ~(1<<31);	
-	sequence &= ~(1<<30);
-	sequence_ack &= ~(1<<31);	
+	sequence &= ~BIT( 31 );
+	sequence &= ~BIT( 30 );
+	sequence_ack &= ~BIT( 31 );
 
 	if( net_showpackets->integer == 2 )
 	{
@@ -1619,14 +1600,8 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	chan->flow[FLOW_INCOMING].current++;
 
 	Netchan_UpdateFlow( chan );
-	hdr_size = MSG_GetNumBytesRead( msg );
 
-	size1 = MSG_GetMaxBytes( msg );
-	if( chan->compress ) Huff_DecompressPacket( msg, hdr_size );
-	size2 = MSG_GetMaxBytes( msg );
-
-	chan->total_received += size1;
-	chan->total_received_uncompressed += size2;
+	chan->total_received += MSG_GetMaxBytes( msg );
 	chan->good_count += 1;
 
 	if( message_contains_fragments )

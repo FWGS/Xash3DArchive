@@ -56,6 +56,7 @@ void CEngineSurface :: setCursor( Cursor *cursor )
 	VGUI_CursorSelect( cursor );
 }
 
+#ifdef NEW_VGUI_DLL
 void CEngineSurface :: GetMousePos( int &x, int &y )
 {
 	POINT	curpos;
@@ -66,6 +67,7 @@ void CEngineSurface :: GetMousePos( int &x, int &y )
 	x = curpos.x;
 	y = curpos.y;
 }
+#endif
 
 void CEngineSurface :: SetupPaintState( const paintState_t &paintState )
 {

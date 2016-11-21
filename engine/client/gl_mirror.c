@@ -290,10 +290,6 @@ void R_DrawMirrors( void )
 
 			VectorCopy( origin, RI.pvsorigin );
 
-			// combine two leafs from client and mirror views
-			r_viewleaf = Mod_PointInLeaf( oldRI.pvsorigin, cl.worldmodel->nodes );
-			r_viewleaf2 = Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes );
-
 			if( GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
 			{
 				// allow screen size
@@ -340,7 +336,6 @@ void R_DrawMirrors( void )
 		tr.mirror_entities[i].ent = NULL;
 	}
 
-	r_oldviewleaf = r_viewleaf = NULL;	// force markleafs next frame
 	tr.framecount = oldframecount;	// restore real framecount
 	tr.num_mirror_entities = 0;
 	tr.num_mirrors_used = 0;

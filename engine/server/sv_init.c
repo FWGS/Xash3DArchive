@@ -18,10 +18,17 @@ GNU General Public License for more details.
 
 int SV_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
 
+server_t		sv;	// local server
 server_static_t	svs;	// persistant server info
 svgame_static_t	svgame;	// persistant game info
-server_t		sv;	// local server
 
+/*
+================
+SV_ModelIndex
+
+register unique model for a server and client
+================
+*/
 int SV_ModelIndex( const char *filename )
 {
 	char	name[64];
@@ -60,6 +67,13 @@ int SV_ModelIndex( const char *filename )
 	return i;
 }
 
+/*
+================
+SV_SoundIndex
+
+register unique sound for client
+================
+*/
 int SV_SoundIndex( const char *filename )
 {
 	char	name[64];
@@ -98,6 +112,13 @@ int SV_SoundIndex( const char *filename )
 	return i;
 }
 
+/*
+================
+SV_EventIndex
+
+register network event for a server and client
+================
+*/
 int SV_EventIndex( const char *filename )
 {
 	char	name[64];
@@ -135,6 +156,13 @@ int SV_EventIndex( const char *filename )
 	return i;
 }
 
+/*
+================
+SV_GenericIndex
+
+register generic resourse for a server and client
+================
+*/
 int SV_GenericIndex( const char *filename )
 {
 	char	name[64];
@@ -181,8 +209,8 @@ get entity script for current map
 char *SV_EntityScript( void )
 {
 	string	entfilename;
-	char	*ents;
 	size_t	ft1, ft2;
+	char	*ents;
 
 	if( !sv.worldmodel )
 		return NULL;
@@ -224,14 +252,11 @@ baseline will be transmitted
 */
 void SV_CreateBaseline( void )
 {
-	edict_t	*pEdict;
 	int	e;	
 
 	for( e = 0; e < svgame.numEntities; e++ )
 	{
-		pEdict = EDICT_NUM( e );
-		if( !SV_IsValidEdict( pEdict )) continue;
-		SV_BaselineForEntity( pEdict );
+		SV_BaselineForEntity( EDICT_NUM( e ));
 	}
 
 	// create the instanced baselines
@@ -311,7 +336,7 @@ void SV_ActivateServer( void )
 
 	numFrames = (sv.loadgame) ? 1 : 2;
 	if( !sv.loadgame || svgame.globals->changelevel )
-		host.frametime = 0.1f;			
+		sv.frametime = 0.1f;			
 
 	// GoldSrc rules
 	// NOTE: this stuff is breaking sound from func_rotating in multiplayer
@@ -344,10 +369,9 @@ void SV_ActivateServer( void )
 		MsgDev( D_INFO, "Game started\n" );
 	}
 
+	// dedicated server purge unused resources here
 	if( host.type == HOST_DEDICATED )
-	{
 		Mod_FreeUnused ();
-	}
 
 	sv.state = ss_active;
 	physinfo->modified = true;
@@ -529,8 +553,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	svgame.globals->time = sv.time;
 	
 	// initialize buffers
-	MSG_Init( &sv.datagram, "Datagram", sv.datagram_buf, sizeof( sv.datagram_buf ));
-	MSG_Init( &sv.reliable_datagram, "Datagram R", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
+	MSG_Init( &sv.reliable_datagram, "Reliable Datagram", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
 	MSG_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));
 	MSG_Init( &sv.signon, "Signon", sv.signon_buf, sizeof( sv.signon_buf ));
 	MSG_Init( &sv.spectator_datagram, "Spectator Datagram", sv.spectator_buf, sizeof( sv.spectator_buf ));
@@ -586,12 +609,6 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 
 	// clear physics interaction links
 	SV_ClearWorld();
-
-	// disabled because invoke crash in battlegrounds mod
-#if 0
-	// tell dlls about new level started
-	svgame.dllFuncs.pfnParmsNewLevel();
-#endif
 
 	return true;
 }
@@ -674,6 +691,7 @@ void SV_InitGame( void )
 	svs.num_client_entities = sv_maxclients->integer * SV_UPDATE_BACKUP * 64;
 	svs.packet_entities = Z_Malloc( sizeof( entity_state_t ) * svs.num_client_entities );
 	svs.baselines = Z_Malloc( sizeof( entity_state_t ) * GI->max_edicts );
+	MsgDev( D_INFO, "%s alloced by server packet entities\n", Q_memprint( sizeof( entity_state_t ) * svs.num_client_entities ));
 
 	// client frames will be allocated in SV_DirectConnect
 
@@ -693,8 +711,8 @@ void SV_InitGame( void )
 	{
 		// setup all the clients
 		ent = EDICT_NUM( i + 1 );
-		SV_InitEdict( ent );
 		svs.clients[i].edict = ent;
+		SV_InitEdict( ent );
 	}
 
 	// get actual movevars

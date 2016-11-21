@@ -102,12 +102,12 @@ void Image_Reset( void )
 	image.source_width = image.source_height = 0;
 	image.source_type = image.num_mips = 0;
 	image.num_sides = image.flags = 0;
+	image.encode = DXT_ENCODE_DEFAULT;
 	image.type = PF_UNKNOWN;
 	image.fogParams[0] = 0;
 	image.fogParams[1] = 0;
 	image.fogParams[2] = 0;
 	image.fogParams[3] = 0;
-	image.encode = 0;
 
 	// pointers will be saved with prevoius picture struct
 	// don't care about it
