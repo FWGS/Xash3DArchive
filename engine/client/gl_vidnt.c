@@ -2022,7 +2022,6 @@ qboolean R_Init( void )
 
 	GL_InitCommands();
 	GL_SetDefaultState();
-	R_InitLookupTables();
 
 	// create the window and set up the context
 	if( !R_Init_OpenGL( ))

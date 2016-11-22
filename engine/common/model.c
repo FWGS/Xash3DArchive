@@ -231,7 +231,7 @@ static void Mod_DecompressVis( const byte *in, const byte *inend, byte *out, byt
 		{
 			if( in == inend )
 			{
-				MsgDev( D_WARN, "Mod_DecompressVis: input underrun (during zero-run) (decompressed %i of %i output bytes)\n",
+				MsgDev( D_REPORT, "Mod_DecompressVis: input underrun (during zero-run) (decompressed %i of %i output bytes)\n",
 				(int)(out - outstart), (int)(outend - outstart));
 				return;
 			}
@@ -240,7 +240,7 @@ static void Mod_DecompressVis( const byte *in, const byte *inend, byte *out, byt
 			{
 				if( out == outend )
 				{
-					MsgDev( D_WARN, "Mod_DecompressVis: output overrun (decompressed %i of %i output bytes)\n",
+					MsgDev( D_REPORT, "Mod_DecompressVis: output overrun (decompressed %i of %i output bytes)\n",
 					(int)(out - outstart), (int)(outend - outstart));
 					return;
 				}

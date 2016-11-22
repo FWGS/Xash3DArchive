@@ -29,11 +29,11 @@ DYNAMIC LIGHTS
 */
 /*
 ==================
-R_AnimateLight
+CL_RunLightStyles
 
 ==================
 */
-void R_AnimateLight( void )
+void CL_RunLightStyles( void )
 {
 	int		i, k, flight, clight;
 	float		l, c, lerpfrac, backlerp;
@@ -51,36 +51,36 @@ void R_AnimateLight( void )
 	{
 		if( r_fullbright->integer || !cl.worldmodel->lightdata )
 		{
-			RI.lightstylevalue[i] = 256 * 256;
-			RI.lightcache[i] = 3.0f;
+			tr.lightstylevalue[i] = 256 * 256;
+			tr.lightcache[i] = 3.0f;
 			continue;
 		}
 
 		if( !RI.refdef.paused && RI.refdef.frametime <= 0.1f )
 			ls->time += RI.refdef.frametime; // evaluate local time
 
-		flight = (int)floor( ls->time * 10 );
-		clight = (int)ceil( ls->time * 10 );
+		flight = (int)Q_floor( ls->time * 10 );
+		clight = (int)Q_ceil( ls->time * 10 );
 		lerpfrac = ( ls->time * 10 ) - flight;
 		backlerp = 1.0f - lerpfrac;
 
 		if( !ls->length )
 		{
-			RI.lightstylevalue[i] = 256 * scale;
-			RI.lightcache[i] = 3.0f * scale;
+			tr.lightstylevalue[i] = 256 * scale;
+			tr.lightcache[i] = 3.0f * scale;
 			continue;
 		}
 		else if( ls->length == 1 )
 		{
 			// single length style so don't bother interpolating
-			RI.lightstylevalue[i] = ls->map[0] * 22 * scale;
-			RI.lightcache[i] = ( ls->map[0] / 12.0f ) * 3.0f * scale;
+			tr.lightstylevalue[i] = ls->map[0] * 22 * scale;
+			tr.lightcache[i] = ( ls->map[0] / 12.0f ) * 3.0f * scale;
 			continue;
 		}
 		else if( !ls->interp || !cl_lightstyle_lerping->integer )
 		{
-			RI.lightstylevalue[i] = ls->map[flight%ls->length] * 22 * scale;
-			RI.lightcache[i] = ( ls->map[flight%ls->length] / 12.0f ) * 3.0f * scale;
+			tr.lightstylevalue[i] = ls->map[flight%ls->length] * 22 * scale;
+			tr.lightcache[i] = ( ls->map[flight%ls->length] / 12.0f ) * 3.0f * scale;
 			continue;
 		}
 
@@ -95,8 +95,8 @@ void R_AnimateLight( void )
 		l += (float)( k * 22.0f ) * lerpfrac;
 		c += (float)( k / 12.0f ) * lerpfrac;
 
-		RI.lightstylevalue[i] = (int)l * scale;
-		RI.lightcache[i] = c * 3.0f * scale;
+		tr.lightstylevalue[i] = (int)l * scale;
+		tr.lightcache[i] = c * 3.0f * scale;
 	}
 }
 
@@ -296,7 +296,7 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 
 		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{
-			uint	scale = RI.lightstylevalue[surf->styles[map]];
+			uint	scale = tr.lightstylevalue[surf->styles[map]];
 
 			r_pointColor[0] += TextureToTexGamma( lm->r ) * scale;
 			r_pointColor[1] += TextureToTexGamma( lm->g ) * scale;

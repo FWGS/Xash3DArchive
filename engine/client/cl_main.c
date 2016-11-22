@@ -2093,6 +2093,9 @@ void Host_ClientFrame( void )
 		CL_PredictMovement();
 	}
 
+	// animate lightestyles
+	CL_RunLightStyles();
+
 	// decay dynamic lights
 	CL_DecayLights ();
 

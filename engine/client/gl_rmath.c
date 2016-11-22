@@ -18,40 +18,6 @@ GNU General Public License for more details.
 #include "mathlib.h"
 #include "client.h"
 
-#define FTABLE_SIZE			1024
-#define FTABLE_CLAMP( x )		(((uint)(( x ) * FTABLE_SIZE ) & ( FTABLE_SIZE - 1 )))
-#define FTABLE_EVALUATE( table, x )	(( table )[FTABLE_CLAMP( x )] )
-
-static float	r_sintable[FTABLE_SIZE];
-
-/*
-==============
-R_InitLookupTables
-
-==============
-*/
-void R_InitLookupTables( void )
-{
-	float	t;
-	int	i;
-
-	for( i = 0; i < FTABLE_SIZE; i++ )
-	{
-		t = (float)i / (float)FTABLE_SIZE;
-		r_sintable[i] = sin( t * M_PI2 );
-	}
-}
-
-/*
-==============
-R_FastSin
-==============
-*/
-float R_FastSin( float t )
-{
-	return sin( t );// FIXME FTABLE_EVALUATE( r_sintable, t );
-}
-
 /*
 ====================
 V_CalcFov

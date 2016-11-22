@@ -546,7 +546,7 @@ void R_SetCacheState( msurface_t *surf )
 
 	for( maps = 0; maps < MAXLIGHTMAPS && surf->styles[maps] != 255; maps++ )
 	{
-		surf->cached_light[maps] = RI.lightstylevalue[surf->styles[maps]];
+		surf->cached_light[maps] = tr.lightstylevalue[surf->styles[maps]];
 	}
 }
 
@@ -668,7 +668,7 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 	// add all the lightmaps
 	for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255 && lm; map++ )
 	{
-		scale = RI.lightstylevalue[surf->styles[map]];
+		scale = tr.lightstylevalue[surf->styles[map]];
 
 		for( i = 0, bl = r_blocklights; i < size; i++, bl += 3, lm++ )
 		{
@@ -996,7 +996,7 @@ void R_RenderFullbrights( void )
 		for( p = fullbright_polys[i]; p; p = p->next )
 		{
 			if( p->flags & SURF_DRAWTURB )
-				EmitWaterPolys( p, ( p->flags & SURF_NOCULL ));
+				EmitWaterPolys( p, ( p->flags & SURF_NOCULL ), false );
 			else DrawGLPoly( p, 0.0f, 0.0f );
 		}
 
@@ -1115,7 +1115,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	if( fa->flags & SURF_DRAWTURB )
 	{	
 		// warp texture, no lightmaps
-		EmitWaterPolys( fa->polys, ( fa->flags & SURF_NOCULL ));
+		EmitWaterPolys( fa->polys, ( fa->flags & SURF_NOCULL ), false );
 		if( is_mirror ) R_EndDrawMirror();
 		// END WATER STUFF
 		return;
@@ -1175,7 +1175,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	// check for lightmap modification
 	for( maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255; maps++ )
 	{
-		if( RI.lightstylevalue[fa->styles[maps]] != fa->cached_light[maps] )
+		if( tr.lightstylevalue[fa->styles[maps]] != fa->cached_light[maps] )
 			goto dynamic;
 	}
 
@@ -1325,7 +1325,7 @@ void R_DrawWaterSurfaces( void )
 		GL_Bind( GL_TEXTURE0, t->gl_texturenum );
 
 		for( ; s; s = s->texturechain )
-			EmitWaterPolys( s->polys, ( s->flags & SURF_NOCULL ));
+			EmitWaterPolys( s->polys, ( s->flags & SURF_NOCULL ), false );
 			
 		t->texturechain = NULL;
 	}
@@ -1391,7 +1391,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( !RI.drawWorld ) return;
 
 	clmodel = e->model;
-	RI.currentWaveHeight = RI.currententity->curstate.scale * 32.0f;
 
 	// don't reflect this entity in mirrors
 	if( e->curstate.effects & EF_NOREFLECT && RI.params & RP_MIRRORVIEW )
@@ -1902,7 +1901,6 @@ void R_DrawWorld( void )
 	memset( fullbright_polys, 0, sizeof( fullbright_polys ));
 	memset( detail_surfaces, 0, sizeof( detail_surfaces ));
 
-	RI.currentWaveHeight = RI.waveHeight;
 	GL_SetRenderMode( kRenderNormal );
 	gl_lms.dynamic_surfaces = NULL;
 
@@ -2060,7 +2058,7 @@ void GL_RebuildLightmaps( void )
 	gl_lms.current_lightmap_texture = 0;
 
 	// setup all the lightstyles
-	R_AnimateLight();
+	CL_RunLightStyles();
 
 	LM_InitBlock();	
 
@@ -2127,7 +2125,7 @@ void GL_BuildLightmaps( void )
 	nColinElim = 0;
 
 	// setup all the lightstyles
-	R_AnimateLight();
+	CL_RunLightStyles();
 
 	LM_InitBlock();	
 

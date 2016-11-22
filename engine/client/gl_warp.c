@@ -22,7 +22,6 @@ GNU General Public License for more details.
 #define SKYCLOUDS_QUALITY	12
 #define MAX_CLIP_VERTS	128 // skybox clip vertices
 #define TURBSCALE		( 256.0f / ( M_PI2 ))
-#define R_TurbSin( x )	( R_FastSin( x * 0.02f + cl.time ))
 static const char*		r_skyBoxSuffix[6] = { "rt", "bk", "lf", "ft", "up", "dn" };
 static const int		r_skyTexOrder[6] = { 0, 2, 1, 3, 4, 5 };
 
@@ -778,17 +777,20 @@ EmitWaterPolys
 Does a water warp on the pre-fragmented glpoly_t chain
 =============
 */
-void EmitWaterPolys( glpoly_t *polys, qboolean noCull )
+void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction )
 {
-	glpoly_t	*p;
+	glpoly_t	*p = polys;
 	float	*v, nv, waveHeight;
 	float	s, t, os, ot;
 	int	i;
 
+	if( !polys ) return;
 	if( noCull ) pglDisable( GL_CULL_FACE );
 
 	// set the current waveheight
-	waveHeight = RI.currentWaveHeight;
+	if( p->verts[0][2] >= RI.refdef.vieworg[2] )
+		waveHeight = -RI.currententity->curstate.scale;
+	else waveHeight = RI.currententity->curstate.scale;
 
 	// reset fog color for nonlightmapped water
 	GL_ResetFogColor();
@@ -797,28 +799,37 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull )
 	{
 		pglBegin( GL_POLYGON );
 
-		for( i = 0, v = p->verts[0]; i < p->numverts; i++, v += VERTEXSIZE )
+		if( direction )
+			v = p->verts[0] + ( p->numverts - 1 ) * VERTEXSIZE;
+		else v = p->verts[0];
+
+		for( i = 0; i < p->numverts; i++ )
 		{
 			if( waveHeight )
 			{
-				nv = v[2] + waveHeight + ( waveHeight * R_TurbSin( v[0] ) * R_TurbSin( v[1] ) * R_TurbSin( v[2] ));
-				nv -= waveHeight;
+				nv = r_turbsin[(int)(cl.time * 160.0f + v[1] + v[0]) & 255] + 8.0f;
+				nv = (r_turbsin[(int)(v[0] * 5.0f + cl.time * 171.0f - v[1]) & 255] + 8.0f ) * 0.8f + nv;
+				nv = nv * waveHeight + v[2];
 			}
 			else nv = v[2];
 
 			os = v[3];
 			ot = v[4];
 
-			s = os + r_turbsin[(int)((ot * 0.125f + cl.time ) * TURBSCALE) & 255];
+			s = os + r_turbsin[(int)((ot * 0.125f + cl.time) * TURBSCALE) & 255];
 			s *= ( 1.0f / SUBDIVIDE_SIZE );
 
-			t = ot + r_turbsin[(int)((os * 0.125f + cl.time ) * TURBSCALE) & 255];
+			t = ot + r_turbsin[(int)((os * 0.125f + cl.time) * TURBSCALE) & 255];
 			t *= ( 1.0f / SUBDIVIDE_SIZE );
 
 			if( glState.activeTMU != 0 )
 				GL_MultiTexCoord2f( glState.activeTMU, s, t );
 			else pglTexCoord2f( s, t );
 			pglVertex3f( v[0], v[1], nv );
+
+			if( direction )
+				v -= VERTEXSIZE;
+			else v += VERTEXSIZE;
 		}
 		pglEnd();
 	}

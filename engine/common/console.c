@@ -1560,7 +1560,8 @@ void Key_Console( int key )
 
 		// copy line to history buffer
 		con.historyLines[con.nextHistoryLine % CON_HISTORY] = con.input;
-		con.historyLine = con.nextHistoryLine++;
+		con.nextHistoryLine++;
+		con.historyLine = con.nextHistoryLine;
 
 		Con_ClearField( &con.input );
 		con.input.widthInChars = con.linewidth;

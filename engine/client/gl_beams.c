@@ -105,7 +105,7 @@ void BeamNormalizeColor( BEAM *pBeam, float r, float g, float b, float brightnes
 	pBeam->r = r * scale;
 	pBeam->g = g * scale;
 	pBeam->b = b * scale;
-	pBeam->brightness = ( brightness > 1.0f ) ? brightness : brightness * 255.0f;
+	pBeam->brightness = brightness * scale * 255.0f;
 }
 
 static qboolean ComputeBeamEntPosition( int beamEnt, vec3_t pt )

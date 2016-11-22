@@ -138,9 +138,6 @@ typedef struct
 	float		fogEnd;
 	int		cached_contents;	// in water
 
-	float		waveHeight;	// global waveHeight
-	float		currentWaveHeight;	// current entity waveHeight
-
 	float		skyMins[2][6];
 	float		skyMaxs[2][6];
 
@@ -150,9 +147,6 @@ typedef struct
 
 	matrix4x4		projectionMatrix;
 	matrix4x4		worldviewProjectionMatrix;	// worldviewMatrix * projectionMatrix
-	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
-	float		lightcache[MAX_LIGHTSTYLES];
-
 	byte		visbytes[(MAX_MAP_LEAFS+7)/8];// actual PVS for current frame
 
 	float		viewplanedist;
@@ -214,6 +208,9 @@ typedef struct
 	int		dlightframecount;	// dynamic light frame
 	int		realframecount;	// not including passes
 	int		framecount;
+
+	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
+	float		lightcache[MAX_LIGHTSTYLES];
 
 	// cull info
 	vec3_t		modelorg;		// relative to viewpoint
@@ -383,8 +380,6 @@ void Matrix4x4_CreateScale3( matrix4x4 out, float x, float y, float z );
 void Matrix4x4_CreateProjection(matrix4x4 out, float xMax, float xMin, float yMax, float yMin, float zNear, float zFar);
 void Matrix4x4_CreateOrtho(matrix4x4 m, float xLeft, float xRight, float yBottom, float yTop, float zNear, float zFar);
 void Matrix4x4_CreateModelview( matrix4x4 out );
-void R_InitLookupTables( void );
-float R_FastSin( float t );
 
 //
 // gl_rmisc.
@@ -431,7 +426,7 @@ void R_AddSkyBoxSurface( msurface_t *fa );
 void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
 void R_DrawClouds( void );
-void EmitWaterPolys( glpoly_t *polys, qboolean noCull );
+void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction );
 
 //
 // gl_vidnt.c

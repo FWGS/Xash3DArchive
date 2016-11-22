@@ -119,6 +119,9 @@ void SCR_NetSpeeds( void )
 	static int	min_svfps = 100;
 	static int	max_svfps = 0;
 	int		cur_svfps = 0;
+	static int	min_clfps = 100;
+	static int	max_clfps = 0;
+	int		cur_clfps = 0;
 	rgba_t		color;
 
 	if( !net_speeds->integer || cls.demoplayback || cls.state != ca_active )
@@ -131,8 +134,15 @@ void SCR_NetSpeeds( void )
 		if( cur_svfps > max_svfps ) max_svfps = cur_svfps;
 	}
 
-	Q_snprintf( msg, sizeof( msg ), "sv fps: ^1%4i min, ^3%4i cur, ^2%4i max\nGame Time: %02d:%02d\nTotal sended to server: %s\nTotal received from server: %s\n",
-	min_svfps, cur_svfps, max_svfps, (int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended ), Q_memprint( cls.netchan.total_received ));
+	if( cl_clientframetime() != 0 )
+	{
+		cur_clfps = Q_rint( 1.0f / cl_clientframetime( ));
+		if( cur_clfps < min_clfps ) min_clfps = cur_clfps;
+		if( cur_clfps > max_clfps ) max_clfps = cur_clfps;
+	}
+
+	Q_snprintf( msg, sizeof( msg ), "sv fps: ^1%4i min, ^3%4i cur, ^2%4i max\ncl fps: ^1%4i min, ^3%4i cur, ^2%4i max\nGame Time: %02d:%02d\nTotal sended to server: %s\nTotal received from server: %s\n",
+	min_svfps, cur_svfps, max_svfps, min_clfps, cur_clfps, max_clfps, (int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended ), Q_memprint( cls.netchan.total_received ));
 
 	x = scr_width->integer - 320;
 	y = 384;

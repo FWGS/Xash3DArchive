@@ -775,7 +775,6 @@ static void R_SetupFrame( void )
 		VectorCopy( RI.vup, RI.cull_vup );
 	}
 
-	R_AnimateLight();
 	R_RunViewmodelEvents();
 
 	// sort opaque entities by model type to avoid drawing model shadows under alpha-surfaces
@@ -790,7 +789,6 @@ static void R_SetupFrame( void )
 	// current viewleaf
 	if( RI.drawWorld )
 	{
-		RI.waveHeight = cl.refdef.movevars->waveHeight * 2.0f;	// set global waveheight
 		RI.isSkyVisible = false; // unknown at this moment
 		R_FindViewLeaf();
 	}

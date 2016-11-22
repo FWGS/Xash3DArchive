@@ -105,6 +105,7 @@ extern int CL_UPDATE_BACKUP;
 #define INVALID_HANDLE	0xFFFF		// for XashXT cache system
 
 #define cl_serverframetime()	(cl.mtime[0] - cl.mtime[1])
+#define cl_clientframetime()	(host.frametime)
 
 typedef struct
 {
@@ -823,6 +824,7 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType );
 void CL_RegisterMuzzleFlashes( void );
 void CL_ReadPointFile_f( void );
 void CL_ReadLineFile_f( void );
+void CL_RunLightStyles( void );
 
 //
 // console.c

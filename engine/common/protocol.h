@@ -89,7 +89,7 @@ GNU General Public License for more details.
 #define clc_requestcvarvalue		9
 #define clc_requestcvarvalue2		10
 
-#define MAX_VISIBLE_PACKET		512	// 512 visible entities per frame (hl1 has 256)
+#define MAX_VISIBLE_PACKET		1024	// 1024 visible entities per frame (hl1 has 256)
 
 // additional protocol data
 #define MAX_CLIENT_BITS		5

@@ -386,6 +386,7 @@ void CL_ParseMovevars( sizebuf_t *msg )
 	memcpy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
 	// keep features an actual!
 	clgame.oldmovevars.features = clgame.movevars.features = host.features;
+	clgame.entities->curstate.scale = cl.refdef.movevars->waveHeight;
 }
 
 /*
