@@ -251,7 +251,8 @@ gotnewcl:
 	newcl->delta_sequence = -1;
 
 	// parse some info from the info strings (this can override cl_updaterate)
-	SV_UserinfoChanged( newcl, userinfo );
+	Q_strncpy( newcl->userinfo, userinfo, sizeof( newcl->userinfo ));
+	SV_UserinfoChanged( newcl, newcl->userinfo );
 
 	newcl->next_messagetime = host.realtime + newcl->cl_updaterate;
 
@@ -358,7 +359,9 @@ edict_t *SV_FakeConnect( const char *netname )
 	}
 
 	// parse some info from the info strings
-	SV_UserinfoChanged( newcl, userinfo );
+	Q_strncpy( newcl->userinfo, userinfo, sizeof( newcl->userinfo ));
+	SV_UserinfoChanged( newcl, newcl->userinfo );
+	SetBits( cl->flags, FCL_RESEND_USERINFO );
 
 	MsgDev( D_NOTE, "Bot %i connecting with challenge %p\n", i, -1 );
 
@@ -366,7 +369,6 @@ edict_t *SV_FakeConnect( const char *netname )
 	newcl->state = cs_spawned;
 	newcl->lastmessage = host.realtime;	// don't timeout
 	newcl->lastconnect = host.realtime;
-	SetBits( newcl->flags, FCL_RESEND_USERINFO );
 	
 	return ent;
 }
@@ -952,6 +954,9 @@ void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 	char	info[MAX_INFO_STRING];
 	int	i;	
 
+	// process userinfo before updating
+	SV_UserinfoChanged( cl, cl->userinfo );
+
 	i = cl - svs.clients;
 
 	MSG_WriteByte( msg, svc_updateuserinfo );
@@ -1140,6 +1145,9 @@ void SV_PutClientInServer( sv_client_t *cl )
 		else cl->pViewEntity = NULL;
 	}
 
+	// refresh the userinfo
+	SetBits( cl->flags, FCL_RESEND_USERINFO );
+
 	// reset client times
 	cl->last_cmdtime = 0.0;
 	cl->last_movetime = 0.0;
@@ -1226,9 +1234,6 @@ void SV_New_f( sv_client_t *cl )
 	MSG_WriteOneBit( &cl->netchan.message, sv.background ); // tell client about background map
 	MSG_WriteString( &cl->netchan.message, GI->gamefolder );
 	MSG_WriteLong( &cl->netchan.message, host.features );
-
-	// refresh userinfo on spawn
-	SV_RefreshUserinfo();
 
 	// game server
 	if( sv.state == ss_active )
@@ -1792,8 +1797,6 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 
 	if( !userinfo || !userinfo[0] ) return; // ignored
 
-	Q_strncpy( cl->userinfo, userinfo, sizeof( cl->userinfo ));
-
 	val = Info_ValueForKey( cl->userinfo, "name" );
 	Q_strncpy( name2, val, sizeof( name2 ));
 	COM_TrimSpace( name2, name1 );
@@ -1901,9 +1904,10 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 
 	// call prog code to allow overrides
 	svgame.dllFuncs.pfnClientUserInfoChanged( cl->edict, cl->userinfo );
-	ent->v.netname = MAKE_STRING( cl->name );
 
-	if( cl->state >= cs_connected ) SetBits( cl->flags, FCL_RESEND_USERINFO ); // needs for update client info 
+	val = Info_ValueForKey( userinfo, "name" );
+	Q_strncpy( cl->name, val, sizeof( cl->name ));
+	ent->v.netname = MAKE_STRING( cl->name );
 }
 
 /*
@@ -1913,7 +1917,10 @@ SV_UpdateUserinfo_f
 */
 static void SV_UpdateUserinfo_f( sv_client_t *cl )
 {
-	SV_UserinfoChanged( cl, Cmd_Argv( 1 ));
+	Q_strncpy( cl->userinfo, Cmd_Argv( 1 ), sizeof( cl->userinfo ));
+
+	if( cl->state >= cs_connected )
+		SetBits( cl->flags, FCL_RESEND_USERINFO ); // needs for update client info
 }
 
 /*
@@ -2416,7 +2423,9 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 		case clc_nop:
 			break;
 		case clc_userinfo:
-			SV_UserinfoChanged( cl, MSG_ReadString( msg ));
+			Q_strncpy( cl->userinfo, MSG_ReadString( msg ), sizeof( cl->userinfo ));
+			if( cl->state >= cs_connected )
+				SetBits( cl->flags, FCL_RESEND_USERINFO ); // needs for update client info
 			break;
 		case clc_delta:
 			cl->delta_sequence = MSG_ReadByte( msg );

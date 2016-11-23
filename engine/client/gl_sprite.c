@@ -520,17 +520,18 @@ between frames where are we lerping
 float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, mspriteframe_t **curframe )
 {
 	msprite_t	*psprite;
-	float	lerpFrac = 0.0f, frame;
-	float	frametime = (1.0f / 10.0f);
+	float	lerpFrac = 1.0f, frame;
 	int	m_fDoInterp, oldf, newf;
+	float	frametime = 0.0f;
 	int	i, j, iframe;
 
 	psprite = ent->model->cache.data;
-	frame = Q_max( 0.0f, ent->curstate.frame );
-	iframe = (int)ent->curstate.frame;
 
-	if(  ent->curstate.framerate > 0.0f )
+	if( ent->curstate.framerate > 0.0f )
 		frametime = (1.0f / ent->curstate.framerate);
+
+	frame = Q_max( 0.0f, ent->curstate.frame - host.frametime * ent->curstate.framerate );
+	iframe = (int)frame;
 
 	// misc info
 	if( r_sprite_lerping->integer && psprite->numframes > 1 )
@@ -573,7 +574,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 			lerpFrac = 1.0f; // reset lerp
 		}
                               
-		if( ent->latched.prevanimtime != 0.0f && ent->latched.prevanimtime >= cl.time )
+		if( ent->latched.prevanimtime != 0.0f && ent->latched.prevanimtime > cl.time )
 			lerpFrac = (ent->latched.prevanimtime - cl.time) * ent->curstate.framerate;
 
 		// compute lerp factor

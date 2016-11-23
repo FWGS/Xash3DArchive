@@ -257,6 +257,18 @@ convar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, cons
 	else cvar_vars = var;
 	var->next = find;
 
+	if( var->flags & CVAR_USERINFO )
+		userinfo->modified = true;	// transmit at next oportunity
+
+	if( var->flags & CVAR_PHYSICINFO )
+		physinfo->modified = true;	// transmit at next oportunity
+
+	if( var->flags & CVAR_SERVERINFO )
+		serverinfo->modified = true;	// transmit at next oportunity
+
+	if( var->flags & CVAR_RENDERINFO )
+		renderinfo->modified = true;	// transmit at next oportunity
+
 	return var;
 }
 
@@ -335,6 +347,18 @@ void Cvar_RegisterVariable( cvar_t *var )
 		else cvar_vars = (convar_t *)var;
 		var->next = (cvar_t *)find;
 	}
+
+	if( var->flags & CVAR_USERINFO )
+		userinfo->modified = true;	// transmit at next oportunity
+
+	if( var->flags & CVAR_PHYSICINFO )
+		physinfo->modified = true;	// transmit at next oportunity
+
+	if( var->flags & CVAR_SERVERINFO )
+		serverinfo->modified = true;	// transmit at next oportunity
+
+	if( var->flags & CVAR_RENDERINFO )
+		renderinfo->modified = true;	// transmit at next oportunity
 }
 	
 /*
