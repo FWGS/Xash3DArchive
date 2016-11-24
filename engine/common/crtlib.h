@@ -56,7 +56,7 @@ typedef struct convar_s
 typedef enum
 {
 	CVAR_ARCHIVE	= BIT( 0 ),	// set to cause it to be saved to config.cfg
-	CVAR_USERINFO	= BIT( 1 ),	// added to userinfo  when changed
+	CVAR_USERINFO	= BIT( 1 ),	// added to userinfo when changed
 	CVAR_SERVERNOTIFY	= BIT( 2 ),	// notifies players when changed
 	CVAR_SERVERDLL	= BIT( 3 ),	// defined by the server DLL
 	CVAR_CLIENTDLL	= BIT( 4 ),	// defined by the client dll
@@ -64,16 +64,17 @@ typedef enum
 	CVAR_SPONLY	= BIT( 6 ),	// this cvar cannot be changed by clients connected to a multiplayer server.
 	CVAR_PRINTABLEONLY	= BIT( 7 ),	// this cvar's string cannot contain unprintable characters ( player name )
 	CVAR_UNLOGGED	= BIT( 8 ),	// if this is a FCVAR_SERVER, don't log changes to the log file / console
-	CVAR_SERVERINFO	= BIT( 9 ),	// added to serverinfo when changed
-	CVAR_PHYSICINFO	= BIT( 10 ),	// added to physinfo when changed
-	CVAR_RENDERINFO	= BIT( 11 ),	// save to a seperate config called opengl.cfg
-	CVAR_CHEAT	= BIT( 12 ),	// can not be changed if cheats are disabled
-	CVAR_INIT		= BIT( 13 ),	// don't allow change from console at all, but can be set from the command line
-	CVAR_LATCH	= BIT( 14 ),	// save changes until server restart
-	CVAR_READ_ONLY	= BIT( 15 ),	// display only, cannot be set by user at all
-	CVAR_GAMEUIDLL	= BIT( 16 ),	// defined by the GameUI DLL
-	CVAR_USER_CREATED	= BIT( 17 ),	// created by a set command (dll's used)
+	CVAR_NOWHITEPACE	= BIT( 9 ),	// strip trailing/leading white space from this cvar
+	CVAR_SERVERINFO	= BIT( 10 ),	// added to serverinfo when changed
+	CVAR_PHYSICINFO	= BIT( 11 ),	// added to physinfo when changed
+	CVAR_RENDERINFO	= BIT( 12 ),	// save to a seperate config called opengl.cfg
+	CVAR_CHEAT	= BIT( 13 ),	// can not be changed if cheats are disabled
+	CVAR_INIT		= BIT( 14 ),	// don't allow change from console at all, but can be set from the command line
+	CVAR_LATCH	= BIT( 15 ),	// save changes until server restart
+	CVAR_READ_ONLY	= BIT( 16 ),	// display only, cannot be set by user at all
+	CVAR_GAMEUIDLL	= BIT( 17 ),	// defined by the GameUI DLL
 	CVAR_GLCONFIG	= BIT( 18 ),	// set to cause it to be saved to opengl.cfg
+	CVAR_USER_CREATED	= BIT( 19 ),	// created by a set command (dll's used)
 } cvar_flags_t;
 
 #include "cvardef.h"

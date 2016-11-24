@@ -699,7 +699,12 @@ using a 'fat' radius
 */
 qboolean SND_CheckPHS( channel_t *ch )
 {
-	mleaf_t	*leaf = Mod_PointInLeaf( ch->origin, cl.worldmodel->nodes );
+	mleaf_t	*leaf;
+
+	if( !ch->dist_mult )
+		return true; // no attenuation
+
+	leaf = Mod_PointInLeaf( ch->origin, cl.worldmodel->nodes );
 
 	if( CHECKVISBIT( s_listener.pasbytes, leaf->cluster ))
 		return true;

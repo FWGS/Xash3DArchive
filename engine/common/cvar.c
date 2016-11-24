@@ -499,6 +499,21 @@ convar_t *Cvar_Set2( const char *var_name, const char *value, qboolean force )
 	if( !Q_strcmp( pszValue, var->string ))
 		return var;
 
+	if( FBitSet( var->flags, CVAR_SERVERNOTIFY ))
+	{
+		if( !FBitSet( var->flags, CVAR_UNLOGGED ))
+		{
+			if( FBitSet( var->flags, CVAR_PROTECTED ))
+			{
+				SV_BroadcastPrintf( NULL, PRINT_HIGH, "\"%s\" changed to \"%s\"\n", var->name, "***PROTECTED***" );
+			}
+			else
+			{
+				SV_BroadcastPrintf( NULL, PRINT_HIGH, "\"%s\" changed to \"%s\"\n", var->name, pszValue );
+			}
+		}
+	}
+
 	if( FBitSet( var->flags, CVAR_USERINFO ))
 		userinfo->modified = true; // transmit at next oportunity
 

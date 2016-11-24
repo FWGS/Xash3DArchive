@@ -1069,7 +1069,7 @@ void CL_InitEdicts( void )
 	if( !clgame.mempool ) return; // Host_Error without client
 
 	CL_UPDATE_BACKUP = ( cl.maxclients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
-	cls.num_client_entities = CL_UPDATE_BACKUP * 64;
+	cls.num_client_entities = CL_UPDATE_BACKUP * NUM_PACKET_ENTITIES;
 	cls.packet_entities = Z_Realloc( cls.packet_entities, sizeof( entity_state_t ) * cls.num_client_entities );
 	clgame.entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * clgame.maxEntities );
 	clgame.static_entities = Mem_Alloc( clgame.mempool, sizeof( cl_entity_t ) * MAX_STATIC_ENTITIES );

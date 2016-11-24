@@ -317,6 +317,26 @@ void SV_ActivateServer( void )
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
 
+	if( sv.loadgame || svgame.globals->changelevel )
+	{
+		sv.frametime = 0.001;
+		numFrames = 1;
+	}
+	else if( sv_maxclients->integer <= 1 )
+	{
+		sv.frametime = 0.1f;
+		numFrames = 2;
+	}
+	else
+	{
+		sv.frametime = 0.1f;
+		numFrames = 8;
+	}
+
+	// run some frames to allow everything to settle
+	for( i = 0; i < numFrames; i++ )
+		SV_Physics();
+
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
 
@@ -331,21 +351,6 @@ void SV_ActivateServer( void )
 			Netchan_Clear( &svs.clients[i].netchan );
 			svs.clients[i].delta_sequence = -1;
 		}
-	}
-
-	numFrames = (sv.loadgame) ? 1 : 2;
-	if( !sv.loadgame || svgame.globals->changelevel )
-		sv.frametime = 0.1f;			
-
-	// GoldSrc rules
-	// NOTE: this stuff is breaking sound from func_rotating in multiplayer
-	// e.g. ambience\boomer.wav on snark_pit.bsp
-	numFrames *= sv_maxclients->integer;
-
-	// run some frames to allow everything to settle
-	for( i = 0; i < numFrames; i++ )
-	{
-		SV_Physics();
 	}
 
 	// invoke to refresh all movevars
@@ -687,7 +692,7 @@ void SV_InitGame( void )
 	SV_UPDATE_BACKUP = ( svgame.globals->maxClients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
 
 	svs.clients = Z_Malloc( sizeof( sv_client_t ) * sv_maxclients->integer );
-	svs.num_client_entities = sv_maxclients->integer * SV_UPDATE_BACKUP * 64;
+	svs.num_client_entities = sv_maxclients->integer * SV_UPDATE_BACKUP * NUM_PACKET_ENTITIES;
 	svs.packet_entities = Z_Malloc( sizeof( entity_state_t ) * svs.num_client_entities );
 	svs.baselines = Z_Malloc( sizeof( entity_state_t ) * GI->max_edicts );
 	MsgDev( D_INFO, "%s alloced by server packet entities\n", Q_memprint( sizeof( entity_state_t ) * svs.num_client_entities ));

@@ -823,6 +823,7 @@ void SV_CreateStudioDecal( struct sizebuf_s *msg, const float *origin, const flo
 int flags, struct modelstate_s *state );
 struct sizebuf_s *SV_GetReliableDatagram( void );
 qboolean SV_RestoreCustomDecal( struct decallist_s *entry, edict_t *pEdict, qboolean adjacent );
+void SV_BroadcastPrintf( struct sv_client_s *ignore, int level, char *fmt, ... );
 int R_CreateDecalList( struct decallist_s *pList, qboolean changelevel );
 void R_ClearAllDecals( void );
 void R_ClearStaticEntities( void );

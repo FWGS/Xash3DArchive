@@ -63,8 +63,9 @@ GNU General Public License for more details.
 #define PORT_MASTER			27010
 #define PORT_CLIENT			27005
 #define PORT_SERVER			27015
-#define MULTIPLAYER_BACKUP		128	// how many data slots to use when in multiplayer (must be power of 2)
+#define MULTIPLAYER_BACKUP		64	// how many data slots to use when in multiplayer (must be power of 2)
 #define SINGLEPLAYER_BACKUP		16	// same for single player  
+#define NUM_PACKET_ENTITIES		128
 
 /*
 ==============================================================
