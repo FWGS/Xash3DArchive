@@ -627,7 +627,7 @@ A brand new game has been started
 void SV_InitGame( void )
 {
 	edict_t	*ent;
-	int	i;
+	int	i, load = sv.loadgame;
 	
 	if( svs.initialized )
 	{
@@ -695,7 +695,7 @@ void SV_InitGame( void )
 	svs.num_client_entities = sv_maxclients->integer * SV_UPDATE_BACKUP * NUM_PACKET_ENTITIES;
 	svs.packet_entities = Z_Malloc( sizeof( entity_state_t ) * svs.num_client_entities );
 	svs.baselines = Z_Malloc( sizeof( entity_state_t ) * GI->max_edicts );
-	MsgDev( D_INFO, "%s alloced by server packet entities\n", Q_memprint( sizeof( entity_state_t ) * svs.num_client_entities ));
+	if( !load ) MsgDev( D_INFO, "%s alloced by server packet entities\n", Q_memprint( sizeof( entity_state_t ) * svs.num_client_entities ));
 
 	// client frames will be allocated in SV_DirectConnect
 

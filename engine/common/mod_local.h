@@ -144,6 +144,7 @@ int Mod_FatPVS( const vec3_t org, float radius, byte *visbuffer, int visbytes, q
 qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );
 void Mod_BuildSurfacePolygons( msurface_t *surf, mextrasurf_t *info );
 void Mod_AmbientLevels( const vec3_t p, byte *pvolumes );
+int Mod_SampleSizeForFace( msurface_t *surf );
 byte *Mod_GetPVSForPoint( const vec3_t p );
 modtype_t Mod_GetType( int handle );
 model_t *Mod_Handle( int handle );

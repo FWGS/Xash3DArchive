@@ -78,6 +78,7 @@ static void BoundPoly( int numverts, float *verts, vec3_t mins, vec3_t maxs )
 static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts )
 {
 	int	i, j, k, f, b;
+	int	sample_size;
 	vec3_t	mins, maxs;
 	float	m, frac, s, t, *v, vertsDiv;
 	vec3_t	front[SUBDIVIDE_SIZE], back[SUBDIVIDE_SIZE], total;
@@ -87,6 +88,7 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 	if( numverts > ( SUBDIVIDE_SIZE - 4 ))
 		Host_Error( "Mod_SubdividePolygon: too many vertexes on face ( %i )\n", numverts );
 
+	sample_size = Mod_SampleSizeForFace( warpface );
 	BoundPoly( numverts, verts, mins, maxs );
 
 	for( i = 0; i < 3; i++ )
@@ -181,15 +183,15 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 			// lightmap texture coordinates
 			s = DotProduct( verts, warpface->texinfo->vecs[0] ) + warpface->texinfo->vecs[0][3];
 			s -= warpface->texturemins[0];
-			s += warpface->light_s * LM_SAMPLE_SIZE;
-			s += LM_SAMPLE_SIZE >> 1;
-			s /= BLOCK_SIZE * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
+			s += warpface->light_s * sample_size;
+			s += sample_size >> 1;
+			s /= BLOCK_SIZE * sample_size; //fa->texinfo->texture->width;
 
 			t = DotProduct( verts, warpface->texinfo->vecs[1] ) + warpface->texinfo->vecs[1][3];
 			t -= warpface->texturemins[1];
-			t += warpface->light_t * LM_SAMPLE_SIZE;
-			t += LM_SAMPLE_SIZE >> 1;
-			t /= BLOCK_SIZE * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
+			t += warpface->light_t * sample_size;
+			t += sample_size >> 1;
+			t /= BLOCK_SIZE * sample_size; //fa->texinfo->texture->height;
 
 			poly->verts[i+1][5] = s;
 			poly->verts[i+1][6] = t;
@@ -284,8 +286,8 @@ GL_BuildPolygonFromSurface
 void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 {
 	int		i, lindex, lnumverts;
+	int		vertpage, sample_size;
 	medge_t		*pedges, *r_pedge;
-	int		vertpage;
 	texture_t		*tex;
 	gltexture_t	*glt;
 	float		*vec;
@@ -308,6 +310,8 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 		glt->srcWidth = tex->width;
 		glt->srcHeight = tex->height;
 	}
+
+	sample_size = Mod_SampleSizeForFace( fa );
 
 	// reconstruct the polygon
 	pedges = mod->edges;
@@ -349,15 +353,15 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 		// lightmap texture coordinates
 		s = DotProduct( vec, fa->texinfo->vecs[0] ) + fa->texinfo->vecs[0][3];
 		s -= fa->texturemins[0];
-		s += fa->light_s * LM_SAMPLE_SIZE;
-		s += LM_SAMPLE_SIZE >> 1;
-		s /= BLOCK_SIZE * LM_SAMPLE_SIZE; //fa->texinfo->texture->width;
+		s += fa->light_s * sample_size;
+		s += sample_size >> 1;
+		s /= BLOCK_SIZE * sample_size; //fa->texinfo->texture->width;
 
 		t = DotProduct( vec, fa->texinfo->vecs[1] ) + fa->texinfo->vecs[1][3];
 		t -= fa->texturemins[1];
-		t += fa->light_t * LM_SAMPLE_SIZE;
-		t += LM_SAMPLE_SIZE >> 1;
-		t /= BLOCK_SIZE * LM_SAMPLE_SIZE; //fa->texinfo->texture->height;
+		t += fa->light_t * sample_size;
+		t += sample_size >> 1;
+		t /= BLOCK_SIZE * sample_size; //fa->texinfo->texture->height;
 
 		poly->verts[i][5] = s;
 		poly->verts[i][6] = t;
@@ -466,6 +470,7 @@ void R_AddDynamicLights( msurface_t *surf )
 	int		lnum, s, t, sd, td, smax, tmax;
 	float		sl, tl, sacc, tacc;
 	vec3_t		impact, origin_l;
+	int		sample_size;
 	mtexinfo_t	*tex;
 	dlight_t		*dl;
 	uint		*bl;
@@ -473,8 +478,9 @@ void R_AddDynamicLights( msurface_t *surf )
 	// no dlighted surfaces here
 	if( !R_CountSurfaceDlights( surf )) return;
 
-	smax = (surf->extents[0] / LM_SAMPLE_SIZE) + 1;
-	tmax = (surf->extents[1] / LM_SAMPLE_SIZE) + 1;
+	sample_size = Mod_SampleSizeForFace( surf );
+	smax = (surf->extents[0] / sample_size) + 1;
+	tmax = (surf->extents[1] / sample_size) + 1;
 	tex = surf->texinfo;
 
 	for( lnum = 0; lnum < MAX_DLIGHTS; lnum++ )
@@ -511,12 +517,12 @@ void R_AddDynamicLights( msurface_t *surf )
 		tl = DotProduct( impact, tex->vecs[1] ) + tex->vecs[1][3] - surf->texturemins[1];
 
 		bl = r_blocklights;
-		for( t = 0, tacc = 0; t < tmax; t++, tacc += LM_SAMPLE_SIZE )
+		for( t = 0, tacc = 0; t < tmax; t++, tacc += sample_size )
 		{
 			td = tl - tacc;
 			if( td < 0 ) td = -td;
 
-			for( s = 0, sacc = 0; s < smax; s++, sacc += LM_SAMPLE_SIZE, bl += 3 )
+			for( s = 0, sacc = 0; s < smax; s++, sacc += sample_size, bl += 3 )
 			{
 				sd = sl - sacc;
 				if( sd < 0 ) sd = -sd;
@@ -655,10 +661,12 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 	int	smax, tmax;
 	uint	*bl, scale;
 	int	i, map, size, s, t;
+	int	sample_size;
 	color24	*lm;
 
-	smax = ( surf->extents[0] / LM_SAMPLE_SIZE ) + 1;
-	tmax = ( surf->extents[1] / LM_SAMPLE_SIZE ) + 1;
+	sample_size = Mod_SampleSizeForFace( surf );
+	smax = ( surf->extents[0] / sample_size ) + 1;
+	tmax = ( surf->extents[1] / sample_size ) + 1;
 	size = smax * tmax;
 
 	lm = surf->samples;
@@ -879,10 +887,12 @@ void R_BlendLightmaps( void )
 		for( surf = gl_lms.dynamic_surfaces; surf != NULL; surf = surf->lightmapchain )
 		{
 			int	smax, tmax;
+			int	sample_size;
 			byte	*base;
 
-			smax = ( surf->extents[0] / LM_SAMPLE_SIZE ) + 1;
-			tmax = ( surf->extents[1] / LM_SAMPLE_SIZE ) + 1;
+			sample_size = Mod_SampleSizeForFace( surf );
+			smax = ( surf->extents[0] / sample_size ) + 1;
+			tmax = ( surf->extents[1] / sample_size ) + 1;
 			info = SURF_INFO( surf, RI.currentmodel );
 
 			if( LM_AllocBlock( smax, tmax, &info->dlight_s, &info->dlight_t ))
@@ -1192,10 +1202,12 @@ dynamic:
 		if(( fa->styles[maps] >= 32 || fa->styles[maps] == 0 ) && ( fa->dlightframe != tr.framecount ))
 		{
 			byte	temp[132*132*4];
+			int	sample_size;
 			int	smax, tmax;
 
-			smax = ( fa->extents[0] / LM_SAMPLE_SIZE ) + 1;
-			tmax = ( fa->extents[1] / LM_SAMPLE_SIZE ) + 1;
+			sample_size = Mod_SampleSizeForFace( fa );
+			smax = ( fa->extents[0] / sample_size ) + 1;
+			tmax = ( fa->extents[1] / sample_size ) + 1;
 
 			R_BuildLightMap( fa, temp, smax * 4, true );
 			R_SetCacheState( fa );
@@ -2000,14 +2012,16 @@ GL_CreateSurfaceLightmap
 void GL_CreateSurfaceLightmap( msurface_t *surf )
 {
 	int	smax, tmax;
+	int	sample_size;
 	byte	*base;
 
 	if( !cl.worldmodel->lightdata ) return;
 	if( surf->flags & SURF_DRAWTILED )
 		return;
 
-	smax = ( surf->extents[0] / LM_SAMPLE_SIZE ) + 1;
-	tmax = ( surf->extents[1] / LM_SAMPLE_SIZE ) + 1;
+	sample_size = Mod_SampleSizeForFace( surf );
+	smax = ( surf->extents[0] / sample_size ) + 1;
+	tmax = ( surf->extents[1] / sample_size ) + 1;
 
 	if( !LM_AllocBlock( smax, tmax, &surf->light_s, &surf->light_t ))
 	{

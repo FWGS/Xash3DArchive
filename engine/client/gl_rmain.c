@@ -1445,6 +1445,10 @@ static int GL_RenderGetParm( int parm, int arg )
 		return glConfig.softwareGammaUpdate;
 	case PARM_DEDICATED_SERVER:
 		return (host.type == HOST_DEDICATED);
+	case PARM_SURF_SAMPLESIZE:
+		if( arg >= 0 && arg < cl.worldmodel->numsurfaces )
+			return Mod_SampleSizeForFace( &cl.worldmodel->surfaces[arg] );
+		return LM_SAMPLE_SIZE;
 	}
 	return 0;
 }

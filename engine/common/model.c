@@ -521,6 +521,21 @@ void Mod_AmbientLevels( const vec3_t p, byte *pvolumes )
 
 /*
 ==================
+Mod_SampleSizeForFace
+
+return the current lightmap resolution per face
+==================
+*/
+int Mod_SampleSizeForFace( msurface_t *surf )
+{
+	if( !surf || !surf->texinfo || !surf->texinfo->faceinfo )
+		return LM_SAMPLE_SIZE;
+
+	return surf->texinfo->faceinfo->texture_step;
+}
+
+/*
+==================
 Mod_CheckWaterAlphaSupport
 
 converted maps potential may don't
@@ -1160,14 +1175,49 @@ static void Mod_LoadTextures( const dlump_t *l )
 Mod_LoadTexInfo
 =================
 */
-static void Mod_LoadTexInfo( const dlump_t *l )
+static mfaceinfo_t *Mod_LoadFaceInfo( const dlump_t *l, int *numfaceinfo )
+{
+	dfaceinfo_t	*in;
+	mfaceinfo_t	*out, *faceinfo;
+	int		i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if( l->filelen % sizeof( *in ))
+		Host_Error( "Mod_LoadFaceInfo: funny lump size in %s\n", loadmodel->name );
+
+	count = l->filelen / sizeof( *in );
+          faceinfo = out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
+
+	for( i = 0; i < count; i++, in++, out++ )
+	{
+		Q_strncpy( out->landname, in->landname, sizeof( out->landname ));
+		out->texture_step = in->texture_step;
+		out->max_extent = in->max_extent;
+		out->groupid = in->groupid;
+	}
+
+	*numfaceinfo = count;
+
+	return faceinfo;
+}
+
+/*
+=================
+Mod_LoadTexInfo
+=================
+*/
+static void Mod_LoadTexInfo( const dlump_t *l, dextrahdr_t *extrahdr )
 {
 	dtexinfo_t	*in;
 	mtexinfo_t	*out;
 	int		miptex;
+	mfaceinfo_t	*fi = NULL;
+	int		fi_count;
 	int		i, j, count;
-	float		len1, len2;
-	
+
+	if( extrahdr != NULL )
+		fi = Mod_LoadFaceInfo( &extrahdr->lumps[LUMP_FACEINFO], &fi_count );
+
 	in = (void *)(mod_base + l->fileofs);
 	if( l->filelen % sizeof( *in ))
 		Host_Error( "Mod_LoadTexInfo: funny lump size in %s\n", loadmodel->name );
@@ -1183,23 +1233,16 @@ static void Mod_LoadTexInfo( const dlump_t *l )
 		for( j = 0; j < 8; j++ )
 			out->vecs[0][j] = in->vecs[0][j];
 
-		len1 = VectorLength( out->vecs[0] );
-		len2 = VectorLength( out->vecs[1] );
-		len1 = ( len1 + len2 ) / 2;
-
-		// g-cont: can use this info for GL_TEXTURE_LOAD_BIAS_EXT ?
-		if( len1 < 0.32f ) out->mipadjust = 4;
-		else if( len1 < 0.49f ) out->mipadjust = 3;
-		else if( len1 < 0.99f ) out->mipadjust = 2;
-		else out->mipadjust = 1;
-
 		miptex = in->miptex;
 		if( miptex < 0 || miptex > loadmodel->numtextures )
 			Host_Error( "Mod_LoadTexInfo: bad miptex number in '%s'\n", loadmodel->name );
 
 		out->texture = loadmodel->textures[miptex];
 		out->flags = in->flags;
-		out->groupid = in->groupid;
+
+		// make sure what faceinfo is really exist
+		if( extrahdr != NULL && in->faceinfo != -1 && in->faceinfo < fi_count )
+			out->faceinfo = &fi[in->faceinfo];
 	}
 }
 
@@ -1269,10 +1312,35 @@ static void Mod_LoadDeluxemap( void )
 
 /*
 =================
+Mod_LoadLightVecs
+=================
+*/
+static void Mod_LoadLightVecs( const dlump_t *l )
+{
+	byte	*in;
+
+	in = (void *)(mod_base + l->fileofs);
+	world.vecdatasize = l->filelen;
+
+	if( world.vecdatasize != world.litdatasize )
+	{
+		MsgDev( D_ERROR, "Mod_LoadLightVecs: has mismatched size (%i should be %i)\n", world.vecdatasize, world.litdatasize );
+		world.deluxedata = NULL;
+		world.vecdatasize = 0;
+		return;
+	}
+
+	world.deluxedata = Mem_Alloc( loadmodel->mempool, world.vecdatasize );
+	memcpy( world.deluxedata, in, world.vecdatasize );
+	MsgDev( D_INFO, "Mod_LoadLightVecs: loaded\n" );
+}
+
+/*
+=================
 Mod_LoadLighting
 =================
 */
-static void Mod_LoadLighting( const dlump_t *l )
+static void Mod_LoadLighting( const dlump_t *l, dextrahdr_t *extrahdr )
 {
 	byte	d, *in;
 	color24	*out;
@@ -1316,8 +1384,20 @@ static void Mod_LoadLighting( const dlump_t *l )
 		break;
 	}
 
+	if( !world.loading ) return;	// only world can have deluxedata (FIXME: what about quake models?)
+
+	// not supposed to be load ?
+	if( !FBitSet( host.features, ENGINE_LOAD_DELUXEDATA ))
+	{
+		world.deluxedata = NULL;
+		world.vecdatasize = 0;
+		return;
+	}
+
 	// try to loading deluxemap too
-	Mod_LoadDeluxemap ();
+	if( extrahdr != NULL )
+		Mod_LoadLightVecs( &extrahdr->lumps[LUMP_LIGHTVECS] );
+	else Mod_LoadDeluxemap (); // old method
 }
 
 /*
@@ -1331,10 +1411,11 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 {
 	float		mins[2], maxs[2], val;
 	int		bmins[2], bmaxs[2];
-	int		i, j, e;
+	int		i, j, e, sample_size;
 	mtexinfo_t	*tex;
 	mvertex_t		*v;
 
+	sample_size = Mod_SampleSizeForFace( surf );
 	tex = surf->texinfo;
 
 	mins[0] = mins[1] = 999999;
@@ -1360,11 +1441,11 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 
 	for( i = 0; i < 2; i++ )
 	{
-		bmins[i] = floor( mins[i] / LM_SAMPLE_SIZE );
-		bmaxs[i] = ceil( maxs[i] / LM_SAMPLE_SIZE );
+		bmins[i] = floor( mins[i] / sample_size );
+		bmaxs[i] = ceil( maxs[i] / sample_size );
 
-		surf->texturemins[i] = bmins[i] * LM_SAMPLE_SIZE;
-		surf->extents[i] = (bmaxs[i] - bmins[i]) * LM_SAMPLE_SIZE;
+		surf->texturemins[i] = bmins[i] * sample_size;
+		surf->extents[i] = (bmaxs[i] - bmins[i]) * sample_size;
 
 		if( !FBitSet( tex->flags, TEX_SPECIAL ) && surf->extents[i] > 4096 )
 			MsgDev( D_ERROR, "Bad surface extents %i\n", surf->extents[i] );
@@ -1411,7 +1492,7 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 	uint		bufSize;
 	vec3_t		normal, tangent, binormal;
 	mtexinfo_t	*texinfo = surf->texinfo;
-	int		i, numElems;
+	int		i, numElems, sample_size;
 	byte		*buffer;
 	msurfmesh_t	*mesh;
 
@@ -1421,6 +1502,7 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 	bufSize = sizeof( msurfmesh_t ) + numVerts * sizeof( glvert_t ) + numElems * sizeof( word );
 	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
 
+	sample_size = Mod_SampleSizeForFace( surf );
 	mesh = (msurfmesh_t *)buffer;
 	buffer += sizeof( msurfmesh_t );
 	mesh->numVerts = numVerts;
@@ -1477,14 +1559,14 @@ static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts
 
 		// lightmap texture coordinates
 		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
-		s += surf->light_s * LM_SAMPLE_SIZE;
-		s += LM_SAMPLE_SIZE >> 1;
-		s /= BLOCK_SIZE * LM_SAMPLE_SIZE;
+		s += surf->light_s * sample_size;
+		s += sample_size >> 1;
+		s /= BLOCK_SIZE * sample_size;
 
 		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
-		t += surf->light_t * LM_SAMPLE_SIZE;
-		t += LM_SAMPLE_SIZE >> 1;
-		t /= BLOCK_SIZE * LM_SAMPLE_SIZE;
+		t += surf->light_t * sample_size;
+		t += sample_size >> 1;
+		t /= BLOCK_SIZE * sample_size;
 
 		out->lmcoord[0] = s;
 		out->lmcoord[1] = t;
@@ -1508,6 +1590,7 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 	vec3_t		normal, tangent, binormal, mins, maxs;
 	mtexinfo_t	*texinfo = surf->texinfo;
 	vec2_t		totalST, totalLM;
+	int		sample_size;
 	float		s, t, scale;
 	int		i, j, f, b;
 	uint		bufSize;
@@ -1518,6 +1601,8 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 
 	for( i = 0, v = verts; i < numVerts; i++, v += 3 )
 		AddPointToBounds( v, mins, maxs );
+
+	sample_size = Mod_SampleSizeForFace( surf );
 
 	for( i = 0; i < 3; i++ )
 	{
@@ -1645,14 +1730,14 @@ static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numV
 		{
 			// lightmap texture coordinates
 			s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
-			s += surf->light_s * LM_SAMPLE_SIZE;
-			s += LM_SAMPLE_SIZE >> 1;
-			s /= BLOCK_SIZE * LM_SAMPLE_SIZE;
+			s += surf->light_s * sample_size;
+			s += sample_size >> 1;
+			s /= BLOCK_SIZE * sample_size;
 
 			t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
-			t += surf->light_t * LM_SAMPLE_SIZE;
-			t += LM_SAMPLE_SIZE >> 1;
-			t /= BLOCK_SIZE * LM_SAMPLE_SIZE;
+			t += surf->light_t * sample_size;
+			t += sample_size >> 1;
+			t /= BLOCK_SIZE * sample_size;
 		}
 		else
 		{
@@ -2704,9 +2789,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		sample_size = 16;
 		break;
 	case XTBSP_VERSION:
-		if( extrahdr->id == IDEXTRAHEADER && extrahdr->version == EXTRA_VERSION_3 )
-			sample_size = 16;
-		else sample_size = 8;
+		sample_size = 8;
 		break;
 	default:
 		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)", loadmodel->name, i, HLBSP_VERSION );
@@ -2725,11 +2808,17 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)", loadmodel->name, i, world.version );
 		return;		
 	}
+
+	loadmodel->numframes = sample_size; // NOTE: world store sample size into model_t->numframes
 	bmodel_version = i;	// share it
 
 	// swap all the lumps
 	mod_base = (byte *)header;
 	loadmodel->mempool = Mem_AllocPool( va( "^2%s^7", loadmodel->name ));
+
+	// make sure what extrahdr is valid
+	if( extrahdr->id != IDEXTRAHEADER || extrahdr->version != EXTRA_VERSION )
+		extrahdr = NULL; // no extra header
 
 	// load into heap
 	if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && (header->lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
@@ -2754,9 +2843,9 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	Mod_LoadEdges( &header->lumps[LUMP_EDGES] );
 	Mod_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
 	Mod_LoadTextures( &header->lumps[LUMP_TEXTURES] );
-	Mod_LoadLighting( &header->lumps[LUMP_LIGHTING] );
+	Mod_LoadLighting( &header->lumps[LUMP_LIGHTING], extrahdr );
 	Mod_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
-	Mod_LoadTexInfo( &header->lumps[LUMP_TEXINFO] );
+	Mod_LoadTexInfo( &header->lumps[LUMP_TEXINFO], extrahdr );
 	Mod_LoadSurfaces( &header->lumps[LUMP_FACES] );
 	Mod_LoadMarkSurfaces( &header->lumps[LUMP_MARKSURFACES] );
 	Mod_LoadLeafs( &header->lumps[LUMP_LEAFS] );
@@ -2767,8 +2856,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	else Mod_LoadClipnodes( &header->lumps[LUMP_CLIPNODES] );
 
 	Mod_MakeHull0 ();
-	
-	loadmodel->numframes = 2;	// regular and alternate animation
+
 	ents = loadmodel->entities;
 	
 	// set up the submodels
@@ -3108,7 +3196,9 @@ void Mod_GetFrames( int handle, int *numFrames )
 		return;
 	}
 
-	*numFrames = mod->numframes;
+	if( mod->type == mod_brush )
+		*numFrames = 2; // regular and alternate animation
+	else *numFrames = mod->numframes;
 	if( *numFrames < 1 ) *numFrames = 1;
 }
 

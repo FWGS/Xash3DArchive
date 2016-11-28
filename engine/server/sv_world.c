@@ -1437,6 +1437,7 @@ static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec
 	mtexinfo_t	*tex;
 	float		front, back, scale, frac;
 	int		i, map, size, s, t;
+	int		sample_size;
 	color24		*lm;
 	vec3_t		mid;
 
@@ -1474,6 +1475,7 @@ static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec
 
 	// check for impact on this node
 	surf = model->surfaces + node->firstsurface;
+	sample_size = Mod_SampleSizeForFace( surf );
 
 	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
@@ -1488,16 +1490,16 @@ static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec
 		if(( s < 0.0f || s > surf->extents[0] ) || ( t < 0.0f || t > surf->extents[1] ))
 			continue;
 
-		s /= LM_SAMPLE_SIZE;
-		t /= LM_SAMPLE_SIZE;
+		s /= sample_size;
+		t /= sample_size;
 
 		if( !surf->samples )
 			return true;
 
 		VectorClear( sv_pointColor );
 
-		lm = surf->samples + (t * ((surf->extents[0] / LM_SAMPLE_SIZE) + 1) + s);
-		size = ((surf->extents[0] / LM_SAMPLE_SIZE) + 1) * ((surf->extents[1] / LM_SAMPLE_SIZE) + 1);
+		lm = surf->samples + (t * ((surf->extents[0] / sample_size) + 1) + s);
+		size = ((surf->extents[0] / sample_size) + 1) * ((surf->extents[1] / sample_size) + 1);
 
 		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{

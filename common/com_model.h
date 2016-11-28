@@ -84,13 +84,22 @@ typedef struct texture_s
 
 typedef struct
 {
+	char		landname[16];	// name of decsription in mapname_land.txt
+	unsigned short	texture_step;	// default is 16, pixels\luxels ratio
+	unsigned short	max_extent;	// default is 16, subdivision step ((texture_step * max_extent) - texture_step)
+	short		groupid;		// to determine equal landscapes from various groups, -1 - no group
+
+	int		reserved[32];	// just for future expansions or mod-makers
+} mfaceinfo_t;
+
+typedef struct
+{
 	float		vecs[2][4];	// [s/t] unit vectors in world space.
 					// [i][3] is the s/t offset relative to the origin.
 					// s or t = dot( 3Dpoint, vecs[i] ) + vecs[i][3]
-	float		mipadjust;	// mipmap limits for very small surfaces
+	mfaceinfo_t	*faceinfo;	// pointer to landscape info and lightmap resolution (may be NULL)
 	texture_t		*texture;
-	short		flags;		// sky or slime, no lightmap or 256 subdivision
-	short		groupid;
+	int		flags;		// sky or slime, no lightmap or 256 subdivision
 } mtexinfo_t;
 
 // 73 bytes per VBO vertex

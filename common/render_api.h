@@ -66,6 +66,7 @@ GNU General Public License for more details.
 #define PARM_CLIENT_ACTIVE	30
 #define PARM_REBUILD_GAMMA	31	// if true lightmaps rebuilding for gamma change
 #define PARM_DEDICATED_SERVER	32
+#define PARM_SURF_SAMPLESIZE	33	// lightmap resolution per face (second arg interpret as facenumber)
 
 enum
 {
