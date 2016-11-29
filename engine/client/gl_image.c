@@ -652,8 +652,6 @@ static void GL_SetTextureFormat( gltexture_t *tex, pixformat_t format, int chann
 		case PF_DXT3: tex->format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT; break;
 		case PF_DXT5: tex->format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; break;
 		}
-
-		SetBits( tex->flags, TF_DXT_FORMAT );
 		return;
 	}
 	else if( FBitSet( tex->flags, TF_DEPTHMAP ))
@@ -693,58 +691,40 @@ static void GL_SetTextureFormat( gltexture_t *tex, pixformat_t format, int chann
 	}
 	else if( compressImage )
 	{
-		if( tex->flags & TF_INTENSITY )
+		switch( GL_CalcTextureSamples( channelMask ))
 		{
-			tex->format = GL_COMPRESSED_INTENSITY_ARB;
-		}
-		else
-		{
-			switch( GL_CalcTextureSamples( channelMask ))
-			{
-			case 1: tex->format = GL_LUMINANCE8; break;
-			case 2: tex->format = GL_LUMINANCE8_ALPHA8; break;
-			case 3: tex->format = GL_COMPRESSED_RGB_S3TC_DXT1_EXT; break;
-			case 4: tex->format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; break;
-			}
-
-			tex->flags &= ~TF_INTENSITY;
+		case 1: tex->format = GL_LUMINANCE8; break;
+		case 2: tex->format = GL_LUMINANCE8_ALPHA8; break;
+		case 3: tex->format = GL_COMPRESSED_RGB_S3TC_DXT1_EXT; break;
+		case 4: tex->format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; break;
 		}
 	}
 	else
 	{
 		// NOTE: not all the types will be compressed
-		if( tex->flags & TF_INTENSITY )
-		{
-			tex->format = GL_INTENSITY8;
-		}
-		else
-		{
-			int	bits = glw_state.desktopBitsPixel;
+		int	bits = glw_state.desktopBitsPixel;
 
-			switch( GL_CalcTextureSamples( channelMask ) )
+		switch( GL_CalcTextureSamples( channelMask ) )
+		{
+		case 1: tex->format = GL_LUMINANCE8; break;
+		case 2: tex->format = GL_LUMINANCE8_ALPHA8; break;
+		case 3:
+			switch( bits )
 			{
-			case 1: tex->format = GL_LUMINANCE8; break;
-			case 2: tex->format = GL_LUMINANCE8_ALPHA8; break;
-			case 3:
-				switch( bits )
-				{
-				case 16: tex->format = GL_RGB5; break;
-				case 32: tex->format = GL_RGB8; break;
-				default: tex->format = GL_RGB; break;
-				}
-				break;	
-			case 4:
-			default:
-				switch( bits )
-				{
-				case 16: tex->format = GL_RGBA4; break;
-				case 32: tex->format = GL_RGBA8; break;
-				default: tex->format = GL_RGBA; break;
-				}
-				break;
+			case 16: tex->format = GL_RGB5; break;
+			case 32: tex->format = GL_RGB8; break;
+			default: tex->format = GL_RGB; break;
 			}
-
-			tex->flags &= ~TF_INTENSITY;
+			break;	
+		case 4:
+		default:
+			switch( bits )
+			{
+			case 16: tex->format = GL_RGBA4; break;
+			case 32: tex->format = GL_RGBA8; break;
+			default: tex->format = GL_RGBA; break;
+			}
+			break;
 		}
 	}
 }

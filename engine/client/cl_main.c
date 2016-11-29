@@ -326,7 +326,9 @@ qboolean CL_ProcessOverviewCmds( usercmd_t *cmd )
 {
 	ref_overview_t	*ov = &clgame.overView;
 	int		sign = 1;
-	float		step = 100.0f * (cl.time - cl.oldtime);
+	float		size = world.size[!ov->rotated] / world.size[ov->rotated];
+	float		step = (2.0f / size) * host.realframetime;
+	float		step2 = step * 100.0f * (2.0f / ov->flZoom);
 
 	if( !gl_overview->integer || gl_showtextures->integer )
 		return false;
@@ -339,22 +341,22 @@ qboolean CL_ProcessOverviewCmds( usercmd_t *cmd )
 	if( cmd->buttons & IN_JUMP ) ov->zFar += step;
 	else if( cmd->buttons & IN_DUCK ) ov->zFar -= step;
 
-	if( cmd->buttons & IN_FORWARD ) ov->origin[ov->rotated] -= sign * step;
-	else if( cmd->buttons & IN_BACK ) ov->origin[ov->rotated] += sign * step;
+	if( cmd->buttons & IN_FORWARD ) ov->origin[ov->rotated] -= sign * step2;
+	else if( cmd->buttons & IN_BACK ) ov->origin[ov->rotated] += sign * step2;
 
 	if( ov->rotated )
 	{
 		if( cmd->buttons & ( IN_RIGHT|IN_MOVERIGHT ))
-			ov->origin[0] -= sign * step;
+			ov->origin[0] -= sign * step2;
 		else if( cmd->buttons & ( IN_LEFT|IN_MOVELEFT ))
-			ov->origin[0] += sign * step;
+			ov->origin[0] += sign * step2;
 	}
 	else
 	{
 		if( cmd->buttons & ( IN_RIGHT|IN_MOVERIGHT ))
-			ov->origin[1] += sign * step;
+			ov->origin[1] += sign * step2;
 		else if( cmd->buttons & ( IN_LEFT|IN_MOVELEFT ))
-			ov->origin[1] -= sign * step;
+			ov->origin[1] -= sign * step2;
 	}
 
 	if( cmd->buttons & IN_ATTACK ) ov->flZoom += step;

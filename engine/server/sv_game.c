@@ -529,7 +529,7 @@ SV_BoxInPVS
 check brush boxes in fat pvs
 ==============
 */
-static qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
+qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax )
 {
 	byte	*vis = Mod_GetPVSForPoint( org );
 
@@ -2115,6 +2115,9 @@ static int pfnTraceMonsterHull( edict_t *pEdict, const float *v1, const float *v
 		return 1;
 	}
 
+	if( pEdict != pentToSkip )
+		MsgDev( D_ERROR, "TRACE_MONSTER_HULL: pEdict != pentToSkip\n" ); 
+
 	trace = SV_Move( v1, pEdict->v.mins, pEdict->v.maxs, v2, fNoMonsters, pentToSkip );
 	if( ptr ) SV_ConvertTrace( ptr, &trace );
 
@@ -2638,6 +2641,18 @@ void pfnWriteCoord( float flValue )
 {
 	MSG_WriteCoord( &sv.multicast, flValue );
 	svgame.msg_realsize += 2;
+}
+
+/*
+=============
+pfnWriteBytes
+
+=============
+*/
+void pfnWriteBytes( const byte *bytes, int count )
+{
+	MSG_WriteBytes( &sv.multicast, bytes, count );
+	svgame.msg_realsize += count;
 }
 
 /*

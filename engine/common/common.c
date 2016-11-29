@@ -420,6 +420,25 @@ byte *COM_LoadFile( const char *filename, int usehunk, int *pLength )
 
 /*
 =============
+COM_LoadFile
+
+=============
+*/
+int COM_SaveFile( const char *filename, const void *data, long len )
+{
+	// check for empty filename
+	if( !filename || !*filename )
+		return false;
+
+	// check for null data
+	if( !data || len <= 0 )
+		return false;
+
+	return FS_WriteFile( filename, data, len );
+}
+
+/*
+=============
 COM_FreeFile
 
 =============

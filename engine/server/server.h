@@ -555,6 +555,7 @@ edict_t* SV_FindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, event_args_t *args );
+qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax );
 void SV_BaselineForEntity( edict_t *pEdict );
 void SV_WriteEntityPatch( const char *filename );
 char *SV_ReadEntityScript( const char *filename, int *flags );
@@ -571,6 +572,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 void SV_CreateStaticEntity( struct sizebuf_s *msg, sv_static_entity_t *ent );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
+void pfnWriteBytes( const byte *bytes, int count );
 void SV_UpdateBaseVelocity( edict_t *ent );
 byte *pfnSetFatPVS( const float *org );
 byte *pfnSetFatPAS( const float *org );

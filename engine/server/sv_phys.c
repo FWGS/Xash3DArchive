@@ -232,21 +232,23 @@ qboolean SV_PlayerRunThink( edict_t *ent, float frametime, double time )
 {
 	float	thinktime;
 
-	if(!( ent->v.flags & (FL_KILLME|FL_DORMANT )))
+	if( !FBitSet( ent->v.flags, FL_KILLME|FL_DORMANT ))
 	{
 		thinktime = ent->v.nextthink;
-		if( thinktime <= 0.0f || thinktime > time + frametime )
+		if( thinktime <= 0.0f || (time + frametime) < thinktime )
 			return true;
 
-		if( thinktime > time )
-			thinktime = time;
+		if( thinktime < time )
+			thinktime = time;	// don't let things stay in the past.
+					// it is possible to start that way
+					// by a trigger with a local time.
 
 		ent->v.nextthink = 0.0f;
 		svgame.globals->time = thinktime;
 		svgame.dllFuncs.pfnThink( ent );
 	}
 
-	if( ent->v.flags & FL_KILLME )
+	if( FBitSet( ent->v.flags, FL_KILLME ))
 		SV_FreeEdict( ent );
 
 	return !ent->free;
@@ -1929,6 +1931,26 @@ static void pfnMem_Free( void *mem, const char *filename, const int fileline )
 	_Mem_Free( mem, filename, fileline );
 }
 
+/*
+=============
+pfnPointContents
+
+=============
+*/
+static int pfnPointContents( const float *pos, int groupmask )
+{
+	int	oldmask, cont;
+
+	if( !pos ) return CONTENTS_NONE;
+	oldmask = svs.groupmask;
+
+	svs.groupmask = groupmask;
+	cont = SV_PointContents( pos );
+	svs.groupmask = oldmask; // restore old mask
+
+	return cont;
+}
+
 static server_physics_api_t gPhysicsAPI =
 {
 	SV_LinkEdict,
@@ -1951,6 +1973,15 @@ static server_physics_api_t gPhysicsAPI =
 	GL_TextureData,
 	pfnMem_Alloc,
 	pfnMem_Free,
+	pfnPointContents,
+	SV_Move,
+	SV_MoveNoEnts,
+	SV_BoxInPVS,
+	pfnWriteBytes,
+	Mod_CheckLump,
+	Mod_ReadLump,
+	Mod_SaveLump,
+	COM_SaveFile,
 };
 
 /*

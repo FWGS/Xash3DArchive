@@ -2400,8 +2400,9 @@ qboolean FS_WriteFile( const char *filename, const void *data, long len )
 		return false;
 	}
 
-	FS_Write (file, data, len);
-	FS_Close (file);
+	FS_Write( file, data, len );
+	FS_Close( file );
+
 	return true;
 }
 

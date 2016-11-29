@@ -695,6 +695,7 @@ qboolean SV_Active( void );
 cvar_t *pfnCvar_RegisterClientVariable( const char *szName, const char *szValue, int flags );
 cvar_t *pfnCvar_RegisterGameUIVariable( const char *szName, const char *szValue, int flags );
 char *COM_MemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
+int COM_SaveFile( const char *filename, const void *data, long len );
 byte* COM_LoadFileForMe( const char *filename, int *pLength );
 cvar_t *pfnCVarGetPointer( const char *szVarName );
 int pfnDrawConsoleString( int x, int y, char *string );

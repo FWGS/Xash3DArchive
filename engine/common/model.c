@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "features.h"
 #include "client.h"
+#include "physint.h"			// LUMP_ error codes
 
 #define MAX_SIDE_VERTS		512	// per one polygon
 
@@ -3336,4 +3337,235 @@ model_t *Mod_Handle( int handle )
 		return NULL;
 	}
 	return com_models[handle];
+}
+
+/*
+==================
+Mod_CheckLump
+
+check lump for existing
+==================
+*/
+int Mod_CheckLump( const char *filename, const int lump, int *lumpsize )
+{
+	file_t		*f = FS_Open( filename, "rb", true );
+	byte		buffer[sizeof( dheader31_t ) + sizeof( dextrahdr_t )];
+	size_t		prefetch_size = sizeof( buffer );
+	dextrahdr_t	*extrahdr;
+	dheader_t		*header;
+
+	if( !f ) return LUMP_LOAD_COULDNT_OPEN;
+
+	if( FS_Read( f, buffer, prefetch_size ) != prefetch_size )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_BAD_HEADER;
+	}
+
+	header = (dheader_t *)buffer;
+
+	if( header->version != HLBSP_VERSION && header->version != XTBSP_VERSION )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_BAD_VERSION;
+	}
+
+	// BSP31 and BSP30 have different offsets
+	if( header->version == XTBSP_VERSION )
+		extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader31_t ));	
+	else extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
+
+	if( extrahdr->id != IDEXTRAHEADER || extrahdr->version != EXTRA_VERSION )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_NO_EXTRADATA;
+	}
+
+	if( lump < 0 || lump >= EXTRA_LUMPS )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_INVALID_NUM;
+	}
+
+	if( extrahdr->lumps[lump].filelen <= 0 )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_NOT_EXIST;
+	}
+
+	if( lumpsize )
+		*lumpsize = extrahdr->lumps[lump].filelen;
+
+	FS_Close( f );
+
+	return LUMP_LOAD_OK;
+}
+
+/*
+==================
+Mod_ReadLump
+
+reading random lump by user request
+==================
+*/
+int Mod_ReadLump( const char *filename, const int lump, void **lumpdata, int *lumpsize )
+{
+	file_t		*f = FS_Open( filename, "rb", true );
+	byte		buffer[sizeof( dheader31_t ) + sizeof( dextrahdr_t )];
+	size_t		prefetch_size = sizeof( buffer );
+	dextrahdr_t	*extrahdr;
+	dheader_t		*header;
+	byte		*data;
+	int		length;
+
+	if( !f ) return LUMP_LOAD_COULDNT_OPEN;
+
+	if( FS_Read( f, buffer, prefetch_size ) != prefetch_size )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_BAD_HEADER;
+	}
+
+	header = (dheader_t *)buffer;
+
+	if( header->version != HLBSP_VERSION && header->version != XTBSP_VERSION )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_BAD_VERSION;
+	}
+
+	// BSP31 and BSP30 have different offsets
+	if( header->version == XTBSP_VERSION )
+		extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader31_t ));	
+	else extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
+
+	if( extrahdr->id != IDEXTRAHEADER || extrahdr->version != EXTRA_VERSION )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_NO_EXTRADATA;
+	}
+
+	if( lump < 0 || lump >= EXTRA_LUMPS )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_INVALID_NUM;
+	}
+
+	if( extrahdr->lumps[lump].filelen <= 0 )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_NOT_EXIST;
+	}
+
+	data = malloc( extrahdr->lumps[lump].filelen + 1 );
+	length = extrahdr->lumps[lump].filelen;
+
+	if( !data )
+	{
+		FS_Close( f );
+		return LUMP_LOAD_MEM_FAILED;
+	}
+
+	FS_Seek( f, extrahdr->lumps[lump].fileofs, SEEK_SET );
+
+	if( FS_Read( f, data, length ) != length )
+	{
+		Mem_Free( data );
+		FS_Close( f );
+		return LUMP_LOAD_CORRUPTED;
+	}
+
+	data[length] = 0; // write term
+	FS_Close( f );
+
+	if( lumpsize )
+		*lumpsize = length;
+	*lumpdata = data;
+
+	return LUMP_LOAD_OK;
+}
+
+/*
+==================
+Mod_SaveLump
+
+writing lump by user request
+only empty lumps is allows
+==================
+*/
+int Mod_SaveLump( const char *filename, const int lump, void *lumpdata, int lumpsize )
+{
+	file_t		*f = FS_Open( filename, "e+b", true );
+	byte		buffer[sizeof( dheader31_t ) + sizeof( dextrahdr_t )];
+	size_t		prefetch_size = sizeof( buffer );
+	dextrahdr_t	*extrahdr;
+	dheader_t		*header;
+
+	if( !f ) return LUMP_SAVE_COULDNT_OPEN;
+
+	if( !lumpdata || lumpsize <= 0 )
+		return LUMP_SAVE_NO_DATA;
+
+	if( FS_Read( f, buffer, prefetch_size ) != prefetch_size )
+	{
+		FS_Close( f );
+		return LUMP_SAVE_BAD_HEADER;
+	}
+
+	header = (dheader_t *)buffer;
+
+	if( header->version != HLBSP_VERSION && header->version != XTBSP_VERSION )
+	{
+		FS_Close( f );
+		return LUMP_SAVE_BAD_VERSION;
+	}
+
+	// BSP31 and BSP30 have different offsets
+	if( header->version == XTBSP_VERSION )
+		extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader31_t ));	
+	else extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
+
+	if( extrahdr->id != IDEXTRAHEADER || extrahdr->version != EXTRA_VERSION )
+	{
+		FS_Close( f );
+		return LUMP_SAVE_NO_EXTRADATA;
+	}
+
+	if( lump < 0 || lump >= EXTRA_LUMPS )
+	{
+		FS_Close( f );
+		return LUMP_SAVE_INVALID_NUM;
+	}
+
+	if( extrahdr->lumps[lump].filelen != 0 )
+	{
+		FS_Close( f );
+		return LUMP_SAVE_ALREADY_EXIST;
+	}
+
+	FS_Seek( f, 0, SEEK_END );
+
+	// will be saved later
+	extrahdr->lumps[lump].fileofs = FS_Tell( f );
+	extrahdr->lumps[lump].filelen = lumpsize;
+
+	if( FS_Write( f, lumpdata, lumpsize ) != lumpsize )
+	{
+		FS_Close( f );
+		return LUMP_SAVE_CORRUPTED;
+	}
+
+	// update the header
+	if( header->version == XTBSP_VERSION )
+		FS_Seek( f, sizeof( dheader31_t ), SEEK_SET );
+	else FS_Seek( f, sizeof( dheader_t ), SEEK_SET );
+
+	if( FS_Write( f, extrahdr, sizeof( dextrahdr_t )) != sizeof( dextrahdr_t ))
+	{
+		FS_Close( f );
+		return LUMP_SAVE_CORRUPTED;
+	}
+
+	FS_Close( f );
+	return LUMP_SAVE_OK;
 }

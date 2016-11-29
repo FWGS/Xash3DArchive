@@ -67,7 +67,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 		int		ver = -1, mapver = -1, lumpofs = 0, lumplen = 0;
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 		char		*ents = NULL, *pfile;
-		qboolean		paranoia = false;
+		int		version = 0;
 		qboolean		gearbox = false;
 			
 		if( Q_stricmp( ext, "bsp" )) continue;
@@ -108,8 +108,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 				hdrext = (dextrahdr_t *)((byte *)buf + sizeof( dheader31_t ));	
 			else hdrext = (dextrahdr_t *)((byte *)buf + sizeof( dheader_t ));
 
-			if( hdrext->id == IDEXTRAHEADER && hdrext->version == EXTRA_VERSION )
-				paranoia = true;
+			if( hdrext->id == IDEXTRAHEADER ) version = hdrext->version;
 
 			Q_strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
@@ -163,11 +162,17 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			break;
 		case HLBSP_VERSION:
 			if( gearbox ) Q_strncpy( buf, "Blue-Shift", sizeof( buf ));
-			else if( paranoia ) Q_strncpy( buf, "Paranoia 2", sizeof( buf ));
+			else if( version == 1 ) Q_strncpy( buf, "XashXT old format", sizeof( buf ));
+			else if( version == 2 ) Q_strncpy( buf, "Paranoia 2: Savior", sizeof( buf ));
+			else if( version == 3 ) Q_strncpy( buf, "not supported", sizeof( buf ));
+			else if( version == 4 ) Q_strncpy( buf, "Half-Life extended", sizeof( buf ));
 			else Q_strncpy( buf, "Half-Life", sizeof( buf ));
 			break;
 		case XTBSP_VERSION:
-			if( paranoia ) Q_strncpy( buf, "Paranoia 2", sizeof( buf ));
+			if( version == 1 ) Q_strncpy( buf, "XashXT old format", sizeof( buf ));
+			else if( version == 2 ) Q_strncpy( buf, "Paranoia 2: Savior", sizeof( buf ));
+			else if( version == 3 ) Q_strncpy( buf, "not supported", sizeof( buf ));
+			else if( version == 4 ) Q_strncpy( buf, "Xash3D extended", sizeof( buf ));
 			else Q_strncpy( buf, "Xash3D", sizeof( buf ));
 			break;
 		default:	Q_strncpy( buf, "??", sizeof( buf )); break;
