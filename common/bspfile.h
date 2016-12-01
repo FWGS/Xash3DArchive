@@ -106,8 +106,8 @@ BRUSH MODELS
 
 #define LUMP_LIGHTVECS		0	// deluxemap data
 #define LUMP_FACEINFO		1	// landscape and lightmap resolution info
-#define LUMP_VERTNORMALS		2	// phong shaded vertex normals
-#define LUMP_CUBEMAPS		3	// cubemap description
+#define LUMP_CUBEMAPS		2	// cubemap description
+#define LUMP_VERTNORMALS		3	// phong shaded vertex normals
 #define LUMP_LEAF_LIGHTING		4	// contain compressed light cubes per empty leafs
 #define LUMP_WORLDLIGHTS		5	// list of all the virtual and real lights (used to relight models in-game)
 #define LUMP_COLLISION		6	// physics engine collision hull dump

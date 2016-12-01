@@ -1312,6 +1312,10 @@ void R_DrawWaterSurfaces( void )
 	if( cl.refdef.movevars->wateralpha >= 1.0f )
 		return;
 
+	// restore worldmodel
+	RI.currententity = clgame.entities;
+	RI.currentmodel = RI.currententity->model;
+
 	// go back to the world matrix
 	R_LoadIdentity();
 

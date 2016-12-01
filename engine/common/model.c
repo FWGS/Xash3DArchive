@@ -161,6 +161,7 @@ void Mod_PrintBSPFileSizes_f( void )
 
 	Msg( "=== Total BSP file data space used: %s ===\n", Q_memprint( totalmemory ));
 	Msg( "World size ( %g %g %g ) units\n", world.size[0], world.size[1], world.size[2] );
+	Msg( "Supports transparency world water: %s\n", world.water_alpha ? "Yes" : "No" );
 	Msg( "original name: ^1%s\n", worldmodel->name );
 	Msg( "internal name: %s\n", (world.message[0]) ? va( "^2%s", world.message ) : "none" );
 }
