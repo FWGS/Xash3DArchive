@@ -1145,8 +1145,9 @@ void SV_PutClientInServer( sv_client_t *cl )
 		else cl->pViewEntity = NULL;
 	}
 
-	// refresh the userinfo
-	SetBits( cl->flags, FCL_RESEND_USERINFO );
+	// refresh the userinfo and movevars
+	// NOTE: because movevars can be changed during the connection process
+	SetBits( cl->flags, FCL_RESEND_USERINFO|FCL_RESEND_MOVEVARS );
 
 	// reset client times
 	cl->last_cmdtime = 0.0;
@@ -1155,7 +1156,8 @@ void SV_PutClientInServer( sv_client_t *cl )
 
 	if( !FBitSet( cl->flags, FCL_FAKECLIENT ))
 	{
-		int	viewEnt;
+		sv_client_t	*cur;
+		int		i, viewEnt;
 
 		MSG_WriteBits( &cl->netchan.message, MSG_GetData( &sv.signon ), MSG_GetNumBitsWritten( &sv.signon ));
 
@@ -1165,6 +1167,17 @@ void SV_PutClientInServer( sv_client_t *cl )
 	
 		MSG_WriteByte( &cl->netchan.message, svc_setview );
 		MSG_WriteWord( &cl->netchan.message, viewEnt );
+
+		// collect the info about all the players and send to me
+		for( i = 0, cur = svs.clients; i < sv_maxclients->integer; i++, cur++ )
+		{
+			if( !cur->edict ) continue;	// not in game yet
+
+			if( cur == cl || cur->state != cs_spawned )
+				continue;
+
+			SV_FullClientUpdate( cur, &cl->netchan.message );
+		}
 	}
 
 	// clear any temp states
