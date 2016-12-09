@@ -420,6 +420,9 @@ void SV_ReadPackets( void )
 		if( i != sv_maxclients->integer )
 			continue;
 	}
+
+	svs.currentPlayer = NULL;
+	svs.currentPlayerNum = -1;
 }
 
 /*

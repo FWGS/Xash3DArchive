@@ -110,11 +110,10 @@ void CL_SetUpPlayerPrediction( int dopred, int bIncludeLocalClient )
 		clent = CL_GetEntityByIndex( i + 1 );
 
 		// special for EF_NODRAW and local client?
-		if(( state->effects & EF_NODRAW ) && !bIncludeLocalClient )
+		if( FBitSet( state->effects, EF_NODRAW ) && !bIncludeLocalClient )
 		{
 			// don't include local player?
-			if( cl.playernum == i )
-				continue;
+			if( cl.playernum == i ) continue;
 
 			player->active = true;
 			player->movetype = state->movetype;

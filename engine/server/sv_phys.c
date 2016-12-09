@@ -1951,6 +1951,22 @@ static int pfnPointContents( const float *pos, int groupmask )
 	return cont;
 }
 
+const byte *pfnLoadImagePixels( const char *filename, int *width, int *height )
+{
+	rgbdata_t	*pic = FS_LoadImage( filename, NULL, 0 );
+	byte	*buffer;
+
+	if( !pic ) return NULL;
+
+	buffer = Mem_Alloc( svgame.mempool, pic->size );
+	if( buffer ) memcpy( buffer, pic->buffer, pic->size );
+	if( width ) *width = pic->width;
+	if( height ) *height = pic->height;
+	FS_FreeImage( pic );
+
+	return buffer;
+}
+
 static server_physics_api_t gPhysicsAPI =
 {
 	SV_LinkEdict,
@@ -1982,6 +1998,7 @@ static server_physics_api_t gPhysicsAPI =
 	Mod_ReadLump,
 	Mod_SaveLump,
 	COM_SaveFile,
+	pfnLoadImagePixels,
 };
 
 /*

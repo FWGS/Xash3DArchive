@@ -735,7 +735,7 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 		bSkipMessage = ((demo.timestamp - cl_serverframetime()) >= fElapsedTime) ? true : false;
 		if( cls.changelevel ) demo.framecount = 1;
 
-		// HACKHACK: changelevel issues
+		// changelevel issues
 		if( demo.framecount <= 2 && ( fElapsedTime - demo.timestamp ) > host.frametime )
 			demo.starttime = CL_GetDemoPlaybackClock();
 

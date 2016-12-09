@@ -177,6 +177,11 @@ void Image_Init( void )
 		image.loadformats = load_game;
 		image.saveformats = save_game;
 		break;
+	case HOST_DEDICATED:
+		image.cmd_flags = 0;		
+		image.loadformats = load_game;
+		image.saveformats = save_null;
+		break;
 	default:	// all other instances not using imagelib or will be reinstalling later
 		image.loadformats = load_null;
 		image.saveformats = save_null;

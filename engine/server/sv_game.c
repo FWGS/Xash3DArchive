@@ -266,7 +266,7 @@ MSG_PVS	send to clients potentially visible from org
 MSG_PHS	send to clients potentially audible from org
 =================
 */
-qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean usermessage )
+qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean usermessage, qboolean filter )
 {
 	byte		*mask = NULL;
 	int		j, numclients = sv_maxclients->integer;
@@ -338,6 +338,11 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean us
 			continue;
 
 		if( !cl->edict || FBitSet( cl->flags, FCL_FAKECLIENT ))
+			continue;
+
+		// reject step sounds while predicting is enabled
+		// FIXME: make sure what this code doesn't cutoff something important!!!
+		if( filter && cl == svs.currentPlayer && FBitSet( svs.currentPlayer->flags, FCL_PREDICT_MOVEMENT ))
 			continue;
 
 		if( ent != NULL && ent->v.groupinfo && cl->edict->v.groupinfo )
@@ -1862,6 +1867,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 {
 	int 	sound_idx;
 	int	entityIndex;
+	qboolean	filter = false;
 	int	msg_dest;
 	vec3_t	origin;
 
@@ -1892,7 +1898,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	VectorAverage( ent->v.mins, ent->v.maxs, origin );
 	VectorAdd( origin, ent->v.origin, origin );
 
-	if( flags & SND_SPAWNING )
+	if( FBitSet( flags, SND_SPAWNING ))
 		msg_dest = MSG_INIT;
 	else if( chan == CHAN_STATIC )
 		msg_dest = MSG_ALL;
@@ -1900,6 +1906,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 
 	// always sending stop sound command
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;
+	if( flags & SND_FILTER_CLIENT ) filter = true;
 
 	if( sample[0] == '!' && Q_isdigit( sample + 1 ))
 	{
@@ -1925,6 +1932,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	if( sound_idx > 255 ) flags |= SND_LARGE_INDEX;
 
 	// not sending (because this is out of range)
+	flags &= ~SND_FILTER_CLIENT;
 	flags &= ~SND_SPAWNING;
 
 	MSG_WriteByte( &sv.multicast, svc_sound );
@@ -1941,7 +1949,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	MSG_WriteWord( &sv.multicast, entityIndex );
 	MSG_WriteVec3Coord( &sv.multicast, origin );
 
-	SV_Send( msg_dest, origin, NULL, false );
+	SV_Send( msg_dest, origin, NULL, false, filter );
 }
 
 /*
@@ -2021,7 +2029,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	MSG_WriteWord( &sv.multicast, number );
 	MSG_WriteVec3Coord( &sv.multicast, pos );
 
-	SV_Send( msg_dest, pos, NULL, false );
+	SV_Send( msg_dest, pos, NULL, false, false );
 }
 
 /*
@@ -2034,7 +2042,7 @@ void SV_StartMusic( const char *curtrack, const char *looptrack, long position )
 {
 	MSG_WriteByte( &sv.multicast, svc_stufftext );
 	MSG_WriteString( &sv.multicast, va( "music \"%s\" \"%s\" %i\n", curtrack, looptrack, position ));
-	SV_Send( MSG_ALL, NULL, NULL, false );
+	SV_Send( MSG_ALL, NULL, NULL, false, false );
 }
 
 /*
@@ -2348,7 +2356,7 @@ void pfnParticleEffect( const float *org, const float *dir, float color, float c
 	MSG_WriteByte( &sv.multicast, color );
 	MSG_WriteByte( &sv.multicast, 0 );
 
-	SV_Send( MSG_PVS, org, NULL, false );
+	SV_Send( MSG_PVS, org, NULL, false, false );
 }
 
 /*
@@ -2564,7 +2572,7 @@ void pfnMessageEnd( void )
 	if( !VectorIsNull( svgame.msg_org )) org = svgame.msg_org;
 	svgame.msg_dest = bound( MSG_BROADCAST, svgame.msg_dest, MSG_SPEC );
 
-	SV_Send( svgame.msg_dest, org, svgame.msg_ent, true );
+	SV_Send( svgame.msg_dest, org, svgame.msg_ent, true, false );
 }
 
 /*
@@ -3074,7 +3082,7 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 		MSG_WriteByte( &sv.multicast, svgame.msg[i].number );
 		MSG_WriteByte( &sv.multicast, (byte)iSize );
 		MSG_WriteString( &sv.multicast, svgame.msg[i].name );
-		SV_Send( MSG_ALL, NULL, NULL, false );
+		SV_Send( MSG_ALL, NULL, NULL, false, false );
 	}
 
 	return svgame.msg[i].number;

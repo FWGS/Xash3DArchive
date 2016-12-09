@@ -478,7 +478,7 @@ static void pfnPlaySound( int channel, const char *sample, float volume, float a
 	ent = EDICT_NUM( svgame.pmove->player_index + 1 );
 	if( !SV_IsValidEdict( ent )) return;
 
-	SV_StartSound( ent, channel, sample, volume, attenuation, fFlags, pitch );
+	SV_StartSound( ent, channel, sample, volume, attenuation, fFlags|SND_FILTER_CLIENT, pitch );
 }
 
 static void pfnPlaybackEventFull( int flags, int clientindex, word eventindex, float delay, float *origin,

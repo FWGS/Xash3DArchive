@@ -304,6 +304,8 @@ void S_StreamSoundTrack( void )
 	{
 		wavdata_t	*info = SCR_GetMovieInfo();
 
+		if( !info ) break;	// bad soundtrack?
+
 		bufferSamples = ch->max_samples - (ch->s_rawend - soundtime);
 
 		// decide how much data needs to be read from the file

@@ -713,7 +713,7 @@ void SV_SendClientMessages( void )
 	int		i;
 
 	svs.currentPlayer = NULL;
-	svs.currentPlayerNum = 0;
+	svs.currentPlayerNum = -1;
 
 	if( sv.state == ss_dead )
 		return;
@@ -787,7 +787,7 @@ void SV_SendClientMessages( void )
 
 	// reset current client
 	svs.currentPlayer = NULL;
-	svs.currentPlayerNum = 0;
+	svs.currentPlayerNum = -1;
 }
 
 /*

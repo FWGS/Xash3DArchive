@@ -22,7 +22,7 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "features.h"
 #include "client.h"
-#include "physint.h"			// LUMP_ error codes
+#include "server.h"			// LUMP_ error codes
 
 #define MAX_SIDE_VERTS		512	// per one polygon
 
@@ -582,10 +582,21 @@ static void Mod_FreeUserData( model_t *mod )
 	if( !mod || !mod->name[0] )
 		return;
 
-	if( clgame.drawFuncs.Mod_ProcessUserData != NULL )
+	if( host.type == HOST_DEDICATED )
 	{
-		// let the client.dll free custom data
-		clgame.drawFuncs.Mod_ProcessUserData( mod, false, NULL );
+		if( svgame.physFuncs.Mod_ProcessUserData != NULL )
+		{
+			// let the server.dll free custom data
+			svgame.physFuncs.Mod_ProcessUserData( mod, false, NULL );
+		}
+	}
+	else
+	{
+		if( clgame.drawFuncs.Mod_ProcessUserData != NULL )
+		{
+			// let the client.dll free custom data
+			clgame.drawFuncs.Mod_ProcessUserData( mod, false, NULL );
+		}
 	}
 }
 
@@ -3068,10 +3079,24 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 
 		return NULL;
 	}
-	else if( clgame.drawFuncs.Mod_ProcessUserData != NULL )
+	else
 	{
-		// let the client.dll load custom data
-		clgame.drawFuncs.Mod_ProcessUserData( mod, true, buf );
+		if( host.type == HOST_DEDICATED )
+		{
+			if( svgame.physFuncs.Mod_ProcessUserData != NULL )
+			{
+				// let the server.dll load custom data
+				svgame.physFuncs.Mod_ProcessUserData( mod, true, buf );
+			}
+		}
+		else
+		{
+			if( clgame.drawFuncs.Mod_ProcessUserData != NULL )
+			{
+				// let the client.dll load custom data
+				clgame.drawFuncs.Mod_ProcessUserData( mod, true, buf );
+			}
+		}
 	}
 
 	Mem_Free( buf );

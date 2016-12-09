@@ -397,9 +397,9 @@ typedef struct
 	movevars_t	oldmovevars;
 	playermove_t	*pmove;			// pmove state
 
-	qboolean             pushed;                     // used by PM_Push\Pop state
-	int                  oldviscount;                // used by PM_Push\Pop state
-	int                  oldphyscount;               // used by PM_Push\Pop state
+	qboolean		pushed;			// used by PM_Push\Pop state
+	int		oldviscount;		// used by PM_Push\Pop state
+	int		oldphyscount;		// used by PM_Push\Pop state
 
 	vec3_t		player_mins[MAX_MAP_HULLS];	// 4 hulls allowed
 	vec3_t		player_maxs[MAX_MAP_HULLS];	// 4 hulls allowed

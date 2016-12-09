@@ -101,7 +101,9 @@ typedef struct server_physics_api_s
 	int		(*pfnReadLump)( const char *filename, const int lump, void **lumpdata, int *lumpsize );
 	int		(*pfnSaveLump)( const char *filename, const int lump, void *lumpdata, int lumpsize );
 
+	// FS tools
 	int		(*pfnSaveFile)( const char *filename, const void *data, long len );
+	const byte	*(*pfnLoadImagePixels)( const char *filename, int *width, int *height );
 } server_physics_api_t;
 
 // physic callbacks
@@ -149,6 +151,8 @@ typedef struct physics_interface_s
 	int		(*pfnRestoreDecal)( struct decallist_s *entry, edict_t *pEdict, qboolean adjacent );
 	// handle custom trigger touching for player
 	void		(*PM_PlayerTouch)( struct playermove_s *ppmove, edict_t *client );
+	// alloc or destroy model custom data (called only for dedicated servers, otherwise using an client version)
+	void		(*Mod_ProcessUserData)( struct model_s *mod, qboolean create, const byte *buffer );
 } physics_interface_t;
 
 #endif//PHYSINT_H

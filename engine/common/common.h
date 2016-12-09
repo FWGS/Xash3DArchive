@@ -279,6 +279,11 @@ typedef struct host_redirect_s
 	void		(*flush)( netadr_t adr, rdtype_t target, char *buffer );
 } host_redirect_t;
 
+// local flags (never sending acorss the net)
+#define SND_LOCALSOUND	(1<<9)	// not paused, not looped, for internal use
+#define SND_STOP_LOOPING	(1<<10)	// stop all looping sounds on the entity.
+#define SND_FILTER_CLIENT	(1<<11)	// don't send sound from local player if prediction was enabled
+
 typedef struct
 {
 	char		name[64];

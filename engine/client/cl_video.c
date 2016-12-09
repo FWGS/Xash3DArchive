@@ -149,7 +149,10 @@ void SCR_RunCinematic( void )
 		return;
 
 	if( !AVI_IsActive( cin_state ))
+	{
+		SCR_NextMovie( );
 		return;
+	}
 
 	if( UI_IsVisible( ))
 	{
