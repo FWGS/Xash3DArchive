@@ -433,6 +433,7 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction );
 //
 #define GL_CheckForErrors() GL_CheckForErrors_( __FILE__, __LINE__ )
 void GL_CheckForErrors_( const char *filename, const int fileline );
+void *GL_GetProcAddress( const char *name );
 void GL_UpdateSwapInterval( void );
 void GL_UpdateGammaRamp( void );
 qboolean GL_DeleteContext( void );
@@ -577,6 +578,9 @@ typedef struct
 	int		alpha_bits;
 	int		depth_bits;
 	int		stencil_bits;
+
+	gl_context_type_t	context;
+	gles_wrapper_t	wrapper;
 
 	qboolean		softwareGammaUpdate;
 	qboolean		deviceSupportsGamma;

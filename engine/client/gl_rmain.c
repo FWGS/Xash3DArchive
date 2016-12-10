@@ -1449,6 +1449,10 @@ static int GL_RenderGetParm( int parm, int arg )
 		if( arg >= 0 && arg < cl.worldmodel->numsurfaces )
 			return Mod_SampleSizeForFace( &cl.worldmodel->surfaces[arg] );
 		return LM_SAMPLE_SIZE;
+	case PARM_GL_CONTEXT_TYPE:
+		return glConfig.context;
+	case PARM_GLES_WRAPPER:
+		return glConfig.wrapper;
 	}
 	return 0;
 }
@@ -1604,6 +1608,7 @@ static void *R_Mem_Alloc( size_t cb, const char *filename, const int fileline )
 
 static void R_Mem_Free( void *mem, const char *filename, const int fileline )
 {
+	if( !mem ) return;
 	_Mem_Free( mem, filename, fileline );
 }
 
@@ -1671,7 +1676,7 @@ static render_api_t gRenderAPI =
 	GL_TexGen,
 	GL_TextureTarget,
 	GL_SetTexCoordArrayMode,
-	NULL,
+	GL_GetProcAddress,
 	NULL,
 	NULL,
 	NULL,

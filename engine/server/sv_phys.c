@@ -873,7 +873,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	sv_pushed_t	*p, *pushed_p;
 	edict_t		*check;	
 
-	if( VectorIsNull( pusher->v.velocity ))
+	if( svgame.globals->changelevel || VectorIsNull( pusher->v.velocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -991,7 +991,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	vec3_t		org, org2, temp;
 	edict_t		*check;
 
-	if( VectorIsNull( pusher->v.avelocity ))
+	if( svgame.globals->changelevel || VectorIsNull( pusher->v.avelocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -1928,6 +1928,7 @@ static void *pfnMem_Alloc( size_t cb, const char *filename, const int fileline )
 
 static void pfnMem_Free( void *mem, const char *filename, const int fileline )
 {
+	if( !mem ) return;
 	_Mem_Free( mem, filename, fileline );
 }
 

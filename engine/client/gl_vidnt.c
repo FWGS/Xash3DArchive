@@ -1817,6 +1817,10 @@ void GL_InitExtensions( void )
 	glConfig.extensions_string = pglGetString( GL_EXTENSIONS );
 	MsgDev( D_INFO, "Video: %s\n", glConfig.renderer_string );
 
+	// intialize wrapper type
+	glConfig.context = CONTEXT_TYPE_GL;
+	glConfig.wrapper = GLES_WRAPPER_NONE;
+
 	if( Q_stristr( glConfig.renderer_string, "geforce" ))
 		glConfig.hardware_type = GLHW_NVIDIA;
 	else if( Q_stristr( glConfig.renderer_string, "quadro fx" ))

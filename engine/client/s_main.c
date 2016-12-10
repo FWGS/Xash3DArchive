@@ -701,7 +701,7 @@ qboolean SND_CheckPHS( channel_t *ch )
 {
 	mleaf_t	*leaf;
 
-	if( !ch->dist_mult )
+	if( !ch->dist_mult || !s_phs->integer )
 		return true; // no attenuation
 
 	leaf = Mod_PointInLeaf( ch->origin, cl.worldmodel->nodes );

@@ -1900,7 +1900,7 @@ void CL_InitLocal( void )
 	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar
 	cl_updaterate = Cvar_Get( "cl_updaterate", "60", CVAR_USERINFO|CVAR_ARCHIVE, "refresh rate of server messages" );
 	Cvar_Get( "cl_background", "0", CVAR_READ_ONLY, "indicate what background map is running" );
-	Cvar_Get( "cl_msglevel", "3", CVAR_USERINFO|CVAR_ARCHIVE, "message filter for server notifications" );
+	Cvar_Get( "cl_msglevel", "0", CVAR_USERINFO|CVAR_ARCHIVE, "message filter for server notifications" );
 
 	// these two added to shut up CS 1.5 about 'unknown' commands
 	Cvar_Get( "lightgamma", "1", CVAR_ARCHIVE, "ambient lighting level (legacy, unused)" );

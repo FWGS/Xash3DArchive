@@ -33,7 +33,6 @@ typedef struct
 	vec3_t	color;
 	float	texcoord;	// Y texture coordinate
 	float	width;
-	float	alpha;
 } beamseg_t;
 
 static float	rgNoise[NOISE_DIVISIONS+1];	// global noise array
@@ -88,24 +87,12 @@ static cl_entity_t *CL_GetBeamEntityByIndex( int index )
 	return ent;
 }
 
-void BeamNormalizeColor( BEAM *pBeam, float r, float g, float b, float brightness ) 
+void BeamNormalizeColor( BEAM *pBeam, int r, int g, int b, float brightness ) 
 {
-	float	max, scale;
-
-	max = max( max( r, g ), b );
-
-	if( max == 0 )
-	{
-		pBeam->r = pBeam->g = pBeam->b = 255.0f;
-		pBeam->brightness = brightness;
-	}
-
-	scale = 255.0f / max;
-
-	pBeam->r = r * scale;
-	pBeam->g = g * scale;
-	pBeam->b = b * scale;
-	pBeam->brightness = brightness * scale * 255.0f;
+	pBeam->r = (float)r;
+	pBeam->g = (float)g;
+	pBeam->b = (float)b;
+	pBeam->brightness = brightness;
 }
 
 static qboolean ComputeBeamEntPosition( int beamEnt, vec3_t pt )
@@ -269,7 +256,6 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 		vec3_t	vPoint1, vPoint2;
 	
 		ASSERT( noiseIndex < ( NOISE_DIVISIONS << 16 ));
-		nextSeg.alpha = 1.0f;
 
 		fraction = i * div;
 
@@ -350,12 +336,12 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 			VectorMA( curSeg.pos, ( curSeg.width * 0.5f ), vAveNormal, vPoint1 );
 			VectorMA( curSeg.pos, (-curSeg.width * 0.5f ), vAveNormal, vPoint2 );
 
-			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
+			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], 1.0f );
 			pglTexCoord2f( 0.0f, curSeg.texcoord );
 			pglNormal3fv( vAveNormal );
 			pglVertex3fv( vPoint1 );
 
-			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
+			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], 1.0f );
 			pglTexCoord2f( 1.0f, curSeg.texcoord );
 			pglNormal3fv( vAveNormal );
 			pglVertex3fv( vPoint2 );
@@ -371,12 +357,12 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 			VectorMA( curSeg.pos, (-curSeg.width * 0.5f ), vLastNormal, vPoint2 );
 
 			// specify the points.
-			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
+			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], 1.0f );
 			pglTexCoord2f( 0.0f, curSeg.texcoord );
 			pglNormal3fv( vLastNormal );
 			pglVertex3fv( vPoint1 );
 
-			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], curSeg.alpha );
+			pglColor4f( curSeg.color[0], curSeg.color[1], curSeg.color[2], 1.0f );
 			pglTexCoord2f( 1.0f, curSeg.texcoord );
 			pglNormal3fv( vLastNormal );
 			pglVertex3fv( vPoint2 );
@@ -1442,10 +1428,10 @@ void CL_DrawBeam( BEAM *pbeam )
 		pStart = CL_GetBeamEntityByIndex( pbeam->startEntity ); 
 		if( pStart && pStart->curstate.rendermode != kRenderNormal )
 			pbeam->brightness = pStart->curstate.renderamt;
-	}
 
-	VectorScale( color, ( pbeam->brightness / 255.0f ), color );
-	VectorScale( color, ( 1.0f / 255.0f ), color );
+		VectorScale( color, ( pbeam->brightness / 255.0f ), color );
+		VectorScale( color, ( 1.0f / 255.0f ), color );
+	}
 
 	switch( pbeam->type )
 	{
@@ -1514,9 +1500,9 @@ void CL_DrawCustomBeam( cl_entity_t *pbeam )
 	beam.width = pbeam->curstate.scale;
 	beam.amplitude = (float)(pbeam->curstate.body * 0.1f);
 	beam.brightness = pbeam->curstate.renderamt;
-	beam.r = pbeam->curstate.rendercolor.r;
-	beam.g = pbeam->curstate.rendercolor.g;
-	beam.b = pbeam->curstate.rendercolor.b;
+	beam.r = pbeam->curstate.rendercolor.r / 255.0f;
+	beam.g = pbeam->curstate.rendercolor.g / 255.0f;
+	beam.b = pbeam->curstate.rendercolor.b / 255.0f;
 	beam.flags = 0;
 
 	VectorSubtract( beam.target, beam.source, beam.delta );
@@ -1982,9 +1968,9 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		life = (float)(MSG_ReadByte( msg ) * 0.1f);
 		width = (float)(MSG_ReadByte( msg ) * 0.1f);
 		noise = (float)(MSG_ReadByte( msg ) * 0.1f);
-		r = (float)MSG_ReadByte( msg );
-		g = (float)MSG_ReadByte( msg );
-		b = (float)MSG_ReadByte( msg );
+		r = (float)MSG_ReadByte( msg ) / 255.0f;
+		g = (float)MSG_ReadByte( msg ) / 255.0f;
+		b = (float)MSG_ReadByte( msg ) / 255.0f;
 		brightness = (float)MSG_ReadByte( msg );
 		speed = (float)(MSG_ReadByte( msg ) * 0.1f);
 		CL_BeamPoints( start, end, modelIndex, life, width, noise, brightness, speed, startFrame,
@@ -2001,9 +1987,9 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		life = (float)(MSG_ReadByte( msg ) * 0.1f);
 		width = (float)(MSG_ReadByte( msg ) * 0.1f);
 		noise = (float)(MSG_ReadByte( msg ) * 0.01f);
-		r = (float)MSG_ReadByte( msg );
-		g = (float)MSG_ReadByte( msg );
-		b = (float)MSG_ReadByte( msg );
+		r = (float)MSG_ReadByte( msg ) / 255.0f;
+		g = (float)MSG_ReadByte( msg ) / 255.0f;
+		b = (float)MSG_ReadByte( msg ) / 255.0f;
 		brightness = (float)MSG_ReadByte( msg );
 		speed = (float)(MSG_ReadByte( msg ) * 0.1f);
 		CL_BeamEntPoint( startEnt, end, modelIndex, life, width, noise, brightness, speed, startFrame,
@@ -2031,9 +2017,9 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		life = (float)(MSG_ReadByte( msg ) * 0.1f);
 		width = (float)(MSG_ReadByte( msg ) * 0.1f);
 		noise = (float)(MSG_ReadByte( msg ) * 0.01f);
-		r = (float)MSG_ReadByte( msg );
-		g = (float)MSG_ReadByte( msg );
-		b = (float)MSG_ReadByte( msg );
+		r = (float)MSG_ReadByte( msg ) / 255.0f;
+		g = (float)MSG_ReadByte( msg ) / 255.0f;
+		b = (float)MSG_ReadByte( msg ) / 255.0f;
 		brightness = (float)MSG_ReadByte( msg );
 		speed = (float)(MSG_ReadByte( msg ) * 0.1f);
 		CL_BeamEnts( startEnt, endEnt, modelIndex, life, width, noise, brightness, speed, startFrame,
@@ -2068,9 +2054,9 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		life = (float)(MSG_ReadByte( msg ) * 0.1f);
 		width = (float)MSG_ReadByte( msg );
 		noise = (float)(MSG_ReadByte( msg ) * 0.1f);
-		r = (float)MSG_ReadByte( msg );
-		g = (float)MSG_ReadByte( msg );
-		b = (float)MSG_ReadByte( msg );
+		r = (float)MSG_ReadByte( msg ) / 255.0f;
+		g = (float)MSG_ReadByte( msg ) / 255.0f;
+		b = (float)MSG_ReadByte( msg ) / 255.0f;
 		brightness = (float)MSG_ReadByte( msg );
 		speed = (float)(MSG_ReadByte( msg ) * 0.1f);
 		CL_BeamCirclePoints( beamType, start, end, modelIndex, life, width, noise, brightness, speed,
@@ -2096,9 +2082,9 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		life = (float)(MSG_ReadByte( msg ) * 0.1f);
 		width = (float)(MSG_ReadByte( msg ) * 0.1f);
 		noise = (float)(MSG_ReadByte( msg ) * 0.1f);
-		r = (float)MSG_ReadByte( msg );
-		g = (float)MSG_ReadByte( msg );
-		b = (float)MSG_ReadByte( msg );
+		r = (float)MSG_ReadByte( msg ) / 255.0f;
+		g = (float)MSG_ReadByte( msg ) / 255.0f;
+		b = (float)MSG_ReadByte( msg ) / 255.0f;
 		brightness = (float)MSG_ReadByte( msg );
 		speed = (float)(MSG_ReadByte( msg ) * 0.1f);
 		CL_BeamRing( startEnt, endEnt, modelIndex, life, width, noise, brightness, speed, startFrame,

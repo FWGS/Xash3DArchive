@@ -67,6 +67,8 @@ GNU General Public License for more details.
 #define PARM_REBUILD_GAMMA	31	// if true lightmaps rebuilding for gamma change
 #define PARM_DEDICATED_SERVER	32
 #define PARM_SURF_SAMPLESIZE	33	// lightmap resolution per face (second arg interpret as facenumber)
+#define PARM_GL_CONTEXT_TYPE	34	// opengl or opengles
+#define PARM_GLES_WRAPPER	35	//
 
 enum
 {
@@ -111,6 +113,19 @@ typedef enum
 	TF_NOCOMPARE	= (1<<27),	// disable comparing for depth textures
 	TF_ARB_16BIT	= (1<<28),	// keep image as 16-bit (not 24)
 } texFlags_t;
+
+typedef enum
+{
+	CONTEXT_TYPE_GL = 0,
+	CONTEXT_TYPE_GLES_1_X,
+	CONTEXT_TYPE_GLES_2_x
+} gl_context_type_t;
+
+typedef enum
+{
+	GLES_WRAPPER_NONE = 0,		// native GLES
+	GLES_WRAPPER_NANOGL,		// used on GLES platforms
+} gles_wrapper_t;
 
 typedef struct beam_s BEAM;
 typedef struct particle_s particle_t;
@@ -194,11 +209,11 @@ typedef struct render_api_s
 	void		(*GL_TexGen)( unsigned int coord, unsigned int mode );
 	void		(*GL_TextureTarget)( unsigned int target ); // change texture unit mode without bind texture
 	void		(*GL_TexCoordArrayMode)( unsigned int texmode );
+	void*		(*GL_GetProcAddress)( const char *name );
 	void		(*GL_Reserved0)( void );	// for potential interface expansion without broken compatibility
 	void		(*GL_Reserved1)( void );
 	void		(*GL_Reserved2)( void );
-	void		(*GL_Reserved3)( void );
-		
+
 	// Misc renderer functions
 	void		(*GL_DrawParticles)( const float *vieworg, const float *fwd, const float *rt, const float *up, unsigned int clipFlags );
 	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot, int shotsize ); // creates a cubemap or skybox into gfx\env folder

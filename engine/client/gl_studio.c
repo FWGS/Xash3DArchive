@@ -258,10 +258,22 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
 
 	// rotate the bounding box
 	VectorCopy( e->angles, angles );
-
+#if 0
 	if( e->player ) angles[PITCH] = 0.0f; // don't rotate player model, only aim
 	AngleVectors( angles, vectors[0], vectors[1], vectors[2] );
+#else
+	vectors[0][0] = g_rotationmatrix[0][0];
+	vectors[0][1] = g_rotationmatrix[1][0];
+	vectors[0][2] = g_rotationmatrix[2][0];
 
+	vectors[1][0] = g_rotationmatrix[0][1];
+	vectors[1][1] = g_rotationmatrix[1][1];
+	vectors[1][2] = g_rotationmatrix[2][1];
+
+	vectors[2][0] = g_rotationmatrix[0][2];
+	vectors[2][1] = g_rotationmatrix[1][2];
+	vectors[2][2] = g_rotationmatrix[2][2];
+#endif
 	// compute a full bounding box
 	for( i = 0; i < 8; i++ )
 	{
@@ -271,7 +283,7 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
 
 		// rotate by YAW
 		p2[0] = DotProduct( p1, vectors[0] );
-		p2[1] = DotProduct( p1, vectors[1] );
+		p2[1] = -DotProduct( p1, vectors[1] );
 		p2[2] = DotProduct( p1, vectors[2] );
 
 		if( bbox ) VectorAdd( p2, e->origin, bbox[i] );
