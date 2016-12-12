@@ -139,6 +139,9 @@ int CL_InterpolateModel( cl_entity_t *e )
 	if( cl.predicted.moving && cl.predicted.onground == e->index )
 		return 1;
 
+	if( e->curstate.starttime != 0.0f && e->curstate.impacttime != 0.0f )
+		return 1;	// don't interpolate parametric entities
+
 	t = cl.time - cl_interp->value;
 
 	CL_FindInterpolationUpdates( e, t, &ph0, &ph1, NULL );
@@ -1159,7 +1162,7 @@ void CL_AddPacketEntities( frame_t *frame )
 			continue;
 
 		if( clgame.dllFuncs.pfnInterpolateEntity != NULL )
-			clgame.dllFuncs.pfnInterpolateEntity( ent );
+			clgame.dllFuncs.pfnInterpolateEntity( ent, cl.lerpFrac );
 		else CL_UpdateEntityFields( ent );
 
 		if( ent->player ) entityType = ET_PLAYER;

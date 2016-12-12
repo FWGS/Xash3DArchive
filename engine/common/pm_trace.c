@@ -117,7 +117,8 @@ hull_t *PM_HullForBsp( physent_t *pe, playermove_t *pmove, float *offset )
 {
 	hull_t	*hull;
 
-	ASSERT( pe && pe->model != NULL );
+	Assert( pe != NULL );
+	Assert( pe->model != NULL );
 
 	switch( pmove->usehull )
 	{
@@ -135,7 +136,7 @@ hull_t *PM_HullForBsp( physent_t *pe, playermove_t *pmove, float *offset )
 		break;
 	}
 
-	ASSERT( hull != NULL );
+	Assert( hull != NULL );
 
 	// force to use hull0 because other hulls doesn't exist for water
 	if( pe->model->flags & MODEL_LIQUID && pe->solid != SOLID_TRIGGER )

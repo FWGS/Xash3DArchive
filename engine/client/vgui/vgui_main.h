@@ -163,7 +163,6 @@ protected:
 	int _drawTextPos[2];
 	int _drawColor[4];
 	int _drawTextColor[4];
-	bool _allowSetTextPos;
 	friend class App;
 	friend class Panel;
 };

@@ -65,7 +65,7 @@ typedef struct cldll_func_s
 	int	(*pfnGetRenderInterface)( int version, render_api_t *renderfuncs, render_interface_t *callback );
 	void	(*pfnClipMoveToEntity)( struct physent_s *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, struct pmtrace_s *tr );
 	void	(*pfnUpdateEntityState)( cl_entity_t *ent, entity_state_t *newstate, int noInterp ); // custom interp
-	void	(*pfnInterpolateEntity)( cl_entity_t *ent );
+	void	(*pfnInterpolateEntity)( cl_entity_t *ent, float lerpFrac );
 } cldll_func_t;
 
 #endif//CDLL_EXP_H

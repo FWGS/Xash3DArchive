@@ -275,8 +275,8 @@ void MSG_WriteBitFloat( sizebuf_t *sb, float val )
 {
 	long	intVal;
 
-	ASSERT( sizeof( long ) == sizeof( float ));
-	ASSERT( sizeof( float ) == 4 );
+	Assert( sizeof( long ) == sizeof( float ));
+	Assert( sizeof( float ) == 4 );
 
 	intVal = *((long *)&val );
 	MSG_WriteUBitLong( sb, intVal, 32 );
@@ -368,7 +368,7 @@ uint MSG_ReadUBitLong( sizebuf_t *sb, int numbits )
 		return 0;
 	}
 
-	ASSERT( numbits > 0 && numbits <= 32 );
+	Assert( numbits > 0 && numbits <= 32 );
 
 	// Read the current dword.
 	idword1 = sb->iCurBit >> 5;
@@ -401,8 +401,8 @@ float MSG_ReadBitFloat( sizebuf_t *sb )
 	long	val;
 	int	bit, byte;
 
-	ASSERT( sizeof( float ) == sizeof( long ));
-	ASSERT( sizeof( float ) == 4 );
+	Assert( sizeof( float ) == sizeof( long ));
+	Assert( sizeof( float ) == 4 );
 
 	if( MSG_Overflow( sb, 32 ))
 		return 0.0f;
@@ -547,7 +547,8 @@ dword MSG_ReadDword( sizebuf_t *sb )
 float MSG_ReadFloat( sizebuf_t *sb )
 {
 	float	ret;
-	ASSERT( sizeof( ret ) == 4 );
+
+	Assert( sizeof( ret ) == 4 );
 
 	MSG_ReadBits( sb, &ret, 32 );
 

@@ -386,6 +386,7 @@ file_t *FS_OpenFile( const char *path, long *filesizeptr, qboolean gamedironly )
 byte *FS_LoadFile( const char *path, long *filesizeptr, qboolean gamedironly );
 qboolean FS_WriteFile( const char *filename, const void *data, long len );
 qboolean COM_ParseVector( char **pfile, float *v, size_t size );
+void COM_NormalizeAngles( vec3_t angles );
 int COM_FileSize( const char *filename );
 void COM_FixSlashes( char *pname );
 void COM_FreeFile( void *buffer );

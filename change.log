@@ -1,3 +1,59 @@
+build 3597
+
+Engine: implemenantion of generic extension of BSP file format. Some extra lumps used by mods to get a new features like terrains, improved lighting etc
+Engine: rewrite PVS system for variable PVS radius that can be used as FAT pvs or FAT phs without recalculating vis-array
+Engine: starting to implement a new global feature that called HOST_FIXED_FRAMERATE to get client and server with constant fps (xash-based mods only)
+Render: some unsed funcs from RenderAPI was replaced with usefully funcs. Backward compatibility stay keep on
+Render: added few function in RenderAPI for SDLash3D by Albatross request
+Render: get support for loading multi-layered textures (for potential landscape implemenantion)
+Client: added two funcs into engine interface for custom interpolation on the client
+Server: allow to write map lums on a server to store userdata (physic collision, ai nodegraph as example). Works with extended BSP format only
+Server: physic interface was updated and expanded to get more control over player and entities simulation
+Client: demo protocol was changed to 2 ( allow comment in demo header)
+Client: demo playing is now using interpolation of client view angles
+Client: fixup some issues on demo playback
+Client: fix broken parametric entities (rockets in TFC as example) in multiplayer
+Client: net graph implementation like in GoldSrc
+Client: fixup ugly "un-duck" effect while after changing level (see for example transition from c0a0b to c0a0c)
+Client: clean-up and rewrite predicting code to get more compatibility for original prediction
+Client: handle colon separately for client version of COM_ParseFile (like in goldsrc)
+Client: finalize NETAPI. Now it can handle servers list from a master server (and display on a built-in client browser of course)
+GameUI: fixup color-strings that sended across network as server names or player names
+Client: texturebrower and overview mode now is not affected to player moving in world
+Client: accumulate pmove entities right after handling delta's not after world rendering
+Client: change master server address and request to actual
+Client: exclude dead bodies from solid objects in pmove processing
+Engine: fixup wad parsing from "wad" string in worldspawn settings (broken in previous version)
+Client: new style of displaying FPS counter
+Network: remove compression routine (very low efficiency)
+Client: fix muzzleflashes decoding from an studio animation event
+Engine: fix crash\hanging while trying to play AVI-file when codec is not-installed
+Client: change color handle for viewbeams (remove color normalization)
+Render: rewrite waves on water surfaces, uses table sin, increase speed and look close GoldSrc
+Render: completely rewrite texture loader, remove obsolete code, added support for multi-layered textures and float textures, fix errors
+Render: now "gl_texturemode" is obsolete and removed. Use "gl_texture_nearest" cvar instead
+Render: improved doble-cloud layering sky for Quake. reduce parallax distorsion
+Render: completely rewrite OpenGL loader. Remove obsolete extensions, fixup some errors
+Render: moved lightstyle animation from render frame loop to client frame loop (to prevent execute lightstyle animation on multipass viewing)
+Client: fixup studio culling on models with non-default scaling (large models in SoHL)
+Sound: change DSP code to get DSP effects like in original GoldSrc
+Sound: rewite sound PHS code. Now it can be useful
+Sound: first implenantion of raw-channels manager (in future this will be used for a custom video playing in xash-based mods and voice stream)
+Sound: sentence sounds now can be freed after playing (and saves some memory)
+Client: get VGUI backend to implement of lastest version of vgui.dll
+Engine: sort commands and cvars in alpha-bethical order. Include scripting functions from SDLash3D
+Console: now map list show an extension or type of various map and mapstats check level for transparent water support
+Console: replace the console buffer with effectively circular buffer (up to 1mb messages)
+FS: do complete revision of filesystem code, remove WAD2 support
+ImageLib: fix crash in quantizer while image is completely black
+Server: ignore sounds from pmove code when prediction is enabled
+Server: change userinfo handling, fixup info send to all the clients
+Server: fixup player animtion timings
+Server: enable cl_msglevel to filter up unneeded messages
+Server: restart server right if circular buffer pointer was exceeded 32-bit limit value
+Server: fixup player think timings
+    
+
 build 3366
 
 Render: get support for custom DXT encoding (custom renderers only)

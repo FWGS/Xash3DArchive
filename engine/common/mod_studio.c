@@ -208,8 +208,6 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 	mstudiobbox_t	*phitbox;
 	int		i, j;
 
-	ASSERT( numhitboxes );
-
 	*numhitboxes = 0; // assume error
 
 	if( mod_studiocache->integer )
@@ -229,8 +227,6 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 
 	mod_studiohdr = Mod_Extradata( model );
 	if( !mod_studiohdr ) return NULL; // probably not a studiomodel
-
-	ASSERT( pBlendAPI != NULL );
 
 	VectorCopy( angles, angles2 );
 
@@ -745,8 +741,6 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *origin, 
 	if( mod_studiohdr->numattachments <= 0 )
 		return;
 
-	ASSERT( pBlendAPI != NULL );
-
 	if( mod_studiohdr->numattachments > MAXSTUDIOATTACHMENTS )
 	{
 		mod_studiohdr->numattachments = MAXSTUDIOATTACHMENTS; // reduce it
@@ -793,8 +787,6 @@ void Mod_GetBonePosition( const edict_t *e, int iBone, float *origin, float *ang
 	mod = Mod_Handle( e->v.modelindex );
 	mod_studiohdr = (studiohdr_t *)Mod_Extradata( mod );
 	if( !mod_studiohdr ) return;
-
-	ASSERT( pBlendAPI != NULL );
 
 	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, e->v.angles, e->v.origin,
 		e->v.controller, e->v.blending, iBone, e );

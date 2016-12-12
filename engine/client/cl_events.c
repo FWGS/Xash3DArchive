@@ -400,7 +400,9 @@ void CL_ParseEvent( sizebuf_t *msg )
 				if( VectorIsNull( args.velocity ))
 					VectorCopy( state->velocity, args.velocity );
 			}
-		}
+          
+ 			COM_NormalizeAngles( args.angles );
+ 		}
 		else if( state )
 		{
 			if( VectorIsNull( args.origin ))

@@ -389,8 +389,11 @@ void SV_ActivateServer( void )
 		// listenserver is executed on every map change in multiplayer
 		if( host.type != HOST_DEDICATED )
 		{
+#if 0
+			// temporare disable because it's broken TFC multiplayer
 			char *plservercfgfile = Cvar_VariableString( "lservercfgfile" );
 			if( *plservercfgfile ) Cbuf_AddText( va( "exec %s\n", plservercfgfile ));
+#endif
 		}
 
 		if( public_server->integer )

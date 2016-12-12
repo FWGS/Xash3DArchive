@@ -231,7 +231,8 @@ generic method to fill rectangle
 */
 void VGUI_DrawQuad( const vpoint_t *ul, const vpoint_t *lr )
 {
-	ASSERT( ul != NULL && lr != NULL );
+	Assert( ul != NULL );
+	Assert( lr != NULL );
 
 	pglBegin( GL_QUADS );
 		pglTexCoord2f( ul->coord[0], ul->coord[1] );

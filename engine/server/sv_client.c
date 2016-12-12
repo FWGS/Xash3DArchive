@@ -881,7 +881,7 @@ void SV_EstablishTimeBase( sv_client_t *cl, usercmd_t *cmds, int dropped, int nu
 	for( ; numcmds > 0; numcmds-- )
 		runcmd_time += cmds[numcmds - 1].msec / 1000.0;
 
-	cl->timebase = sv.time + cl->cl_updaterate - runcmd_time;
+	cl->timebase = sv.frametime + svgame.globals->time - runcmd_time;
 }
 
 /*

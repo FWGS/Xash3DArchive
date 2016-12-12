@@ -66,9 +66,9 @@ NetGraph_DrawLine
 CL_FillRGBA shortcut
 ==========
 */
-static void NetGraph_DrawRect( wrect_t *rect, byte colors[3], byte alpha )
+static void NetGraph_DrawRect( wrect_t *rect, byte colors[4] )
 {
-	CL_FillRGBA( rect->left, rect->top, rect->right, rect->bottom, colors[0], colors[1], colors[2], alpha );
+	CL_FillRGBA( rect->left, rect->top, rect->right, rect->bottom, colors[0], colors[1], colors[2], colors[3] );
 }
 
 /*
@@ -106,11 +106,12 @@ NetGraph_GetFrameData
 get frame data info, like chokes, packet losses, also update graph, packet and cmdinfo
 ==========
 */
-void NetGraph_GetFrameData( int *choke_count, int *loss_count, int *biggest_message, float *latency, int *latency_count )
+void NetGraph_GetFrameData( int *biggest_message, float *latency, int *latency_count )
 {
-	int i;
+	int	i, choke_count = 0, loss_count = 0;
+	float	loss, choke;
 
-	*choke_count = *loss_count = *biggest_message = *latency_count = 0;
+	*biggest_message = *latency_count = 0;
 	*latency = 0.0f;
 
 	for( i = cls.netchan.incoming_sequence - CL_UPDATE_BACKUP + 1; i <= cls.netchan.incoming_sequence; i++ )
@@ -121,21 +122,26 @@ void NetGraph_GetFrameData( int *choke_count, int *loss_count, int *biggest_mess
 
 		p->choked = f->receivedtime == -2.0f ? true : false;
 		if( p->choked )
-			(*choke_count)++;
+			choke_count++;
 
-		if( !f->valid || f->receivedtime == -2.0f )
+		if( !f->valid || f->receivedtime == -2.0 )
+		{
 			p->latency = 9998; // broken delta
-		else if( f->receivedtime == -1 )
+		}
+		else if( f->receivedtime == -1.0 )
+		{
 			p->latency = 9999; // dropped
+			loss_count++;
+		}
 		else
 		{
-			int frame_latency = min( 1.0f, f->latency );
+			int frame_latency = Q_min( 1.0f, f->latency );
 			p->latency = (( frame_latency + 0.1 ) / 1.1 ) * ( net_graphheight->value - NETGRAPH_LERP_HEIGHT - 2 );
 
 			if( i > cls.netchan.incoming_sequence - NUM_LATENCY_SAMPLES )
 			{
 				*latency += 1000.0f * f->latency;
-				(*latency_count)++;
+				latency_count++;
 			}
 		}
 
@@ -151,6 +157,14 @@ void NetGraph_GetFrameData( int *choke_count, int *loss_count, int *biggest_mess
 		netstat_cmdinfo[i & NET_TIMINGS_MASK].sent = cl.commands[i & CL_UPDATE_MASK].heldback ? false : true;
 		netstat_cmdinfo[i & NET_TIMINGS_MASK].size = cl.commands[i & CL_UPDATE_MASK].sendsize;
 	}
+
+	// packet loss
+	loss = 100.0 * (float)loss_count / CL_UPDATE_BACKUP;
+	packet_loss = PACKETLOSS_AVG_FRAC * packet_loss + ( 1.0 - PACKETLOSS_AVG_FRAC ) * loss;
+
+	// packet choke
+	choke = 100.0 * (float)choke_count / CL_UPDATE_BACKUP;
+	packet_choke = PACKETCHOKE_AVG_FRAC * packet_choke + ( 1.0 - PACKETCHOKE_AVG_FRAC ) * choke;
 }
 
 /*
@@ -159,10 +173,10 @@ NetGraph_DrawTimes
 
 ===========
 */
-void NetGraph_DrawTimes( wrect_t rect, struct cmdinfo_t *cmdinfo, int x, int w )
+void NetGraph_DrawTimes( wrect_t rect, int x, int w )
 {
 	int	i, j, extrap_point = NETGRAPH_LERP_HEIGHT / 3, a, h;
-	POINT	pt = { max( x + w - 1 - 25, 1 ), max( rect.top + rect.bottom - 4 - NETGRAPH_LERP_HEIGHT + 1, 1 ) };
+	POINT	pt = { Q_max( x + w - 1 - 25, 1 ), Q_max( rect.top + rect.bottom - 4 - NETGRAPH_LERP_HEIGHT + 1, 1 ) };
 	rgba_t	colors = { 0.9 * 255, 0.9 * 255, 0.7 * 255, 255 };
 	wrect_t	fill;
 
@@ -171,7 +185,7 @@ void NetGraph_DrawTimes( wrect_t rect, struct cmdinfo_t *cmdinfo, int x, int w )
 	for( a = 0; a < w; a++ )
 	{
 		i = ( cls.netchan.outgoing_sequence - a ) & NET_TIMINGS_MASK;
-		h = ( cmdinfo[i].cmd_lerp / 3.0f ) * NETGRAPH_LERP_HEIGHT;
+		h = ( netstat_cmdinfo[i].cmd_lerp / 3.0f ) * NETGRAPH_LERP_HEIGHT;
 
 		fill.left = x + w - a - 1;
 		fill.right = fill.bottom = 1;
@@ -186,7 +200,8 @@ void NetGraph_DrawTimes( wrect_t rect, struct cmdinfo_t *cmdinfo, int x, int w )
 
 			for( j = start; j < h; j++ )
 			{
-				NetGraph_DrawRect( &fill, netcolors[j + extrap_point], 255 );
+				memcpy( colors, netcolors[j + extrap_point], sizeof( byte ) * 3 );
+				NetGraph_DrawRect( &fill, colors );
 				fill.top--;
 			}
 		}
@@ -199,7 +214,8 @@ void NetGraph_DrawTimes( wrect_t rect, struct cmdinfo_t *cmdinfo, int x, int w )
 
 			for( j = 0; j < h; j++ )
 			{
-				NetGraph_DrawRect( &fill, netcolors[j + oldh], 255 );
+				memcpy( colors, netcolors[j + oldh], sizeof( byte ) * 3 );
+				NetGraph_DrawRect( &fill, colors );
 				fill.top--;
 			}
 		}
@@ -210,7 +226,7 @@ void NetGraph_DrawTimes( wrect_t rect, struct cmdinfo_t *cmdinfo, int x, int w )
 
 		fill.top = rect.top + rect.bottom - 3;
 
-		if( !cmdinfo[i].sent )
+		if( !netstat_cmdinfo[i].sent )
 			CL_FillRGBA( fill.left, fill.top, fill.right, fill.bottom, 255, 0, 0, 255 );
 	}
 }
@@ -239,25 +255,22 @@ NetGraph_DrawTextFields
 
 ===========
 */
-void NetGraph_DrawTextFields( int x, int y, int count, float avg, float *framerate, int packet_loss, int packet_choke )
+void NetGraph_DrawTextFields( int x, int y, int count, float avg, int packet_loss, int packet_choke )
 {
-	static int lastout;
-	float latency;
-	rgba_t colors = { 0.9 * 255, 0.9 * 255, 0.7 * 255, 255 };
+	static int	lastout;
+	rgba_t		colors = { 0.9 * 255, 0.9 * 255, 0.7 * 255, 255 };
+	int		i = ( cls.netchan.outgoing_sequence - 1 ) & NET_TIMINGS_MASK;
+	float		latency = count > 0 ? Q_max( 0,  avg / count - 0.5 * host.frametime - 1000.0 / cl_updaterate->value ) : 0;
+	float		framerate = 1.0 / host.realframetime;
 
-
-	latency = count > 0 ? max( 0,  avg / count - 0.5 * host.frametime - 1000.0 / cl_updaterate->value ) : 0;
-
-	*framerate = 0.5 * host.realframetime + 0.5 * *framerate;
-
-	Con_DrawString( x, y - net_graphheight->integer, va( "%.1ffps" , 0.5 / *framerate ), colors );
+	Con_DrawString( x, y - net_graphheight->integer, va( "%.1ffps" , framerate ), colors );
 	Con_DrawString( x + 75, y - net_graphheight->integer, va( "%i ms" , (int)latency ), colors );
 	Con_DrawString( x + 150, y - net_graphheight->integer, va( "%i/s" , cl_updaterate->integer ), colors );
 
-	if( netstat_cmdinfo[( cls.netchan.outgoing_sequence - 1 ) & NET_TIMINGS_MASK].size )
-		lastout = netstat_cmdinfo[( cls.netchan.outgoing_sequence - 1 ) & NET_TIMINGS_MASK].size;
+	if( netstat_cmdinfo[i].size )
+		lastout = netstat_cmdinfo[i].size;
 
-	Con_DrawString( x, y - net_graphheight->integer + 15, va( "in :  %i %.2f k/s", netstat_graph[cls.netchan.incoming_sequence & NET_TIMINGS_MASK].msgbytes, cls.netchan.flow[FLOW_INCOMING].avgkbytespersec ), colors );
+	Con_DrawString( x, y - net_graphheight->integer + 15, va( "in :  %i %.2f k/s", netstat_graph[i].msgbytes, cls.netchan.flow[FLOW_INCOMING].avgkbytespersec ), colors );
 
 	Con_DrawString( x, y - net_graphheight->integer + 30, va( "out:  %i %.2f k/s", lastout, cls.netchan.flow[FLOW_OUTGOING].avgkbytespersec ), colors );
 
@@ -272,19 +285,20 @@ NetGraph_DrawDataSegment
 
 ===========
 */
-int NetGraph_DrawDataSegment( wrect_t *fill, int bytes, byte r, byte g, byte b, byte alpha )
+int NetGraph_DrawDataSegment( wrect_t *fill, int bytes, byte r, byte g, byte b, byte a )
 {
 	int h = bytes / net_scale->value;
-	byte colors[3] = { r, g, b };
+	byte colors[4] = { r, g, b, a };
+
 	fill->top -= h;
+
 	if( net_graphfillsegments->integer )
 		fill->bottom = h;
-	else
-		fill->bottom = 1;
+	else fill->bottom = 1;
 
 	if( fill->top > 1 )
 	{
-		NetGraph_DrawRect( fill, colors, alpha );
+		NetGraph_DrawRect( fill, colors );
 		return 1;
 	}
 	return 0;
@@ -297,36 +311,31 @@ NetGraph_ColorForHeight
 color based on packet latency
 ===========
 */
-void NetGraph_ColorForHeight( struct packet_latency_t *packet, byte color[3], byte *alpha, int *ping )
+void NetGraph_ColorForHeight( struct packet_latency_t *packet, byte color[4], int *ping )
 {
 	switch( packet->latency )
 	{
 	case 9999:
-		memcpy( color, netcolors[0], sizeof( byte ) * 3 ); // dropped
+		memcpy( color, netcolors[0], sizeof( byte ) * 4 ); // dropped
 		*ping = 0;
-		*alpha = netcolors[0][3];
 		break;
 	case 9998:
-		memcpy( color, netcolors[1], sizeof( byte ) * 3 ); // invalid
-		*alpha = netcolors[1][3];
+		memcpy( color, netcolors[1], sizeof( byte ) * 4 ); // invalid
 		*ping = 0;
 		break;
 	case 9997:
-		memcpy( color, netcolors[2], sizeof( byte ) * 3 ); // skipped
-		*alpha = netcolors[2][3];
+		memcpy( color, netcolors[2], sizeof( byte ) * 4 ); // skipped
 		*ping = 0;
 		break;
 	default:
 		*ping = 1;
 		if( packet->choked )
 		{
-			memcpy( color, netcolors[3], sizeof( byte ) * 3 );
-			*alpha = netcolors[3][3];
+			memcpy( color, netcolors[3], sizeof( byte ) * 4 );
 		}
 		else
 		{
-			memcpy( color, netcolors[4], sizeof( byte ) * 3 );
-			*alpha = netcolors[4][3];
+			memcpy( color, netcolors[4], sizeof( byte ) * 4 );
 		}
 	}
 }
@@ -340,15 +349,15 @@ NetGraph_DrawDataUsage
 void NetGraph_DrawDataUsage( int x, int y, int w, int maxmsgbytes )
 {
 	int	a, i, h, lastvalidh = 0, ping;
-	byte	color[3], alpha;
 	wrect_t	fill = { 0 };
+	byte	color[4];
 
 	for( a = 0; a < w; a++ )
 	{
 		i = (cls.netchan.incoming_sequence - a) & NET_TIMINGS_MASK;
 		h = netstat_packet_latency[i].latency;
 
-		NetGraph_ColorForHeight( &netstat_packet_latency[i], color, &alpha, &ping );
+		NetGraph_ColorForHeight( &netstat_packet_latency[i], color, &ping );
 
 		if( !ping ) h = lastvalidh;
 		else lastvalidh = h;
@@ -361,23 +370,23 @@ void NetGraph_DrawDataUsage( int x, int y, int w, int maxmsgbytes )
 		fill.right = 1;
 		fill.bottom = ping ? 1: h;
 
-		NetGraph_DrawRect( &fill, color, alpha );
+		NetGraph_DrawRect( &fill, color );
 
 		fill.top = y;
 		fill.bottom = 1;
 
-		color[0] = 0; color[1] = 255; color[2] = 0;
+		color[0] = 0; color[1] = 255; color[2] = 0; color[3] = 160;
 
-		NetGraph_DrawRect( &fill, color, 160 );
+		NetGraph_DrawRect( &fill, color );
 
 		if( net_graph->integer < 2 )
 			continue;
 
 		fill.top = y - net_graphheight->value - 1;
 		fill.bottom = 1;
-		color[0] = color[1] = color[2] = 255;
+		color[0] = color[1] = color[2] = color[3] = 255;
 
-		NetGraph_DrawRect( &fill, color, 255 );
+		NetGraph_DrawRect( &fill, color );
 
 		fill.top -= 1;
 
@@ -405,24 +414,54 @@ void NetGraph_DrawDataUsage( int x, int y, int w, int maxmsgbytes )
 		if( !NetGraph_DrawDataSegment( &fill, netstat_graph[i].usr, 200, 200, 200, 128 ))
 			continue;
 
-		// special case for maximum usage
+		// special case for absolute usage
 		h = netstat_graph[i].msgbytes / net_scale->value;
 
-		color[0] = color[1] = color[2] = 240;
+		color[0] = color[1] = color[2] = 240; color[3] = 255;
 
-		if( net_graphfillsegments->integer )
-			fill.bottom = h;
-		else fill.bottom = 1;
-
+		fill.bottom = 1;
 		fill.top = y - net_graphheight->value - 1 - h;
 
 		if( fill.top < 2 ) continue;
 
-		NetGraph_DrawRect( &fill, color, 255 );
+		NetGraph_DrawRect( &fill, color );
 	}
 
 	if( net_graph->integer >= 2 )
 		NetGraph_DrawHatches( x, y - net_graphheight->value - 1, maxmsgbytes );
+}
+
+/*
+===========
+NetGraph_GetScreenPos
+
+===========
+*/
+void NetGraph_GetScreenPos( wrect_t *rect, int *w, int *x, int *y )
+{
+	rect->left = rect->top = 0;
+	rect->right = clgame.scrInfo.iWidth;
+	rect->bottom = clgame.scrInfo.iHeight;
+
+	*w = Q_min( NET_TIMINGS, net_graphwidth->integer );
+	if( rect->right < *w + 10 )
+		*w = rect->right - 10;
+
+	// detect x and y position
+	switch( net_graphpos->integer )
+	{
+	case 1: // right sided
+		*x = rect->left + rect->right - 5 - *w;
+		break;
+	case 2: // center
+		*x = rect->left + ( rect->right - 10 - *w ) / 2;
+		break;
+	default: // left sided
+		*x = rect->left + 5;
+		break;
+	}
+
+	*y = rect->bottom + rect->top - NETGRAPH_LERP_HEIGHT - 5;
 }
 
 /*
@@ -433,11 +472,11 @@ SCR_DrawNetGraph
 */
 void SCR_DrawNetGraph( void )
 {
-	wrect_t	rect = { 0, clgame.scrInfo.iWidth, 0, clgame.scrInfo.iHeight };
-	float	loss = 0, choke = 0, avg_ping = 0;
-	int	loss_count = 0, choke_count = 0, ping_count = 0, maxmsgbytes = 0;
-	int	w = min( NET_TIMINGS, net_graphwidth->integer ), x, y;
-	float	framerate = 0;
+	wrect_t	rect;
+	float	avg_ping;
+	int	ping_count;
+	int	maxmsgbytes;
+	int	w, x, y;
 
 	if( !net_graph->integer )
 		return;
@@ -445,41 +484,17 @@ void SCR_DrawNetGraph( void )
 	if( net_scale->value <= 0 )
 		Cvar_SetFloat( "net_scale", 0.1f );
 
-	if( rect.right < w + 10 )
-		w = rect.right - 10;
+	NetGraph_GetScreenPos( &rect, &w, &x, &y );
 
-	NetGraph_GetFrameData( &choke_count, &loss_count, &maxmsgbytes, &avg_ping, &ping_count );
-
-	// packet loss
-	loss = 100.0 * (float)loss_count / CL_UPDATE_BACKUP;
-	packet_loss = PACKETLOSS_AVG_FRAC * packet_loss + ( 1.0 - PACKETLOSS_AVG_FRAC ) * loss;
-
-	// packet choke
-	choke = 100.0 * (float)choke_count / CL_UPDATE_BACKUP;
-	packet_choke = PACKETCHOKE_AVG_FRAC * packet_choke + ( 1.0 - PACKETCHOKE_AVG_FRAC ) * choke;
-
-	// detect x and y position
-	switch( net_graphpos->integer )
-	{
-	case 1: // right sided
-		x = rect.left + rect.right - 5 - w;
-		break;
-	case 2: // center
-		x = rect.left + ( rect.right - 10 - w ) / 2;
-		break;
-	default: // left sided
-		x = rect.left + 5;
-		break;
-	}
-	y = rect.bottom + rect.top - NETGRAPH_LERP_HEIGHT - 5;
+	NetGraph_GetFrameData( &maxmsgbytes, &avg_ping, &ping_count );
 
 	if( net_graph->integer < 3 )
 	{
-		NetGraph_DrawTimes( rect, netstat_cmdinfo, x, w );
+		NetGraph_DrawTimes( rect, x, w );
 		NetGraph_DrawDataUsage( x, y, w, maxmsgbytes );
 	}
 
-	NetGraph_DrawTextFields( x, y, ping_count, avg_ping, &framerate, packet_loss, packet_choke );
+	NetGraph_DrawTextFields( x, y, ping_count, avg_ping, packet_loss, packet_choke );
 }
 
 void CL_InitNetgraph( void )

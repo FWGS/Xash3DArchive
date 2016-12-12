@@ -526,8 +526,6 @@ static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
 {
 	int	fontWidth;
 
-	ASSERT( font != NULL );
-
 	if( font->valid ) return; // already loaded
 
 	// loading conchars
@@ -1480,7 +1478,7 @@ void Field_DrawInputLine( int x, int y, field_t *edit )
 		drawLen = len - prestep;
 
 	// extract <drawLen> characters from the field at <prestep>
-	ASSERT( drawLen < MAX_SYSPATH );
+	drawLen = Q_min( drawLen, MAX_SYSPATH - 1 );
 
 	memcpy( str, edit->buffer + prestep, drawLen );
 	str[drawLen] = 0;

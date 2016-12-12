@@ -450,6 +450,25 @@ void COM_FreeFile( void *buffer )
 
 /*
 =============
+COM_NormalizeAngles
+
+=============
+*/
+void COM_NormalizeAngles( vec3_t angles )
+{
+	int i;
+
+	for( i = 0; i < 3; i++ )
+	{
+		if( angles[i] > 180.0f )
+			angles[i] -= 360.0f;
+		else if( angles[i] < -180.0f )
+			angles[i] += 360.0f;
+	}
+}
+
+/*
+=============
 pfnGetModelType
 
 =============

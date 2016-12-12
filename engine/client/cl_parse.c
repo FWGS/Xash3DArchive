@@ -1583,12 +1583,14 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_restoresound:
 			CL_ParseRestoreSoundPacket( msg );
+			cl.frames[cl.parsecountmod].graphdata.sound += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_spawnstatic:
 			CL_ParseStaticEntity( msg );
 			break;
 		case svc_ambientsound:
 			CL_ParseSoundPacket( msg, true );
+			cl.frames[cl.parsecountmod].graphdata.sound += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_crosshairangle:
 			CL_ParseCrosshairAngle( msg );

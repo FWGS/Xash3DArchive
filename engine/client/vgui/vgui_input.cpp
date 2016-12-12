@@ -217,9 +217,9 @@ KeyCode VGUI_MapKey( int keyCode )
 {
 	VGUI_InitKeyTranslationTable();
 
-	if( keyCode < 0 || keyCode >= sizeof( s_pVirtualKeyTrans ) / sizeof( s_pVirtualKeyTrans[0] ))
+	if( keyCode < 0 || keyCode >= ARRAYSIZE( s_pVirtualKeyTrans ))
 	{
-		Assert( false );
+		Assert( 0 );
 		return (KeyCode)-1;
 	}
 	else
@@ -238,11 +238,13 @@ LONG VGUI_SurfaceWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		return 0;
 
 	panel = (CEnginePanel *)VGui_GetPanel();
-	surface = panel->getSurfaceBase();
-	pApp = panel->getApp();
+	ASSERT( panel != NULL );
 
-	ASSERT( pApp != NULL );
+	surface = panel->getSurfaceBase();
 	ASSERT( surface != NULL );
+
+	pApp = panel->getApp();
+	ASSERT( pApp != NULL );
 
 	switch( uMsg )
 	{
@@ -284,7 +286,7 @@ LONG VGUI_SurfaceWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 		break;
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
-		if(!( lParam & ( 1 << 30 )))
+		if( !FBitSet( lParam, BIT( 30 )))
 			pApp->internalKeyPressed( VGUI_MapKey( wParam ), surface );
 		pApp->internalKeyTyped( VGUI_MapKey( wParam ), surface );
 		break;

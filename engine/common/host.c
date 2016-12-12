@@ -235,7 +235,7 @@ void Host_Exec_f( void )
 	}
 
 	// don't execute listenserver.cfg in singleplayer
-	if( !Q_stricmp( Cvar_VariableString( "lservercfgfile" ),  Cmd_Argv( 1 )))
+	if( !Q_stricmp( Cvar_VariableString( "lservercfgfile" ), Cmd_Argv( 1 )))
 	{
 		if( Cvar_VariableInteger( "maxplayers" ) == 1 )
 			return;
