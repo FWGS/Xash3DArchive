@@ -50,7 +50,7 @@ infotable	dlumpinfo_t[dwadinfo_t->numlumps]
 #define TYP_DDSTEX		65	// contain DDS texture
 #define TYP_GFXPIC		66	// menu or hud image (not contain mip-levels)
 #define TYP_MIPTEX		67	// quake1 and half-life in-game textures with four miplevels
-#define TYP_RAWDATA		68	// never was used but may contain any data
+#define TYP_SCRIPT		68	// contain script files
 #define TYP_COLORMAP2	69	// old stuff. build palette from LBM file (not used)
 #define TYP_QFONT		70	// half-life font (qfont_t)
 

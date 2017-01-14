@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include "cl_tent.h"
 #include "studio.h"
 #include "dlight.h"
+#include "sound.h"
 #include "input.h"
 
 #define MAX_FORWARD		6
@@ -883,7 +884,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 
 		oldframe = &cl.frames[oldpacket & CL_UPDATE_MASK];
 
-		if(( cls.next_client_entities - oldframe->first_entity ) > ( cls.num_client_entities - 128 ))
+		if(( cls.next_client_entities - oldframe->first_entity ) > ( cls.num_client_entities - NUM_PACKET_ENTITIES ))
 		{
 			MsgDev( D_NOTE, "CL_ParsePacketEntities: delta frame is too old (flush)\n");
 			Con_NPrintf( 2, "^3Warning:^1 delta frame is too old^7\n" );
@@ -1204,23 +1205,21 @@ void CL_AddEntities( void )
 //
 // sound engine implementation
 //
-qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, float *pradius )
+qboolean CL_GetEntitySpatialization( channel_t *ch )
 {
 	cl_entity_t	*ent;
 	qboolean		valid_origin;
 
-	ASSERT( origin != NULL );
+	if( ch->entnum == 0 ) return true; // static sound
 
-	if( entnum == 0 ) return true; // static sound
-
-	if(( entnum - 1 ) == cl.playernum )
+	if(( ch->entnum - 1 ) == cl.playernum )
 	{
-		VectorCopy( cl.frame.client.origin, origin );
+		VectorCopy( cl.frame.client.origin, ch->origin );
 		return true;
 	}
 
-	valid_origin = VectorIsNull( origin ) ? false : true;          
-	ent = CL_GetEntityByIndex( entnum );
+	valid_origin = VectorIsNull( ch->origin ) ? false : true;          
+	ent = CL_GetEntityByIndex( ch->entnum );
 
 	// entity is not present on the client but has valid origin
 	if( !ent || !ent->index ) return valid_origin;
@@ -1236,18 +1235,28 @@ qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, float *pradius )
 	if( ent->curstate.messagenum != cl.parsecount )
 		return valid_origin;
 #endif
+	ch->movetype = ent->curstate.movetype;
+
 	// setup origin
-	VectorAverage( ent->curstate.mins, ent->curstate.maxs, origin );
-	VectorAdd( origin, ent->curstate.origin, origin );
+	VectorAverage( ent->curstate.mins, ent->curstate.maxs, ch->origin );
+	VectorAdd( ch->origin, ent->curstate.origin, ch->origin );
+
+	// setup mins\maxs
+	// FIXME: should to expand them for rotating bmodels?
+	VectorAdd( ent->curstate.mins, ent->curstate.origin, ch->absmin );
+	VectorAdd( ent->curstate.maxs, ent->curstate.origin, ch->absmax );
 
 	// setup radius
-	if( pradius )
-	{
-		if( ent->model != NULL && ent->model->radius ) *pradius = ent->model->radius;
-		else *pradius = RadiusFromBounds( ent->curstate.mins, ent->curstate.maxs );
-	}
+	if( ent->model != NULL && ent->model->radius ) ch->radius = ent->model->radius;
+	else ch->radius = RadiusFromBounds( ent->curstate.mins, ent->curstate.maxs );
 
 	return true;
+}
+
+qboolean CL_GetMovieSpatialization( rawchan_t *ch )
+{
+	// UNDONE
+	return false;
 }
 
 void CL_ExtraUpdate( void )

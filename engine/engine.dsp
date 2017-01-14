@@ -64,12 +64,16 @@ SOURCE="$(InputPath)"
 BuildCmds= \
 	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Paranoia2\xash.dll" \
+	copy $(TargetDir)\xash.dll "D:\Area51\xash.dll" \
 	
 
 "D:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
 
 "D:\Paranoia2\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"D:\Area51\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
 # End Custom Build
 
@@ -108,12 +112,16 @@ SOURCE="$(InputPath)"
 BuildCmds= \
 	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Paranoia2\xash.dll" \
+	copy $(TargetDir)\xash.dll "D:\Area51\xash.dll" \
 	
 
 "D:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
 
 "D:\Paranoia2\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"D:\Area51\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
 # End Custom Build
 

@@ -768,7 +768,7 @@ void SV_Init( void )
 	Cvar_Get ("protocol", va( "%i", PROTOCOL_VERSION ), CVAR_INIT, "displays server protocol version" );
 	Cvar_Get ("defaultmap", "", CVAR_SERVERNOTIFY, "holds the multiplayer mapname" );
 	Cvar_Get ("showtriggers", "0", CVAR_LATCH, "debug cvar shows triggers" );
-	Cvar_Get ("sv_aim", "0", CVAR_ARCHIVE, "enable auto-aiming" );
+	Cvar_Get ("sv_aim", "0", CVAR_ARCHIVE|CVAR_SERVERNOTIFY, "enable auto-aiming" );
 	Cvar_Get ("mapcyclefile", "mapcycle.txt", 0, "name of multiplayer map cycle configuration file" );
 	Cvar_Get ("servercfgfile","server.cfg", 0, "name of dedicated server configuration file" );
 	Cvar_Get ("lservercfgfile","listenserver.cfg", 0, "name of listen server configuration file" );

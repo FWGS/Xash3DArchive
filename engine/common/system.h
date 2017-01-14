@@ -43,7 +43,7 @@ typedef vec_t		matrix4x4[4][4];
 
 #include "const.h"
 
-#define ASSERT( exp )	if(!( exp )) Sys_Break( "assert failed at %s:%i\n", __FILE__, __LINE__ )
+#define ASSERT( exp )	if(!( exp )) Sys_Error( "assert failed at %s:%i\n", __FILE__, __LINE__ )
 
 /*
 ========================================================================
@@ -74,7 +74,6 @@ char *Sys_GetClipboardData( void );
 char *Sys_GetCurrentUser( void );
 int Sys_CheckParm( const char *parm );
 void Sys_Error( const char *error, ... );
-void Sys_Break( const char *error, ... );
 qboolean Sys_LoadLibrary( dll_info_t *dll );
 void* Sys_GetProcAddress( dll_info_t *dll, const char* name );
 qboolean Sys_FreeLibrary( dll_info_t *dll );

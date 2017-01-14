@@ -21,6 +21,12 @@ GNU General Public License for more details.
 
 extern convar_t	*con_gamemaps;
 
+typedef struct autocomplete_list_s
+{
+	const char *name;
+	qboolean (*func)( const char *s, char *name, int length );
+} autocomplete_list_t;
+
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
 {
@@ -58,7 +64,8 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
-	Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length ) 
+		Q_strncpy( completedname, matchbuf, length );
 	if( t->numfilenames == 1 ) return true;
 
 	for( i = 0, nummaps = 0; i < t->numfilenames; i++ )
@@ -211,14 +218,15 @@ qboolean Cmd_GetDemoList( const char *s, char *completedname, int length )
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( t->numfilenames == 1 ) return true;
 
 	for( i = 0, numdems = 0; i < t->numfilenames; i++ )
 	{
-		const char *ext = FS_FileExtension( t->filenames[i] ); 
+		if( Q_stricmp( FS_FileExtension( t->filenames[i] ), "dem" ))
+			continue;
 
-		if( Q_stricmp( ext, "dem" )) continue;
 		FS_FileBase( t->filenames[i], matchbuf );
 		Msg( "%16s\n", matchbuf );
 		numdems++;
@@ -256,14 +264,15 @@ qboolean Cmd_GetMovieList( const char *s, char *completedname, int length )
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( t->numfilenames == 1 ) return true;
 
 	for(i = 0, nummovies = 0; i < t->numfilenames; i++)
 	{
-		const char *ext = FS_FileExtension( t->filenames[i] ); 
+		if( Q_stricmp( FS_FileExtension( t->filenames[i] ), "avi" ))
+			continue;
 
-		if( Q_stricmp( ext, "avi" )) continue;
 		FS_FileBase( t->filenames[i], matchbuf );
 		Msg( "%16s\n", matchbuf );
 		nummovies++;
@@ -302,7 +311,8 @@ qboolean Cmd_GetMusicList( const char *s, char *completedname, int length )
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( t->numfilenames == 1 ) return true;
 
 	for(i = 0, numtracks = 0; i < t->numfilenames; i++)
@@ -349,14 +359,15 @@ qboolean Cmd_GetSavesList( const char *s, char *completedname, int length )
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( t->numfilenames == 1 ) return true;
 
 	for( i = 0, numsaves = 0; i < t->numfilenames; i++ )
 	{
-		const char *ext = FS_FileExtension( t->filenames[i] ); 
+		if( Q_stricmp( FS_FileExtension( t->filenames[i] ), "sav" ))
+			continue;
 
-		if( Q_stricmp( ext, "sav" )) continue;
 		FS_FileBase( t->filenames[i], matchbuf );
 		Msg( "%16s\n", matchbuf );
 		numsaves++;
@@ -395,14 +406,15 @@ qboolean Cmd_GetConfigList( const char *s, char *completedname, int length )
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( t->numfilenames == 1 ) return true;
 
 	for( i = 0, numconfigs = 0; i < t->numfilenames; i++ )
 	{
-		const char *ext = FS_FileExtension( t->filenames[i] );
+		if( Q_stricmp( FS_FileExtension( t->filenames[i] ), "cfg" ))
+			continue;
 
-		if( Q_stricmp( ext, "cfg" )) continue;
 		FS_FileBase( t->filenames[i], matchbuf );
 		Msg( "%16s\n", matchbuf );
 		numconfigs++;
@@ -443,15 +455,16 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 
 	Q_strncpy( matchbuf, t->filenames[0] + Q_strlen( snddir ), MAX_STRING ); 
 	FS_StripExtension( matchbuf ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( t->numfilenames == 1 ) return true;
 
 	for(i = 0, numsounds = 0; i < t->numfilenames; i++)
 	{
 		const char *ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( !Q_stricmp( ext, "wav" ) || !Q_stricmp( ext, "mp3" ));
-		else continue;
+		if( Q_stricmp( ext, "wav" ) && Q_stricmp( ext, "mp3" ))
+			continue;
 
 		Q_strncpy( matchbuf, t->filenames[i] + Q_strlen(snddir), MAX_STRING ); 
 		FS_StripExtension( matchbuf );
@@ -493,14 +506,15 @@ qboolean Cmd_GetItemsList( const char *s, char *completedname, int length )
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( t->numfilenames == 1 ) return true;
 
 	for(i = 0, numitems = 0; i < t->numfilenames; i++)
 	{
-		const char *ext = FS_FileExtension( t->filenames[i] ); 
+		if( Q_stricmp( FS_FileExtension( t->filenames[i] ), "txt" ))
+			continue;
 
-		if( Q_stricmp( ext, "txt" )) continue;
 		FS_FileBase( t->filenames[i], matchbuf );
 		Msg( "%16s\n", matchbuf );
 		numitems++;
@@ -538,14 +552,15 @@ qboolean Cmd_GetCustomList( const char *s, char *completedname, int length )
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( t->numfilenames == 1 ) return true;
 
 	for(i = 0, numitems = 0; i < t->numfilenames; i++)
 	{
-		const char *ext = FS_FileExtension( t->filenames[i] ); 
+		if( Q_stricmp( FS_FileExtension( t->filenames[i] ), "hpk" ))
+			continue;
 
-		if( Q_stricmp( ext, "hpk" )) continue;
 		FS_FileBase( t->filenames[i], matchbuf );
 		Msg( "%16s\n", matchbuf );
 		numitems++;
@@ -592,7 +607,8 @@ qboolean Cmd_GetGamesList( const char *s, char *completedname, int length )
 
 	if( !numgamedirs ) return false;
 	Q_strncpy( matchbuf, gamedirs[0], MAX_STRING ); 
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( numgamedirs == 1 ) return true;
 
 	for( i = 0; i < numgamedirs; i++ )
@@ -649,7 +665,8 @@ qboolean Cmd_GetCDList( const char *s, char *completedname, int length )
 
 	if( !numcdcommands ) return false;
 	Q_strncpy( matchbuf, cdcommands[0], MAX_STRING );
-	if( completedname && length ) Q_strncpy( completedname, matchbuf, length );
+	if( completedname && length )
+		Q_strncpy( completedname, matchbuf, length );
 	if( numcdcommands == 1 ) return true;
 
 	for( i = 0; i < numcdcommands; i++ )
@@ -707,9 +724,10 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 		char		*ents = NULL, *pfile;
 		int		ver = -1, lumpofs = 0, lumplen = 0;
 		string		mapname, message, entfilename;
-		const char	*ext = FS_FileExtension( t->filenames[i] ); 
 
-		if( Q_stricmp( ext, "bsp" )) continue;
+		if( Q_stricmp( FS_FileExtension( t->filenames[i] ), "bsp" ))
+			continue;
+
 		f = FS_Open( t->filenames[i], "rb", onlyingamedir );
 		FS_FileBase( t->filenames[i], mapname );
 
@@ -841,6 +859,43 @@ autocomplete_list_t cmd_list[] =
 { "cd", Cmd_GetCDList },
 { NULL }, // termiantor
 };
+
+/*
+===============
+Cmd_CheckName
+
+compare first argument with string
+===============
+*/
+static qboolean Cmd_CheckName( const char *name )
+{
+	if( !Q_stricmp( Cmd_Argv( 0 ), name ))
+		return true;
+	if( !Q_stricmp( Cmd_Argv( 0 ), va( "\\%s", name )))
+		return true;
+	return false;
+}
+
+/*
+============
+Cmd_AutocompleteName
+
+Autocomplete filename
+for various cmds
+============
+*/
+qboolean Cmd_AutocompleteName( const char *source, char *buffer, size_t bufsize )
+{
+	autocomplete_list_t	*list;
+
+	for( list = cmd_list; list->name; list++ )
+	{
+		if( Cmd_CheckName( list->name ))
+			return list->func( source, buffer, bufsize ); 
+	}
+
+	return false;
+}
 
 /*
 ============

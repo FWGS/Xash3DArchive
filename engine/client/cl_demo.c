@@ -48,6 +48,7 @@ typedef struct
 	int		id;		// should be IDEM
 	int		dem_protocol;	// should be DEMO_PROTOCOL
 	int		net_protocol;	// should be PROTOCOL_VERSION
+	double		host_fps;		// fps for demo playing
 	char		mapname[64];	// name of map
 	char		comment[64];	// comment for demo
 	char		gamedir[64];	// name of game directory (FS_Gamedir())
@@ -158,6 +159,20 @@ overwrite host.realtime
 float CL_GetDemoPlaybackClock( void ) 
 {
 	return host.realtime + host.frametime;
+}
+
+/*
+====================
+CL_GetDemoFramerate
+
+overwrite host.frametime
+====================
+*/
+double CL_GetDemoFramerate( void )
+{
+	if( cls.demoplayback || cls.demorecording )
+		return demo.header.host_fps;
+	return 0.0;
 }
 
 /*
@@ -345,6 +360,9 @@ void CL_WriteDemoHeader( const char *name )
 	demo.header.id = IDEMOHEADER;
 	demo.header.dem_protocol = DEMO_PROTOCOL;
 	demo.header.net_protocol = PROTOCOL_VERSION;
+	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+		demo.header.host_fps = bound( HOST_MINFPS, HOST_FPS, HOST_MAXFPS );
+	else demo.header.host_fps = bound( HOST_MINFPS, host_maxfps->value, HOST_MAXFPS );
 	Q_strncpy( demo.header.mapname, clgame.mapname, sizeof( demo.header.mapname ));
 	Q_strncpy( demo.header.comment, clgame.maptitle, sizeof( demo.header.comment ));
 	Q_strncpy( demo.header.gamedir, FS_Gamedir(), sizeof( demo.header.gamedir ));
@@ -445,9 +463,10 @@ void CL_StopRecord( void )
 	cls.demorecording = false;
 	cls.demoname[0] = '\0';
 	gameui.globals->demoname[0] = '\0';
+	demo.header.host_fps = 0.0;
 
 	Msg( "Completed demo\n" );
-	MsgDev( D_INFO, "Recording time: %02d:%02d", (int)(cls.demotime / 60.0f ), (int)fmod( cls.demotime, 60.0f ));
+	MsgDev( D_INFO, "Recording time: %02d:%02d\n", (int)(cls.demotime / 60.0f ), (int)fmod( cls.demotime, 60.0f ));
 	cls.demotime = 0.0;
 }
 
@@ -699,7 +718,7 @@ reads demo data and write it to client
 */
 qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 {
-	long	curpos = 0;
+	size_t	curpos = 0, lastpos = 0;
 	float	fElapsedTime = 0.0f;
 	qboolean	swallowmessages = true;
 	byte	*userbuf = NULL;
@@ -750,6 +769,14 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 			}
 		}
 
+		// we already have the usercmd_t for this frame
+		// don't read next usercmd_t so predicting will work properly
+		if( cmd == dem_usercmd && lastpos != 0 && demo.framecount != 0 )
+		{
+			FS_Seek( cls.demofile, lastpos, SEEK_SET );
+			return false; // not time yet.
+		}
+
 		// COMMAND HANDLERS
 		switch( cmd )
 		{
@@ -771,6 +798,7 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 			break;
 		case dem_usercmd:
 			CL_ReadDemoUserCmd( false );
+			lastpos = FS_Tell( cls.demofile );
 			break;
 		default:
 			swallowmessages = false;
@@ -889,10 +917,11 @@ void CL_StopPlayback( void )
 	demo.framecount = 0;
 	cls.demofile = NULL;
 
-	cls.olddemonum = max( -1, cls.demonum - 1 );
+	cls.olddemonum = Q_max( -1, cls.demonum - 1 );
 	Mem_Free( demo.directory.entries );
 	demo.directory.numentries = 0;
 	demo.directory.entries = NULL;
+	demo.header.host_fps = 0.0;
 	demo.entry = NULL;
 
 	cls.demoname[0] = '\0';	// clear demoname too

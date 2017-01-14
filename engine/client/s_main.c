@@ -353,7 +353,7 @@ we're trying to allocate a channel for a stream sound that is
 already playing.
 =====================
 */
-channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx, const vec3_t pos )
+channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx )
 {
 	channel_t	*ch = NULL;
 	int	i;
@@ -704,10 +704,18 @@ qboolean SND_CheckPHS( channel_t *ch )
 	if( !ch->dist_mult || !s_phs->integer )
 		return true; // no attenuation
 
-	leaf = Mod_PointInLeaf( ch->origin, cl.worldmodel->nodes );
+	if( ch->movetype == MOVETYPE_PUSH )
+	{
+		if( Mod_BoxVisible( ch->absmin, ch->absmax, s_listener.pasbytes ))
+			return true;
+	}
+	else
+	{
+		leaf = Mod_PointInLeaf( ch->origin, cl.worldmodel->nodes );
 
-	if( CHECKVISBIT( s_listener.pasbytes, leaf->cluster ))
-		return true;
+		if( CHECKVISBIT( s_listener.pasbytes, leaf->cluster ))
+			return true;
+	}
 
 	return false;
 }
@@ -771,7 +779,7 @@ void SND_Spatialize( channel_t *ch )
 
 	if( !ch->staticsound )
 	{
-		if( !CL_GetEntitySpatialization( ch->entnum, ch->origin, &ch->radius ) || !SND_CheckPHS( ch ))
+		if( !CL_GetEntitySpatialization( ch ) || !SND_CheckPHS( ch ))
 		{
 			// origin is null and entity not exist on client
 			ch->leftvol = ch->rightvol = 0;
@@ -873,7 +881,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	if( !pos ) pos = cl.refdef.vieworg;
 
 	// pick a channel to play on
-	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( ent, sfx, pos );
+	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( ent, sfx );
 	else target_chan = SND_PickDynamicChannel( ent, chan, sfx );
 
 	if( !target_chan )
@@ -998,7 +1006,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 
 	// pick a channel to play on
 	if( chan == CHAN_STATIC )
-		target_chan = SND_PickStaticChannel( ent, sfx, pos );
+		target_chan = SND_PickStaticChannel( ent, sfx );
 	else target_chan = SND_PickDynamicChannel( ent, chan, sfx );
 
 	if( !target_chan )
@@ -1111,7 +1119,6 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 	sfx_t	*sfx = NULL;
 	int	vol, fvox = 0;
 	float	radius = SND_RADIUS_MAX;
-	vec3_t	origin;		
 
 	if( !dma.initialized ) return;
 	sfx = S_GetSfxByHandle( handle );
@@ -1133,14 +1140,14 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 		return;
 	}
 
-	if( pos ) VectorCopy( pos, origin );
-	else VectorClear( origin );
-
-	CL_GetEntitySpatialization( ent, origin, &radius );
-
 	// pick a channel to play on from the static area
-	ch = SND_PickStaticChannel( ent, sfx, origin );
+	ch = SND_PickStaticChannel( ent, sfx );
 	if( !ch ) return;
+
+	if( pos ) VectorCopy( pos, ch->origin );
+	else VectorClear( ch->origin );
+
+	CL_GetEntitySpatialization( ch );
 
 	if( S_TestSoundChar( sfx->name, '!' ))
 	{
@@ -1170,8 +1177,6 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 		S_FreeChannel( ch );
 		return;
 	}
-
-	VectorCopy( origin, ch->origin );
 
 	// never update positions if source entity is 0
 	ch->staticsound = ( ent == 0 ) ? true : false;
@@ -1666,7 +1671,7 @@ static void S_SpatializeRawChannels( void )
 		// spatialization
 		if( !S_IsClient( ch->entnum ) && ch->dist_mult && ch->entnum >= 0 && ch->entnum < GI->max_edicts )
 		{
-			if( !CL_GetEntitySpatialization( ch->entnum, ch->origin, &ch->radius ))
+			if( !CL_GetMovieSpatialization( ch ))
 			{
 				// origin is null and entity not exist on client
 				ch->leftvol = ch->rightvol = 0;

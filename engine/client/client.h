@@ -53,8 +53,8 @@ typedef struct netbandwithgraph_s
 {
 	word		client;
 	word		players;
-	word		entities;	// entities bytes, except for players
-	word		tentities;// temp entities
+	word		entities;		// entities bytes, except for players
+	word		tentities;	// temp entities
 	word		sound;
 	word		event;
 	word		usr;
@@ -68,6 +68,7 @@ typedef struct frame_s
 	double		receivedtime;	// time message was received, or -1
 	double		latency;
 	double		time;		// server timestamp
+	qboolean		valid;		// cleared if delta parsing was invalid
 
 	clientdata_t	client;		// local client private data
 	entity_state_t	playerstate[MAX_CLIENTS];
@@ -76,8 +77,6 @@ typedef struct frame_s
 
 	int		num_entities;
 	int		first_entity;	// into the circular cl_packet_entities[]
-
-	qboolean		valid;		// cleared if delta parsing was invalid
 } frame_t;
 
 typedef struct runcmd_s
@@ -779,7 +778,8 @@ void CL_InitStudioAPI( void );
 int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType );
 void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean noInterp );
-qboolean CL_GetEntitySpatialization( int entnum, vec3_t origin, float *pradius );
+qboolean CL_GetEntitySpatialization( struct channel_s *ch );
+qboolean CL_GetMovieSpatialization( struct rawchan_s *ch );
 void CL_UpdateEntityFields( cl_entity_t *ent );
 qboolean CL_IsPlayerIndex( int idx );
 void CL_SetIdealPitch( void );

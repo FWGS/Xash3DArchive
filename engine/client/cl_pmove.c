@@ -1012,16 +1012,18 @@ void CL_CheckPredictionError( void )
 	len = VectorLength( delta );
 
 	// save the prediction error for interpolation
-//	if(( cl.frame.client.flags & EF_NOINTERP ) || len > maxspd )
-	if( len > 64.0f )
+	if( FBitSet( cl.frame.client.flags, EF_NOINTERP ) || ( len > ( maxspd * 2.0f )))
 	{
+		if( cl_showerror->integer && ( len > ( maxspd * 2.0f )) && host.developer >= D_ERROR )
+			MsgDev( D_INFO, "CL_Predict: player teleported on %i: %g > %g\n", cl.parsecount, len, ( maxspd * 2.0f ));
+
 		// a teleport or something or gamepaused
 		VectorClear( cl.predicted.error );
 	}
 	else
 	{
-		if( cl_showerror->value && len > 0.5f )
-			MsgDev( D_ERROR, "prediction error on %i: %g\n", cl.parsecount, len );
+		if( cl_showerror->integer && len > 0.25f && host.developer >= D_ERROR )
+			MsgDev( D_INFO, "CL_Predict: prediction error on %i: %g\n", cl.parsecount, len );
 
 		VectorCopy( cl.frame.playerstate[cl.playernum].origin, cl.predicted.origins[frame] );
 
@@ -1031,27 +1033,6 @@ void CL_CheckPredictionError( void )
 		if(( len > 0.25f ) && ( cl.maxclients > 1 ))
 			cl.predicted.correction_time = cl_smoothtime->value;
 	}
-}
-
-/*
-===========
-CL_PostRunCmd
-
-used while predicting is off but local weapons is on
-===========
-*/
-void CL_PostRunCmd( usercmd_t *ucmd, int random_seed )
-{
-	local_state_t	from, to;
-
-	memset( &from, 0, sizeof( local_state_t ));
-	memset( &to, 0, sizeof( local_state_t ));
-	memcpy( from.weapondata, cl.frame.weapondata, sizeof( from.weapondata ));
-	from.playerstate = cl.frame.playerstate[cl.playernum];
-	from.client = cl.frame.client;
-	to = from;
-
-	clgame.dllFuncs.pfnPostRunCmd( &from, &to, ucmd, true, cl.time, random_seed );
 }
 
 /*
@@ -1066,6 +1047,8 @@ void CL_FakeUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qbool
 	usercmd_t		cmd;
 	local_state_t	temp;
 	usercmd_t		split;
+
+	memset( &temp, 0, sizeof( temp ));
 
 	while( u->msec > 50 )
 	{
@@ -1087,7 +1070,7 @@ void CL_FakeUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qbool
 =================
 CL_PredictMovement
 
-Sets cl.predicted_origin and cl.predicted_angles
+Sets cl.predicted.origin and cl.predicted.angles
 =================
 */
 void CL_PredictMovement( void )
@@ -1258,7 +1241,7 @@ void CL_PredictMovement( void )
 		cl.predicted.viewmodel = to->client.viewmodel;
 		cl.predicted.usehull = to->playerstate.usehull;
 
-		if( to->client.flags & FL_ONGROUND )
+		if( FBitSet( to->client.flags, FL_ONGROUND ))
 		{
 			cl_entity_t *ent = CL_GetEntityByIndex( cl.predicted.lastground );
 			
@@ -1285,7 +1268,7 @@ void CL_PredictMovement( void )
 			cl.predicted.moving = 0;
 		}
 
-		if ( cl.predicted.correction_time > 0.0 && !cl_nosmooth->value && cl_smoothtime->value )
+		if( cl.predicted.correction_time > 0.0 && !cl_nosmooth->value && cl_smoothtime->value )
 		{
 			float	d;
 			int	i;

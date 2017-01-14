@@ -201,6 +201,13 @@ void SCR_RSpeeds( void )
 	}
 }
 
+/*
+================
+SCR_MakeLevelShot
+
+creates levelshot at next frame
+================
+*/
 void SCR_MakeLevelShot( void )
 {
 	if( cls.scrshot_request != scrshot_plaque )
@@ -210,6 +217,13 @@ void SCR_MakeLevelShot( void )
 	Cbuf_AddText( "levelshot\n" );
 }
 
+/*
+================
+SCR_MakeScreenShot
+
+create a requested screenshot type
+================
+*/
 void SCR_MakeScreenShot( void )
 {
 	qboolean	iRet = false;
@@ -263,13 +277,16 @@ void SCR_MakeScreenShot( void )
 	cls.shotname[0] = '\0';
 }
 
+/*
+================
+SCR_DrawPlaque
+================
+*/
 void SCR_DrawPlaque( void )
 {
-	int	levelshot;
-
 	if(( cl_allow_levelshots->integer && !cls.changelevel ) || cl.background )
 	{
-		levelshot = GL_LoadTexture( cl_levelshot_name->string, NULL, 0, TF_IMAGE, NULL );
+		int levelshot = GL_LoadTexture( cl_levelshot_name->string, NULL, 0, TF_IMAGE, NULL );
 		GL_SetRenderMode( kRenderNormal );
 		R_DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, levelshot );
 		if( !cl.background ) CL_DrawHUD( CL_LOADING );

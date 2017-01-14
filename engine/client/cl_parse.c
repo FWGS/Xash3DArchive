@@ -167,9 +167,9 @@ write net_message into buffer.dat for debugging
 */
 void CL_WriteErrorMessage( int current_count, sizebuf_t *msg )
 {
-	file_t		*fp;
 	const char	*buffer_file = "buffer.dat";
-	
+	file_t		*fp;	
+
 	fp = FS_Open( buffer_file, "wb", false );
 	if( !fp ) return;
 
@@ -953,7 +953,7 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 	slot = MSG_ReadUBitLong( msg, MAX_CLIENT_BITS );
 
 	if( slot >= MAX_CLIENTS )
-		Host_Error( "CL_ParseServerMessage: svc_updateuserinfo > MAX_CLIENTS\n" );
+		Host_Error( "CL_ParseServerMessage: svc_updateuserinfo >= MAX_CLIENTS\n" );
 
 	player = &cl.players[slot];
 	active = MSG_ReadOneBit( msg ) ? true : false;
@@ -1385,7 +1385,7 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 	int	i, iSize;
 	byte	pbuf[256]; // message can't be larger than 255 bytes
 
-	// NOTE: any user message parse on engine, not in client.dll
+	// NOTE: any user message is really parse at engine, not in client.dll
 	if( svc_num < svc_lastmsg || svc_num >= ( MAX_USER_MESSAGES + svc_lastmsg ))
 	{
 		// out or range
@@ -1460,7 +1460,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 	char	*s;
 	int	i, j, cmd;
 	int	param1, param2;
-	int	bufStart, playerbytes;
+	size_t	bufStart, playerbytes;
 
 	cls_message_debug.parsing = true;		// begin parsing
 	starting_count = MSG_GetNumBytesRead( msg );	// updates each frame
@@ -1532,9 +1532,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			cl.frames[cl.parsecountmod].graphdata.sound += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_time:
-			// shuffle timestamps
-			cl.mtime[1] = cl.mtime[0];
-			cl.mtime[0] = MSG_ReadFloat( msg );			
+			CL_ParseServerTime( msg );
 			break;
 		case svc_print:
 			i = MSG_ReadByte( msg );

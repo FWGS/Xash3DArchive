@@ -255,8 +255,8 @@ extern struct particle_s	*cl_free_trails;
 //
 // gl_backend.c
 //
-void GL_BackendStartFrame( void );
-void GL_BackendEndFrame( void );
+void GL_BackendStartFrame( const ref_params_t *fd );
+void GL_BackendEndFrame( const ref_params_t *fd );
 void GL_CleanUpTextureUnits( int last );
 void GL_Bind( GLint tmu, GLenum texnum );
 void GL_MultiTexCoord2f( GLenum texture, GLfloat s, GLfloat t );

@@ -935,10 +935,6 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "playersonly", SV_PlayersOnly_f, "freezes time, except for players" );
 
 	Cmd_AddCommand( "map", SV_Map_f, "start new level" );
-	Cmd_AddCommand( "newgame", SV_NewGame_f, "begin new game" );
-	Cmd_AddCommand( "endgame", SV_EndGame_f, "end current game" );
-	Cmd_AddCommand( "killgame", SV_KillGame_f, "end current game" );
-	Cmd_AddCommand( "hazardcourse", SV_HazardCourse_f, "starting a Hazard Course" );
 	Cmd_AddCommand( "changelevel", SV_ChangeLevel_f, "changing level" );
 	Cmd_AddCommand( "restart", SV_Restart_f, "restarting current level" );
 	Cmd_AddCommand( "reload", SV_Reload_f, "continue from latest save or restart level" );
@@ -946,13 +942,12 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "edict_usage", SV_EdictUsage_f, "show info about edicts usage" );
 	Cmd_AddCommand( "entity_info", SV_EntityInfo_f, "show more info about edicts" );
 
-	if( host.type == HOST_DEDICATED )
+	if( host.type == HOST_NORMAL )
 	{
-		Cmd_AddCommand( "say", SV_ConSay_f, "send a chat message to everyone on the server" );
-		Cmd_AddCommand( "killserver", SV_KillServer_f, "shutdown current server" );
-	}
-	else
-	{
+		Cmd_AddCommand( "newgame", SV_NewGame_f, "begin new game" );
+		Cmd_AddCommand( "endgame", SV_EndGame_f, "end current game" );
+		Cmd_AddCommand( "killgame", SV_KillGame_f, "end current game" );
+		Cmd_AddCommand( "hazardcourse", SV_HazardCourse_f, "starting a Hazard Course" );
 		Cmd_AddCommand( "map_background", SV_MapBackground_f, "set background map" );
 		Cmd_AddCommand( "save", SV_Save_f, "save the game to a file" );
 		Cmd_AddCommand( "load", SV_Load_f, "load a saved game file" );
@@ -960,6 +955,11 @@ void SV_InitOperatorCommands( void )
 		Cmd_AddCommand( "loadquick", SV_QuickLoad_f, "load a quick-saved game file" );
 		Cmd_AddCommand( "killsave", SV_DeleteSave_f, "delete a saved game file and saveshot" );
 		Cmd_AddCommand( "autosave", SV_AutoSave_f, "save the game to 'autosave' file" );
+	}
+	else if( host.type == HOST_DEDICATED )
+	{
+		Cmd_AddCommand( "say", SV_ConSay_f, "send a chat message to everyone on the server" );
+		Cmd_AddCommand( "killserver", SV_KillServer_f, "shutdown current server" );
 	}
 }
 
@@ -979,10 +979,6 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "playersonly" );
 
 	Cmd_RemoveCommand( "map" );
-	Cmd_RemoveCommand( "newgame" );
-	Cmd_RemoveCommand( "endgame" );
-	Cmd_RemoveCommand( "killgame" );
-	Cmd_RemoveCommand( "hazardcourse" );
 	Cmd_RemoveCommand( "changelevel" );
 	Cmd_RemoveCommand( "restart" );
 	Cmd_RemoveCommand( "reload" );
@@ -990,13 +986,12 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "edict_usage" );
 	Cmd_RemoveCommand( "entity_info" );
 
-	if( host.type == HOST_DEDICATED )
+	if( host.type == HOST_NORMAL )
 	{
-		Cmd_RemoveCommand( "say" );
-		Cmd_RemoveCommand( "killserver" );
-	}
-	else
-	{
+		Cmd_RemoveCommand( "newgame" );
+		Cmd_RemoveCommand( "endgame" );
+		Cmd_RemoveCommand( "killgame" );
+		Cmd_RemoveCommand( "hazardcourse" );
 		Cmd_RemoveCommand( "map_background" );
 		Cmd_RemoveCommand( "save" );
 		Cmd_RemoveCommand( "load" );
@@ -1004,5 +999,10 @@ void SV_KillOperatorCommands( void )
 		Cmd_RemoveCommand( "loadquick" );
 		Cmd_RemoveCommand( "killsave" );
 		Cmd_RemoveCommand( "autosave" );
+	}
+	else if( host.type == HOST_DEDICATED )
+	{
+		Cmd_RemoveCommand( "say" );
+		Cmd_RemoveCommand( "killserver" );
 	}
 }

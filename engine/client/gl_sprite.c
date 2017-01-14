@@ -519,89 +519,98 @@ between frames where are we lerping
 */
 float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, mspriteframe_t **curframe )
 {
-	msprite_t	*psprite;
-	float	lerpFrac = 1.0f, frame;
-	int	m_fDoInterp, oldf, newf;
-	float	frametime = 0.0f;
-	int	i, j, iframe;
+	msprite_t		*psprite;
+	mspritegroup_t	*pspritegroup;
+	int		i, j, numframes, frame;
+	float		lerpFrac, time, jtime, jinterval;
+	float		*pintervals, fullinterval, targettime;
+	int		m_fDoInterp;
 
 	psprite = ent->model->cache.data;
-
-	if( ent->curstate.framerate > 0.0f )
-		frametime = (1.0f / ent->curstate.framerate);
-
-	frame = Q_max( 0.0f, ent->curstate.frame - host.frametime * ent->curstate.framerate );
-	iframe = (int)frame;
+	frame = (int)ent->curstate.frame;
+	lerpFrac = 1.0f;
 
 	// misc info
-	if( r_sprite_lerping->integer && psprite->numframes > 1 )
+	if( r_sprite_lerping->integer )
 		m_fDoInterp = (ent->curstate.effects & EF_NOINTERP) ? false : true;
 	else m_fDoInterp = false;
 
-	if( m_fDoInterp == false )
+	if( frame < 0 )
 	{
-		// interpolation disabled for some reasons
-		*oldframe = *curframe = R_GetSpriteFrame( ent->model, ent->curstate.frame, ent->angles[YAW] );
-		return lerpFrac;
-	}
-
-	if( iframe < 0 )
-	{
-		iframe = 0;
-	}
-	else if( iframe >= psprite->numframes )
+		frame = 0;
+	}          
+	else if( frame >= psprite->numframes )
 	{
 		MsgDev( D_WARN, "R_GetSpriteFrameInterpolant: no such frame %d (%s)\n", frame, ent->model->name );
-		iframe = psprite->numframes - 1;
+		frame = psprite->numframes - 1;
 	}
 
-	// calc interpolant range
-	oldf = (int)Q_floor( frame );
-	newf = (int)Q_ceil( frame );
-
-	// allow interp between first and last frame
-	oldf = oldf % ( psprite->numframes - 1 );
-	newf = newf % ( psprite->numframes - 1 );
-
-	// NOTE: we allow interpolation between single and angled frames e.g. for Doom monsters
-	if( psprite->frames[iframe].type == FRAME_SINGLE || psprite->frames[iframe].type == FRAME_ANGLED )
+	if( psprite->frames[frame].type == FRAME_SINGLE )
 	{
-		// frame was changed
-		if( newf != ent->latched.prevframe )
+		if( m_fDoInterp )
 		{
-			ent->latched.prevanimtime = cl.time + frametime;
-			ent->latched.prevframe = newf;
-			lerpFrac = 1.0f; // reset lerp
-		}
+			if( ent->latched.prevblending[0] >= psprite->numframes || psprite->frames[ent->latched.prevblending[0]].type != FRAME_SINGLE )
+			{
+				// this can be happens when rendering switched between single and angled frames
+				// or change model on replace delta-entity
+				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+				ent->latched.prevanimtime = RI.refdef.time;
+				lerpFrac = 1.0f;
+			}
                               
-		if( ent->latched.prevanimtime != 0.0f && ent->latched.prevanimtime > cl.time )
-			lerpFrac = (ent->latched.prevanimtime - cl.time) * ent->curstate.framerate;
+			if( ent->latched.prevanimtime < RI.refdef.time )
+			{
+				if( frame != ent->latched.prevblending[1] )
+				{
+					ent->latched.prevblending[0] = ent->latched.prevblending[1];
+					ent->latched.prevblending[1] = frame;
+					ent->latched.prevanimtime = RI.refdef.time;
+					lerpFrac = 0.0f;
+				}
+				else lerpFrac = (RI.refdef.time - ent->latched.prevanimtime) * 10;
+			}
+			else
+			{
+				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+				ent->latched.prevanimtime = RI.refdef.time;
+				lerpFrac = 0.0f;
+			}
+		}
+		else
+		{
+			ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+			lerpFrac = 1.0f;
+		}
 
-		// compute lerp factor
-		lerpFrac = (int)(10000 * lerpFrac) / 10000.0f;
-		lerpFrac = bound( 0.0f, 1.0f - lerpFrac, 1.0f );
+		if( ent->latched.prevblending[0] >= psprite->numframes )
+		{
+			// reset interpolation on change model
+			ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+			ent->latched.prevanimtime = RI.refdef.time;
+			lerpFrac = 0.0f;
+		}
 
 		// get the interpolated frames
-		if( oldframe ) *oldframe = R_GetSpriteFrame( ent->model, oldf, ent->angles[YAW] );
-		if( curframe ) *curframe = R_GetSpriteFrame( ent->model, newf, ent->angles[YAW] );
+		if( oldframe ) *oldframe = psprite->frames[ent->latched.prevblending[0]].frameptr;
+		if( curframe ) *curframe = psprite->frames[frame].frameptr;
 	}
-	else if( psprite->frames[iframe].type == FRAME_GROUP ) 
+	else if( psprite->frames[frame].type == FRAME_GROUP ) 
 	{
-		mspritegroup_t	*pspritegroup = (mspritegroup_t *)psprite->frames[iframe].frameptr;
-		float		*pintervals = pspritegroup->intervals;
-		float		fullinterval, targettime, jinterval;
-		float		jtime = 0.0f;
-
-		fullinterval = pintervals[pspritegroup->numframes-1];
+		pspritegroup = (mspritegroup_t *)psprite->frames[frame].frameptr;
+		pintervals = pspritegroup->intervals;
+		numframes = pspritegroup->numframes;
+		fullinterval = pintervals[numframes-1];
 		jinterval = pintervals[1] - pintervals[0];
+		time = RI.refdef.time;
+		jtime = 0.0f;
 
 		// when loading in Mod_LoadSpriteGroup, we guaranteed all interval values
 		// are positive, so we don't have to worry about division by zero
-		targettime = cl.time - ((int)( cl.time / fullinterval )) * fullinterval;
+		targettime = time - ((int)(time / fullinterval)) * fullinterval;
 
 		// LordHavoc: since I can't measure the time properly when it loops from numframes - 1 to 0,
 		// i instead measure the time of the first frame, hoping it is consistent
-		for( i = 0, j = (pspritegroup->numframes - 1); i < (pspritegroup->numframes - 1); i++ )
+		for( i = 0, j = numframes - 1; i < (numframes - 1); i++ )
 		{
 			if( pintervals[i] > targettime )
 				break;
@@ -610,11 +619,60 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 			jtime = pintervals[i];
 		}
 
-		lerpFrac = (targettime - jtime) / jinterval;
+		if( m_fDoInterp )
+			lerpFrac = (targettime - jtime) / jinterval;
+		else j = i; // no lerping
 
 		// get the interpolated frames
 		if( oldframe ) *oldframe = pspritegroup->frames[j];
 		if( curframe ) *curframe = pspritegroup->frames[i];
+	}
+	else if( psprite->frames[frame].type == FRAME_ANGLED )
+	{
+		// e.g. doom-style sprite monsters
+		float	yaw = ent->angles[YAW];
+		int	angleframe = (int)(Q_rint(( RI.refdef.viewangles[1] - yaw + 45.0f ) / 360 * 8) - 4) & 7;
+
+		if( m_fDoInterp )
+		{
+			if( ent->latched.prevblending[0] >= psprite->numframes || psprite->frames[ent->latched.prevblending[0]].type != FRAME_ANGLED )
+			{
+				// this can be happens when rendering switched between single and angled frames
+				// or change model on replace delta-entity
+				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+				ent->latched.prevanimtime = RI.refdef.time;
+				lerpFrac = 1.0f;
+			}
+
+			if( ent->latched.prevanimtime < RI.refdef.time )
+			{
+				if( frame != ent->latched.prevblending[1] )
+				{
+					ent->latched.prevblending[0] = ent->latched.prevblending[1];
+					ent->latched.prevblending[1] = frame;
+					ent->latched.prevanimtime = RI.refdef.time;
+					lerpFrac = 0.0f;
+				}
+				else lerpFrac = (RI.refdef.time - ent->latched.prevanimtime) * ent->curstate.framerate;
+			}
+			else
+			{
+				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+				ent->latched.prevanimtime = RI.refdef.time;
+				lerpFrac = 0.0f;
+			}
+		}
+		else
+		{
+			ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
+			lerpFrac = 1.0f;
+		}
+
+		pspritegroup = (mspritegroup_t *)psprite->frames[ent->latched.prevblending[0]].frameptr;
+		if( oldframe ) *oldframe = pspritegroup->frames[angleframe];
+
+		pspritegroup = (mspritegroup_t *)psprite->frames[frame].frameptr;
+		if( curframe ) *curframe = pspritegroup->frames[angleframe];
 	}
 
 	return lerpFrac;

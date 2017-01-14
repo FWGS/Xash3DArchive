@@ -127,13 +127,20 @@ returns username for current profile
 */
 char *Sys_GetCurrentUser( void )
 {
-	static string	s_userName;
-	dword		size = sizeof( s_userName );
+	static string	sys_user_name;
+	dword		size = sizeof( sys_user_name );
 
-	if( !GetUserName( s_userName, &size ) || !s_userName[0] )
-		Q_strcpy( s_userName, "player" );
+	if( !sys_user_name[0] )
+	{
+		HINSTANCE	advapi32_dll = LoadLibrary( "advapi32.dll" );
+		BOOL (_stdcall *pGetUserNameA)( LPSTR lpBuffer, LPDWORD nSize ) = NULL;
+		if( advapi32_dll ) pGetUserNameA = (void *)GetProcAddress( advapi32_dll, "GetUserNameA" );
+		if( pGetUserNameA) pGetUserNameA( sys_user_name, &size );
+		if( advapi32_dll ) FreeLibrary( advapi32_dll ); // no need anymore...
+		if( !sys_user_name[0] ) Q_strcpy( sys_user_name, "player" );
+	}
 
-	return s_userName;
+	return sys_user_name;
 }
 
 /*
@@ -143,7 +150,11 @@ Sys_ShellExecute
 */
 void Sys_ShellExecute( const char *path, const char *parms, qboolean exit )
 {
-	ShellExecute( NULL, "open", path, parms, NULL, SW_SHOW );
+	HINSTANCE	shell32_dll = LoadLibrary( "shell32.dll" );
+	HINSTANCE (_stdcall *pShellExecuteA)( HWND hwnd, LPCSTR lpOp, LPCSTR lpFile, LPCSTR lpParam, LPCSTR lpDir, INT nShowCmd ) = NULL;
+	if( shell32_dll ) pShellExecuteA = (void *)GetProcAddress( shell32_dll, "ShellExecuteA" );
+	if( pShellExecuteA ) pShellExecuteA( NULL, "open", path, parms, NULL, SW_SHOW );
+	if( shell32_dll ) FreeLibrary( shell32_dll ); // no need anymore...
 
 	if( exit ) Sys_Quit();
 }
@@ -480,49 +491,6 @@ void Sys_Error( const char *error, ... )
 
 /*
 ================
-Sys_Break
-
-same as Error
-================
-*/
-void Sys_Break( const char *error, ... )
-{
-	va_list	argptr;
-	char	text[MAX_SYSPATH];
-
-	if( host.state == HOST_ERR_FATAL )
-		return; // don't multiple executes
-
-	error_on_exit = true;	
-	host.state = HOST_ERR_FATAL;         
-	va_start( argptr, error );
-	Q_vsprintf( text, error, argptr );
-	va_end( argptr );
-
-	if( host.type == HOST_NORMAL )
-	{
-		if( host.hWnd ) ShowWindow( host.hWnd, SW_HIDE );
-		VID_RestoreGamma();
-	}
-
-	if( host.type != HOST_NORMAL || host.developer > 0 )
-	{
-		Con_ShowConsole( true );
-		Con_DisableInput();	// disable input line for dedicated server
-		Sys_Print( text );
-		Sys_WaitForQuit();
-	}
-	else
-	{
-		Con_ShowConsole( false );
-		MSGBOX( text );
-	}
-
-	Sys_Quit();
-}
-
-/*
-================
 Sys_Quit
 ================
 */
@@ -542,8 +510,8 @@ print into window console
 void Sys_Print( const char *pMsg )
 {
 	const char	*msg;
-	char		buffer[MAX_PRINT_MSG];
-	char		logbuf[MAX_PRINT_MSG];
+	static char	buffer[MAX_PRINT_MSG];
+	static char	logbuf[MAX_PRINT_MSG];
 	char		*b = buffer;
 	char		*c = logbuf;	
 	int		i = 0;

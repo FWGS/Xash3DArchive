@@ -129,9 +129,6 @@ void Host_EndGame( const char *message, ... )
 		Q_snprintf( host.finalmsg, sizeof( host.finalmsg ), "Host_EndGame: %s", string );
 		SV_Shutdown( false );
 	}
-	
-	if( host.type == HOST_DEDICATED )
-		Sys_Break( "Host_EndGame: %s\n", string ); // dedicated servers exit
 
 	SV_Shutdown( false );
 	CL_Disconnect();
@@ -492,7 +489,8 @@ qboolean Host_FrameTime( float time )
 	host.realtime += time;
 
 	// limit fps to withing tolerable range
-	fps = bound( HOST_MINFPS, HOST_FPS, HOST_MAXFPS );
+	fps = CL_GetDemoFramerate();
+	if( fps == 0.0 ) fps = bound( HOST_MINFPS, HOST_FPS, HOST_MAXFPS );
 	minframetime = ( 1.0 / fps );
 
 	if(( host.realtime - oldtime ) < minframetime )
@@ -574,7 +572,8 @@ qboolean Host_FilterTime( float time )
 	host.realtime += time;
 
 	// dedicated's tic_rate regulates server frame rate.  Don't apply fps filter here.
-	fps = host_maxfps->value;
+	fps = CL_GetDemoFramerate();
+	if( fps == 0.0 ) fps = host_maxfps->value;
 
 	// clamp the fps in multiplayer games
 	if( fps != 0 )

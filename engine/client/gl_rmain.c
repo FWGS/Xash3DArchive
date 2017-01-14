@@ -354,17 +354,17 @@ int R_ComputeFxBlend( cl_entity_t *e )
 			blend += Com_RandomLong( -32, 31 );
 		}
 		break;
-	case kRenderFxGlowShell:	// safe current renderamt because it's shell scale!
-	case kRenderFxDeadPlayer:	// safe current renderamt because it's player index!
-		blend = renderAmt;
-		break;
 	case kRenderFxNone:
 	case kRenderFxClampMinScale:
-	default:
 		if( e->curstate.rendermode == kRenderNormal )
 			blend = 255;
 		else blend = renderAmt;
 		break;	
+	case kRenderFxGlowShell:	// safe current renderamt because it's shell scale!
+	case kRenderFxDeadPlayer:	// safe current renderamt because it's player index!
+	default:
+		blend = renderAmt;
+		break;
 	}
 
 	if( e->model && e->model->type != mod_brush )
@@ -1276,7 +1276,7 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	RI.thirdPerson = cl.thirdperson;
 	RI.drawOrtho = (RI.drawWorld) ? gl_overview->integer : 0;
 
-	GL_BackendStartFrame();
+	GL_BackendStartFrame( fd );
 
 	if( !r_lockcull->integer )
 		VectorCopy( fd->vieworg, RI.cullorigin );
@@ -1300,7 +1300,7 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 
 	R_RenderScene( fd );
 
-	GL_BackendEndFrame();
+	GL_BackendEndFrame( fd );
 }
 
 /*

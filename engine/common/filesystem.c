@@ -2975,13 +2975,14 @@ WADSYSTEM PRIVATE COMMON FUNCTIONS
 =============================================================================
 */
 // associate extension with wad type
-static const wadtype_t wad_types[6] =
+static const wadtype_t wad_types[7] =
 {
 { "pal", TYP_PALETTE	}, // palette
 { "dds", TYP_DDSTEX 	}, // DDS image
 { "lmp", TYP_GFXPIC		}, // quake1, hl pic
 { "fnt", TYP_QFONT		}, // hl qfonts
 { "mip", TYP_MIPTEX		}, // hl/q1 mip
+{ "txt", TYP_SCRIPT		}, // scripts
 { NULL,  TYP_NONE		}
 };
 

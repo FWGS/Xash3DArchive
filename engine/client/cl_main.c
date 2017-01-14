@@ -28,9 +28,6 @@ GNU General Public License for more details.
 
 convar_t	*rcon_client_password;
 convar_t	*rcon_address;
-
-convar_t	*cl_nosmooth;
-convar_t	*cl_smoothtime;
 convar_t	*cl_timeout;
 convar_t	*cl_predict;
 convar_t	*cl_showfps;
@@ -42,6 +39,8 @@ convar_t	*cl_bmodelinterp;
 convar_t	*cl_draw_particles;
 convar_t	*cl_lightstyle_lerping;
 convar_t	*cl_idealpitchscale;
+convar_t	*cl_nosmooth;
+convar_t	*cl_smoothtime;
 convar_t	*cl_solid_players;
 convar_t	*cl_draw_beams;
 convar_t	*cl_updaterate;
@@ -460,8 +459,7 @@ void CL_CreateCmd( void )
 		pcmd->cmd.msec = 0;
 	}
 
-	// demo always have commands
-	// so don't overwrite them
+	// demo always have commands so don't overwrite them
 	if( !cls.demoplayback ) cl.refdef.cmd = &pcmd->cmd;
 }
 
@@ -665,7 +663,7 @@ void CL_WritePacket( void )
 		cls.netchan.outgoing_sequence++;
 	}
 
-	if( cls.demorecording )
+	if( cls.demorecording && numbackup > 0 )
 	{
 		// Back up one because we've incremented outgoing_sequence each frame by 1 unit
 		cmdnumber = ( cls.netchan.outgoing_sequence - 1 ) & CL_UPDATE_MASK;

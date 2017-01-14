@@ -28,7 +28,7 @@ GNU General Public License for more details.
 #define STUDIO_MERGE_TEXTURES
 
 #define EVENT_CLIENT	5000	// less than this value it's a server-side studio events
-#define MAXARRAYVERTS	32768	// used for draw shadows
+#define MAXARRAYVERTS	65536	// used for draw shadows
 #define LEGS_BONES_COUNT	8
 
 static vec3_t hullcolor[8] = 
@@ -2499,10 +2499,11 @@ static void R_StudioClientEvents( void )
 	mstudioseqdesc_t	*pseqdesc;
 	mstudioevent_t	*pevent;
 	cl_entity_t	*e = RI.currententity;
+	int		i, sequence;
 	float		f, start;
-	int		i;
 
-	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->curstate.sequence;
+	sequence = bound( 0, e->curstate.sequence, m_pStudioHeader->numseq - 1 );
+	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + sequence;
 	pevent = (mstudioevent_t *)((byte *)m_pStudioHeader + pseqdesc->eventindex);
 
 	// no events for this animation or gamepaused

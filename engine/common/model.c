@@ -233,7 +233,7 @@ static void Mod_DecompressVis( const byte *in, const byte *inend, byte *out, byt
 		{
 			if( in == inend )
 			{
-				MsgDev( D_REPORT, "Mod_DecompressVis: input underrun (during zero-run) (decompressed %i of %i output bytes)\n",
+				MsgDev( D_NOTE, "Mod_DecompressVis: input underrun (during zero-run) (decompressed %i of %i output bytes)\n",
 				(int)(out - outstart), (int)(outend - outstart));
 				return;
 			}
@@ -242,7 +242,7 @@ static void Mod_DecompressVis( const byte *in, const byte *inend, byte *out, byt
 			{
 				if( out == outend )
 				{
-					MsgDev( D_REPORT, "Mod_DecompressVis: output overrun (decompressed %i of %i output bytes)\n",
+					MsgDev( D_NOTE, "Mod_DecompressVis: output overrun (decompressed %i of %i output bytes)\n",
 					(int)(out - outstart), (int)(outend - outstart));
 					return;
 				}
@@ -2482,7 +2482,7 @@ static void Mod_LoadEntities( const dlump_t *l )
 					Q_strcat( wadstring, ";" );
 
 				// parse wad pathes
-				for (pszWadFile = strtok( wadstring, ";" ); pszWadFile!= NULL; pszWadFile = strtok( NULL, ";" ))
+				for (pszWadFile = strtok( wadstring, ";" ); pszWadFile != NULL; pszWadFile = strtok( NULL, ";" ))
 				{
 					COM_FixSlashes( pszWadFile );
 					FS_FileBase( pszWadFile, wadlist.wadnames[wadlist.count++] );

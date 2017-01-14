@@ -591,7 +591,7 @@ static void GL_SetTextureTarget( gltexture_t *tex, rgbdata_t *pic )
 	tex->numMips = 0; // begin counting
 
 	// correct mip count
-	pic->numMips = max( 1, pic->numMips );
+	pic->numMips = Q_max( 1, pic->numMips );
 
 	// trying to determine texture type
 	if( pic->width > 1 && pic->height <= 1 )
@@ -1089,8 +1089,8 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 	bufend = pic->buffer + pic->size; // total image size include all the layers, cube sides, mipmaps
 	offset = GL_CalcImageSize( pic->type, pic->width, pic->height, pic->depth );
 	texsize = GL_CalcTextureSize( tex->format, tex->width, tex->height, tex->depth );
-	normalMap = ( tex->flags & TF_NORMALMAP ) ? true : false;
-	numSides = ( pic->flags & IMAGE_CUBEMAP ) ? 6 : 1;
+	normalMap = FBitSet( tex->flags, TF_NORMALMAP ) ? true : false;
+	numSides = FBitSet( pic->flags, IMAGE_CUBEMAP ) ? 6 : 1;
 
 	// uploading texture into video memory
 	pglBindTexture( tex->target, tex->texnum );
@@ -1103,10 +1103,10 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 
 		if( ImageDXT( pic->type ))
 		{
-			for( j = 0; j < max( 1, pic->numMips ); j++ )
+			for( j = 0; j < Q_max( 1, pic->numMips ); j++ )
 			{
-				width = max( 1, ( tex->width >> j ));
-				height = max( 1, ( tex->height >> j ));
+				width = Q_max( 1, ( tex->width >> j ));
+				height = Q_max( 1, ( tex->height >> j ));
 				texsize = GL_CalcTextureSize( tex->format, width, height, tex->depth );
 				size = GL_CalcImageSize( pic->type, width, height, tex->depth );
 				GL_TextureImageDXT( tex, i, j, width, height, tex->depth, size, buf );
@@ -1117,12 +1117,12 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 				GL_CheckTexImageError( tex );
 			}
 		}
-		else if( max( 1, pic->numMips ) > 1 )	// not-compressed DDS
+		else if( Q_max( 1, pic->numMips ) > 1 )	// not-compressed DDS
 		{
-			for( j = 0; j < max( 1, pic->numMips ); j++ )
+			for( j = 0; j < Q_max( 1, pic->numMips ); j++ )
 			{
-				width = max( 1, ( tex->width >> j ));
-				height = max( 1, ( tex->height >> j ));
+				width = Q_max( 1, ( tex->width >> j ));
+				height = Q_max( 1, ( tex->height >> j ));
 				texsize = GL_CalcTextureSize( tex->format, width, height, tex->depth );
 				size = GL_CalcImageSize( pic->type, width, height, tex->depth );
 				GL_TextureImageRAW( tex, i, j, width, height, tex->depth, pic->type, buf );
@@ -1152,8 +1152,8 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 			// mips will be auto-generated if desired
 			for( j = 0; j < mipCount; j++ )
 			{
-				width = max( 1, ( tex->width >> j ));
-				height = max( 1, ( tex->height >> j ));
+				width = Q_max( 1, ( tex->width >> j ));
+				height = Q_max( 1, ( tex->height >> j ));
 				texsize = GL_CalcTextureSize( tex->format, width, height, tex->depth );
 				size = GL_CalcImageSize( pic->type, width, height, tex->depth );
 				GL_TextureImageRAW( tex, i, j, width, height, tex->depth, pic->type, data );
@@ -1578,7 +1578,6 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	if( !GL_UploadTexture( tex, pic ))
 	{
 		memset( tex, 0, sizeof( gltexture_t ));
-		FS_FreeImage( pic ); // release source texture
 		return 0;
 	}
 

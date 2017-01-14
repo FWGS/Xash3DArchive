@@ -2126,7 +2126,7 @@ qboolean SV_LoadGame( const char *pName )
 		return false;
 
 	// init network stuff
-	NET_Config ( false ); // close network sockets
+	NET_Config( false ); // close network sockets
 
 	if( sv.background || sv_maxclients->integer > 1 )
 		SV_Shutdown( true );

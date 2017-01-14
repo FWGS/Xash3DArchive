@@ -82,6 +82,7 @@ float Cvar_VariableValue( const char *var_name )
 
 	var = Cvar_FindVar( var_name );
 	if( !var ) return 0;
+
 	return var->value;
 }
 
@@ -130,7 +131,7 @@ void Cvar_LookupVars( int checkbit, void *buffer, void *ptr, setpair_t callback 
 	// force checkbit to 0 for lookup all cvars
 	for( cvar = cvar_vars; cvar; cvar = cvar->next )
 	{
-		if( checkbit && !( cvar->flags & checkbit ))
+		if( checkbit && !FBitSet( cvar->flags, checkbit ))
 			continue;
 
 		if( buffer )
@@ -617,7 +618,7 @@ void Cvar_DirectSet( cvar_t *var, const char *value )
 	{
 		MsgDev( D_ERROR, "Cvar_DirectSet: invalid pointer to cvar\n" );
 		return;
-	} 
+	}
 
 	if( value && !Cvar_ValidateString( value, true ))
 	{
@@ -681,17 +682,17 @@ void Cvar_DirectSet( cvar_t *var, const char *value )
 	if( !Q_strcmp( pszValue, var->string ))
 		return;
 
-	if( var->flags & CVAR_USERINFO )
-		userinfo->modified = true;	// transmit at next oportunity
+	if( FBitSet( var->flags, CVAR_USERINFO ))
+		userinfo->modified = true; // transmit at next oportunity
 
-	if( var->flags & CVAR_PHYSICINFO )
-		physinfo->modified = true;	// transmit at next oportunity
+	if( FBitSet( var->flags, CVAR_PHYSICINFO ))
+		physinfo->modified = true; // transmit at next oportunity
 
-	if( var->flags & CVAR_SERVERINFO )
-		serverinfo->modified = true;	// transmit at next oportunity
+	if( FBitSet( var->flags, CVAR_SERVERINFO ))
+		serverinfo->modified = true; // transmit at next oportunity
 
-	if( var->flags & CVAR_RENDERINFO )
-		renderinfo->modified = true;	// transmit at next oportunity
+	if( FBitSet( var->flags, CVAR_RENDERINFO ))
+		renderinfo->modified = true; // transmit at next oportunity
 
 	// free the old value string
 	Mem_Free( var->string );

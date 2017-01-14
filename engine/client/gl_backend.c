@@ -48,9 +48,9 @@ qboolean R_SpeedsMessage( char *out, size_t size )
 GL_BackendStartFrame
 ==============
 */
-void GL_BackendStartFrame( void )
+void GL_BackendStartFrame( const ref_params_t *fd )
 {
-	r_speeds_msg[0] = '\0';
+	if( !fd->nextView ) r_speeds_msg[0] = '\0';
 
 	if( !RI.drawWorld ) R_Set2DMode( false );
 }
@@ -60,12 +60,12 @@ void GL_BackendStartFrame( void )
 GL_BackendEndFrame
 ==============
 */
-void GL_BackendEndFrame( void )
+void GL_BackendEndFrame( const ref_params_t *fd )
 {
 	// go into 2D mode (in case we draw PlayerSetup between two 2d calls)
 	if( !RI.drawWorld ) R_Set2DMode( true );
 
-	if( r_speeds->integer <= 0 || !RI.drawWorld )
+	if( r_speeds->integer <= 0 || !RI.drawWorld || fd->nextView )
 		return;
 
 	switch( r_speeds->integer )

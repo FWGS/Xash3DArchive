@@ -935,7 +935,6 @@ void Con_Print( const char *txt )
 			break;
 		}
 	}
-
 }
 
 /*
@@ -1059,22 +1058,6 @@ EDIT FIELDS
 */
 /*
 ===============
-Cmd_CheckName
-
-compare first argument with string
-===============
-*/
-static qboolean Cmd_CheckName( const char *name )
-{
-	if( !Q_stricmp( Cmd_Argv( 0 ), name ))
-		return true;
-	if( !Q_stricmp( Cmd_Argv( 0 ), va( "\\%s", name )))
-		return true;
-	return false;
-}
-
-/*
-===============
 Con_AddCommandToList
 
 ===============
@@ -1161,11 +1144,10 @@ perform Tab expansion
 */
 void Con_CompleteCommand( field_t *field )
 {
-	field_t		temp;
-	string		filename;
-	qboolean		nextcmd;
-	autocomplete_list_t	*list;
-	int		i;
+	field_t	temp;
+	string	filename;
+	qboolean	nextcmd;
+	int	i;
 
 	// setup the completion field
 	con.completionField = field;
@@ -1210,24 +1192,13 @@ void Con_CompleteCommand( field_t *field )
 
 	memcpy( &temp, con.completionField, sizeof( field_t ));
 
+	// autocomplete second arg
 	if(( Cmd_Argc() == 2 ) || (( Cmd_Argc() == 1 ) && nextcmd ))
 	{
-		qboolean	result = false;
-
 		if( !Q_strlen( con.completionBuffer ))
 			return;
 
-		// autocomplete second arg
-		for( list = cmd_list; list->name; list++ )
-		{
-			if( Cmd_CheckName( list->name ))
-			{
-				result = list->func( con.completionBuffer, filename, MAX_STRING ); 
-				break;
-			}
-		}
-
-		if( result )
+		if( Cmd_AutocompleteName( con.completionBuffer, filename, sizeof( filename )))
 		{         
 			Q_sprintf( con.completionField->buffer, "%s %s", Cmd_Argv( 0 ), filename ); 
 			con.completionField->cursor = Q_strlen( con.completionField->buffer );

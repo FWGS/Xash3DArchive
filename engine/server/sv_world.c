@@ -274,7 +274,7 @@ SV_HullForStudioModel
 */
 hull_t *SV_HullForStudioModel( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset, int *numhitboxes )
 {
-	int		isPointTrace;
+	qboolean		useComplexHull;
 	float		scale = 0.5f;
 	hull_t		*hull = NULL;
 	vec3_t		size;
@@ -287,19 +287,19 @@ hull_t *SV_HullForStudioModel( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t of
 	}
 
 	VectorSubtract( maxs, mins, size );
-	isPointTrace = false;
+	useComplexHull = false;
 
-	if( VectorIsNull( size ) && !( svgame.globals->trace_flags & FTRACE_SIMPLEBOX ))
+	if( VectorIsNull( size ) && !FBitSet( svgame.globals->trace_flags, FTRACE_SIMPLEBOX ))
 	{
-		isPointTrace = true;
+		useComplexHull = true;
 
-		if( ent->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
+		if( FBitSet( ent->v.flags, FL_CLIENT|FL_FAKECLIENT ))
 		{
 			if( sv_clienttrace->value == 0.0f )
 			{
 				// so no way to trace studiomodels by hitboxes
 				// use bbox instead
-				isPointTrace = false;
+				useComplexHull = false;
 			}
 			else
 			{
@@ -309,12 +309,12 @@ hull_t *SV_HullForStudioModel( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t of
 		}
 	}
 
-	if( mod->flags & STUDIO_TRACE_HITBOX || isPointTrace )
+	if( FBitSet( mod->flags, STUDIO_TRACE_HITBOX ) || useComplexHull )
 	{
 		VectorScale( size, scale, size );
 		VectorClear( offset );
 
-		if( ent->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
+		if( FBitSet( ent->v.flags, FL_CLIENT|FL_FAKECLIENT ))
 		{
 			studiohdr_t	*pstudio;
 			mstudioseqdesc_t	*pseqdesc;

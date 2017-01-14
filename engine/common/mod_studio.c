@@ -206,8 +206,10 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 	vec3_t		angles2;
 	mstudiocache_t	*bonecache;
 	mstudiobbox_t	*phitbox;
+	qboolean		bSkipShield;
 	int		i, j;
 
+	bSkipShield = false;
 	*numhitboxes = 0; // assume error
 
 	if( mod_studiocache->integer )
@@ -236,27 +238,30 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 	pBlendAPI->SV_StudioSetupBones( model, frame, sequence, angles2, origin, pcontroller, pblending, -1, pEdict );
 	phitbox = (mstudiobbox_t *)((byte *)mod_studiohdr + mod_studiohdr->hitboxindex);
 
-	for( i = j = 0; i < mod_studiohdr->numhitboxes; i++, j += 6 )
+	if( SV_IsValidEdict( pEdict ) && pEdict->v.gamestate == 1 )
+		bSkipShield = 1;
+	
+	for( i = 0; i < mod_studiohdr->numhitboxes; i++ )
 	{
+		if( bSkipShield && i == 21 ) continue;
+
 		studio_hull_hitgroup[i] = phitbox[i].group;
 
-		Mod_SetStudioHullPlane( &studio_planes[j+0], phitbox[i].bone, 0, phitbox[i].bbmax[0] );
-		Mod_SetStudioHullPlane( &studio_planes[j+1], phitbox[i].bone, 0, phitbox[i].bbmin[0] );
-		Mod_SetStudioHullPlane( &studio_planes[j+2], phitbox[i].bone, 1, phitbox[i].bbmax[1] );
-		Mod_SetStudioHullPlane( &studio_planes[j+3], phitbox[i].bone, 1, phitbox[i].bbmin[1] );
-		Mod_SetStudioHullPlane( &studio_planes[j+4], phitbox[i].bone, 2, phitbox[i].bbmax[2] );
-		Mod_SetStudioHullPlane( &studio_planes[j+5], phitbox[i].bone, 2, phitbox[i].bbmin[2] );
+		for( j = 0; j < 3; j++ )
+		{
+			mplane_t *plane0 = &studio_planes[i * 6 + j * 2 + 0];
+			mplane_t *plane1 = &studio_planes[i * 6 + j * 2 + 1];
 
-		studio_planes[j+0].dist += DotProductAbs( studio_planes[j+0].normal, size );
-		studio_planes[j+1].dist -= DotProductAbs( studio_planes[j+1].normal, size );
-		studio_planes[j+2].dist += DotProductAbs( studio_planes[j+2].normal, size );
-		studio_planes[j+3].dist -= DotProductAbs( studio_planes[j+3].normal, size );
-		studio_planes[j+4].dist += DotProductAbs( studio_planes[j+4].normal, size );
-		studio_planes[j+5].dist -= DotProductAbs( studio_planes[j+5].normal, size );
+			Mod_SetStudioHullPlane( plane0, phitbox[i].bone, j, phitbox[i].bbmax[j] );
+			Mod_SetStudioHullPlane( plane1, phitbox[i].bone, j, phitbox[i].bbmin[j] );
+
+			plane0->dist += DotProductFabs( plane0->normal, size );
+			plane1->dist -= DotProductFabs( plane1->normal, size );
+		}
 	}
 
 	// tell trace code about hitbox count
-	*numhitboxes = mod_studiohdr->numhitboxes;
+	*numhitboxes = (bSkipShield) ? (mod_studiohdr->numhitboxes - 1) : (mod_studiohdr->numhitboxes);
 
 	if( mod_studiocache->integer )
 	{

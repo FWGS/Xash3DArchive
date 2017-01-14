@@ -625,7 +625,7 @@ void Cmd_AddServerCommand( const char *cmd_name, xcommand_t function )
 
 	if( !cmd_name || !*cmd_name )
 	{
-		MsgDev( D_INFO, "Cmd_AddServerCommand: NULL name\n" );
+		MsgDev( D_ERROR, "Cmd_AddServerCommand: NULL name\n" );
 		return;
 	}
 
@@ -669,21 +669,21 @@ int Cmd_AddClientCommand( const char *cmd_name, xcommand_t function )
 
 	if( !cmd_name || !*cmd_name )
 	{
-		MsgDev( D_INFO, "Cmd_AddClientCommand: NULL name\n" );
+		MsgDev( D_ERROR, "Cmd_AddClientCommand: NULL name\n" );
 		return 0;
 	}
 
 	// fail if the command is a variable name
 	if( Cvar_FindVar( cmd_name ))
 	{
-		MsgDev( D_INFO, "Cmd_AddClientCommand: %s already defined as a var\n", cmd_name );
+		MsgDev( D_ERROR, "Cmd_AddClientCommand: %s already defined as a var\n", cmd_name );
 		return 0;
 	}
 	
 	// fail if the command already exists
 	if( Cmd_Exists( cmd_name ))
 	{
-		MsgDev(D_INFO, "Cmd_AddClientCommand: %s already defined\n", cmd_name );
+		MsgDev( D_ERROR, "Cmd_AddClientCommand: %s already defined\n", cmd_name );
 		return 0;
 	}
 
@@ -715,21 +715,21 @@ int Cmd_AddGameUICommand( const char *cmd_name, xcommand_t function )
 
 	if( !cmd_name || !*cmd_name )
 	{
-		MsgDev( D_INFO, "Cmd_AddGameUICommand: NULL name\n" );
+		MsgDev( D_ERROR, "Cmd_AddGameUICommand: NULL name\n" );
 		return 0;
 	}
 
 	// fail if the command is a variable name
 	if( Cvar_FindVar( cmd_name ))
 	{
-		MsgDev( D_INFO, "Cmd_AddGameUICommand: %s already defined as a var\n", cmd_name );
+		MsgDev( D_ERROR, "Cmd_AddGameUICommand: %s already defined as a var\n", cmd_name );
 		return 0;
 	}
 	
 	// fail if the command already exists
 	if( Cmd_Exists( cmd_name ))
 	{
-		MsgDev(D_INFO, "Cmd_AddGameUICommand: %s already defined\n", cmd_name );
+		MsgDev( D_ERROR, "Cmd_AddGameUICommand: %s already defined\n", cmd_name );
 		return 0;
 	}
 
@@ -1103,6 +1103,7 @@ void Cmd_Unlink( int group )
 	}
 
 	prev = &cmd_functions;
+
 	while( 1 )
 	{
 		cmd = *prev;

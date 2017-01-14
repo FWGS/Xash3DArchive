@@ -146,7 +146,7 @@ typedef struct
 	qboolean		finished;
 } mixer_t;
 
-typedef struct
+typedef struct rawchan_s
 {
 	int			entnum;
 	int			master_vol;
@@ -188,6 +188,8 @@ typedef struct channel_s
 	float		ob_gain_inc;	// crossfade increment
 	qboolean		bTraced;		// true if channel was already checked this frame for obscuring
 	float		radius;		// radius of this sound effect
+	vec3_t		absmin, absmax;	// filled in CL_GetEntitySpatialization
+	int		movetype;		// to determine point entities
 
 	// sentence mixer
 	int		wordIndex;
@@ -305,7 +307,7 @@ void S_SoundList_f( void );
 void S_SoundInfo_f( void );
 
 channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx );
-channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx, const vec3_t pos );
+channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx );
 int S_GetCurrentStaticSounds( soundlist_t *pout, int size );
 int S_GetCurrentDynamicSounds( soundlist_t *pout, int size );
 sfx_t *S_GetSfxByHandle( sound_t handle );

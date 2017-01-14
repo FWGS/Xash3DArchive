@@ -2115,7 +2115,7 @@ void SV_TSourceEngineQuery( netadr_t from )
 	MSG_Init( &buf, "TSourceEngineQuery", answer, sizeof( answer ));
 
 	MSG_WriteByte( &buf, 'm' );
-	MSG_WriteString( &buf, NET_AdrToString( net_local ) );
+	MSG_WriteString( &buf, NET_AdrToString( net_local ));
 	MSG_WriteString( &buf, hostname->string );
 	MSG_WriteString( &buf, sv.name );
 	MSG_WriteString( &buf, GI->gamefolder );
@@ -2123,7 +2123,7 @@ void SV_TSourceEngineQuery( netadr_t from )
 	MSG_WriteByte( &buf, count );
 	MSG_WriteByte( &buf, sv_maxclients->integer );
 	MSG_WriteByte( &buf, PROTOCOL_VERSION );
-	MSG_WriteByte( &buf, host.type == HOST_DEDICATED ? 'D' : 'L');
+	MSG_WriteByte( &buf, host.type == HOST_DEDICATED ? 'D' : 'L' );
 	MSG_WriteByte( &buf, 'W' );
 
 	if( Q_stricmp( GI->gamedir, "valve" ))
@@ -2164,7 +2164,7 @@ connectionless packets.
 void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 {
 	char	*args;
-	char	*c, buf[MAX_SYSPATH];
+	char	*pcmd, buf[MAX_SYSPATH];
 	int	len = sizeof( buf );
 
 	MSG_Clear( msg );
@@ -2173,20 +2173,20 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	args = MSG_ReadStringLine( msg );
 	Cmd_TokenizeString( args );
 
-	c = Cmd_Argv( 0 );
-	MsgDev( D_NOTE, "SV_ConnectionlessPacket: %s : %s\n", NET_AdrToString( from ), c );
+	pcmd = Cmd_Argv( 0 );
+	MsgDev( D_NOTE, "SV_ConnectionlessPacket: %s : %s\n", NET_AdrToString( from ), pcmd );
 
-	if( !Q_strcmp( c, "ping" )) SV_Ping( from );
-	else if( !Q_strcmp( c, "ack" )) SV_Ack( from );
-	else if( !Q_strcmp( c, "status" )) SV_Status( from );
-	else if( !Q_strcmp( c, "info" )) SV_Info( from );
-	else if( !Q_strcmp( c, "getchallenge" )) SV_GetChallenge( from );
-	else if( !Q_strcmp( c, "connect" )) SV_DirectConnect( from );
-	else if( !Q_strcmp( c, "rcon" )) SV_RemoteCommand( from, msg );
-	else if( !Q_strcmp( c, "netinfo" )) SV_BuildNetAnswer( from );
-	else if( !Q_strcmp( c, "s")) SV_AddToMaster( from, msg );
-	else if( !Q_strcmp( c, "T" "Source" )) SV_TSourceEngineQuery( from );
-	else if( !Q_strcmp( c, "i" )) NET_SendPacket( NS_SERVER, 5, "\xFF\xFF\xFF\xFFj", from ); // A2A_PING
+	if( !Q_strcmp( pcmd, "ping" )) SV_Ping( from );
+	else if( !Q_strcmp( pcmd, "ack" )) SV_Ack( from );
+	else if( !Q_strcmp( pcmd, "status" )) SV_Status( from );
+	else if( !Q_strcmp( pcmd, "info" )) SV_Info( from );
+	else if( !Q_strcmp( pcmd, "getchallenge" )) SV_GetChallenge( from );
+	else if( !Q_strcmp( pcmd, "connect" )) SV_DirectConnect( from );
+	else if( !Q_strcmp( pcmd, "rcon" )) SV_RemoteCommand( from, msg );
+	else if( !Q_strcmp( pcmd, "netinfo" )) SV_BuildNetAnswer( from );
+	else if( !Q_strcmp( pcmd, "s" )) SV_AddToMaster( from, msg );
+	else if( !Q_strcmp( pcmd, "T" "Source" )) SV_TSourceEngineQuery( from );
+	else if( !Q_strcmp( pcmd, "i" )) NET_SendPacket( NS_SERVER, 5, "\xFF\xFF\xFF\xFFj", from ); // A2A_PING
 	else if( svgame.dllFuncs.pfnConnectionlessPacket( &from, args, buf, &len ))
 	{
 		// user out of band message (must be handled in CL_ConnectionlessPacket)

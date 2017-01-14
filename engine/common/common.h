@@ -73,8 +73,8 @@ typedef struct
 enum
 {
 	D_INFO = 1,	// "-dev 1", shows various system messages
-	D_WARN,		// "-dev 2", shows not critical system warnings
-	D_ERROR,		// "-dev 3", shows critical warnings 
+	D_ERROR,		// "-dev 2", shows critical warnings 
+	D_WARN,		// "-dev 3", shows not critical system warnings
 	D_REPORT,		// "-dev 4", special case for game reports
 	D_NOTE		// "-dev 5", show system notifications for engine developers
 };
@@ -840,6 +840,7 @@ struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
 void SV_DrawDebugTriangles( void );
 void SV_DrawOrthoTriangles( void );
+double CL_GetDemoFramerate( void );
 qboolean UI_CreditsActive( void );
 void CL_ExtraUpdate( void );
 int CL_GetMaxClients( void );
@@ -885,6 +886,7 @@ char *Cvar_Userinfo( void );
 char *Cvar_Serverinfo( void );
 void Cmd_WriteVariables( file_t *f );
 qboolean Cmd_CheckMapsList( qboolean fRefresh );
+qboolean Cmd_AutocompleteName( const char *source, char *buffer, size_t bufsize );
 void Cmd_AutoComplete( char *complete_string );
 void COM_SetRandomSeed( long lSeed );
 long Com_RandomLong( long lMin, long lMax );
@@ -900,14 +902,6 @@ struct cmdalias_s *Cmd_AliasGetList( void );
 char *Cmd_GetName( struct cmd_s *cmd );
 cvar_t *Cvar_GetList( void );
 void Cmd_Null_f( void );
-
-typedef struct autocomplete_list_s
-{
-	const char *name;
-	qboolean (*func)( const char *s, char *name, int length );
-} autocomplete_list_t;
-
-extern autocomplete_list_t cmd_list[];
 extern const char *svc_strings[256];
 
 // soundlib shared exports

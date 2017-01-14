@@ -132,18 +132,6 @@ float CL_GetServerTime( void )
 
 /*
 ====================
-CL_GetLerpFrac
-
-returns current lerp fraction
-====================
-*/
-float CL_GetLerpFrac( void )
-{
-	return cl.lerpFrac;
-}
-
-/*
-====================
 CL_IsThirdPerson
 
 returns true if thirdperson is enabled
