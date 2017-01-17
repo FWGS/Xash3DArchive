@@ -782,10 +782,10 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 		{
 		case dem_jumptime:
 			demo.starttime = CL_GetDemoPlaybackClock();
-			break;
+			return false; // time is changed, skip frame
 		case dem_stop:
 			CL_DemoMoveToNextSection();
-			break;
+			return false; // header is ended, skip frame
 		case dem_userdata:
 			FS_Read( cls.demofile, &size, sizeof( int ));
 			userbuf = Mem_Alloc( cls.mempool, size );

@@ -403,10 +403,11 @@ void CL_CreateCmd( void )
 		VectorCopy( cl.data.viewangles, cl.refdef.cl_viewangles );
 		cl.scr_fov = cl.data.fov;
 	}
-
+#if 0
 	// allways dump the first ten messages,
 	// because it may contain leftover inputs
 	// from the last level
+	// disabled because it's invoke crash in HLFX 0.6 while we trying to playback a demo
 	if( ++cl.movemessages <= 10 )
 	{
 		if( !cls.demoplayback )
@@ -418,7 +419,7 @@ void CL_CreateCmd( void )
 		CL_PopPMStates();
 		return;
 	}
-
+#endif
 	// message we are constructing.
 	i = cls.netchan.outgoing_sequence & CL_UPDATE_MASK;   
 	pcmd = &cl.commands[i];

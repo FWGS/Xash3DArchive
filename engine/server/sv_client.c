@@ -1190,6 +1190,25 @@ void SV_PutClientInServer( sv_client_t *cl )
 }
 
 /*
+===========
+SV_UpdateClientView
+
+Resend the client viewentity (used for demos)
+============
+*/
+void SV_UpdateClientView( sv_client_t *cl )
+{
+	int	viewEnt;
+
+	if( cl->pViewEntity )
+		viewEnt = NUM_FOR_EDICT( cl->pViewEntity );
+	else viewEnt = NUM_FOR_EDICT( cl->edict );
+
+	MSG_WriteByte( &sv.reliable_datagram, svc_setview );
+	MSG_WriteWord( &sv.reliable_datagram, viewEnt );
+}
+
+/*
 ==================
 SV_TogglePause
 ==================
@@ -2082,6 +2101,8 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 			Host_RestartDecals();
 			// resend all the static ents for demo recording
 			SV_RestartStaticEnts();
+			// resend the viewentity
+			SV_UpdateClientView( cl );
 		}
 	}
 }
