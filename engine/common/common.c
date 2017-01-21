@@ -549,7 +549,7 @@ void Con_Printf( char *szFmt, ... )
 	static char	buffer[16384];	// must support > 1k messages
 	va_list		args;
 
-	if( host.developer <= 0 )
+	if( host.developer < D_INFO )
 		return;
 
 	va_start( args, szFmt );
@@ -570,7 +570,7 @@ void Con_DPrintf( char *szFmt, ... )
 	static char	buffer[16384];	// must support > 1k messages
 	va_list		args;
 
-	if( host.developer < D_INFO )
+	if( host.developer < D_ERROR )
 		return;
 
 	va_start( args, szFmt );

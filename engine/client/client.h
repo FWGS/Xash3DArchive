@@ -104,7 +104,7 @@ extern int CL_UPDATE_BACKUP;
 #define INVALID_HANDLE	0xFFFF		// for XashXT cache system
 
 #define cl_serverframetime()	(cl.mtime[0] - cl.mtime[1])
-#define cl_clientframetime()	(host.frametime)
+#define cl_clientframetime()	(cl.time - cl.oldtime)
 
 typedef struct
 {
@@ -171,6 +171,7 @@ typedef struct
 
 	float		lerpFrac;			// interpolation value
 	float		lerpBack;			// invert interpolation value
+	float		timedelta;		// floating delta between two updates
 	ref_params_t	refdef;			// shared refdef
 
 	char		serverinfo[MAX_INFO_STRING];
@@ -183,7 +184,6 @@ typedef struct
 	// server state information
 	int		playernum;
 	int		maxclients;
-	int		movemessages;
 	int		num_custombeams;			// server beams count
 
 	char		model_precache[MAX_MODELS][CS_SIZE];
@@ -578,6 +578,8 @@ extern convar_t	*cl_lightstyle_lerping;
 extern convar_t	*cl_draw_particles;
 extern convar_t	*cl_levelshot_name;
 extern convar_t	*cl_draw_beams;
+extern convar_t	*cl_clockreset;
+extern convar_t	*cl_fixtimerate;
 extern convar_t	*gl_showtextures;
 extern convar_t	*cl_bmodelinterp;
 extern convar_t	*cl_lw;		// local weapons

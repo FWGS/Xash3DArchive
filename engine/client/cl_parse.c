@@ -363,8 +363,28 @@ CL_ParseServerTime
 */
 void CL_ParseServerTime( sizebuf_t *msg )
 {
+	double	dt;
+
 	cl.mtime[1] = cl.mtime[0];
 	cl.mtime[0] = MSG_ReadFloat( msg );
+
+	if( cl.maxclients == 1 )
+		cl.time = cl.mtime[0];
+
+	dt = cl.time - cl.mtime[0];
+
+	if( fabs( dt ) > cl_clockreset->value )	// 0.1 by default
+	{
+		cl.time = cl.mtime[0];
+		cl.timedelta = 0.0f;
+	}
+	else if( dt != 0.0 )
+	{
+		cl.timedelta = dt;
+	}
+
+	if( cl.oldtime > cl.time )
+		cl.oldtime = cl.time;
 }
 
 /*

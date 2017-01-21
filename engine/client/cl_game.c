@@ -3437,14 +3437,14 @@ void NetAPI_CancelRequest( int context )
 				nr->pfnFunc( &nr->resp );
                               }
 
-			memset( &clgame.net_requests[i], 0, sizeof( net_request_t ));
-
 			if( clgame.net_requests[i].resp.type == NETAPI_REQUEST_SERVERLIST && &clgame.net_requests[i] == clgame.master_request )
 			{
 				if( clgame.request_type == NET_REQUEST_CLIENT )
 					clgame.request_type = NET_REQUEST_CANCEL;
 				clgame.master_request = NULL;
 			}
+
+			memset( &clgame.net_requests[i], 0, sizeof( net_request_t ));
 			break;
 		}
 	}

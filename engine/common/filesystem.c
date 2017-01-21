@@ -1992,6 +1992,8 @@ Close a file
 */
 int FS_Close( file_t *file )
 {
+	if( !file ) return 0;
+
 	if( close( file->handle ))
 		return EOF;
 
@@ -2724,7 +2726,7 @@ qboolean FS_FileCopy( file_t *pOutput, file_t *pInput, int fileSize )
 
 		if(( readSize = FS_Read( pInput, buf, size )) < size )
 		{
-			MsgDev( D_ERROR, "FS_FileCopy: unexpected end of input file\n" );
+			MsgDev( D_ERROR, "FS_FileCopy: unexpected end of input file (%d < %d)\n", readSize, size );
 			fileSize = 0;
 			done = false;
 			break;

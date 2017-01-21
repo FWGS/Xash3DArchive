@@ -73,8 +73,8 @@ typedef struct
 enum
 {
 	D_INFO = 1,	// "-dev 1", shows various system messages
-	D_ERROR,		// "-dev 2", shows critical warnings 
-	D_WARN,		// "-dev 3", shows not critical system warnings
+	D_WARN,		// "-dev 2", shows not critical system warnings
+	D_ERROR,		// "-dev 3", shows critical warnings 
 	D_REPORT,		// "-dev 4", special case for game reports
 	D_NOTE		// "-dev 5", show system notifications for engine developers
 };

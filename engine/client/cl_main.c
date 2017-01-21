@@ -41,6 +41,8 @@ convar_t	*cl_lightstyle_lerping;
 convar_t	*cl_idealpitchscale;
 convar_t	*cl_nosmooth;
 convar_t	*cl_smoothtime;
+convar_t	*cl_clockreset;
+convar_t	*cl_fixtimerate;
 convar_t	*cl_solid_players;
 convar_t	*cl_draw_beams;
 convar_t	*cl_updaterate;
@@ -190,38 +192,32 @@ should be put at.
 */
 static float CL_LerpPoint( void )
 {
-	float	f, frac;
+	float	f, frac = 1.0f;
 
 	f = cl_serverframetime();
 	
-	if( !f || SV_Active( ))
+	if( f == 0.0f || cls.timedemo )
 	{
 		cl.time = cl.mtime[0];
+
+		// g-cont. probably this is redundant
+		if( cls.demoplayback )
+			cl.oldtime = cl.mtime[0] - cl_clientframetime();
+
 		return 1.0f;
 	}
-		
-	if( f > 0.1f )
-	{	
-		// dropped packet, or start of demo
-		cl.mtime[1] = cl.mtime[0] - 0.1f;
-		f = 0.1f;
+
+	if( cl_interp->value > 0.001f )
+	{
+		// manual lerp value (goldsrc mode)
+		frac = ( cl.time - cl.mtime[0] ) / cl_interp->value;
+	}
+	else if( f > 0.001f )
+	{
+		// automatic lerp (classic mode)
+		frac = ( cl.time - cl.mtime[1] ) / f;
 	}
 
-	frac = ( cl.time - cl.mtime[1] ) / f;
-
-	if( frac < 0 )
-	{
-		if( frac < -0.01f )
-			cl.time = cl.mtime[1];
-		frac = 0.0f;
-	}
-	else if( frac > 1.0f )
-	{
-		if( frac > 1.01f )
-			cl.time = cl.mtime[0];
-		frac = 1.0f;
-	}
-		
 	return frac;
 }
 
@@ -403,23 +399,7 @@ void CL_CreateCmd( void )
 		VectorCopy( cl.data.viewangles, cl.refdef.cl_viewangles );
 		cl.scr_fov = cl.data.fov;
 	}
-#if 0
-	// allways dump the first ten messages,
-	// because it may contain leftover inputs
-	// from the last level
-	// disabled because it's invoke crash in HLFX 0.6 while we trying to playback a demo
-	if( ++cl.movemessages <= 10 )
-	{
-		if( !cls.demoplayback )
-		{
-			cl.refdef.cmd = &cl.commands[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].cmd;
-			*cl.refdef.cmd = cmd;
-		}
 
-		CL_PopPMStates();
-		return;
-	}
-#endif
 	// message we are constructing.
 	i = cls.netchan.outgoing_sequence & CL_UPDATE_MASK;   
 	pcmd = &cl.commands[i];
@@ -1870,7 +1850,7 @@ void CL_InitLocal( void )
 	cl_nodelta = Cvar_Get ("cl_nodelta", "0", 0, "disable delta-compression for usercommnds" );
 	cl_idealpitchscale = Cvar_Get( "cl_idealpitchscale", "0.8", 0, "how much to look up/down slopes and stairs when not using freelook" );
 	cl_solid_players = Cvar_Get( "cl_solid_players", "1", 0, "Make all players not solid (can't traceline them)" );
-	cl_interp = Cvar_Get( "ex_interp", "0.1", 0, "Interpolate object positions starting this many seconds in past" ); 
+	cl_interp = Cvar_Get( "ex_interp", "0.1", CVAR_ARCHIVE, "Interpolate object positions starting this many seconds in past" ); 
 	cl_timeout = Cvar_Get( "cl_timeout", "60", 0, "connect timeout (in-seconds)" );
 
 	rcon_client_password = Cvar_Get( "rcon_password", "", 0, "remote control client password" );
@@ -1894,6 +1874,8 @@ void CL_InitLocal( void )
 	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", CVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
 	cl_showerror = Cvar_Get( "cl_showerror", "0", CVAR_ARCHIVE, "show prediction error" );
 	cl_bmodelinterp = Cvar_Get( "cl_bmodelinterp", "1", CVAR_ARCHIVE, "enable bmodel interpolation" );
+	cl_clockreset = Cvar_Get( "cl_clockreset", "0.1", CVAR_ARCHIVE, "frametime delta maximum value before reset" );
+	cl_fixtimerate = Cvar_Get( "cl_fixtimerate", "7.5", CVAR_ARCHIVE, "time in msec to client clock adjusting" );
 
 	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
 	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar
@@ -1978,6 +1960,42 @@ void CL_SendCommand( void )
 
 	// resend a connection request if necessary
 	CL_CheckForResend ();
+}
+
+/*
+==================
+CL_AdjustClock
+
+slowly adjuct client clock
+to smooth lag effect
+==================
+*/
+void CL_AdjustClock( void )
+{
+	if( cl.timedelta == 0.0f || !cl_fixtimerate->value )
+		return;
+
+	if( cl_fixtimerate->value < 0.0f )
+		Cvar_SetFloat( "cl_fixtimerate", 7.5f );
+
+	if( fabs( cl.timedelta ) >= 0.001f )
+	{
+		double	msec, adjust, sign;
+
+		msec = ( cl.timedelta * 1000.0 );
+		sign = ( msec < 0 ) ? 1.0 : -1.0;
+		msec = fabs( msec );
+		adjust = sign * ( cl_fixtimerate->value / 1000.0 );
+
+		if( fabs( adjust ) < fabs( cl.timedelta ))
+		{
+			cl.timedelta += adjust;
+			cl.time += adjust;
+		}
+
+		if( cl.oldtime > cl.time )
+			cl.oldtime = cl.time;
+	}
 }
 
 /*
@@ -2092,6 +2110,9 @@ void Host_ClientFrame( void )
 		// predict all unacknowledged movements
 		CL_PredictMovement();
 	}
+
+	// adjust client time
+	CL_AdjustClock();
 
 	// animate lightestyles
 	CL_RunLightStyles();

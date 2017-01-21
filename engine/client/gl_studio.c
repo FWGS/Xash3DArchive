@@ -3343,7 +3343,7 @@ void R_DrawViewModel( void )
 	if( cl.thirdperson || cl.refdef.health <= 0 || cl.refdef.viewentity != ( cl.playernum + 1 ))
 		return;
 
-	if( RI.params & RP_NONVIEWERREF )
+	if( cl.refdef.nextView || RI.params & RP_NONVIEWERREF )
 		return;
 
 	if( !Mod_Extradata( clgame.viewent.model ))
