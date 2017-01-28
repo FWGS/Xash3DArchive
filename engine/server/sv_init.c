@@ -317,7 +317,7 @@ void SV_ActivateServer( void )
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
 
-	if( sv.loadgame || svgame.globals->changelevel )
+	if( sv.loadgame && !svgame.globals->changelevel )
 	{
 		sv.frametime = 0.001;
 		numFrames = 1;

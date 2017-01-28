@@ -701,8 +701,11 @@ qboolean SND_CheckPHS( channel_t *ch )
 {
 	mleaf_t	*leaf;
 
-	if( !ch->dist_mult || !s_phs->integer )
-		return true; // no attenuation
+	if( !s_phs->integer )
+		return true;
+
+	if( !ch->dist_mult && ch->entnum )
+		return true; // no attenuation 
 
 	if( ch->movetype == MOVETYPE_PUSH )
 	{
@@ -1146,6 +1149,7 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 
 	if( pos ) VectorCopy( pos, ch->origin );
 	else VectorClear( ch->origin );
+	ch->entnum = ent;
 
 	CL_GetEntitySpatialization( ch );
 
@@ -1186,7 +1190,6 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 	ch->dist_mult = (attn / SND_CLIP_DISTANCE);
 	ch->entchannel = CHAN_STATIC;
 	ch->basePitch = pitch;
-	ch->entnum = ent;
 	ch->radius = radius;
 
 	// initialize gain due to obscured sound source

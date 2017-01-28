@@ -1059,7 +1059,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	defGI.max_edicts = 900;	// default value if not specified
 	defGI.max_tents = 500;
 	defGI.max_beams = 128;
-	defGI.soundclip_dist = 1536;
+	defGI.soundclip_dist = 1000;
 	defGI.max_particles = 4096;
 	defGI.version = 1.0;
 	defGI.falldir[0] = '\0';
@@ -1105,7 +1105,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	GameInfo->max_edicts = 900;	// default value if not specified
 	GameInfo->max_tents = 500;
 	GameInfo->max_beams = 128;
-	GameInfo->soundclip_dist = 1536;
+	GameInfo->soundclip_dist = 1000;
 	GameInfo->max_particles = 4096;
 	GameInfo->version = 1.0f;
 	GameInfo->falldir[0] = '\0';
@@ -1282,7 +1282,7 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	GameInfo->max_edicts = 900;	// default value if not specified
 	GameInfo->max_tents = 500;
 	GameInfo->max_beams = 128;
-	GameInfo->soundclip_dist = 1536;
+	GameInfo->soundclip_dist = 1000;
 	GameInfo->max_particles = 4096;
 	GameInfo->version = 1.0f;
 	GameInfo->falldir[0] = '\0';

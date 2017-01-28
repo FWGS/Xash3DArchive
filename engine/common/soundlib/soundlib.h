@@ -18,6 +18,8 @@ GNU General Public License for more details.
 
 #include "common.h"
 
+#define FRAME_SIZE		32768	// must match with mp3 frame size
+
 typedef struct loadwavfmt_s
 {
 	const char *formatstring;

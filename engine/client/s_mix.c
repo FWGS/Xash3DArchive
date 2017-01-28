@@ -574,7 +574,8 @@ void MIX_MixChannelsToPaintbuffer( int endtime, int rate, int outputRate )
  
 		if( !bZeroVolume )
 		{
-			if( ch->leftvol <= 5 && ch->rightvol <= 5 )
+			// this values matched with GoldSrc
+			if( ch->leftvol < 8 && ch->rightvol < 8 )
 				bZeroVolume = true;
 		}
 
