@@ -1546,7 +1546,7 @@ void S_RawSamples( uint samples, uint rate, word width, word channels, const byt
 {
 	int	snd_vol;
 
-	if( entnum < 0 ) snd_vol = 128; // bg track or movie track
+	if( entnum < 0 ) snd_vol = 256; // bg track or movie track
 	if( snd_vol < 0 ) snd_vol = 0; // fixup negative values
 
 	S_RawEntSamples( entnum, samples, rate, width, channels, data, snd_vol );
