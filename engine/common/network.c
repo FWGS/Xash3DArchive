@@ -234,37 +234,30 @@ idnewt:28000
 192.246.40.70:28000
 =============
 */
-#define DO(src,dest)		\
-	copy[0] = s[src];		\
-	copy[1] = s[src + 1];	\
-	sscanf( copy, "%x", &val );	\
-	((struct sockaddr_ipx *)sadr)->dest = val
-
 static qboolean NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 {
-	struct hostent	*h;
-	char		*colon;
-	char		copy[MAX_SYSPATH];
-	int		val;
+	char	*colon;
+	char	copy[128];
+	int	val, i, j;
 	
 	memset( sadr, 0, sizeof( *sadr ));
 
-	if((Q_strlen( s ) >= 23 ) && ( s[8] == ':' ) && ( s[21] == ':' )) // check for an IPX address
+	if(( Q_strlen( s ) >= 24 ) && ( s[8] == ':' ) && ( s[21] == ':' )) // check for an IPX address
 	{
-		((struct sockaddr_ipx *)sadr)->sa_family = AF_IPX;
+		sadr->sa_family = AF_IPX;
 		copy[2] = 0;
-		DO( 0, sa_netnum[0] );
-		DO( 2, sa_netnum[1] );
-		DO( 4, sa_netnum[2] );
-		DO( 6, sa_netnum[3] );
-		DO( 9, sa_nodenum[0] );
-		DO( 11, sa_nodenum[1] );
-		DO( 13, sa_nodenum[2] );
-		DO( 15, sa_nodenum[3] );
-		DO( 17, sa_nodenum[4] );
-		DO( 19, sa_nodenum[5] );
+
+		for( i = j = 0; i < 10; i++, j += 2 )
+		{
+			if( j == 8 ) j++; // skip ':'
+			copy[0] = s[j+0];
+			copy[1] = s[j+1];
+			sscanf( copy, "%x", &val );
+			sadr->sa_data[i] = (char)val;
+		}
+
 		sscanf( &s[22], "%u", &val );
-		((struct sockaddr_ipx *)sadr)->sa_socket = pHtons((word)val);
+		*(word *)&sadr->sa_data[10] = pHtons( val );
 	}
 	else
 	{
@@ -282,21 +275,22 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 				((struct sockaddr_in *)sadr)->sin_port = pHtons((short)Q_atoi( colon + 1 ));	
 			}
 		}
-		
-		if( copy[0] >= '0' && copy[0] <= '9' )
+
+		((struct sockaddr_in *)sadr)->sin_addr.s_addr = pInet_Addr( copy );
+
+		if(((struct sockaddr_in *)sadr)->sin_addr.s_addr == INADDR_NONE )
 		{
-			*(int *)&((struct sockaddr_in *)sadr)->sin_addr = pInet_Addr( copy );
-		}
-		else
-		{
-			if(!( h = pGetHostByName( copy )))
+			struct hostent	*h = pGetHostByName( copy );
+
+			if( h == NULL || h->h_addr == NULL )
 				return false;
-			*(int *)&((struct sockaddr_in *)sadr)->sin_addr = *(int *)h->h_addr_list[0];
+
+			((struct sockaddr_in *)sadr)->sin_addr.s_addr = *(uint *)h->h_addr;	
 		}
 	}
+
 	return true;
 }
-#undef DO
 
 char *NET_AdrToString( const netadr_t a )
 {
