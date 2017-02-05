@@ -71,7 +71,7 @@ qboolean Sound_LoadMPG( const char *name, const byte *buffer, size_t filesize )
 		return false;
 
 #ifdef _DEBUG
-	if( ret ) MsgDev( D_ERROR, %s\n", get_error( mpeg ));
+	if( ret ) MsgDev( D_ERROR, "%s\n", get_error( mpeg ));
 #endif
 
 	// trying to read header
@@ -169,7 +169,7 @@ stream_t *Stream_OpenMPG( const char *filename )
 	}
 
 #ifdef _DEBUG
-	if( ret ) MsgDev( D_ERROR, %s\n", get_error( mpeg ));
+	if( ret ) MsgDev( D_ERROR, "%s\n", get_error( mpeg ));
 #endif
 	// trying to open stream and read header
 	if( !open_mpeg_stream( mpeg, file, FS_Read, FS_Seek, &sc ))

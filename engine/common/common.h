@@ -119,6 +119,8 @@ typedef enum
 // config strings are a general means of communication from
 // the server to all connected clients.
 // each config string can be at most CS_SIZE characters.
+#define MAX_QPATH		64	// max length of a game pathname
+#define MAX_OSPATH		260	// max length of a filesystem pathname
 #define CS_SIZE		64	// size of one config string
 #define CS_TIME		16	// size of time string
 
@@ -262,13 +264,7 @@ typedef enum
 	PRINT_CHAT,	// chat messages
 } messagelevel_t;
 
-typedef enum
-{
-	NS_CLIENT,
-	NS_SERVER
-} netsrc_t;
-
-#include "netadr.h"
+#include "net_ws.h"
 
 typedef struct host_redirect_s
 {
@@ -415,22 +411,6 @@ int FS_Close( file_t *file );
 int FS_Getc( file_t *file );
 qboolean FS_Eof( file_t *file );
 long FS_FileLength( file_t *f );
-
-//
-// network.c
-//
-void NET_Init( void );
-void NET_Shutdown( void );
-void NET_Sleep( int msec );
-void NET_Config( qboolean net_enable );
-qboolean NET_IsLocalAddress( netadr_t adr );
-char *NET_AdrToString( const netadr_t a );
-char *NET_BaseAdrToString( const netadr_t a );
-qboolean NET_StringToAdr( const char *string, netadr_t *adr );
-qboolean NET_CompareAdr( const netadr_t a, const netadr_t b );
-qboolean NET_CompareBaseAdr( const netadr_t a, const netadr_t b );
-qboolean NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
-void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to );
 
 /*
 ========================================================================
@@ -838,6 +818,7 @@ qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *posi
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
+const char *CL_MsgInfo( int cmd );
 void SV_DrawDebugTriangles( void );
 void SV_DrawOrthoTriangles( void );
 double CL_GetDemoFramerate( void );
@@ -903,6 +884,7 @@ char *Cmd_GetName( struct cmd_s *cmd );
 cvar_t *Cvar_GetList( void );
 void Cmd_Null_f( void );
 extern const char *svc_strings[256];
+extern const char *clc_strings[11];
 
 // soundlib shared exports
 qboolean S_Init( void );

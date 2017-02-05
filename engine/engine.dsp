@@ -392,7 +392,7 @@ SOURCE=.\common\net_encode.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\network.c
+SOURCE=.\common\net_ws.c
 # End Source File
 # Begin Source File
 

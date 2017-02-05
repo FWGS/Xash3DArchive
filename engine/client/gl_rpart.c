@@ -864,9 +864,9 @@ void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 		VectorScale( p->vel, speed, p->vel );
 	}
 
-	for( arc = 0.075f, i = 0; i < speed / 2; i++, arc -= 0.005f )
+	for( arc = 0.075f, i = 0; i < ( speed / 5 ); i++, arc -= 0.005f )
 	{
-		float	num;
+		float	num, spd;
 
 		p = CL_AllocParticle( NULL );
 		if( !p ) return;
@@ -881,8 +881,11 @@ void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 		p->vel[2] -= arc;
 
 		num = Com_RandomFloat( 0.0f, 1.0f );
-		num = 1.7f * num * (int)(num * speed);
+		spd = speed * num;
+		num *= 1.7f;
+
 		VectorScale( p->vel, num, p->vel );
+		VectorScale( p->vel, spd, p->vel );
 
 		for( j = 0; j < 2; j++ )
 		{
@@ -901,6 +904,7 @@ void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 			p->vel[2] -= arc;
 
 			VectorScale( p->vel, num, p->vel );
+			VectorScale( p->vel, spd, p->vel );
 		}
 	}
 }

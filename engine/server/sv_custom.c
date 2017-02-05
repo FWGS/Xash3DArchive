@@ -332,7 +332,7 @@ void SV_SendResources( sizebuf_t *msg )
 
 	memset( nullrguc, 0, sizeof( nullrguc ));
 
-	MSG_WriteByte( msg, svc_customization );
+	MSG_BeginServerCmd( msg, svc_customization );
 	MSG_WriteLong( msg, svs.spawncount );
 
 	// g-cont. This is more than HL limit but unmatched with GoldSrc protocol

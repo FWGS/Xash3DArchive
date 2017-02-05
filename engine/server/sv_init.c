@@ -59,7 +59,7 @@ int SV_ModelIndex( const char *filename )
 	if( sv.state != ss_loading )
 	{	
 		// send the update to everyone
-		MSG_WriteByte( &sv.reliable_datagram, svc_modelindex );
+		MSG_BeginServerCmd( &sv.reliable_datagram, svc_modelindex );
 		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_MODEL_BITS );
 		MSG_WriteString( &sv.reliable_datagram, name );
 	}
@@ -104,7 +104,7 @@ int SV_SoundIndex( const char *filename )
 	if( sv.state != ss_loading )
 	{	
 		// send the update to everyone
-		MSG_WriteByte( &sv.reliable_datagram, svc_soundindex );
+		MSG_BeginServerCmd( &sv.reliable_datagram, svc_soundindex );
 		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_SOUND_BITS );
 		MSG_WriteString( &sv.reliable_datagram, name );
 	}
@@ -148,7 +148,7 @@ int SV_EventIndex( const char *filename )
 	if( sv.state != ss_loading )
 	{
 		// send the update to everyone
-		MSG_WriteByte( &sv.reliable_datagram, svc_eventindex );
+		MSG_BeginServerCmd( &sv.reliable_datagram, svc_eventindex );
 		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_EVENT_BITS );
 		MSG_WriteString( &sv.reliable_datagram, name );
 	}
@@ -364,12 +364,9 @@ void SV_ActivateServer( void )
 	if( svgame.globals->maxClients > 1 )
 	{
 		MsgDev( D_INFO, "%i player server started\n", svgame.globals->maxClients );
-		Cvar_Reset( "clockwindow" );
 	}
 	else
 	{
-		// clear the ugly moving delay in singleplayer
-		Cvar_SetFloat( "clockwindow", 0.0f );
 		MsgDev( D_INFO, "Game started\n" );
 	}
 
@@ -560,10 +557,11 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	svgame.globals->time = sv.time;
 	
 	// initialize buffers
-	MSG_Init( &sv.reliable_datagram, "Reliable Datagram", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
-	MSG_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));
 	MSG_Init( &sv.signon, "Signon", sv.signon_buf, sizeof( sv.signon_buf ));
-	MSG_Init( &sv.spectator_datagram, "Spectator Datagram", sv.spectator_buf, sizeof( sv.spectator_buf ));
+	MSG_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));
+	MSG_Init( &sv.datagram, "Datagram", sv.datagram_buf, sizeof( sv.datagram_buf ));
+	MSG_Init( &sv.reliable_datagram, "Reliable Datagram", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
+	MSG_Init( &sv.spec_datagram, "Spectator Datagram", sv.spectator_buf, sizeof( sv.spectator_buf ));
 
 	// leave slots at start for clients only
 	for( i = 0; i < sv_maxclients->integer; i++ )

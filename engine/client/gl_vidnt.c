@@ -1253,6 +1253,16 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	w = rect.right - rect.left;
 	h = rect.bottom - rect.top;
 
+#if 0
+	RECT WindowRect;
+	unsigned WindowHeight;
+	HWND WindowHandle;
+
+	WindowHandle = FindWindow("Shell_TrayWnd", NULL);
+	GetWindowRect(WindowHandle, &WindowRect);
+	WindowHeight = WindowRect.bottom - WindowRect.top;
+#endif
+
 	if( !fullscreen )
 	{
 		x = r_xpos->integer;
@@ -1266,11 +1276,11 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 		if( Cvar_VariableInteger( "vid_mode" ) != glConfig.prev_mode )
 		{
 			// adjust window in the screen size
-			if(( x + w > glw_state.desktopWidth ) || ( y + h > glw_state.desktopHeight ))
-			{
-				x = ( glw_state.desktopWidth - w ) / 2;
-				y = ( glw_state.desktopHeight - h ) / 2;
-			}
+			if( x + w > glw_state.desktopWidth )
+				x = ( glw_state.desktopWidth - w );
+
+			if( y + h > glw_state.desktopHeight )
+				y = ( glw_state.desktopHeight - h );
 		}
 	}
 
@@ -1746,8 +1756,8 @@ void GL_InitCommands( void )
 	r_flaresize = Cvar_Get( "r_flaresize", "200", CVAR_ARCHIVE, "set flares size" );
 	r_lefthand = Cvar_Get( "hand", "0", CVAR_ARCHIVE, "viewmodel handedness" );
 	r_decals = Cvar_Get( "r_decals", "4096", CVAR_ARCHIVE, "sets the maximum number of decals" );
-	r_xpos = Cvar_Get( "r_xpos", "130", CVAR_GLCONFIG, "window position by horizontal" );
-	r_ypos = Cvar_Get( "r_ypos", "48", CVAR_GLCONFIG, "window position by vertical" );
+	r_xpos = Cvar_Get( "r_xpos", "130", CVAR_RENDERINFO, "window position by horizontal" );
+	r_ypos = Cvar_Get( "r_ypos", "48", CVAR_RENDERINFO, "window position by vertical" );
 			
 	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_GLCONFIG, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_GLCONFIG, "reduces resolution of skybox textures by powers of 2" );

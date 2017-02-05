@@ -1042,7 +1042,8 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 
 		SCR_MakeLevelShot();		// make levelshot if needs
 		Cvar_SetFloat( "scr_loading", 0.0f );	// reset progress bar	
-
+		Netchan_ReportFlow( &cls.netchan );
+ 
 		if(( cls.demoplayback || cls.disable_servercount != cl.servercount ) && cl.video_prepped )
 			SCR_EndLoadingPlaque(); // get rid of loading plaque
 		cl.first_frame = true;		// first server frame received

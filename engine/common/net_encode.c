@@ -1354,6 +1354,8 @@ void MSG_ReadDeltaUsercmd( sizebuf_t *msg, usercmd_t *from, usercmd_t *to )
 	{
 		Delta_ReadField( msg, pField, from, to, 0.0f );
 	}
+
+	COM_NormalizeAngles( to->viewangles );
 }
 
 /*

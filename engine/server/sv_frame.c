@@ -25,6 +25,7 @@ typedef struct
 } sv_ents_t;
 
 int	c_fullsend;	// just a debug counter
+int	c_notsend;
 
 /*
 =======================
@@ -142,8 +143,9 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 			else
 			{
 				// visibility list is full
-				MsgDev( D_ERROR, "too many entities in visible packet list\n" );
-				break;
+				// continue counting entities,
+				// so we know how many it's ovreflowed
+				c_notsend++;
 			}
 		}
 
@@ -195,12 +197,12 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 			from = NULL;
 			from_num_entities = 0;
 
-			MSG_WriteByte( msg, svc_packetentities );
+			MSG_BeginServerCmd( msg, svc_packetentities );
 			MSG_WriteWord( msg, to->num_entities );
 		}
 		else
 		{
-			MSG_WriteByte( msg, svc_deltapacketentities );
+			MSG_BeginServerCmd( msg, svc_deltapacketentities );
 			MSG_WriteWord( msg, to->num_entities );
 			MSG_WriteByte( msg, cl->delta_sequence );
 		}
@@ -210,7 +212,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		from = NULL;
 		from_num_entities = 0;
 
-		MSG_WriteByte( msg, svc_packetentities );
+		MSG_BeginServerCmd( msg, svc_packetentities );
 		MSG_WriteWord( msg, to->num_entities );
 	}
 
@@ -345,7 +347,7 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 		}
 	}
 
-	MSG_WriteByte( msg, svc_event );	// create message
+	MSG_BeginServerCmd( msg, svc_event );	// create message
 	MSG_WriteUBitLong( msg, ev_count, 5 );	// up to MAX_EVENT_QUEUE events
 
 	for( count = i = 0; i < MAX_EVENT_QUEUE; i++ )
@@ -411,7 +413,7 @@ void SV_EmitPings( sizebuf_t *msg )
 	int		packet_loss;
 	int		i, ping;
 
-	MSG_WriteByte( msg, svc_updatepings );
+	MSG_BeginServerCmd( msg, svc_updatepings );
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -454,11 +456,10 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 
 	frame->senttime = host.realtime;
 	frame->ping_time = -1.0f;
-	frame->latency = -1.0f;
 
 	if( cl->chokecount != 0 )
 	{
-		MSG_WriteByte( msg, svc_chokecount );
+		MSG_BeginServerCmd( msg, svc_chokecount );
 		MSG_WriteByte( msg, cl->chokecount );
 		cl->chokecount = 0;
 	}
@@ -467,14 +468,14 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	switch( clent->v.fixangle )
 	{
 	case 1:
-		MSG_WriteByte( msg, svc_setangle );
+		MSG_BeginServerCmd( msg, svc_setangle );
 		MSG_WriteBitAngle( msg, clent->v.angles[0], 16 );
 		MSG_WriteBitAngle( msg, clent->v.angles[1], 16 );
 		MSG_WriteBitAngle( msg, clent->v.angles[2], 16 );
 		clent->v.effects |= EF_NOINTERP;
 		break;
 	case 2:
-		MSG_WriteByte( msg, svc_addangle );
+		MSG_BeginServerCmd( msg, svc_addangle );
 		MSG_WriteBitAngle( msg, clent->v.avelocity[1], 16 );
 		clent->v.avelocity[1] = 0.0f;
 		break;
@@ -488,7 +489,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	// update clientdata_t
 	svgame.dllFuncs.pfnUpdateClientData( clent, FBitSet( cl->flags, FCL_LOCAL_WEAPONS ), &frame->clientdata );
 
-	MSG_WriteByte( msg, svc_clientdata );
+	MSG_BeginServerCmd( msg, svc_clientdata );
 	if( FBitSet( cl->flags, FCL_HLTV_PROXY )) return;	// don't send more nothing
 
 	if( cl->delta_sequence == -1 ) from_cd = &nullcd;
@@ -552,12 +553,19 @@ void SV_WriteEntitiesToClient( sv_client_t *cl, sizebuf_t *msg )
 	sv.net_framenum++;	// now all portal-through entities are invalidate
 
 	// clear everything in this snapshot
-	frame_ents.num_entities = c_fullsend = 0;
+	frame_ents.num_entities = c_fullsend = c_notsend = 0;
 
 	// add all the entities directly visible to the eye, which
 	// may include portal entities that merge other viewpoints
 	SV_AddEntitiesToPacket( viewent, clent, frame, &frame_ents, true );
-   
+
+	if( c_notsend != cl->ignored_ents )
+	{
+		if( c_notsend > 0 )
+			MsgDev( D_ERROR, "Too many entities in visible packet list. Ignored %d entities\n", c_notsend );
+		cl->ignored_ents = c_notsend;
+	}   
+
 	// if there were portals visible, there may be out of order entities
 	// in the list which will need to be resorted for the delta compression
 	// to work correctly.  This also catches the error condition
@@ -605,7 +613,7 @@ SV_SendClientDatagram
 */
 void SV_SendClientDatagram( sv_client_t *cl )
 {
-	static byte    	msg_buf[NET_MAX_PAYLOAD];
+	static byte    	msg_buf[NET_MAX_MESSAGE];
 	sizebuf_t		msg;
 
 	svs.currentPlayerNum = (cl - svs.clients);
@@ -614,7 +622,7 @@ void SV_SendClientDatagram( sv_client_t *cl )
 	MSG_Init( &msg, "Datagram", msg_buf, sizeof( msg_buf ));
 
 	// always send servertime at new frame
-	MSG_WriteByte( &msg, svc_time );
+	MSG_BeginServerCmd( &msg, svc_time );
 	MSG_WriteFloat( &msg, sv.time );
 
 	SV_WriteClientdataToMessage( cl, &msg );
@@ -622,8 +630,17 @@ void SV_SendClientDatagram( sv_client_t *cl )
 
 	// copy the accumulated multicast datagram
 	// for this client out to the message
-	if( MSG_CheckOverflow( &cl->datagram )) MsgDev( D_WARN, "datagram overflowed for %s\n", cl->name );
-	else MSG_WriteBits( &msg, MSG_GetData( &cl->datagram ), MSG_GetNumBitsWritten( &cl->datagram ));
+	if( MSG_CheckOverflow( &cl->datagram ))
+	{
+		MsgDev( D_WARN, "datagram overflowed for %s\n", cl->name );
+	}
+	else
+	{
+		if( MSG_GetNumBytesWritten( &cl->datagram ) < MSG_GetNumBytesLeft( &msg ))
+			MSG_WriteBits( &msg, MSG_GetData( &cl->datagram ), MSG_GetNumBitsWritten( &cl->datagram ));
+		else MsgDev( D_WARN, "Ignoring unreliable datagram for %s, would overflow on msg\n", cl->name );
+	}
+
 	MSG_Clear( &cl->datagram );
 
 	if( MSG_CheckOverflow( &msg ))
@@ -635,6 +652,18 @@ void SV_SendClientDatagram( sv_client_t *cl )
 
 	// send the datagram
 	Netchan_TransmitBits( &cl->netchan, MSG_GetNumBitsWritten( &msg ), MSG_GetData( &msg ));
+}
+
+/*
+=======================
+SV_UpdateUserInfo
+=======================
+*/
+void SV_UpdateUserInfo( sv_client_t *cl )
+{
+	SV_FullClientUpdate( cl, &sv.reliable_datagram );
+	ClearBits( cl->flags, FCL_RESEND_USERINFO );
+	cl->next_sendinfotime = host.realtime + 1.0;
 }
 
 /*
@@ -655,10 +684,10 @@ void SV_UpdateToReliableMessages( void )
 		if( cl->state != cs_spawned )
 			continue;
 
-		if( FBitSet( cl->flags, FCL_RESEND_USERINFO ))
+		if( FBitSet( cl->flags, FCL_RESEND_USERINFO ) && cl->next_sendinfotime <= host.realtime )
 		{
-			SV_FullClientUpdate( cl, &sv.reliable_datagram );
-			ClearBits( cl->flags, FCL_RESEND_USERINFO );
+			if( MSG_GetNumBytesLeft( &sv.reliable_datagram ) >= ( Q_strlen( cl->userinfo ) + 6 ))
+				SV_UpdateUserInfo( cl );
 		}
 
 		if( FBitSet( cl->flags, FCL_RESEND_MOVEVARS ))
@@ -672,17 +701,24 @@ void SV_UpdateToReliableMessages( void )
 	if( sv.write_bad_message && Com_RandomLong( 0, 512 ) == 404 )
 	{
 		// just for network debugging (send only for local client)
-		MSG_WriteByte( &sv.reliable_datagram, svc_bad );
+		MSG_BeginServerCmd( &sv.reliable_datagram, svc_bad );
 		MSG_WriteLong( &sv.reliable_datagram, rand( ));		// send some random data
 		MSG_WriteString( &sv.reliable_datagram, host.finalmsg );	// send final message
 		sv.write_bad_message = false;
 	}
 
 	// clear the server datagram if it overflowed.
-	if( MSG_CheckOverflow( &sv.spectator_datagram ))
+	if( MSG_CheckOverflow( &sv.datagram ))
 	{
-		MsgDev( D_ERROR, "sv.spectator_datagram overflowed!\n" );
-		MSG_Clear( &sv.spectator_datagram );
+		MsgDev( D_ERROR, "sv.datagram overflowed!\n" );
+		MSG_Clear( &sv.datagram );
+	}
+
+	// clear the server datagram if it overflowed.
+	if( MSG_CheckOverflow( &sv.spec_datagram ))
+	{
+		MsgDev( D_ERROR, "sv.spec_datagram overflowed!\n" );
+		MSG_Clear( &sv.spec_datagram );
 	}
 
 	// now send the reliable and server datagrams to all clients.
@@ -691,15 +727,41 @@ void SV_UpdateToReliableMessages( void )
 		if( cl->state < cs_connected || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;	// reliables go to all connected or spawned
 
-		MSG_WriteBits( &cl->netchan.message, MSG_GetData( &sv.reliable_datagram ), MSG_GetNumBitsWritten( &sv.reliable_datagram ));
+		if( MSG_GetNumBytesWritten( &sv.reliable_datagram ) < MSG_GetNumBytesLeft( &cl->netchan.message ))
+		{
+			MSG_WriteBits( &cl->netchan.message, MSG_GetBuf( &sv.reliable_datagram ), MSG_GetNumBitsWritten( &sv.reliable_datagram ));
+		}
+		else
+		{
+			Netchan_CreateFragments( &cl->netchan, &sv.reliable_datagram );
+		}
+
+		if( MSG_GetNumBytesWritten( &sv.datagram ) < MSG_GetNumBytesLeft( &cl->datagram ))
+		{
+			MSG_WriteBits( &cl->datagram, MSG_GetBuf( &sv.datagram ), MSG_GetNumBitsWritten( &sv.datagram ));
+		}
+		else
+		{
+			MsgDev( D_WARN, "Ignoring unreliable datagram for %s, would overflow\n", cl->name );
+		}
 
 		if( FBitSet( cl->flags, FCL_HLTV_PROXY ))
-			MSG_WriteBits( &cl->datagram, MSG_GetData( &sv.spectator_datagram ), MSG_GetNumBitsWritten( &sv.spectator_datagram ));
+		{
+			if( MSG_GetNumBytesWritten( &sv.spec_datagram ) < MSG_GetNumBytesLeft( &cl->datagram ))
+			{
+				MSG_WriteBits( &cl->datagram, MSG_GetBuf( &sv.spec_datagram ), MSG_GetNumBitsWritten( &sv.spec_datagram ));
+			}
+			else
+			{
+				MsgDev( D_WARN, "Ignoring spectator datagram for %s, would overflow\n", cl->name );
+			}
+		}
 	}
 
 	// now clear the reliable and datagram buffers.
-	MSG_Clear( &sv.spectator_datagram );
 	MSG_Clear( &sv.reliable_datagram );
+	MSG_Clear( &sv.spec_datagram );
+	MSG_Clear( &sv.datagram );
 }
 
 /*

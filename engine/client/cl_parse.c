@@ -424,7 +424,7 @@ void CL_ParseParticles( sizebuf_t *msg )
 	MSG_ReadVec3Coord( msg, org );	
 
 	for( i = 0; i < 3; i++ )
-		dir[i] = MSG_ReadChar( msg ) * (1.0f / 16);
+		dir[i] = MSG_ReadChar( msg ) * 0.0625f;
 
 	count = MSG_ReadByte( msg );
 	color = MSG_ReadByte( msg );
@@ -740,7 +740,7 @@ void CL_ParseClientData( sizebuf_t *msg )
 		{
 			if( cl.frames[j & CL_UPDATE_MASK].receivedtime >= 0.0 )
 			{
-				cl.frames[j & CL_UPDATE_MASK].receivedtime = -1;
+				cl.frames[j & CL_UPDATE_MASK].receivedtime = -1.0f;
 				cl.frames[j & CL_UPDATE_MASK].latency = 0;
 			}
 		}
@@ -966,7 +966,7 @@ collect userinfo from all players
 */
 void CL_UpdateUserinfo( sizebuf_t *msg )
 {
-	int		slot;
+	int		slot, id;
 	qboolean		active;
 	player_info_t	*player;
 
@@ -975,6 +975,7 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 	if( slot >= MAX_CLIENTS )
 		Host_Error( "CL_ParseServerMessage: svc_updateuserinfo >= MAX_CLIENTS\n" );
 
+	id = MSG_ReadLong( msg );	// unique user ID
 	player = &cl.players[slot];
 	active = MSG_ReadOneBit( msg ) ? true : false;
 
@@ -1125,7 +1126,7 @@ void CL_CheckingResFile( char *pResFileName )
 	if( cls.state == ca_disconnected ) return;
 
 	MSG_Init( &buf, "ClientPacket", data, sizeof( data ));
-	MSG_WriteByte( &buf, clc_resourcelist );
+	MSG_BeginClientCmd( &buf, clc_resourcelist );
 	MSG_WriteString( &buf, pResFileName );
 
 	if( !cls.netchan.remote_address.type )	// download in singleplayer ???
@@ -1181,7 +1182,7 @@ void CL_ParseResourceList( sizebuf_t *msg )
 
 	if( !cls.downloadcount )
 	{
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
+		MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
 		MSG_WriteString( &cls.netchan.message, "continueloading" );
 	}
 }
@@ -1329,7 +1330,7 @@ void CL_ParseCvarValue( sizebuf_t *msg )
 	convar_t *cvar = Cvar_FindVar( cvarName );
 
 	// build the answer
-	MSG_WriteByte( &cls.netchan.message, clc_requestcvarvalue );
+	MSG_BeginClientCmd( &cls.netchan.message, clc_requestcvarvalue );
 	MSG_WriteString( &cls.netchan.message, cvar ? cvar->string : "Not Found" );
 }
 
@@ -1348,7 +1349,7 @@ void CL_ParseCvarValue2( sizebuf_t *msg )
 	convar_t *cvar = Cvar_FindVar( cvarName );
 
 	// build the answer
-	MSG_WriteByte( &cls.netchan.message, clc_requestcvarvalue2 );
+	MSG_BeginClientCmd( &cls.netchan.message, clc_requestcvarvalue2 );
 	MSG_WriteLong( &cls.netchan.message, requestID );
 	MSG_WriteString( &cls.netchan.message, cvarName );
 	MSG_WriteString( &cls.netchan.message, cvar ? cvar->string : "Not Found" );
@@ -1501,7 +1502,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		if( MSG_GetNumBitsLeft( msg ) < 8 )
 			break;		
 
-		cmd = MSG_ReadByte( msg );
+		cmd = MSG_ReadServerCmd( msg );
 
 		// record command for debugging spew on parse problem
 		CL_Parse_RecordCommand( cmd, bufStart );
@@ -1684,6 +1685,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			Cvar_SetFloat( "room_type", param1 );
 			break;
 		case svc_chokecount:
+#if 0
+			cl.frames[cls.netchan.incoming_sequence & CL_UPDATE_MASK].receivedtime = -2.0;
+#else
 			i = MSG_ReadByte( msg );
 			j = cls.netchan.incoming_acknowledged - 1;
 			for( ; i > 0 && j > cls.netchan.outgoing_sequence - CL_UPDATE_BACKUP; j-- )
@@ -1694,6 +1698,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 					i--;
 				}
 			}
+#endif
 			break;
 		case svc_resourcelist:
 			CL_ParseResourceList( msg );

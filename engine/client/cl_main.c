@@ -48,6 +48,7 @@ convar_t	*cl_draw_beams;
 convar_t	*cl_updaterate;
 convar_t	*cl_cmdrate;
 convar_t	*cl_interp;
+convar_t	*cl_dlmax;
 convar_t	*cl_lw;
 
 //
@@ -541,7 +542,7 @@ void CL_WritePacket( void )
 	// send a userinfo update if needed
 	if( userinfo->modified )
 	{
-		MSG_WriteByte( &cls.netchan.message, clc_userinfo );
+		MSG_BeginClientCmd( &cls.netchan.message, clc_userinfo );
 		MSG_WriteString( &cls.netchan.message, Cvar_Userinfo( ));
 	}
 		
@@ -561,7 +562,7 @@ void CL_WritePacket( void )
 		else outgoing_sequence = cls.lastoutgoingcommand + 1;
 
 		// begin a client move command
-		MSG_WriteByte( &buf, clc_move );
+		MSG_BeginClientCmd( &buf, clc_move );
 
 		// save the position for a checksum byte
 		key = MSG_GetRealBytesWritten( &buf );
@@ -609,7 +610,7 @@ void CL_WritePacket( void )
 		{
 			cl.delta_sequence = cl.validsequence;
 
-			MSG_WriteByte( &buf, clc_delta );
+			MSG_BeginClientCmd( &buf, clc_delta );
 			MSG_WriteByte( &buf, cl.validsequence & 0xFF );
 		}
 		else
@@ -910,7 +911,7 @@ void CL_SendDisconnectMessage( void )
 	if( cls.state == ca_disconnected ) return;
 
 	MSG_Init( &buf, "LastMessage", data, sizeof( data ));
-	MSG_WriteByte( &buf, clc_stringcmd );
+	MSG_BeginClientCmd( &buf, clc_stringcmd );
 	MSG_WriteString( &buf, "disconnect" );
 
 	if( !cls.netchan.remote_address.type )
@@ -1106,7 +1107,7 @@ void CL_Reconnect_f( void )
 		Netchan_Clear( &cls.netchan );
 		MSG_Clear( &cls.netchan.message );
 
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
+		MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
 		MSG_WriteString( &cls.netchan.message, "new" );
 
 		cl.validsequence = 0;		// haven't gotten a valid frame update yet
@@ -1472,8 +1473,8 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 			return;
 		}
 
-		Netchan_Setup( NS_CLIENT, &cls.netchan, from, Cvar_VariableValue( "net_qport" ));
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
+		Netchan_Setup( NS_CLIENT, &cls.netchan, from, Cvar_VariableValue( "net_qport" ), NULL, NULL );
+		MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
 		MSG_WriteString( &cls.netchan.message, "new" );
 		cls.state = ca_connected;
 
@@ -1680,12 +1681,10 @@ void CL_ReadNetMessage( void )
 	// check for fragmentation/reassembly related packets.
 	if( cls.state != ca_disconnected && Netchan_IncomingReady( &cls.netchan ))
 	{
-		// the header is different lengths for reliable and unreliable messages
-		int headerBytes = MSG_GetNumBytesRead( &net_message );
-
 		// process the incoming buffer(s)
-		if( Netchan_CopyNormalFragments( &cls.netchan, &net_message ))
+		if( Netchan_CopyNormalFragments( &cls.netchan, &net_message, &curSize ))
 		{
+			MSG_Init( &net_message, "ServerData", net_message_buffer, curSize );
 			CL_ParseServerMessage( &net_message );
 		}
 		
@@ -1759,7 +1758,7 @@ void CL_ProcessFile( qboolean successfully_received, const char *filename )
 	{
 		MsgDev( D_INFO, "Download completed, resuming connection\n" );
 		FS_Rescan();
-		MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
+		MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
 		MSG_WriteString( &cls.netchan.message, "continueloading" );
 		cls.downloadfileid = 0;
 		cls.downloadcount = 0;
@@ -1811,7 +1810,7 @@ void CL_Precache_f( void )
 	CL_PrepSound();
 	CL_PrepVideo();
 
-	MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
+	MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
 	MSG_WriteString( &cls.netchan.message, va( "begin %i\n", spawncount ));
 }
 
@@ -1862,6 +1861,7 @@ void CL_InitLocal( void )
 	name = Cvar_Get( "name", Sys_GetCurrentUser(), CVAR_USERINFO|CVAR_ARCHIVE|CVAR_PRINTABLEONLY, "player name" );
 	topcolor = Cvar_Get( "topcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player top color" );
 	bottomcolor = Cvar_Get( "bottomcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player bottom color" );
+	cl_dlmax = Cvar_Get( "cl_dlmax", "0", CVAR_USERINFO|CVAR_ARCHIVE, "max allowed fragment size on download resources" );
 	rate = Cvar_Get( "rate", "25000", CVAR_USERINFO|CVAR_ARCHIVE, "player network rate" );
 	hltv = Cvar_Get( "hltv", "0", CVAR_USERINFO|CVAR_LATCH, "HLTV mode" );
 	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );

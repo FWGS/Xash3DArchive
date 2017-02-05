@@ -35,7 +35,7 @@ void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... )
 	Q_vsprintf( string, fmt, argptr );
 	va_end( argptr );
 	
-	MSG_WriteByte( &cl->netchan.message, svc_print );
+	MSG_BeginServerCmd( &cl->netchan.message, svc_print );
 	MSG_WriteByte( &cl->netchan.message, level );
 	MSG_WriteString( &cl->netchan.message, string );
 }
@@ -72,7 +72,7 @@ void SV_BroadcastPrintf( sv_client_t *ignore, int level, char *fmt, ... )
 		if( cl == ignore || cl->state != cs_spawned )
 			continue;
 
-		MSG_WriteByte( &cl->netchan.message, svc_print );
+		MSG_BeginServerCmd( &cl->netchan.message, svc_print );
 		MSG_WriteByte( &cl->netchan.message, level );
 		MSG_WriteString( &cl->netchan.message, string );
 	}
@@ -97,7 +97,7 @@ void SV_BroadcastCommand( char *fmt, ... )
 	Q_vsprintf( string, fmt, argptr );
 	va_end( argptr );
 
-	MSG_WriteByte( &sv.reliable_datagram, svc_stufftext );
+	MSG_BeginServerCmd( &sv.reliable_datagram, svc_stufftext );
 	MSG_WriteString( &sv.reliable_datagram, string );
 }
 
@@ -705,7 +705,7 @@ void SV_Status_f( void )
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
-		int	j, l, ping;
+		int	j, l;
 		char	*s;
 
 		if( !cl->state ) continue;
@@ -716,11 +716,7 @@ void SV_Status_f( void )
 		if( cl->state == cs_connected ) Msg( "Connect" );
 		else if( cl->state == cs_zombie ) Msg( "Zombie " );
 		else if( FBitSet( cl->flags, FCL_FAKECLIENT )) Msg( "Bot   " );
-		else
-		{
-			ping = cl->ping < 9999 ? cl->ping : 9999;
-			Msg( "%7i ", ping );
-		}
+		else Msg( "%7i ", SV_CalcPing( cl ));
 
 		Msg( "%s", cl->name );
 		l = 24 - Q_strlen( cl->name );
@@ -918,6 +914,29 @@ void SV_EntityInfo_f( void )
 		Msg( "\n" );
 	}
 }
+/*
+==================
+SV_InitHostCommands
+
+commands that create server
+is available always
+==================
+*/
+void SV_InitHostCommands( void )
+{
+	Cmd_AddCommand( "map", SV_Map_f, "start new level" );
+	Cmd_AddCommand( "changelevel", SV_ChangeLevel_f, "changing level" );
+
+	if( host.type == HOST_NORMAL )
+	{
+		Cmd_AddCommand( "newgame", SV_NewGame_f, "begin new game" );
+		Cmd_AddCommand( "hazardcourse", SV_HazardCourse_f, "starting a Hazard Course" );
+		Cmd_AddCommand( "map_background", SV_MapBackground_f, "set background map" );
+		Cmd_AddCommand( "load", SV_Load_f, "load a saved game file" );
+		Cmd_AddCommand( "loadquick", SV_QuickLoad_f, "load a quick-saved game file" );
+		Cmd_AddCommand( "killsave", SV_DeleteSave_f, "delete a saved game file and saveshot" );
+	}
+}
 
 /*
 ==================
@@ -933,9 +952,6 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "serverinfo", SV_ServerInfo_f, "print server settings" );
 	Cmd_AddCommand( "clientinfo", SV_ClientInfo_f, "print user infostring (player num required)" );
 	Cmd_AddCommand( "playersonly", SV_PlayersOnly_f, "freezes time, except for players" );
-
-	Cmd_AddCommand( "map", SV_Map_f, "start new level" );
-	Cmd_AddCommand( "changelevel", SV_ChangeLevel_f, "changing level" );
 	Cmd_AddCommand( "restart", SV_Restart_f, "restarting current level" );
 	Cmd_AddCommand( "reload", SV_Reload_f, "continue from latest save or restart level" );
 	Cmd_AddCommand( "entpatch", SV_EntPatch_f, "write entity patch to allow external editing" );
@@ -944,16 +960,10 @@ void SV_InitOperatorCommands( void )
 
 	if( host.type == HOST_NORMAL )
 	{
-		Cmd_AddCommand( "newgame", SV_NewGame_f, "begin new game" );
 		Cmd_AddCommand( "endgame", SV_EndGame_f, "end current game" );
 		Cmd_AddCommand( "killgame", SV_KillGame_f, "end current game" );
-		Cmd_AddCommand( "hazardcourse", SV_HazardCourse_f, "starting a Hazard Course" );
-		Cmd_AddCommand( "map_background", SV_MapBackground_f, "set background map" );
 		Cmd_AddCommand( "save", SV_Save_f, "save the game to a file" );
-		Cmd_AddCommand( "load", SV_Load_f, "load a saved game file" );
 		Cmd_AddCommand( "savequick", SV_QuickSave_f, "save the game to the quicksave" );
-		Cmd_AddCommand( "loadquick", SV_QuickLoad_f, "load a quick-saved game file" );
-		Cmd_AddCommand( "killsave", SV_DeleteSave_f, "delete a saved game file and saveshot" );
 		Cmd_AddCommand( "autosave", SV_AutoSave_f, "save the game to 'autosave' file" );
 	}
 	else if( host.type == HOST_DEDICATED )
@@ -977,9 +987,6 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "serverinfo" );
 	Cmd_RemoveCommand( "clientinfo" );
 	Cmd_RemoveCommand( "playersonly" );
-
-	Cmd_RemoveCommand( "map" );
-	Cmd_RemoveCommand( "changelevel" );
 	Cmd_RemoveCommand( "restart" );
 	Cmd_RemoveCommand( "reload" );
 	Cmd_RemoveCommand( "entpatch" );
@@ -988,15 +995,10 @@ void SV_KillOperatorCommands( void )
 
 	if( host.type == HOST_NORMAL )
 	{
-		Cmd_RemoveCommand( "newgame" );
 		Cmd_RemoveCommand( "endgame" );
 		Cmd_RemoveCommand( "killgame" );
-		Cmd_RemoveCommand( "hazardcourse" );
-		Cmd_RemoveCommand( "map_background" );
 		Cmd_RemoveCommand( "save" );
-		Cmd_RemoveCommand( "load" );
 		Cmd_RemoveCommand( "savequick" );
-		Cmd_RemoveCommand( "loadquick" );
 		Cmd_RemoveCommand( "killsave" );
 		Cmd_RemoveCommand( "autosave" );
 	}

@@ -124,7 +124,7 @@ void NetGraph_GetFrameData( int *biggest_message, float *latency, int *latency_c
 		if( p->choked )
 			choke_count++;
 
-		if( !f->valid || f->receivedtime == -2.0 )
+		if( !f->valid )
 		{
 			p->latency = 9998; // broken delta
 		}
@@ -132,6 +132,10 @@ void NetGraph_GetFrameData( int *biggest_message, float *latency, int *latency_c
 		{
 			p->latency = 9999; // dropped
 			loss_count++;
+		}
+		else if( f->receivedtime == -2.0 )
+		{
+			p->latency = 9997; // choked
 		}
 		else
 		{
@@ -196,7 +200,7 @@ void NetGraph_DrawTimes( wrect_t rect, int x, int w )
 			int	start = 0;
 
 			h -= extrap_point;
-			fill.top = extrap_point;
+			fill.top -= extrap_point;
 
 			for( j = start; j < h; j++ )
 			{
@@ -263,7 +267,7 @@ void NetGraph_DrawTextFields( int x, int y, int count, float avg, int packet_los
 	float		latency = count > 0 ? Q_max( 0,  avg / count - 0.5 * host.frametime - 1000.0 / cl_updaterate->value ) : 0;
 	float		framerate = 1.0 / host.realframetime;
 
-	Con_DrawString( x, y - net_graphheight->integer, va( "%.1ffps" , framerate ), colors );
+	Con_DrawString( x, y - net_graphheight->integer, va( "%.1f fps" , framerate ), colors );
 	Con_DrawString( x + 75, y - net_graphheight->integer, va( "%i ms" , (int)latency ), colors );
 	Con_DrawString( x + 150, y - net_graphheight->integer, va( "%i/s" , cl_updaterate->integer ), colors );
 

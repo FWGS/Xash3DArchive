@@ -1561,7 +1561,7 @@ void SV_SetLightStyle( int style, const char* s, float f )
 	if( sv.state != ss_active ) return;
 
 	// tell the clients about changed lightstyle
-	MSG_WriteByte( &sv.reliable_datagram, svc_lightstyle );
+	MSG_BeginServerCmd( &sv.reliable_datagram, svc_lightstyle );
 	MSG_WriteByte( &sv.reliable_datagram, style );
 	MSG_WriteString( &sv.reliable_datagram, sv.lightstyles[style].pattern );
 	MSG_WriteFloat( &sv.reliable_datagram, sv.lightstyles[style].time );

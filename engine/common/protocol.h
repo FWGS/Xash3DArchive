@@ -88,6 +88,7 @@ GNU General Public License for more details.
 #define clc_voicedata		8
 #define clc_requestcvarvalue		9
 #define clc_requestcvarvalue2		10
+#define clc_lastmsg			11	// end client messages
 
 #define MAX_VISIBLE_PACKET		1024	// 1024 visible entities per frame (hl1 has 256)
 

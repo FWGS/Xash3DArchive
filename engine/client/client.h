@@ -95,9 +95,6 @@ typedef struct runcmd_s
 #define ANGLE_BACKUP	16
 #define ANGLE_MASK		(ANGLE_BACKUP - 1)
 
-#define CMD_BACKUP		MULTIPLAYER_BACKUP	// allow a lot of command backups for very fast systems
-#define CMD_MASK		(CMD_BACKUP - 1)
-
 #define CL_UPDATE_MASK	(CL_UPDATE_BACKUP - 1)
 extern int CL_UPDATE_BACKUP;
 

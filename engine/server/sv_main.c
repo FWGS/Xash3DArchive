@@ -68,7 +68,6 @@ convar_t	*sv_quakehulls;
 convar_t	*mp_consistency;
 convar_t	*serverinfo;
 convar_t	*physinfo;
-convar_t	*clockwindow;
 convar_t	*deathmatch;
 convar_t	*teamplay;
 convar_t	*skill;
@@ -92,85 +91,6 @@ convar_t	*sv_skyspeed;
 void Master_Shutdown( void );
 
 //============================================================================
-
-/*
-===================
-SV_CalcPings
-
-Updates the cl->ping variables
-===================
-*/
-void SV_CalcPings( void )
-{
-	sv_client_t	*cl;
-	int		i, j;
-	int		total, count;
-
-	if( !svs.clients ) return;
-
-	// clamp fps counter
-	for( i = 0; i < sv_maxclients->integer; i++ )
-	{
-		cl = &svs.clients[i];
-
-		if( cl->state != cs_spawned || FBitSet( cl->flags, FCL_FAKECLIENT ))
-			continue;
-
-		total = count = 0;
-
-		for( j = 0; j < (SV_UPDATE_BACKUP / 2); j++ )
-		{
-			client_frame_t	*frame;
-
-			frame = &cl->frames[(cl->netchan.incoming_acknowledged - (j + 1)) & SV_UPDATE_MASK];
-			if( frame->latency > 0 )
-			{
-				count++;
-				total += frame->latency;
-			}
-		}
-
-		if( !count ) cl->ping = 0;
-		else cl->ping = total / count;
-	}
-}
-
-/*
-===================
-SV_CalcPacketLoss
-
-determine % of packets that were not ack'd.
-===================
-*/
-int SV_CalcPacketLoss( sv_client_t *cl )
-{
-	int	i, lost, count;
-	float	losspercent;
-	register client_frame_t *frame;
-	int	numsamples;
-
-	lost  = 0;
-	count = 0;
-
-	if( FBitSet( cl->flags, FCL_FAKECLIENT ))
-		return 0;
-
-	numsamples = SV_UPDATE_BACKUP / 2;
-
-	for( i = 0; i < numsamples; i++ )
-	{
-		frame = &cl->frames[(cl->netchan.incoming_acknowledged - 1 - i) & SV_UPDATE_MASK];
-		if( frame->latency == -1 )
-			lost++;
-		count++;
-	}
-
-	if( !count ) return 100;
-	losspercent = 100.0f * ( float )lost / ( float )count;
-
-	return (int)losspercent;
-}
-
 /*
 ================
 SV_HasActivePlayers
@@ -267,7 +187,7 @@ void pfnUpdateServerInfo( const char *szKey, const char *szValue, const char *un
 
 	if( !cv || !cv->modified ) return; // this cvar not changed
 
-	MSG_WriteByte( &sv.reliable_datagram, svc_serverinfo );
+	MSG_BeginServerCmd( &sv.reliable_datagram, svc_serverinfo );
 	MSG_WriteString( &sv.reliable_datagram, szKey );
 	MSG_WriteString( &sv.reliable_datagram, szValue );
 	cv->modified = false; // reset state
@@ -291,8 +211,11 @@ void SV_CheckCmdTimes( void )
 {
 	sv_client_t	*cl;
 	static double	lastreset = 0;
-	double		timewindow;
+	float		diff;
 	int		i;
+
+	if( Host_IsLocalGame( ))
+		return;
 
 	if(( host.realtime - lastreset ) < 1.0 )
 		return;
@@ -304,21 +227,21 @@ void SV_CheckCmdTimes( void )
 		if( cl->state != cs_spawned )
 			continue;
 
-		if( cl->last_cmdtime == 0.0 )
+		if( cl->connecttime == 0.0 )
 		{
-			cl->last_cmdtime = host.realtime;
+			cl->connecttime = host.realtime;
 		}
 
-		timewindow = cl->last_movetime + cl->last_cmdtime - host.realtime;
+		diff = cl->connecttime + cl->cmdtime - host.realtime;
 
-		if( timewindow > clockwindow->value )
+		if( diff > net_clockwindow->value )
 		{
-			cl->next_movetime = clockwindow->value + host.realtime;
-			cl->last_movetime = host.realtime - cl->last_cmdtime;
+			cl->ignorecmdtime = net_clockwindow->value + host.realtime;
+			cl->cmdtime = host.realtime - cl->connecttime;
 		}
-		else if( timewindow < -clockwindow->value )
+		else if( diff < -net_clockwindow->value )
 		{
-			cl->last_movetime = host.realtime - cl->last_cmdtime;
+			cl->cmdtime = host.realtime - cl->connecttime;
 		}
 	}
 }
@@ -403,9 +326,9 @@ void SV_ReadPackets( void )
 			// fragmentation/reassembly sending takes priority over all game messages, want this in the future?
 			if( Netchan_IncomingReady( &cl->netchan ))
 			{
-				if( Netchan_CopyNormalFragments( &cl->netchan, &net_message ))
+				if( Netchan_CopyNormalFragments( &cl->netchan, &net_message, &curSize ))
 				{
-					MSG_Clear( &net_message );
+					MSG_Init( &net_message, "ClientPacket", net_message_buffer, curSize );
 					SV_ExecuteClientMessage( cl, &net_message );
 				}
 
@@ -606,23 +529,20 @@ void Host_ServerFrame( void )
 
 	svgame.globals->frametime = sv.frametime;
 
-	// check timeouts
-	SV_CheckTimeouts ();
-
 	// check clients timewindow
 	SV_CheckCmdTimes ();
 
 	// read packets from clients
 	SV_ReadPackets ();
 
-	// update ping based on the last known frame from all clients
-	SV_CalcPings ();
-
 	// refresh serverinfo on the client side
 	SV_UpdateServerInfo ();
 
 	// refresh physic movevars on the client side
 	SV_UpdateMovevars ( false );
+
+	// check timeouts
+	SV_CheckTimeouts ();
 
 	// let everything in the world think and move
 	if( !SV_RunGameFrame ()) return;
@@ -759,7 +679,7 @@ Only called at startup, not for each game
 */
 void SV_Init( void )
 {
-	SV_InitOperatorCommands();
+	SV_InitHostCommands();
 
 	skill = Cvar_Get ("skill", "1", CVAR_LATCH, "game skill level" );
 	deathmatch = Cvar_Get ("deathmatch", "0", CVAR_LATCH|CVAR_SERVERINFO, "displays deathmatch state" );
@@ -845,7 +765,6 @@ void SV_Init( void )
 	sv_sendvelocity = Cvar_Get( "sv_sendvelocity", "1", CVAR_ARCHIVE, "force to send velocity for event_t structure across network" );
 	sv_quakehulls = Cvar_Get( "sv_quakehulls", "0", CVAR_ARCHIVE, "using quake style hull select instead of half-life style hull select" );
 	mp_consistency = Cvar_Get( "mp_consistency", "1", CVAR_SERVERNOTIFY, "enbale consistency check in multiplayer" );
-	clockwindow = Cvar_Get( "clockwindow", "0.5", 0, "timewindow to execute client moves" );
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
 
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
@@ -870,13 +789,13 @@ void SV_FinalMessage( char *message, qboolean reconnect )
 	int		i;
 	
 	MSG_Init( &msg, "FinalMessage", msg_buf, sizeof( msg_buf ));
-	MSG_WriteByte( &msg, svc_print );
+	MSG_BeginServerCmd( &msg, svc_print );
 	MSG_WriteByte( &msg, PRINT_HIGH );
 	MSG_WriteString( &msg, va( "%s\n", message ));
 
 	if( reconnect )
 	{
-		MSG_WriteByte( &msg, svc_changing );
+		MSG_BeginServerCmd( &msg, svc_changing );
 
 		if( sv.loadgame || sv_maxclients->integer > 1 || sv.changelevel )
 			MSG_WriteOneBit( &msg, 1 ); // changelevel
@@ -884,7 +803,7 @@ void SV_FinalMessage( char *message, qboolean reconnect )
 	}
 	else
 	{
-		MSG_WriteByte( &msg, svc_disconnect );
+		MSG_BeginServerCmd( &msg, svc_disconnect );
 	}
 
 	// send it twice

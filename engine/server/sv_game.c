@@ -255,7 +255,7 @@ qboolean SV_CheckClientVisiblity( sv_client_t *cl, const byte *mask )
 
 /*
 =================
-SV_Send
+SV_Multicast
 
 Sends the contents of sv.multicast to a subset of the clients,
 then clears sv.multicast.
@@ -266,7 +266,7 @@ MSG_PVS	send to clients potentially visible from org
 MSG_PHS	send to clients potentially audible from org
 =================
 */
-qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean usermessage, qboolean filter )
+int SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, qboolean usermessage, qboolean filter )
 {
 	byte		*mask = NULL;
 	int		j, numclients = sv_maxclients->integer;
@@ -321,7 +321,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean us
 		specproxy = reliable = true;
 		break;
 	default:
-		Host_Error( "SV_Send: bad dest: %i\n", dest );
+		Host_Error( "SV_Multicast: bad dest: %i\n", dest );
 		return false;
 	}
 
@@ -354,7 +354,7 @@ qboolean SV_Send( int dest, const vec3_t origin, const edict_t *ent, qboolean us
 		if( !SV_CheckClientVisiblity( cl, mask ))
 			continue;
 
-		if( specproxy ) MSG_WriteBits( &sv.spectator_datagram, MSG_GetData( &sv.multicast ), MSG_GetNumBitsWritten( &sv.multicast ));
+		if( specproxy ) MSG_WriteBits( &sv.spec_datagram, MSG_GetData( &sv.multicast ), MSG_GetNumBitsWritten( &sv.multicast ));
 		else if( reliable ) MSG_WriteBits( &cl->netchan.message, MSG_GetData( &sv.multicast ), MSG_GetNumBitsWritten( &sv.multicast ));
 		else MSG_WriteBits( &cl->datagram, MSG_GetData( &sv.multicast ), MSG_GetNumBitsWritten( &sv.multicast ));
 		numsends++;
@@ -403,11 +403,11 @@ void SV_CreateDecal( sizebuf_t *msg, const float *origin, int decalIndex, int en
 		return;
 
 	// this can happens if serialized map contain 4096 static decals...
-	if(( MSG_GetNumBytesWritten( msg ) + 20 ) >= MSG_GetMaxBytes( msg ))
+	if( MSG_GetNumBytesLeft( msg ) >= 20 )
 		return;
 
 	// static decals are posters, it's always reliable
-	MSG_WriteByte( msg, svc_bspdecal );
+	MSG_BeginServerCmd( msg, svc_bspdecal );
 	MSG_WriteVec3Coord( msg, origin );
 	MSG_WriteWord( msg, decalIndex );
 	MSG_WriteShort( msg, entityIndex );
@@ -437,11 +437,11 @@ void SV_CreateStudioDecal( sizebuf_t *msg, const float *origin, const float *sta
 	ASSERT( start );
 
 	// this can happens if serialized map contain 4096 static decals...
-	if(( MSG_GetNumBytesWritten( msg ) + 30 ) >= MSG_GetMaxBytes( msg ))
+	if( MSG_GetNumBytesLeft( msg ) >= 30 )
 		return;
 
 	// static decals are posters, it's always reliable
-	MSG_WriteByte( msg, svc_studiodecal );
+	MSG_BeginServerCmd( msg, svc_studiodecal );
 	MSG_WriteVec3Coord( msg, origin );
 	MSG_WriteVec3Coord( msg, start );
 	MSG_WriteWord( msg, decalIndex );
@@ -474,13 +474,13 @@ void SV_CreateStaticEntity( sizebuf_t *msg, sv_static_entity_t *ent )
 	int	index, i;
 
 	// this can happens if serialized map contain too many static entities...
-	if(( MSG_GetNumBytesWritten( msg ) + 64 ) >= MSG_GetMaxBytes( msg ))
+	if( MSG_GetNumBytesLeft( msg ) >= 64 )
 		return;
 
 	index = SV_ModelIndex( ent->model );
 
-	MSG_WriteByte( msg, svc_spawnstatic );
-	MSG_WriteShort(msg, index );
+	MSG_BeginServerCmd( msg, svc_spawnstatic );
+	MSG_WriteShort( msg, index );
 	MSG_WriteByte( msg, ent->sequence );
 	MSG_WriteByte( msg, ent->frame );
 	MSG_WriteWord( msg, ent->colormap );
@@ -914,7 +914,7 @@ void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, eve
 
 	memset( &nullargs, 0, sizeof( nullargs ));
 
-	MSG_WriteByte( msg, svc_event_reliable );
+	MSG_BeginServerCmd( msg, svc_event_reliable );
 
 	// send event index
 	MSG_WriteUBitLong( msg, eventindex, MAX_EVENT_BITS );
@@ -1840,7 +1840,7 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 	// not sending (because this is out of range)
 	flags &= ~SND_SPAWNING;
 
-	MSG_WriteByte( &sv.multicast, svc_sound );
+	MSG_BeginServerCmd( &sv.multicast, svc_sound );
 	MSG_WriteWord( &sv.multicast, flags );
 	if( flags & SND_LARGE_INDEX )
 		MSG_WriteWord( &sv.multicast, sound_idx );
@@ -1935,7 +1935,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	flags &= ~SND_FILTER_CLIENT;
 	flags &= ~SND_SPAWNING;
 
-	MSG_WriteByte( &sv.multicast, svc_sound );
+	MSG_BeginServerCmd( &sv.multicast, svc_sound );
 	MSG_WriteWord( &sv.multicast, flags );
 	if( flags & SND_LARGE_INDEX )
 		MSG_WriteWord( &sv.multicast, sound_idx );
@@ -1949,7 +1949,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	MSG_WriteWord( &sv.multicast, entityIndex );
 	MSG_WriteVec3Coord( &sv.multicast, origin );
 
-	SV_Send( msg_dest, origin, NULL, false, filter );
+	SV_Multicast( msg_dest, origin, NULL, false, filter );
 }
 
 /*
@@ -2014,7 +2014,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	// not sending (because this is out of range)
 	flags &= ~SND_SPAWNING;
 
-	MSG_WriteByte( &sv.multicast, svc_ambientsound );
+	MSG_BeginServerCmd( &sv.multicast, svc_ambientsound );
 	MSG_WriteWord( &sv.multicast, flags );
 	if( flags & SND_LARGE_INDEX )
 		MSG_WriteWord( &sv.multicast, sound_idx );
@@ -2029,7 +2029,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	MSG_WriteWord( &sv.multicast, number );
 	MSG_WriteVec3Coord( &sv.multicast, pos );
 
-	SV_Send( msg_dest, pos, NULL, false, false );
+	SV_Multicast( msg_dest, pos, NULL, false, false );
 }
 
 /*
@@ -2040,9 +2040,9 @@ SV_StartMusic
 */
 void SV_StartMusic( const char *curtrack, const char *looptrack, long position )
 {
-	MSG_WriteByte( &sv.multicast, svc_stufftext );
+	MSG_BeginServerCmd( &sv.multicast, svc_stufftext );
 	MSG_WriteString( &sv.multicast, va( "music \"%s\" \"%s\" %i\n", curtrack, looptrack, position ));
-	SV_Send( MSG_ALL, NULL, NULL, false, false );
+	SV_Multicast( MSG_ALL, NULL, NULL, false, false );
 }
 
 /*
@@ -2319,7 +2319,7 @@ void pfnClientCommand( edict_t* pEdict, char* szFmt, ... )
 
 	if( SV_IsValidCmd( buffer ))
 	{
-		MSG_WriteByte( &cl->netchan.message, svc_stufftext );
+		MSG_BeginServerCmd( &cl->netchan.message, svc_stufftext );
 		MSG_WriteString( &cl->netchan.message, buffer );
 	}
 	else MsgDev( D_ERROR, "Tried to stuff bad command %s\n", buffer );
@@ -2334,7 +2334,7 @@ Make sure the event gets sent to all clients
 */
 void pfnParticleEffect( const float *org, const float *dir, float color, float count )
 {
-	int	i, v;
+	int	v;
 
 	if( !org || !dir )
 	{
@@ -2343,20 +2343,20 @@ void pfnParticleEffect( const float *org, const float *dir, float color, float c
 		return;
 	}
 
-	MSG_WriteByte( &sv.multicast, svc_particle );
-	MSG_WriteVec3Coord( &sv.multicast, org );
-
-	for( i = 0; i < 3; i++ )
+	if( MSG_GetNumBytesLeft( &sv.datagram ) >= 16 )
 	{
-		v = bound( -128, dir[i] * 16.0f, 127 );
+		MSG_BeginServerCmd( &sv.multicast, svc_particle );
+		MSG_WriteVec3Coord( &sv.multicast, org );
+		v = bound( -128, dir[0] * 16.0f, 127 );
 		MSG_WriteChar( &sv.multicast, v );
+		v = bound( -128, dir[1] * 16.0f, 127 );
+		MSG_WriteChar( &sv.multicast, v );
+		v = bound( -128, dir[2] * 16.0f, 127 );
+		MSG_WriteChar( &sv.multicast, v );
+		MSG_WriteByte( &sv.multicast, count );
+		MSG_WriteByte( &sv.multicast, color );
+		MSG_WriteByte( &sv.multicast, 0 );
 	}
-
-	MSG_WriteByte( &sv.multicast, count );
-	MSG_WriteByte( &sv.multicast, color );
-	MSG_WriteByte( &sv.multicast, 0 );
-
-	SV_Send( MSG_PVS, org, NULL, false, false );
 }
 
 /*
@@ -2458,7 +2458,7 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 		svgame.msg_index = i;
 	}
 
-	MSG_WriteByte( &sv.multicast, msg_num );
+	MSG_WriteCmdExt( &sv.multicast, msg_num, NS_SERVER, svgame.msg_name );
 
 	// save message destination
 	if( pOrigin ) VectorCopy( pOrigin, svgame.msg_org );
@@ -2495,6 +2495,13 @@ void pfnMessageEnd( void )
 	// HACKHACK: clearing HudText in background mode
 	if( sv.background && svgame.msg_index >= 0 && svgame.msg[svgame.msg_index].number == svgame.gmsgHudText )
 	{
+		MSG_Clear( &sv.multicast );
+		return;
+	}
+
+	if( MSG_CheckOverflow( &sv.multicast ))
+	{
+		MsgDev( D_ERROR, "MessageEnd: %s has overflow multicast buffer\n", name );
 		MSG_Clear( &sv.multicast );
 		return;
 	}
@@ -2572,7 +2579,7 @@ void pfnMessageEnd( void )
 	if( !VectorIsNull( svgame.msg_org )) org = svgame.msg_org;
 	svgame.msg_dest = bound( MSG_BROADCAST, svgame.msg_dest, MSG_SPEC );
 
-	SV_Send( svgame.msg_dest, org, svgame.msg_ent, true, false );
+	SV_Multicast( svgame.msg_dest, org, svgame.msg_ent, true, false );
 }
 
 /*
@@ -3078,11 +3085,11 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	if( sv.state == ss_active )
 	{
 		// tell the client about new user message
-		MSG_WriteByte( &sv.multicast, svc_usermessage );
+		MSG_BeginServerCmd( &sv.multicast, svc_usermessage );
 		MSG_WriteByte( &sv.multicast, svgame.msg[i].number );
 		MSG_WriteByte( &sv.multicast, (byte)iSize );
 		MSG_WriteString( &sv.multicast, svgame.msg[i].name );
-		SV_Send( MSG_ALL, NULL, NULL, false, false );
+		SV_Multicast( MSG_ALL, NULL, NULL, false, false );
 	}
 
 	return svgame.msg[i].number;
@@ -3177,7 +3184,7 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 	case print_center:
 		if( FBitSet( client->flags, FCL_FAKECLIENT ))
 			return;
-		MSG_WriteByte( &client->netchan.message, svc_centerprint );
+		MSG_BeginServerCmd( &client->netchan.message, svc_centerprint );
 		MSG_WriteString( &client->netchan.message, szMsg );
 		break;
 	}
@@ -3251,7 +3258,7 @@ void pfnCrosshairAngle( const edict_t *pClient, float pitch, float yaw )
 	if( yaw > 180.0f ) yaw -= 360;
 	if( yaw < -180.0f ) yaw += 360;
 
-	MSG_WriteByte( &client->netchan.message, svc_crosshairangle );
+	MSG_BeginServerCmd( &client->netchan.message, svc_crosshairangle );
 	MSG_WriteChar( &client->netchan.message, pitch * 5 );
 	MSG_WriteChar( &client->netchan.message, yaw * 5 );
 }
@@ -3291,7 +3298,7 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 	if( FBitSet( client->flags, FCL_FAKECLIENT ))
 		return;
 
-	MSG_WriteByte( &client->netchan.message, svc_setview );
+	MSG_BeginServerCmd( &client->netchan.message, svc_setview );
 	MSG_WriteWord( &client->netchan.message, NUM_FOR_EDICT( pViewent ));
 }
 
@@ -3388,7 +3395,7 @@ void pfnFadeClientVolume( const edict_t *pEdict, int fadePercent, int fadeOutSec
 	if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 		return;
 
-	MSG_WriteByte( &cl->netchan.message, svc_soundfade );
+	MSG_BeginServerCmd( &cl->netchan.message, svc_soundfade );
 	MSG_WriteByte( &cl->netchan.message, fadePercent );
 	MSG_WriteByte( &cl->netchan.message, holdTime );
 	MSG_WriteByte( &cl->netchan.message, fadeOutSeconds );
@@ -3443,7 +3450,7 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 
 	svs.currentPlayer = SV_ClientFromEdict( pClient, true );
 	svs.currentPlayerNum = (svs.currentPlayer - svs.clients);
-	svs.currentPlayer->timebase = (sv.time + sv.frametime) - (msec / 1000.0f);
+	svs.currentPlayer->timebase = (sv.time + sv.frametime) - ((double)msec / 1000.0);
 
 	memset( &cmd, 0, sizeof( cmd ));
 	if( v_angle ) VectorCopy( v_angle, cmd.viewangles );
@@ -3531,6 +3538,7 @@ void pfnSetClientKeyValue( int clientIndex, char *infobuffer, char *key, char *v
 
 	Info_SetValueForKey( infobuffer, key, value );
 	SetBits( cl->flags, FCL_RESEND_USERINFO );
+	cl->next_sendinfotime = 0.0;	// send immediately
 }
 
 /*
@@ -4086,7 +4094,7 @@ void pfnGetPlayerStats( const edict_t *pClient, int *ping, int *packet_loss )
 		return;
 	}
 
-	if( ping ) *ping = cl->ping * 1000;	// this is should be cl->latency not ping!
+	if( ping ) *ping = cl->latency * 1000;
 	if( packet_loss ) *packet_loss = cl->packet_loss;
 }
 	
@@ -4265,7 +4273,7 @@ void pfnQueryClientCvarValue( const edict_t *player, const char *cvarName )
 
 	if(( cl = SV_ClientFromEdict( player, true )) != NULL )
 	{
-		MSG_WriteByte( &cl->netchan.message, svc_querycvarvalue );
+		MSG_BeginServerCmd( &cl->netchan.message, svc_querycvarvalue );
 		MSG_WriteString( &cl->netchan.message, cvarName );
 	}
 	else
@@ -4295,7 +4303,7 @@ void pfnQueryClientCvarValue2( const edict_t *player, const char *cvarName, int 
 
 	if(( cl = SV_ClientFromEdict( player, true )) != NULL )
 	{
-		MSG_WriteByte( &cl->netchan.message, svc_querycvarvalue2 );
+		MSG_BeginServerCmd( &cl->netchan.message, svc_querycvarvalue2 );
 		MSG_WriteLong( &cl->netchan.message, requestID );
 		MSG_WriteString( &cl->netchan.message, cvarName );
 	}
@@ -4734,6 +4742,9 @@ void SV_UnloadProgs( void )
 	Cvar_FullSet( "host_gameloaded", "0", CVAR_INIT );
 	Cvar_FullSet( "sv_background", "0", CVAR_READ_ONLY );
 
+	// remove server cmds
+	SV_KillOperatorCommands();
+
 	// must unlink all game cvars,
 	// before pointers on them will be lost...
 	Cvar_Unlink( CVAR_SERVERDLL );
@@ -4840,6 +4851,7 @@ qboolean SV_LoadProgs( const char *name )
 		return false;
 	}
 
+	SV_InitOperatorCommands();
 	Mod_InitStudioAPI();
 
 	if( !SV_InitPhysicsAPI( ))

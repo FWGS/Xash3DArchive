@@ -321,7 +321,7 @@ static void pfnParticle( float *origin, int color, float life, int zpos, int zve
 		return;
 	}
 
-	MSG_WriteByte( &sv.reliable_datagram, svc_particle );
+	MSG_BeginServerCmd( &sv.reliable_datagram, svc_particle );
 	MSG_WriteVec3Coord( &sv.reliable_datagram, origin );
 	MSG_WriteChar( &sv.reliable_datagram, 0 ); // no x-vel
 	MSG_WriteChar( &sv.reliable_datagram, 0 ); // no y-vel
@@ -640,7 +640,7 @@ static void SV_SetupPMove( playermove_t *pmove, sv_client_t *cl, usercmd_t *ucmd
 
 	pmove->player_index = NUM_FOR_EDICT( clent ) - 1;
 	pmove->multiplayer = (sv_maxclients->integer > 1) ? true : false;
-	pmove->time = cl->timebase; // probably never used
+	pmove->time = (float)(cl->timebase * 1000.0);
 	VectorCopy( clent->v.origin, pmove->origin );
 	VectorCopy( clent->v.v_angle, pmove->angles );
 	VectorCopy( clent->v.v_angle, pmove->oldangles );
@@ -1027,13 +1027,13 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
    
 	clent = cl->edict;
 
-	if( cl->next_movetime > host.realtime )
+	if( cl->ignorecmdtime > host.realtime )
 	{
-		cl->last_movetime += ( ucmd->msec * 0.001f );
+		cl->cmdtime += ((double)ucmd->msec / 1000.0 );
 		return;
 	}
 
-	cl->next_movetime = 0.0;
+	cl->ignorecmdtime = 0.0;
 
 	// chop up very long commands
 	if( ucmd->msec > 50 )
@@ -1058,9 +1058,9 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 	lastcmd = *ucmd;
 	svgame.dllFuncs.pfnCmdStart( cl->edict, ucmd, random_seed );
 
-	frametime = ucmd->msec * 0.001;
+	frametime = ((double)ucmd->msec / 1000.0 );
 	cl->timebase += frametime;
-	cl->last_movetime += frametime;
+	cl->cmdtime += frametime;
 
 	PM_CheckMovingGround( clent, frametime );
 
@@ -1071,6 +1071,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 
 	// copy player buttons
 	clent->v.button = ucmd->buttons;
+	clent->v.light_level = ucmd->lightlevel;
 	if( ucmd->impulse ) clent->v.impulse = ucmd->impulse;
 
 	if( ucmd->impulse == 204 )

@@ -2577,7 +2577,7 @@ int pfnServerCmdUnreliable( char *szCmdString )
 	if( !szCmdString || !szCmdString[0] )
 		return 0;
 
-	MSG_WriteByte( &cls.datagram, clc_stringcmd );
+	MSG_BeginClientCmd( &cls.datagram, clc_stringcmd );
 	MSG_WriteString( &cls.datagram, szCmdString );
 
 	return 1;

@@ -862,7 +862,7 @@ void Con_Init( void )
 	Cmd_AddCommand( "messagemode", Con_MessageMode_f, "enable message mode \"say\"" );
 	Cmd_AddCommand( "messagemode2", Con_MessageMode2_f, "enable message mode \"say_team\"" );
 
-	MsgDev( D_NOTE, "Console initialized.\n" );
+	MsgDev( D_REPORT, "Console initialized.\n" );
 	con.initialized = true;
 }
 

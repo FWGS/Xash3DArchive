@@ -505,7 +505,7 @@ void RestoreSound( soundlist_t *entry )
 	edict_t	*ent;
 
 	// this can happens if serialized map contain 4096 static decals...
-	if(( MSG_GetNumBytesWritten( &sv.signon ) + 20 ) >= MSG_GetMaxBytes( &sv.signon ))
+	if( MSG_GetNumBytesLeft( &sv.signon ) >= 20 )
 		return;
 
 	if( entry->name[0] == '!' && Q_isdigit( entry->name + 1 ))
@@ -552,7 +552,7 @@ void RestoreSound( soundlist_t *entry )
 
 	if( soundIndex > 255 ) flags |= SND_LARGE_INDEX;
 
-	MSG_WriteByte( &sv.signon, svc_restoresound );
+	MSG_BeginServerCmd( &sv.signon, svc_restoresound );
 	MSG_WriteWord( &sv.signon, flags );
 	if( flags & SND_LARGE_INDEX )
 		MSG_WriteWord( &sv.signon, soundIndex );
@@ -1412,7 +1412,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 		// read current track position
 		FS_Read( pFile, &position, sizeof( position ));
 
-		MSG_WriteByte( &sv.signon, svc_stufftext );
+		MSG_BeginServerCmd( &sv.signon, svc_stufftext );
 		MSG_WriteString( &sv.signon, va( "music \"%s\" \"%s\" %i\n", curtrack, looptrack, position ));
 	}
 

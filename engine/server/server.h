@@ -153,19 +153,23 @@ typedef struct server_s
 
 	sv_baselines_t	instanced;	// instanced baselines
 
+	// unreliable data to send to clients.
+	sizebuf_t		datagram;
+	byte		datagram_buf[MAX_DATAGRAM];
+
 	// reliable data to send to clients.
 	sizebuf_t		reliable_datagram;	// copied to all clients at end of frame
-	byte		reliable_datagram_buf[NET_MAX_PAYLOAD];
+	byte		reliable_datagram_buf[MAX_DATAGRAM];
 
 	// the multicast buffer is used to send a message to a set of clients
 	sizebuf_t		multicast;
-	byte		multicast_buf[NET_MAX_PAYLOAD];
+	byte		multicast_buf[MAX_MULTICAST];
 
 	sizebuf_t		signon;
-	byte		signon_buf[NET_MAX_PAYLOAD];
+	byte		signon_buf[NET_MAX_PAYLOAD];	// need a get to maximum size
 
-	sizebuf_t		spectator_datagram;
-	byte		spectator_buf[NET_MAX_PAYLOAD];
+	sizebuf_t		spec_datagram;
+	byte		spectator_buf[MAX_MULTICAST];
 
 	model_t		*worldmodel;	// pointer to world
 	uint		checksum;		// for catching cheater maps
@@ -179,7 +183,6 @@ typedef struct
 {
 	double		senttime;
 	float		ping_time;
-	float		latency;
 
 	clientdata_t	clientdata;
 	weapon_data_t	weapondata[MAX_LOCAL_WEAPONS];
@@ -203,6 +206,7 @@ typedef struct sv_client_s
 
 	double		next_messagetime;		// time when we should send next world state update  
 	double		next_checkpingtime;		// time to send all players pings to client
+	double		next_sendinfotime;		// time to send info about all players
 	double		cl_updaterate;		// client requested updaterate
 	double		timebase;			// client timebase
 
@@ -212,15 +216,15 @@ typedef struct sv_client_s
 
 	usercmd_t		lastcmd;			// for filling in big drops
 
-	double		last_cmdtime;
-	double		last_movetime;
-	double		next_movetime;
+	double		connecttime;
+	double		cmdtime;
+	double		ignorecmdtime;
 
 	int		modelindex;		// custom playermodel index
 	int		packet_loss;
 	float		latency;
-	float		ping;
 
+	int		ignored_ents;		// if visibility list is full we should know how many entities will be ignored
 	int		listeners;		// 32 bits == MAX_CLIENTS (voice listeners)
 
 	edict_t		*edict;			// EDICT_NUM(clientnum+1)
@@ -233,13 +237,13 @@ typedef struct sv_client_s
 	// the datagram is written to by sound calls, prints, temp ents, etc.
 	// it can be harmlessly overflowed.
 	sizebuf_t		datagram;
-	byte		datagram_buf[NET_MAX_PAYLOAD];
+	byte		datagram_buf[MAX_DATAGRAM];
 
 	client_frame_t	*frames;			// updates can be delta'd from here
 	event_state_t	events;
 
 	double		lastmessage;		// time when packet was last received
-	double		lastconnect;
+	double		connection_started;
 
 	int		challenge;		// challenge of this user, randomly generated
 	int		userid;			// identifying number on server
@@ -509,9 +513,10 @@ void SV_ClientThink( sv_client_t *cl, usercmd_t *cmd );
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg );
 void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg );
 edict_t *SV_FakeConnect( const char *netname );
- void SV_ExecuteClientCommand( sv_client_t *cl, char *s );
+void SV_ExecuteClientCommand( sv_client_t *cl, char *s );
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
 qboolean SV_IsPlayerIndex( int idx );
+int SV_CalcPing( sv_client_t *cl );
 void SV_InitClientMove( void );
 void SV_UpdateServerInfo( void );
 void SV_EndRedirect( void );
@@ -521,6 +526,7 @@ void SV_EndRedirect( void );
 //
 void SV_Status_f( void );
 void SV_Newgame_f( void );
+void SV_InitHostCommands( void );
 
 //
 // sv_custom.c
