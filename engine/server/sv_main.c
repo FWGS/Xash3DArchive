@@ -310,7 +310,7 @@ void SV_ReadPackets( void )
 
 			if( Netchan_Process( &cl->netchan, &net_message ))
 			{	
-				if(( sv_maxclients->integer == 1 && !FBitSet( host.features, ENGINE_FIXED_FRAMERATE )) || cl->state != cs_spawned )
+				if( sv_maxclients->integer == 1 || cl->state != cs_spawned )
 					SetBits( cl->flags, FCL_SEND_NET_MESSAGE ); // reply at end of frame
 
 				// this is a valid, sequenced packet, so process it
@@ -329,7 +329,18 @@ void SV_ReadPackets( void )
 				if( Netchan_CopyNormalFragments( &cl->netchan, &net_message, &curSize ))
 				{
 					MSG_Init( &net_message, "ClientPacket", net_message_buffer, curSize );
-					SV_ExecuteClientMessage( cl, &net_message );
+
+					if( sv_maxclients->integer == 1 || cl->state != cs_spawned )
+						SetBits( cl->flags, FCL_SEND_NET_MESSAGE ); // reply at end of frame
+
+					// this is a valid, sequenced packet, so process it
+					if( cl->state != cs_zombie )
+					{
+						cl->lastmessage = host.realtime; // don't timeout
+						SV_ExecuteClientMessage( cl, &net_message );
+						svgame.globals->frametime = sv.frametime;
+						svgame.globals->time = sv.time;
+					}
 				}
 
 				if( Netchan_CopyFileFragments( &cl->netchan, &net_message ))

@@ -1076,6 +1076,7 @@ void SV_PutClientInServer( sv_client_t *cl )
 		else ent->v.flags = 0;
 
 		ent->v.netname = MAKE_STRING( cl->name );
+		ent->v.colormap = NUM_FOR_EDICT( ent );	// ???
 
 		// fisrt entering
 		svgame.globals->time = sv.time;
@@ -1135,7 +1136,9 @@ void SV_PutClientInServer( sv_client_t *cl )
 		sv_client_t	*cur;
 		int		i, viewEnt;
 
-		MSG_WriteBits( &cl->netchan.message, MSG_GetData( &sv.signon ), MSG_GetNumBitsWritten( &sv.signon ));
+		// time to send signon buffer
+		Netchan_CreateFragments( &cl->netchan, &sv.signon );
+		Netchan_FragSend( &cl->netchan );
 
 		if( cl->pViewEntity )
 			viewEnt = NUM_FOR_EDICT( cl->pViewEntity );
@@ -1379,7 +1382,7 @@ void SV_WriteModels_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_MODELS )
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && start < MAX_MODELS )
 	{
 		if( sv.model_precache[start][0] )
 		{
@@ -1425,7 +1428,7 @@ void SV_WriteSounds_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_SOUNDS )
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && start < MAX_SOUNDS )
 	{
 		if( sv.sound_precache[start][0] )
 		{
@@ -1471,7 +1474,7 @@ void SV_WriteEvents_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_EVENTS )
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && start < MAX_EVENTS )
 	{
 		if( sv.event_precache[start][0] )
 		{
@@ -1517,7 +1520,7 @@ void SV_WriteLightstyles_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_LIGHTSTYLES )
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && start < MAX_LIGHTSTYLES )
 	{
 		if( sv.lightstyles[start].pattern[0] )
 		{
@@ -1565,7 +1568,7 @@ void SV_UserMessages_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < MAX_USER_MESSAGES )
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && start < MAX_USER_MESSAGES )
 	{
 		message = &svgame.msg[start];
 		if( message->name[0] )
@@ -1616,7 +1619,7 @@ void SV_DeltaInfo_f( sv_client_t *cl )
 	fieldIndex = Q_atoi( Cmd_Argv( 3 ));
 
 	// write a packet full of data
-	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && tableIndex < Delta_NumTables( ))
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && tableIndex < Delta_NumTables( ))
 	{
 		dt = Delta_FindStructByIndex( tableIndex );
 
@@ -1680,7 +1683,7 @@ void SV_Baselines_f( sv_client_t *cl )
 	memset( &nullstate, 0, sizeof( nullstate ));
 
 	// write a packet full of data
-	while( MSG_GetNumBytesWritten( &cl->netchan.message ) < ( NET_MAX_PAYLOAD / 2 ) && start < svgame.numEntities )
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && start < svgame.numEntities )
 	{
 		base = &svs.baselines[start];
 		if(( !start || base->number ) && ( base->modelindex || base->effects != EF_NODRAW ))
@@ -1722,7 +1725,7 @@ void SV_Begin_f( sv_client_t *cl )
 
 	SV_PutClientInServer( cl );
 
-	// if we are paused, tell the client
+	// if we are paused, tell the clients
 	if( sv.paused )
 	{
 		MSG_BeginServerCmd( &sv.reliable_datagram, svc_setpause );

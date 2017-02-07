@@ -403,7 +403,7 @@ void SV_CreateDecal( sizebuf_t *msg, const float *origin, int decalIndex, int en
 		return;
 
 	// this can happens if serialized map contain 4096 static decals...
-	if( MSG_GetNumBytesLeft( msg ) >= 20 )
+	if( MSG_GetNumBytesLeft( msg ) < 20 )
 		return;
 
 	// static decals are posters, it's always reliable
@@ -437,7 +437,7 @@ void SV_CreateStudioDecal( sizebuf_t *msg, const float *origin, const float *sta
 	ASSERT( start );
 
 	// this can happens if serialized map contain 4096 static decals...
-	if( MSG_GetNumBytesLeft( msg ) >= 30 )
+	if( MSG_GetNumBytesLeft( msg ) < 32 )
 		return;
 
 	// static decals are posters, it's always reliable
@@ -474,7 +474,7 @@ void SV_CreateStaticEntity( sizebuf_t *msg, sv_static_entity_t *ent )
 	int	index, i;
 
 	// this can happens if serialized map contain too many static entities...
-	if( MSG_GetNumBytesLeft( msg ) >= 64 )
+	if( MSG_GetNumBytesLeft( msg ) < 64 )
 		return;
 
 	index = SV_ModelIndex( ent->model );
@@ -1767,7 +1767,7 @@ SV_BuildSoundMsg
 
 =================
 */
-int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float attn, int flags, int pitch, const vec3_t pos )
+int SV_BuildSoundMsg( edict_t *ent, int chan, const char *sample, int vol, float attn, int flags, int pitch, const vec3_t pos )
 {
 	int	sound_idx;
 	int	entityIndex;
@@ -1780,13 +1780,13 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 
 	if( attn < 0.0f || attn > 4.0f )
 	{
-		MsgDev( D_ERROR, "SV_StartSound: attenuation = %g\n", attn );
+		MsgDev( D_ERROR, "SV_StartSound: attenuation %g must be in range 0-4\n", attn );
 		return 0;
 	}
 
 	if( chan < 0 || chan > 7 )
 	{
-		MsgDev( D_ERROR, "SV_StartSound: channel = %i\n", chan );
+		MsgDev( D_ERROR, "SV_StartSound: channel must be in range 0-7\n" );
 		return 0;
 	}
 
@@ -1796,36 +1796,30 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 		return 0;
 	}
 
-	if( !samp || !*samp )
+	if( !sample || !*sample )
 	{
 		MsgDev( D_ERROR, "SV_StartSound: passed NULL sample\n" );
 		return 0;
 	}
 
-	if( samp[0] == '!' && Q_isdigit( samp + 1 ))
+	if( sample[0] == '!' && Q_isdigit( sample + 1 ))
 	{
 		flags |= SND_SENTENCE;
-		sound_idx = Q_atoi( samp + 1 );
-
-		if( sound_idx >= 1536 )
-		{
-			MsgDev( D_ERROR, "SV_StartSound: invalid sentence number %s.\n", samp );
-			return 0;
-		}
+		sound_idx = Q_atoi( sample + 1 );
 	}
-	else if( samp[0] == '#' && Q_isdigit( samp + 1 ))
+	else if( sample[0] == '#' && Q_isdigit( sample + 1 ))
 	{
-		flags |= SND_SENTENCE;
-		sound_idx = Q_atoi( samp + 1 ) + 1536;
+		flags |= SND_SENTENCE|SND_SEQUENCE;
+		sound_idx = Q_atoi( sample + 1 );
 	}
 	else
 	{
 		// precache_sound can be used twice: cache sounds when loading
 		// and return sound index when server is active
-		sound_idx = SV_SoundIndex( samp );
+		sound_idx = SV_SoundIndex( sample );
 	}
 
-	if( !ent->v.modelindex || !ent->v.model )
+	if( !ent || !ent->v.modelindex || !ent->v.model )
 		entityIndex = 0;
 	else if( SV_IsValidEdict( ent->v.aiment ))
 		entityIndex = NUM_FOR_EDICT( ent->v.aiment );
@@ -1835,23 +1829,19 @@ int SV_BuildSoundMsg( edict_t *ent, int chan, const char *samp, int vol, float a
 	if( attn != ATTN_NONE ) flags |= SND_ATTENUATION;
 	if( pitch != PITCH_NORM ) flags |= SND_PITCH;
 
-	if( sound_idx > 255 ) flags |= SND_LARGE_INDEX;
-
 	// not sending (because this is out of range)
 	flags &= ~SND_SPAWNING;
 
 	MSG_BeginServerCmd( &sv.multicast, svc_sound );
-	MSG_WriteWord( &sv.multicast, flags );
-	if( flags & SND_LARGE_INDEX )
-		MSG_WriteWord( &sv.multicast, sound_idx );
-	else MSG_WriteByte( &sv.multicast, sound_idx );
-	MSG_WriteByte( &sv.multicast, chan );
+	MSG_WriteUBitLong( &sv.multicast, flags, MAX_SND_FLAGS_BITS );
+	MSG_WriteUBitLong( &sv.multicast, sound_idx, MAX_SOUND_BITS );
+	MSG_WriteUBitLong( &sv.multicast, chan, MAX_SND_CHAN_BITS );
 
 	if( flags & SND_VOLUME ) MSG_WriteByte( &sv.multicast, vol );
 	if( flags & SND_ATTENUATION ) MSG_WriteByte( &sv.multicast, attn * 64 );
 	if( flags & SND_PITCH ) MSG_WriteByte( &sv.multicast, pitch );
 
-	MSG_WriteWord( &sv.multicast, entityIndex );
+	MSG_WriteUBitLong( &sv.multicast, entityIndex, MAX_ENTITY_BITS );
 	MSG_WriteVec3Coord( &sv.multicast, pos );
 
 	return 1;
@@ -1915,8 +1905,8 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 	}
 	else if( sample[0] == '#' && Q_isdigit( sample + 1 ))
 	{
-		flags |= SND_SENTENCE;
-		sound_idx = Q_atoi( sample + 1 ) + 1536;
+		flags |= SND_SENTENCE|SND_SEQUENCE;
+		sound_idx = Q_atoi( sample + 1 );
 	}
 	else
 	{
@@ -1929,24 +1919,20 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		entityIndex = NUM_FOR_EDICT( ent->v.aiment );
 	else entityIndex = NUM_FOR_EDICT( ent );
 
-	if( sound_idx > 255 ) flags |= SND_LARGE_INDEX;
-
 	// not sending (because this is out of range)
 	flags &= ~SND_FILTER_CLIENT;
 	flags &= ~SND_SPAWNING;
 
 	MSG_BeginServerCmd( &sv.multicast, svc_sound );
-	MSG_WriteWord( &sv.multicast, flags );
-	if( flags & SND_LARGE_INDEX )
-		MSG_WriteWord( &sv.multicast, sound_idx );
-	else MSG_WriteByte( &sv.multicast, sound_idx );
-	MSG_WriteByte( &sv.multicast, chan );
+	MSG_WriteUBitLong( &sv.multicast, flags, MAX_SND_FLAGS_BITS );
+	MSG_WriteUBitLong( &sv.multicast, sound_idx, MAX_SOUND_BITS );
+	MSG_WriteUBitLong( &sv.multicast, chan, MAX_SND_CHAN_BITS );
 
 	if( flags & SND_VOLUME ) MSG_WriteByte( &sv.multicast, vol * 255 );
 	if( flags & SND_ATTENUATION ) MSG_WriteByte( &sv.multicast, attn * 64 );
 	if( flags & SND_PITCH ) MSG_WriteByte( &sv.multicast, pitch );
 
-	MSG_WriteWord( &sv.multicast, entityIndex );
+	MSG_WriteUBitLong( &sv.multicast, entityIndex, MAX_ENTITY_BITS );
 	MSG_WriteVec3Coord( &sv.multicast, origin );
 
 	SV_Multicast( msg_dest, origin, NULL, false, filter );
@@ -1960,7 +1946,7 @@ pfnEmitAmbientSound
 */
 void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vol, float attn, int flags, int pitch )
 {
-	int 	number = 0, sound_idx;
+	int 	entityIndex = 0, sound_idx;
 	int	msg_dest = MSG_PAS_R;
 
 	if( !sample ) return;
@@ -1987,7 +1973,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	else msg_dest = MSG_ALL;
 
 	if( SV_IsValidEdict( ent ))
-		number = NUM_FOR_EDICT( ent );
+		entityIndex = NUM_FOR_EDICT( ent );
 
 	// always sending stop sound command
 	if( flags & SND_STOP ) msg_dest = MSG_ALL;
@@ -1999,8 +1985,8 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	}
 	else if( sample[0] == '#' && Q_isdigit( sample + 1 ))
 	{
-		flags |= SND_SENTENCE;
-		sound_idx = Q_atoi( sample + 1 ) + 1536;
+		flags |= SND_SENTENCE|SND_SEQUENCE;
+		sound_idx = Q_atoi( sample + 1 );
 	}
 	else
 	{
@@ -2009,24 +1995,20 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 		sound_idx = SV_SoundIndex( sample );
 	}
 
-	if( sound_idx > 255 ) flags |= SND_LARGE_INDEX;
-
 	// not sending (because this is out of range)
 	flags &= ~SND_SPAWNING;
 
 	MSG_BeginServerCmd( &sv.multicast, svc_ambientsound );
-	MSG_WriteWord( &sv.multicast, flags );
-	if( flags & SND_LARGE_INDEX )
-		MSG_WriteWord( &sv.multicast, sound_idx );
-	else MSG_WriteByte( &sv.multicast, sound_idx );
-	MSG_WriteByte( &sv.multicast, CHAN_STATIC );
+	MSG_WriteUBitLong( &sv.multicast, flags, MAX_SND_FLAGS_BITS );
+	MSG_WriteUBitLong( &sv.multicast, sound_idx, MAX_SOUND_BITS );
+	MSG_WriteUBitLong( &sv.multicast, CHAN_STATIC, MAX_SND_CHAN_BITS );
 
 	if( flags & SND_VOLUME ) MSG_WriteByte( &sv.multicast, vol * 255 );
 	if( flags & SND_ATTENUATION ) MSG_WriteByte( &sv.multicast, attn * 64 );
 	if( flags & SND_PITCH ) MSG_WriteByte( &sv.multicast, pitch );
 
 	// plays from fixed position
-	MSG_WriteWord( &sv.multicast, number );
+	MSG_WriteUBitLong( &sv.multicast, entityIndex, MAX_ENTITY_BITS );
 	MSG_WriteVec3Coord( &sv.multicast, pos );
 
 	SV_Multicast( msg_dest, pos, NULL, false, false );
@@ -2343,20 +2325,20 @@ void pfnParticleEffect( const float *org, const float *dir, float color, float c
 		return;
 	}
 
-	if( MSG_GetNumBytesLeft( &sv.datagram ) >= 16 )
-	{
-		MSG_BeginServerCmd( &sv.multicast, svc_particle );
-		MSG_WriteVec3Coord( &sv.multicast, org );
-		v = bound( -128, dir[0] * 16.0f, 127 );
-		MSG_WriteChar( &sv.multicast, v );
-		v = bound( -128, dir[1] * 16.0f, 127 );
-		MSG_WriteChar( &sv.multicast, v );
-		v = bound( -128, dir[2] * 16.0f, 127 );
-		MSG_WriteChar( &sv.multicast, v );
-		MSG_WriteByte( &sv.multicast, count );
-		MSG_WriteByte( &sv.multicast, color );
-		MSG_WriteByte( &sv.multicast, 0 );
-	}
+	if( MSG_GetNumBytesLeft( &sv.datagram ) < 16 )
+		return;
+
+	MSG_BeginServerCmd( &sv.multicast, svc_particle );
+	MSG_WriteVec3Coord( &sv.multicast, org );
+	v = bound( -128, dir[0] * 16.0f, 127 );
+	MSG_WriteChar( &sv.multicast, v );
+	v = bound( -128, dir[1] * 16.0f, 127 );
+	MSG_WriteChar( &sv.multicast, v );
+	v = bound( -128, dir[2] * 16.0f, 127 );
+	MSG_WriteChar( &sv.multicast, v );
+	MSG_WriteByte( &sv.multicast, count );
+	MSG_WriteByte( &sv.multicast, color );
+	MSG_WriteByte( &sv.multicast, 0 );
 }
 
 /*
@@ -2429,7 +2411,7 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 	// check range
 	msg_num = bound( svc_bad, msg_num, 255 );
 
-	if( msg_num < svc_lastmsg )
+	if( msg_num <= svc_lastmsg )
 	{
 		svgame.msg_index = -msg_num; // this is a system message
 		svgame.msg_name = svc_strings[msg_num];
@@ -2441,7 +2423,7 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 	else
 	{
 		// check for existing
-		for( i = 0; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
+		for( i = 1; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
 		{
 			if( svgame.msg[i].number == msg_num )
 				break; // found
@@ -3060,7 +3042,7 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	iSize = bound( -1, iSize, 255 );
 
 	// message 0 is reserved for svc_bad
-	for( i = 0; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
+	for( i = 1; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
 	{
 		// see if already registered
 		if( !Q_strcmp( svgame.msg[i].name, pszName ))

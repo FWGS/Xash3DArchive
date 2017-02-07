@@ -1501,7 +1501,8 @@ void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, 
 {
 	delta_t		*pField;
 	delta_info_t	*dt;
-	int		i;
+	int		i, startBit;
+	int		numChanges = 0;
 
 	dt = Delta_FindStruct( "clientdata_t" );
 	Assert( dt && dt->bInitialized );
@@ -1509,14 +1510,24 @@ void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, 
 	pField = dt->pFields;
 	Assert( pField != NULL );
 
+	startBit = msg->iCurBit;
+
+	MSG_WriteOneBit( msg, 1 ); // have clientdata
+
 	// activate fields and call custom encode func
 	Delta_CustomEncode( dt, from, to );
 
 	// process fields
 	for( i = 0; i < dt->numFields; i++, pField++ )
 	{
-		 Delta_WriteField( msg, pField, from, to, timebase );
+		if( Delta_WriteField( msg, pField, from, to, timebase ))
+			numChanges++;
 	}
+
+	if( numChanges ) return; // we have updates
+
+	MSG_SeekToBit( msg, startBit );
+	MSG_WriteOneBit( msg, 0 ); // no changes
 }
 
 /*
@@ -1539,6 +1550,9 @@ void MSG_ReadClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, f
 	Assert( pField != NULL );
 
 	*to = *from;
+
+	if( !MSG_ReadOneBit( msg ))
+		return; // we have no changes
 
 	// process fields
 	for( i = 0; i < dt->numFields; i++, pField++ )

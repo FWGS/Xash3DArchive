@@ -150,13 +150,13 @@ void SV_CreateCustomizationList( sv_client_t *cl )
 	customization_t	*pCust, *pNewCust;
 	int		duplicated, lump_count;
 
-	cl->customization.pNext = NULL;
+	cl->customdata.pNext = NULL;
 
-	for( pRes = cl->resource1.pNext; pRes != &cl->resource1; pRes = pRes->pNext )
+	for( pRes = cl->resourcesonhand.pNext; pRes != &cl->resourcesonhand; pRes = pRes->pNext )
 	{
 		duplicated = false;
 
-		for( pCust = cl->customization.pNext; pCust != NULL; pCust = pCust->pNext )
+		for( pCust = cl->customdata.pNext; pCust != NULL; pCust = pCust->pNext )
 		{
 			if( !memcmp( pCust->resource.rgucMD5_hash, pRes->rgucMD5_hash, 16 ))
 			{
@@ -174,7 +174,7 @@ void SV_CreateCustomizationList( sv_client_t *cl )
 		// create it.
 		lump_count = 0;
 
-		if( !SV_CreateCustomization( &cl->customization, pRes, -1, 3, &pNewCust, &lump_count ))
+		if( !SV_CreateCustomization( &cl->customdata, pRes, -1, 3, &pNewCust, &lump_count ))
 		{
 			MsgDev( D_WARN, "CreateCustomizationList: ignoring custom decal.\n" );
 			continue;

@@ -210,9 +210,9 @@ typedef struct sv_client_s
 	double		cl_updaterate;		// client requested updaterate
 	double		timebase;			// client timebase
 
-	customization_t	customization;		// player customization linked list
-	resource_t	resource1;
-	resource_t	resource2;		// <mapname.res> from client (server downloading)
+	customization_t	customdata;		// player customization linked list
+	resource_t	resourcesonhand;
+	resource_t	resourcesneeded;		// <mapname.res> from client (server downloading)
 
 	usercmd_t		lastcmd;			// for filling in big drops
 

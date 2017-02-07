@@ -505,7 +505,7 @@ void RestoreSound( soundlist_t *entry )
 	edict_t	*ent;
 
 	// this can happens if serialized map contain 4096 static decals...
-	if( MSG_GetNumBytesLeft( &sv.signon ) >= 20 )
+	if( MSG_GetNumBytesLeft( &sv.signon ) < 36 )
 		return;
 
 	if( entry->name[0] == '!' && Q_isdigit( entry->name + 1 ))
@@ -515,8 +515,8 @@ void RestoreSound( soundlist_t *entry )
 	}
 	else if( entry->name[0] == '#' && Q_isdigit( entry->name + 1 ))
 	{
-		flags |= SND_SENTENCE;
-		soundIndex = Q_atoi( entry->name + 1 ) + 1536;
+		flags |= SND_SENTENCE|SND_SEQUENCE;
+		soundIndex = Q_atoi( entry->name + 1 );
 	}
 	else
 	{
@@ -550,20 +550,16 @@ void RestoreSound( soundlist_t *entry )
 	if( entry->pitch != PITCH_NORM ) flags |= SND_PITCH;
 	if( !entry->looping ) flags |= SND_STOP_LOOPING;	// just in case
 
-	if( soundIndex > 255 ) flags |= SND_LARGE_INDEX;
-
 	MSG_BeginServerCmd( &sv.signon, svc_restoresound );
-	MSG_WriteWord( &sv.signon, flags );
-	if( flags & SND_LARGE_INDEX )
-		MSG_WriteWord( &sv.signon, soundIndex );
-	else MSG_WriteByte( &sv.signon, soundIndex );
-	MSG_WriteByte( &sv.signon, entry->channel );
+	MSG_WriteUBitLong( &sv.signon, flags, MAX_SND_FLAGS_BITS );
+	MSG_WriteUBitLong( &sv.signon, soundIndex, MAX_SOUND_BITS );
+	MSG_WriteUBitLong( &sv.signon, entry->channel, MAX_SND_CHAN_BITS );
 
 	if( flags & SND_VOLUME ) MSG_WriteByte( &sv.signon, entry->volume * 255 );
 	if( flags & SND_ATTENUATION ) MSG_WriteByte( &sv.signon, entry->attenuation * 64 );
 	if( flags & SND_PITCH ) MSG_WriteByte( &sv.signon, entry->pitch );
 
-	MSG_WriteWord( &sv.signon, entry->entnum );
+	MSG_WriteUBitLong( &sv.signon, entry->entnum, MAX_ENTITY_BITS );
 	MSG_WriteVec3Coord( &sv.signon, entry->origin );
 	MSG_WriteByte( &sv.signon, entry->wordIndex );
 

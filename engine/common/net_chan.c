@@ -548,8 +548,8 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 {
 	fragbuf_t		*buf;
 	int		chunksize;
-	int		send, pos;
 	int		remaining;
+	int		bits, pos;
 	int		bufferid = 1;
 	fragbufwaiting_t	*wait, *p;
 	
@@ -562,23 +562,32 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 
 	wait = (fragbufwaiting_t *)Mem_Alloc( net_mempool, sizeof( fragbufwaiting_t ));
 
-	remaining = MSG_GetNumBytesWritten( msg );
-	pos = 0;
+	remaining = MSG_GetNumBitsWritten( msg );
+	chunksize <<= 3; // convert bytes to bits
+	pos = 0;	// current position in bits
 
 	while( remaining > 0 )
 	{
-		send = Q_min( remaining, chunksize );
-		remaining -= send;
+		byte	buffer[MAX_MSGLEN];
+		sizebuf_t	temp;
+
+		bits = Q_min( remaining, chunksize );
+		remaining -= bits;
 	
 		buf = Netchan_AllocFragbuf();
 		buf->bufferid = bufferid++;
 
 		// Copy in data
 		MSG_Clear( &buf->frag_message );
-		MSG_WriteBits( &buf->frag_message, msg->pData + pos, send << 3 );
-		pos += send;
+
+		MSG_StartReading( &temp, MSG_GetData( msg ), MSG_GetMaxBytes( msg ), MSG_GetNumBitsWritten( msg ), -1 );
+		MSG_SeekToBit( &temp, pos );
+		MSG_ReadBits( &temp, buffer, bits );
+
+		MSG_WriteBits( &buf->frag_message, buffer, bits );
 
 		Netchan_AddFragbufToTail( wait, buf );
+		pos += bits;
 	}
 
 	// now add waiting list item to end of buffer queue
@@ -1236,7 +1245,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 			// if the reliable buffer has gotten too big, queue it at the end of everything and clear out buffer
 			if( MSG_GetNumBytesWritten( &chan->message ) > MAX_RELIABLE_PAYLOAD )
 			{
-				Netchan_CreateFragments( chan, &chan->message );
+				Netchan_CreateFragments_( chan, &chan->message );
 				MSG_Clear( &chan->message );
 			}
 		}
@@ -1621,12 +1630,12 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 					MSG_Clear( &pbuf->frag_message );
 
 					MSG_StartReading( &temp, msg->pData, MSG_GetMaxBytes( msg ), MSG_GetNumBitsRead( msg ) + frag_offset[i], -1 );
-					MSG_ReadBits( msg, buffer, bits );
+					MSG_ReadBits( &temp, buffer, bits );
 					MSG_WriteBits( &pbuf->frag_message, buffer, bits );
 				}
 				else
 				{
-					MsgDev( D_ERROR, "Netchan_Process: Couldn't allocate or find buffer %i\n", inbufferid );
+					MsgDev( D_ERROR, "Netchan_Process: Couldn't find buffer %i\n", inbufferid );
 				}
 
 				// count # of incoming bufs we've queued? are we done?

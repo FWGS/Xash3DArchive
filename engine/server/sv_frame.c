@@ -413,7 +413,7 @@ void SV_EmitPings( sizebuf_t *msg )
 	int		packet_loss;
 	int		i, ping;
 
-	MSG_BeginServerCmd( msg, svc_updatepings );
+	MSG_BeginServerCmd( msg, svc_pings );
 
 	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
 	{
@@ -819,7 +819,7 @@ void SV_SendClientMessages( void )
 			// If we haven't gotten a message in sv_failuretime seconds, then stop sending messages to this client
 			// until we get another packet in from the client. This prevents crash/drop and reconnect where they are
 			// being hosed with "sequenced packet without connection" packets.
-			if(( host.realtime - cl->netchan.last_received ) > sv_failuretime->value )
+			if( sv_failuretime->value < ( host.realtime - cl->netchan.last_received ))
 				ClearBits( cl->flags, FCL_SEND_NET_MESSAGE );
 		}
 

@@ -31,8 +31,8 @@ const char *svc_strings[256] =
 	"svc_bad",
 	"svc_nop",
 	"svc_disconnect",
+	"svc_event",
 	"svc_changing",
-	"svc_version",
 	"svc_setview",
 	"svc_sound",
 	"svc_time",
@@ -45,7 +45,7 @@ const char *svc_strings[256] =
 	"svc_deltatable",
 	"svc_clientdata",
 	"svc_stopsound",
-	"svc_updatepings",
+	"svc_pings",
 	"svc_particle",
 	"svc_restoresound",
 	"svc_spawnstatic",
@@ -55,14 +55,14 @@ const char *svc_strings[256] =
 	"svc_setpause",
 	"svc_signonnum",
 	"svc_centerprint",
-	"svc_event",
+	"svc_modelindex",
 	"svc_soundindex",
 	"svc_ambientsound",
 	"svc_intermission",
-	"svc_modelindex",
-	"svc_cdtrack",
-	"svc_serverinfo",
 	"svc_eventindex",
+	"svc_cdtrack",
+	"svc_restore",
+	"svc_serverinfo",
 	"svc_weaponanim",
 	"svc_bspdecal",
 	"svc_roomtype",
@@ -73,25 +73,20 @@ const char *svc_strings[256] =
 	"svc_chokecount",
 	"svc_resourcelist",
 	"svc_deltamovevars",
+	"svc_resourcerequest",
 	"svc_customization",
-	"svc_unused46",
 	"svc_crosshairangle",
 	"svc_soundfade",
-	"svc_unused49",
-	"svc_unused50",
+	"svc_filetxferfailed",
+	"svc_hltv",
 	"svc_director",
 	"svc_studiodecal",
-	"svc_unused53",
+	"svc_voicedata",
 	"svc_unused54",
 	"svc_unused55",
-	"svc_unused56",
+	"svc_resourcelocation",
 	"svc_querycvarvalue",
 	"svc_querycvarvalue2",
-	"svc_unused59",
-	"svc_unused60",
-	"svc_unused61",
-	"svc_unused62",
-	"svc_unused63",
 };
 
 typedef struct
@@ -118,12 +113,12 @@ const char *CL_MsgInfo( int cmd )
 
 	Q_strcpy( sz, "???" );
 
-	if( cmd >= 0 && cmd < svc_lastmsg )
+	if( cmd >= 0 && cmd <= svc_lastmsg )
 	{
 		// get engine message name
 		Q_strncpy( sz, svc_strings[cmd], sizeof( sz ));
 	}
-	else if( cmd >= svc_lastmsg && cmd < ( svc_lastmsg + MAX_USER_MESSAGES ))
+	else if( cmd > svc_lastmsg && cmd <= ( svc_lastmsg + MAX_USER_MESSAGES ))
 	{
 		int	i;
 
@@ -244,7 +239,7 @@ CL_ParseSoundPacket
 
 ==================
 */
-void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
+void CL_ParseSoundPacket( sizebuf_t *msg )
 {
 	vec3_t	pos;
 	int 	chan, sound;
@@ -252,11 +247,9 @@ void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 	int	flags, pitch, entnum;
 	sound_t	handle = 0;
 
-	flags = MSG_ReadWord( msg );
-	if( flags & SND_LARGE_INDEX )
-		sound = MSG_ReadWord( msg );
-	else sound = MSG_ReadByte( msg );
-	chan = MSG_ReadByte( msg );
+	flags = MSG_ReadUBitLong( msg, MAX_SND_FLAGS_BITS );
+	sound = MSG_ReadUBitLong( msg, MAX_SOUND_BITS );
+	chan = MSG_ReadUBitLong( msg, MAX_SND_CHAN_BITS );
 
 	if( flags & SND_VOLUME )
 		volume = (float)MSG_ReadByte( msg ) / 255.0f;
@@ -271,7 +264,7 @@ void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 	else pitch = PITCH_NORM;
 
 	// entity reletive
-	entnum = MSG_ReadWord( msg ); 
+	entnum = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS ); 
 
 	// positioned in space
 	MSG_ReadVec3Coord( msg, pos );
@@ -280,15 +273,21 @@ void CL_ParseSoundPacket( sizebuf_t *msg, qboolean is_ambient )
 	{
 		char	sentenceName[32];
 
-		Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
+		if( flags & SND_SEQUENCE )
+			Q_snprintf( sentenceName, sizeof( sentenceName ), "!#%i", sound );
+		else Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
+
 		handle = S_RegisterSound( sentenceName );
 	}
 	else handle = cl.sound_index[sound];	// see precached sound
 
 	if( !cl.audio_prepped )
+	{
+		MsgDev( D_WARN, "CL_StartSoundPacket: ignore sound message: too early\n" );
 		return; // too early
+	}
 
-	if( is_ambient )
+	if( chan == CHAN_STATIC )
 	{
 		S_AmbientSound( pos, entnum, handle, volume, attn, pitch, flags );
 	}
@@ -314,11 +313,9 @@ void CL_ParseRestoreSoundPacket( sizebuf_t *msg )
 	int	wordIndex;
 	sound_t	handle = 0;
 
-	flags = MSG_ReadWord( msg );
-	if( flags & SND_LARGE_INDEX )
-		sound = MSG_ReadWord( msg );
-	else sound = MSG_ReadByte( msg );
-	chan = MSG_ReadByte( msg );
+	flags = MSG_ReadUBitLong( msg, MAX_SND_FLAGS_BITS );
+	sound = MSG_ReadUBitLong( msg, MAX_SOUND_BITS );
+	chan = MSG_ReadUBitLong( msg, MAX_SND_CHAN_BITS );
 
 	if( flags & SND_VOLUME )
 		volume = (float)MSG_ReadByte( msg ) / 255.0f;
@@ -332,25 +329,35 @@ void CL_ParseRestoreSoundPacket( sizebuf_t *msg )
 		pitch = MSG_ReadByte( msg );
 	else pitch = PITCH_NORM;
 
+	// entity reletive
+	entnum = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
+
+	// positioned in space
+	MSG_ReadVec3Coord( msg, pos );
+
 	if( flags & SND_SENTENCE )
 	{
 		char	sentenceName[32];
 
-		Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
+		if( flags & SND_SEQUENCE )
+			Q_snprintf( sentenceName, sizeof( sentenceName ), "!#%i", sound );
+		else Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
+
 		handle = S_RegisterSound( sentenceName );
 	}
 	else handle = cl.sound_index[sound]; // see precached sound
 
-	// entity reletive
-	entnum = MSG_ReadWord( msg ); 
-
-	// positioned in space
-	MSG_ReadVec3Coord( msg, pos );
 	wordIndex = MSG_ReadByte( msg );
 
 	// 16 bytes here
 	MSG_ReadBytes( msg, &samplePos, sizeof( samplePos ));
 	MSG_ReadBytes( msg, &forcedEnd, sizeof( forcedEnd ));
+
+	if( !cl.audio_prepped )
+	{
+		MsgDev( D_WARN, "CL_RestoreSoundPacket: ignore sound message: too early\n" );
+		return; // too early
+	}
 
 	S_RestoreSound( pos, entnum, chan, handle, volume, attn, pitch, flags, samplePos, forcedEnd, wordIndex );
 }
@@ -1081,7 +1088,7 @@ void CL_UpdateUserPings( sizebuf_t *msg )
 		slot = MSG_ReadUBitLong( msg, MAX_CLIENT_BITS );
 
 		if( slot >= MAX_CLIENTS )
-			Host_Error( "CL_ParseServerMessage: svc_updatepings > MAX_CLIENTS\n" );
+			Host_Error( "CL_ParseServerMessage: svc_pings > MAX_CLIENTS\n" );
 
 		player = &cl.players[slot];
 		player->ping = MSG_ReadUBitLong( msg, 12 );
@@ -1407,7 +1414,7 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 	byte	pbuf[256]; // message can't be larger than 255 bytes
 
 	// NOTE: any user message is really parse at engine, not in client.dll
-	if( svc_num < svc_lastmsg || svc_num >= ( MAX_USER_MESSAGES + svc_lastmsg ))
+	if( svc_num <= svc_lastmsg || svc_num > ( MAX_USER_MESSAGES + svc_lastmsg ))
 	{
 		// out or range
 		Host_Error( "CL_ParseUserMessage: illegible server message %d\n", svc_num );
@@ -1549,7 +1556,8 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			cl.refdef.viewentity = MSG_ReadWord( msg );
 			break;
 		case svc_sound:
-			CL_ParseSoundPacket( msg, false );
+		case svc_ambientsound:
+			CL_ParseSoundPacket( msg );
 			cl.frames[cl.parsecountmod].graphdata.sound += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_time:
@@ -1591,7 +1599,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			cl.frames[cl.parsecountmod].graphdata.players += playerbytes;
 			cl.frames[cl.parsecountmod].graphdata.entities += MSG_GetNumBytesRead( msg ) - bufStart - playerbytes;
 			break;
-		case svc_updatepings:
+		case svc_pings:
 			CL_UpdateUserPings( msg );
 			break;
 		case svc_usermessage:
@@ -1606,10 +1614,6 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_spawnstatic:
 			CL_ParseStaticEntity( msg );
-			break;
-		case svc_ambientsound:
-			CL_ParseSoundPacket( msg, true );
-			cl.frames[cl.parsecountmod].graphdata.sound += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_crosshairangle:
 			CL_ParseCrosshairAngle( msg );
