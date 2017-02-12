@@ -79,6 +79,16 @@ void SV_SysError( const char *error_string )
 		svgame.dllFuncs.pfnSys_Error( error_string );
 }
 
+char *SV_Serverinfo( void )
+{
+	return svs.serverinfo;
+}
+
+char *SV_Localinfo( void )
+{
+	return svs.localinfo;
+}
+
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 {
 	int	i;
@@ -269,7 +279,7 @@ MSG_PHS	send to clients potentially audible from org
 int SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, qboolean usermessage, qboolean filter )
 {
 	byte		*mask = NULL;
-	int		j, numclients = sv_maxclients->integer;
+	int		j, numclients = svs.maxclients;
 	sv_client_t	*cl, *current = svs.clients;
 	qboolean		reliable = false;
 	qboolean		specproxy = false;
@@ -957,7 +967,7 @@ sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, qboolean spawned_only )
 
 	i = NUM_FOR_EDICT( pEdict ) - 1;
 
-	if( i < 0 || i >= sv_maxclients->integer )
+	if( i < 0 || i >= svs.maxclients )
 		return NULL;
 
 	if( spawned_only )
@@ -1028,8 +1038,8 @@ void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed )
 	// fakeclients must be changed speed too
 	fNewMaxspeed = bound( -svgame.movevars.maxspeed, fNewMaxspeed, svgame.movevars.maxspeed );
 
+	Info_SetValueForKey( cl->physinfo, "maxspd", va( "%.f", fNewMaxspeed ), MAX_INFO_STRING );
 	cl->edict->v.maxspeed = fNewMaxspeed;
-	Info_SetValueForKey( cl->physinfo, "maxspd", va( "%.f", fNewMaxspeed ));
 }
 
 /*
@@ -1289,7 +1299,7 @@ edict_t* SV_FindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 		ed = EDICT_NUM( e );
 		if( !SV_IsValidEdict( ed )) continue;
 
-		if( e <= sv_maxclients->integer && !SV_ClientFromEdict( ed, ( sv_maxclients->integer != 1 )))
+		if( e <= svs.maxclients && !SV_ClientFromEdict( ed, ( svs.maxclients != 1 )))
 			continue;
 
 		switch( desc->fieldType )
@@ -1355,7 +1365,7 @@ edict_t *pfnFindEntityInSphere( edict_t *pStartEdict, const float *org, float fl
 			continue;
 
 		// ignore clients that not in a game
-		if( e <= sv_maxclients->integer && !SV_ClientFromEdict( ent, true ))
+		if( e <= svs.maxclients && !SV_ClientFromEdict( ent, true ))
 			continue;
 
 		distSquared = 0.0f;
@@ -3347,7 +3357,7 @@ int pfnIsMapValid( char *filename )
 	int	flags;
 
 	// determine spawn entity classname
-	if( sv_maxclients->integer == 1 )
+	if( svs.maxclients == 1 )
 		spawn_entity = GI->sp_entity;
 	else spawn_entity = GI->mp_entity;
 
@@ -3485,17 +3495,34 @@ char *pfnGetInfoKeyBuffer( edict_t *e )
 {
 	sv_client_t	*cl;
 
+	// NULL passes localinfo
 	if( !SV_IsValidEdict( e ))
-		return Cvar_Serverinfo(); // otherwise return ServerInfo
+		return SV_Localinfo();
 
-	// pfnUserInfoChanged passed
-	if(( cl = SV_ClientFromEdict( e, false )) == NULL )
-	{
-		MsgDev( D_ERROR, "SV_GetClientUserinfo: client is not connected!\n" );
-		return Cvar_Serverinfo(); // otherwise return ServerInfo
-	}
+	// world passes serverinfo
+	if( e == svgame.edicts )
+		return SV_Serverinfo();
 
-	return cl->userinfo;
+	// userinfo for specified edict
+	if(( cl = SV_ClientFromEdict( e, false )) != NULL )
+		return cl->userinfo;
+
+	return ""; // assume error
+}
+
+/*
+=============
+pfnSetValueForKey
+
+=============
+*/
+void pfnSetValueForKey( char *infobuffer, char *key, char *value )
+{
+	if( infobuffer == svs.localinfo )
+		Info_SetValueForStarKey( infobuffer, key, value, MAX_LOCALINFO_STRING );
+	else if( infobuffer == svs.serverinfo )
+		Info_SetValueForStarKey( infobuffer, key, value, MAX_SERVERINFO_STRING );
+	else MsgDev( D_ERROR, "can't set client keys with SetValueForKey\n" );
 }
 
 /*
@@ -3508,17 +3535,21 @@ void pfnSetClientKeyValue( int clientIndex, char *infobuffer, char *key, char *v
 {
 	sv_client_t	*cl;
 
+	if( infobuffer == svs.localinfo || infobuffer == svs.serverinfo )
+		return;
+
 	clientIndex -= 1;
 
-	if( !svs.clients || clientIndex < 0 || clientIndex >= sv_maxclients->integer )
+	if( !svs.clients || clientIndex < 0 || clientIndex >= svs.maxclients )
+		return;
+
+	// value not changed?
+	if ( !Q_strcmp( Info_ValueForKey( infobuffer, key ), value ))
 		return;
 
 	cl = &svs.clients[clientIndex]; 
 
-	if( cl->state < cs_spawned || infobuffer == NULL )
-		return;
-
-	Info_SetValueForKey( infobuffer, key, value );
+	Info_SetValueForStarKey( infobuffer, key, value, MAX_INFO_STRING );
 	SetBits( cl->flags, FCL_RESEND_USERINFO );
 	cl->next_sendinfotime = 0.0;	// send immediately
 }
@@ -3536,7 +3567,7 @@ const char *pfnGetPhysicsKeyValue( const edict_t *pClient, const char *key )
 	// pfnUserInfoChanged passed
 	if(( cl = SV_ClientFromEdict( pClient, false )) == NULL )
 	{
-		MsgDev( D_ERROR, "SV_GetClientPhysKey: client is not connected!\n" );
+		MsgDev( D_ERROR, "GetPhysicsKeyValue: client is not connected!\n" );
 		return "";
 	}
 
@@ -3556,11 +3587,11 @@ void pfnSetPhysicsKeyValue( const edict_t *pClient, const char *key, const char 
 	// pfnUserInfoChanged passed
 	if(( cl = SV_ClientFromEdict( pClient, false )) == NULL )
 	{
-		MsgDev( D_ERROR, "SV_SetClientPhysinfo: client is not connected!\n" );
+		MsgDev( D_ERROR, "SetPhysicsKeyValue: client is not connected!\n" );
 		return;
 	}
 
-	Info_SetValueForKey( cl->physinfo, key, value );
+	Info_SetValueForKey( cl->physinfo, key, value, MAX_INFO_STRING );
 }
 
 /*
@@ -3576,7 +3607,7 @@ const char *pfnGetPhysicsInfoString( const edict_t *pClient )
 	// pfnUserInfoChanged passed
 	if(( cl = SV_ClientFromEdict( pClient, false )) == NULL )
 	{
-		MsgDev( D_ERROR, "SV_GetClientPhysinfo: client is not connected!\n" );
+		MsgDev( D_ERROR, "GetPhysicsInfoString: client is not connected!\n" );
 		return "";
 	}
 
@@ -3672,7 +3703,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		if( !FBitSet( args.flags, FEVENT_ANGLES ))
 			VectorCopy( pInvoker->v.angles, args.angles );
 
-		if( sv_sendvelocity->integer )
+		if( sv_sendvelocity->value )
 			VectorCopy( pInvoker->v.velocity, args.velocity );
 	}
 	else
@@ -3717,7 +3748,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 		mask = Mod_GetPVSForPoint( pvspoint );
 
 	// process all the clients
-	for( slot = 0, cl = svs.clients; slot < sv_maxclients->integer; slot++, cl++ )
+	for( slot = 0, cl = svs.clients; slot < svs.maxclients; slot++, cl++ )
 	{
 		if( cl->state != cs_spawned || !cl->edict || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;
@@ -3815,7 +3846,7 @@ byte *pfnSetFatPVS( const float *org )
 {
 	qboolean	fullvis = false;
 
-	if( !sv.worldmodel->visdata || sv_novis->integer || !org || CL_DisableVisibility( ))
+	if( !sv.worldmodel->visdata || sv_novis->value || !org || CL_DisableVisibility( ))
 		fullvis = true;
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
@@ -3865,7 +3896,7 @@ byte *pfnSetFatPAS( const float *org )
 {
 	qboolean	fullvis = false;
 
-	if( !sv.worldmodel->visdata || sv_novis->integer || !org || CL_DisableVisibility( ))
+	if( !sv.worldmodel->visdata || sv_novis->value || !org || CL_DisableVisibility( ))
 		fullvis = true;
 
 	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
@@ -4050,7 +4081,7 @@ int pfnGetPlayerUserId( edict_t *e )
 	if( !SV_ClientFromEdict( e, false ))
 		return -1;
 
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( cl->edict == e )
 			return cl->userid;
@@ -4133,7 +4164,7 @@ pfnVoice_GetClientListening
 */
 qboolean pfnVoice_GetClientListening( int iReceiver, int iSender )
 {
-	int	iMaxClients = sv_maxclients->integer;
+	int	iMaxClients = svs.maxclients;
 
 	if( !svs.initialized ) return false;
 
@@ -4154,7 +4185,7 @@ pfnVoice_SetClientListening
 */
 qboolean pfnVoice_SetClientListening( int iReceiver, int iSender, qboolean bListen )
 {
-	int	iMaxClients = sv_maxclients->integer;
+	int	iMaxClients = svs.maxclients;
 
 	if( !svs.initialized ) return false;
 
@@ -4195,7 +4226,7 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 	if( sv.state != ss_active || !SV_IsValidEdict( e ))
 		return result;
 
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( cl->edict == e )
 		{
@@ -4376,10 +4407,10 @@ static enginefuncs_t gEngfuncs =
 	pfnWriteCoord,
 	pfnWriteString,
 	pfnWriteEntity,
-	Cvar_RegisterVariable,
+	pfnCvar_RegisterServerVariable,
 	Cvar_VariableValue,
 	Cvar_VariableString,
-	Cvar_SetFloat,
+	Cvar_SetValue,
 	Cvar_Set,
 	pfnAlertMessage,
 	pfnEngineFprintf,
@@ -4420,7 +4451,7 @@ static enginefuncs_t gEngfuncs =
 	pfnEndSection,
 	COM_CompareFileTime,
 	pfnGetGameDir,
-	Cvar_RegisterVariable,
+	pfnCvar_RegisterEngineVariable,
 	pfnFadeClientVolume,
 	pfnSetClientMaxspeed,
 	SV_FakeConnect,
@@ -4428,7 +4459,7 @@ static enginefuncs_t gEngfuncs =
 	pfnNumberOfEntities,
 	pfnGetInfoKeyBuffer,
 	Info_ValueForKey,
-	Info_SetValueForKey,
+	pfnSetValueForKey,
 	pfnSetClientKeyValue,
 	pfnIsMapValid,
 	pfnStaticDecal,
@@ -4457,7 +4488,7 @@ static enginefuncs_t gEngfuncs =
 	Delta_UnsetFieldByIndex,
 	pfnSetGroupMask,	
 	pfnCreateInstancedBaseline,
-	Cvar_DirectSet,
+	pfnCVarDirectSet,
 	pfnForceUnmodified,
 	pfnGetPlayerStats,
 	Cmd_AddServerCommand,
@@ -4695,7 +4726,7 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	svgame.movevars.fog_settings = 0;
 
 	svgame.globals->maxEntities = GI->max_edicts;
-	svgame.globals->maxClients = sv_maxclients->integer;
+	svgame.globals->maxClients = svs.maxclients;
 	svgame.globals->mapname = MAKE_STRING( sv.name );
 	svgame.globals->startspot = MAKE_STRING( sv.startspot );
 	svgame.globals->time = sv.time;
@@ -4721,15 +4752,15 @@ void SV_UnloadProgs( void )
 		svgame.dllFuncs2.pfnGameShutdown ();
 
 	// now we can unload cvars
-	Cvar_FullSet( "host_gameloaded", "0", CVAR_INIT );
-	Cvar_FullSet( "sv_background", "0", CVAR_READ_ONLY );
+	Cvar_FullSet( "host_gameloaded", "0", FCVAR_READ_ONLY );
+	Cvar_FullSet( "sv_background", "0", FCVAR_READ_ONLY );
 
 	// remove server cmds
 	SV_KillOperatorCommands();
 
 	// must unlink all game cvars,
 	// before pointers on them will be lost...
-	Cvar_Unlink( CVAR_SERVERDLL );
+	Cvar_Unlink( FCVAR_EXTDLL );
 	Cmd_Unlink( CMD_SERVERDLL );
 
 	Mod_ResetStudioAPI ();
@@ -4847,7 +4878,7 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.globals->pStringBase = ""; // setup string base
 
 	svgame.globals->maxEntities = GI->max_edicts;
-	svgame.globals->maxClients = sv_maxclients->integer;
+	svgame.globals->maxClients = svs.maxclients;
 	svgame.edicts = Mem_Alloc( svgame.mempool, sizeof( edict_t ) * svgame.globals->maxEntities );
 	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
 
@@ -4857,7 +4888,7 @@ qboolean SV_LoadProgs( const char *name )
 	// clear user messages
 	svgame.gmsgHudText = -1;
 
-	Cvar_FullSet( "host_gameloaded", "1", CVAR_INIT );
+	Cvar_FullSet( "host_gameloaded", "1", FCVAR_READ_ONLY );
 	svgame.stringspool = Mem_AllocPool( "Server Strings" );
 
 	// fire once

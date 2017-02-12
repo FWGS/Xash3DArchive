@@ -26,10 +26,11 @@ GNU General Public License for more details.
 #define MAX_CMD_BUFFER		8000
 #define CONNECTION_PROBLEM_TIME	15.0	// 15 seconds
 
+CVAR_DEFINE( cl_test, "cl_mycvar", "0", 0, "test variable on a new system" );
 convar_t	*rcon_client_password;
 convar_t	*rcon_address;
 convar_t	*cl_timeout;
-convar_t	*cl_predict;
+convar_t	*cl_nopred;
 convar_t	*cl_showfps;
 convar_t	*cl_nodelta;
 convar_t	*cl_crosshair;
@@ -59,7 +60,6 @@ convar_t	*model;
 convar_t	*topcolor;
 convar_t	*bottomcolor;
 convar_t	*rate;
-convar_t	*hltv;
 
 client_t		cl;
 client_static_t	cls;
@@ -112,6 +112,11 @@ qboolean CL_IsBackgroundDemo( void )
 qboolean CL_IsBackgroundMap( void )
 {
 	return ( cl.background && !cls.demoplayback );
+}
+
+char *CL_Userinfo( void )
+{
+	return cls.userinfo;
 }
 
 /*
@@ -295,7 +300,7 @@ qboolean CL_ProcessShowTexturesCmds( usercmd_t *cmd )
 	int		changed;
 	int		pressed, released;
 
-	if( !gl_showtextures->integer || gl_overview->integer )
+	if( !gl_showtextures->value || gl_overview->value )
 		return false;
 
 	changed = (oldbuttons ^ cmd->buttons);
@@ -303,9 +308,9 @@ qboolean CL_ProcessShowTexturesCmds( usercmd_t *cmd )
 	released = changed & (~cmd->buttons);
 
 	if( released & ( IN_RIGHT|IN_MOVERIGHT ))
-		Cvar_SetFloat( "r_showtextures", gl_showtextures->integer + 1 );
+		Cvar_SetValue( "r_showtextures", gl_showtextures->value + 1 );
 	if( released & ( IN_LEFT|IN_MOVELEFT ))
-		Cvar_SetFloat( "r_showtextures", max( 1, gl_showtextures->integer - 1 ));
+		Cvar_SetValue( "r_showtextures", max( 1, gl_showtextures->value - 1 ));
 	oldbuttons = cmd->buttons;
 
 	return true;
@@ -326,7 +331,7 @@ qboolean CL_ProcessOverviewCmds( usercmd_t *cmd )
 	float		step = (2.0f / size) * host.realframetime;
 	float		step2 = step * 100.0f * (2.0f / ov->flZoom);
 
-	if( !gl_overview->integer || gl_showtextures->integer )
+	if( !gl_overview->value || gl_showtextures->value )
 		return false;
 
 	if( ov->flZoom < 0.0f ) sign = -1;
@@ -500,12 +505,12 @@ void CL_WritePacket( void )
 	MSG_Init( &buf, "ClientData", data, sizeof( data ));
 
 	// Determine number of backup commands to send along
-	numbackup = bound( 0, cl_cmdbackup->integer, MAX_BACKUP_COMMANDS );
+	numbackup = bound( 0, cl_cmdbackup->value, MAX_BACKUP_COMMANDS );
 	if( cls.state == ca_connected ) numbackup = 0;
 
 	// clamp cmdrate
-	if( cl_cmdrate->integer < 0 ) Cvar_Set( "cl_cmdrate", "0" );
-	else if( cl_cmdrate->integer > 100 ) Cvar_Set( "cl_cmdrate", "100" );
+	if( cl_cmdrate->value < 0 ) Cvar_Set( "cl_cmdrate", "0" );
+	else if( cl_cmdrate->value > 100 ) Cvar_Set( "cl_cmdrate", "100" );
 
 	// Check to see if we can actually send this command
 
@@ -515,7 +520,7 @@ void CL_WritePacket( void )
 
 	// In single player, send commands as fast as possible
 	// Otherwise, only send when ready and when not choking bandwidth
-	if( cl.maxclients == 1 || ( NET_IsLocalAddress( cls.netchan.remote_address ) && !host_limitlocal->integer ))
+	if( cl.maxclients == 1 || ( NET_IsLocalAddress( cls.netchan.remote_address ) && !host_limitlocal->value ))
 		send_command = true;
 
 	if(( host.realtime >= cls.nextcmdtime ) && Netchan_CanPacket( &cls.netchan ))
@@ -536,21 +541,14 @@ void CL_WritePacket( void )
 		}
 	}
 
-	if( cl_nodelta->integer )
+	if( cl_nodelta->value )
 		cl.validsequence = 0;
 
-	// send a userinfo update if needed
-	if( userinfo->modified )
-	{
-		MSG_BeginClientCmd( &cls.netchan.message, clc_userinfo );
-		MSG_WriteString( &cls.netchan.message, Cvar_Userinfo( ));
-	}
-		
 	if( send_command )
 	{
 		int	outgoing_sequence;
 	
-		if( cl_cmdrate->integer > 0 ) // clamped between 10 and 100 fps
+		if( cl_cmdrate->value > 0 ) // clamped between 10 and 100 fps
 			cls.nextcmdtime = host.realtime + bound( 0.1f, ( 1.0f / cl_cmdrate->value ), 0.01f );
 		else cls.nextcmdtime = host.realtime; // always able to send right away
 
@@ -670,9 +668,6 @@ void CL_SendCmd( void )
 
 	// clc_move, userinfo etc
 	CL_WritePacket();
-
-	// make sure what menu and CL_WritePacket catch changes
-	userinfo->modified = false;
 }
 
 /*
@@ -723,8 +718,7 @@ void CL_SendConnectPacket( void )
 	if( adr.port == 0 ) adr.port = MSG_BigShort( PORT_SERVER );
 	port = Cvar_VariableValue( "net_qport" );
 
-	userinfo->modified = false;
-	Netchan_OutOfBandPrint( NS_CLIENT, adr, "connect %i %i %i \"%s\"\n", PROTOCOL_VERSION, port, cls.challenge, Cvar_Userinfo( ));
+	Netchan_OutOfBandPrint( NS_CLIENT, adr, "connect %i %i %i \"%s\"\n", PROTOCOL_VERSION, port, cls.challenge, cls.userinfo );
 }
 
 /*
@@ -802,8 +796,8 @@ void CL_Connect_f( void )
 	cls.state = ca_connecting;
 	Q_strncpy( cls.servername, server, sizeof( cls.servername ));
 	cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
+	cls.spectator = false;
 }
-
 
 /*
 =====================
@@ -882,15 +876,15 @@ void CL_ClearState( void )
 	MSG_Clear( &cls.netchan.message );
 	memset( &clgame.fade, 0, sizeof( clgame.fade ));
 	memset( &clgame.shake, 0, sizeof( clgame.shake ));
-	Cvar_FullSet( "cl_background", "0", CVAR_READ_ONLY );
+	Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
 	cl.refdef.movevars = &clgame.movevars;
 	cl.maxclients = 1; // allow to drawing player in menu
 	cl.mtime[0] = cl.mtime[1] = 1.0f; // because level starts from 1.0f second
 	NetAPI_CancelAllRequests();
 	cl.scr_fov = 90.0f;
 
-	Cvar_SetFloat( "scr_download", 0.0f );
-	Cvar_SetFloat( "scr_loading", 0.0f );
+	Cvar_SetValue( "scr_download", 0.0f );
+	Cvar_SetValue( "scr_loading", 0.0f );
 
 	// restore real developer level
 	host.developer = host.old_developer;
@@ -1329,6 +1323,18 @@ void CL_SetupOverviewParams( void )
 	ov->flZoom = ( 8192.0f / world.size[ov->rotated] ) / aspect;
 
 	VectorAverage( world.mins, world.maxs, ov->origin );
+
+	memset( &cls.spectator_state, 0, sizeof( cls.spectator_state ));
+
+	if( cls.spectator )
+	{
+		cls.spectator_state.playerstate.friction = 1;
+		cls.spectator_state.playerstate.gravity = 1;
+		cls.spectator_state.playerstate.number = cl.playernum + 1;
+		cls.spectator_state.playerstate.usehull = 1;
+		cls.spectator_state.playerstate.movetype = MOVETYPE_NOCLIP;
+		cls.spectator_state.client.maxspeed = clgame.movevars.spectatormaxspeed;
+	}
 }
 
 /*
@@ -1351,8 +1357,8 @@ void CL_PrepSound( void )
 	for( i = 0; i < MAX_SOUNDS && cl.sound_precache[i+1][0]; i++ )
 	{
 		cl.sound_index[i+1] = S_RegisterSound( cl.sound_precache[i+1] );
-		Cvar_SetFloat( "scr_loading", scr_loading->value + 5.0f / sndcount );
-		if( cl_allow_levelshots->integer || host.developer > 3 || cl.background )
+		Cvar_SetValue( "scr_loading", scr_loading->value + 5.0f / sndcount );
+		if( cl_allow_levelshots->value || host.developer > 3 || cl.background )
 			SCR_UpdateScreen();
 	}
 
@@ -1376,14 +1382,14 @@ void CL_PrepVideo( void )
 	if( !cl.model_precache[1][0] )
 		return; // no map loaded
 
-	Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar
+	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
 	MsgDev( D_NOTE, "CL_PrepVideo: %s\n", clgame.mapname );
 
 	// let the render dll load the map
 	Q_strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
 	Mod_LoadWorld( mapname, &map_checksum, cl.maxclients > 1 );
 	cl.worldmodel = Mod_Handle( 1 ); // get world pointer
-	Cvar_SetFloat( "scr_loading", 25.0f );
+	Cvar_SetValue( "scr_loading", 25.0f );
 
 	SCR_UpdateScreen();
 
@@ -1398,8 +1404,8 @@ void CL_PrepVideo( void )
 	{
 		Q_strncpy( name, cl.model_precache[i+1], MAX_STRING );
 		Mod_RegisterModel( name, i+1 );
-		Cvar_SetFloat( "scr_loading", scr_loading->value + 75.0f / mdlcount );
-		if( cl_allow_levelshots->integer || host.developer > 3 || cl.background )
+		Cvar_SetValue( "scr_loading", scr_loading->value + 75.0f / mdlcount );
+		if( cl_allow_levelshots->value || host.developer > 3 || cl.background )
 			SCR_UpdateScreen();
 	}
 
@@ -1428,7 +1434,7 @@ void CL_PrepVideo( void )
 
 	Mod_FreeUnused ();
 
-	Cvar_SetFloat( "scr_loading", 100.0f );	// all done
+	Cvar_SetValue( "scr_loading", 100.0f );	// all done
 
 	if( host.developer <= 2 )
 		Con_ClearNotify(); // clear any lines of console text
@@ -1768,17 +1774,76 @@ void CL_ProcessFile( qboolean successfully_received, const char *filename )
 	cls.downloadfileid++;
 }
 
+/*
+====================
+CL_ServerCommand
+
+send command to a server
+====================
+*/
+void CL_ServerCommand( qboolean reliable, char *fmt, ... )
+{
+	char		string[MAX_SYSPATH];
+	va_list		argptr;
+
+	if( cls.state < ca_connecting )
+		return;
+
+	va_start( argptr, fmt );
+	Q_vsprintf( string, fmt, argptr );
+	va_end( argptr );
+
+	if( reliable )
+	{
+		MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
+		MSG_WriteString( &cls.netchan.message, string );
+	}
+	else
+	{
+		MSG_BeginClientCmd( &cls.datagram, clc_stringcmd );
+		MSG_WriteString( &cls.datagram, string );
+	}
+}
+
 //=============================================================================
 /*
 ==============
-CL_Userinfo_f
+CL_SetInfo_f
 ==============
 */
-void CL_Userinfo_f( void )
+void CL_SetInfo_f( void )
 {
-	Msg( "User info settings:\n" );
-	Info_Print( Cvar_Userinfo( ));
-	Msg( "Total %i symbols\n", Q_strlen( Cvar_Userinfo( )));
+	convar_t	*var;
+
+	if( Cmd_Argc() == 1 )
+	{
+		Msg( "User info settings:\n" );
+		Info_Print( cls.userinfo );
+		Msg( "Total %i symbols\n", Q_strlen( cls.userinfo ));
+		return;
+	}
+
+	if( Cmd_Argc() != 3 )
+	{
+		Msg( "usage: setinfo [ <key> <value> ]\n" );
+		return;
+	}
+
+	// NOTE: some userinfo comed from cvars, e.g. cl_lw but we can call "setinfo cl_lw 1"
+	// without real cvar changing. So we need to lookup for cvar first to make sure what
+	// our key is not linked with console variable
+	var = Cvar_FindVar( Cmd_Argv( 1 ));
+
+	// make sure what cvar is existed and really part of userinfo
+	if( var && FBitSet( var->flags, FCVAR_USERINFO ))
+	{
+		Cvar_DirectSet( var, Cmd_Argv( 2 ));
+	}
+	else if( Info_SetValueForKey( cls.userinfo, Cmd_Argv( 1 ), Cmd_Argv( 2 ), MAX_INFO_STRING ))
+	{
+		// send update only on successfully changed userinfo
+		Cmd_ForwardToServer ();
+	}
 }
 
 /*
@@ -1789,8 +1854,8 @@ CL_Physinfo_f
 void CL_Physinfo_f( void )
 {
 	Msg( "Phys info settings:\n" );
-	Info_Print( cl.frame.client.physinfo );
-	Msg( "Total %i symbols\n", Q_strlen( cl.frame.client.physinfo ));
+	Info_Print( cls.physinfo );
+	Msg( "Total %i symbols\n", Q_strlen( cls.physinfo ));
 }
 
 /*
@@ -1812,6 +1877,24 @@ void CL_Precache_f( void )
 
 	MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
 	MSG_WriteString( &cls.netchan.message, va( "begin %i\n", spawncount ));
+}
+
+/*
+==================
+CL_FullServerinfo_f
+
+Sent by server when serverinfo changes
+==================
+*/
+void CL_FullServerinfo_f( void )
+{
+	if( Cmd_Argc() != 2 )
+	{
+		Msg( "Usage: fullserverinfo <complete info string>\n" );
+		return;
+	}
+
+	Q_strncpy( cl.serverinfo, Cmd_Argv( 1 ), sizeof( cl.serverinfo ));
 }
 
 /*
@@ -1843,53 +1926,56 @@ void CL_InitLocal( void )
 {
 	cls.state = ca_disconnected;
 
+	Cvar_RegisterVariable( &cl_test );
+
 	// register our variables
-	cl_predict = Cvar_Get( "cl_predict", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable client movement prediction" );
-	cl_crosshair = Cvar_Get( "crosshair", "1", CVAR_ARCHIVE, "show weapon chrosshair" );
+	cl_crosshair = Cvar_Get( "crosshair", "1", FCVAR_ARCHIVE, "show weapon chrosshair" );
 	cl_nodelta = Cvar_Get ("cl_nodelta", "0", 0, "disable delta-compression for usercommnds" );
 	cl_idealpitchscale = Cvar_Get( "cl_idealpitchscale", "0.8", 0, "how much to look up/down slopes and stairs when not using freelook" );
 	cl_solid_players = Cvar_Get( "cl_solid_players", "1", 0, "Make all players not solid (can't traceline them)" );
-	cl_interp = Cvar_Get( "ex_interp", "0.1", CVAR_ARCHIVE, "Interpolate object positions starting this many seconds in past" ); 
+	cl_interp = Cvar_Get( "ex_interp", "0.1", FCVAR_ARCHIVE, "Interpolate object positions starting this many seconds in past" ); 
 	cl_timeout = Cvar_Get( "cl_timeout", "60", 0, "connect timeout (in-seconds)" );
 
 	rcon_client_password = Cvar_Get( "rcon_password", "", 0, "remote control client password" );
 	rcon_address = Cvar_Get( "rcon_address", "", 0, "remote control address" );
 
 	// userinfo
-	Cvar_Get( "password", "", CVAR_USERINFO, "player password" );
-	model = Cvar_Get( "model", "player", CVAR_USERINFO|CVAR_ARCHIVE, "player model ('player' is a singleplayer model)" );
-	name = Cvar_Get( "name", Sys_GetCurrentUser(), CVAR_USERINFO|CVAR_ARCHIVE|CVAR_PRINTABLEONLY, "player name" );
-	topcolor = Cvar_Get( "topcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player top color" );
-	bottomcolor = Cvar_Get( "bottomcolor", "0", CVAR_USERINFO|CVAR_ARCHIVE, "player bottom color" );
-	cl_dlmax = Cvar_Get( "cl_dlmax", "0", CVAR_USERINFO|CVAR_ARCHIVE, "max allowed fragment size on download resources" );
-	rate = Cvar_Get( "rate", "25000", CVAR_USERINFO|CVAR_ARCHIVE, "player network rate" );
-	hltv = Cvar_Get( "hltv", "0", CVAR_USERINFO|CVAR_LATCH, "HLTV mode" );
-	cl_showfps = Cvar_Get( "cl_showfps", "1", CVAR_ARCHIVE, "show client fps" );
-	cl_nosmooth = Cvar_Get( "cl_nosmooth", "0", CVAR_ARCHIVE, "disable smooth up stair climbing and interpolate position in multiplayer" );
-	cl_smoothtime = Cvar_Get( "cl_smoothtime", "0.1", CVAR_ARCHIVE, "time to smooth up" );
-	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "10", CVAR_ARCHIVE, "how many additional history commands are sent" );
-	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", CVAR_ARCHIVE, "Max number of command packets sent to server per second" );
-	cl_draw_particles = Cvar_Get( "cl_draw_particles", "1", CVAR_ARCHIVE, "Disable any particle effects" );
-	cl_draw_beams = Cvar_Get( "cl_draw_beams", "1", CVAR_ARCHIVE, "Disable view beams" );
-	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", CVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
-	cl_showerror = Cvar_Get( "cl_showerror", "0", CVAR_ARCHIVE, "show prediction error" );
-	cl_bmodelinterp = Cvar_Get( "cl_bmodelinterp", "1", CVAR_ARCHIVE, "enable bmodel interpolation" );
-	cl_clockreset = Cvar_Get( "cl_clockreset", "0.1", CVAR_ARCHIVE, "frametime delta maximum value before reset" );
-	cl_fixtimerate = Cvar_Get( "cl_fixtimerate", "7.5", CVAR_ARCHIVE, "time in msec to client clock adjusting" );
+	cl_nopred = Cvar_Get( "cl_nopred", "0", FCVAR_ARCHIVE|FCVAR_USERINFO, "disable client movement prediction" );
+	name = Cvar_Get( "name", Sys_GetCurrentUser(), FCVAR_USERINFO|FCVAR_ARCHIVE|FCVAR_PRINTABLEONLY, "player name" );
+	model = Cvar_Get( "model", "", FCVAR_USERINFO|FCVAR_ARCHIVE, "player model ('player' is a singleplayer model)" );
+	cl_updaterate = Cvar_Get( "cl_updaterate", "20", FCVAR_USERINFO|FCVAR_ARCHIVE, "refresh rate of server messages" );
+	cl_dlmax = Cvar_Get( "cl_dlmax", "0", FCVAR_USERINFO|FCVAR_ARCHIVE, "max allowed fragment size on download resources" );
+	rate = Cvar_Get( "rate", "3500", FCVAR_USERINFO|FCVAR_ARCHIVE, "player network rate" );
+	topcolor = Cvar_Get( "topcolor", "0", FCVAR_USERINFO|FCVAR_ARCHIVE, "player top color" );
+	bottomcolor = Cvar_Get( "bottomcolor", "0", FCVAR_USERINFO|FCVAR_ARCHIVE, "player bottom color" );
+	cl_lw = Cvar_Get( "cl_lw", "1", FCVAR_ARCHIVE|FCVAR_USERINFO, "enable client weapon predicting" );
+	Cvar_Get( "cl_lc", "1", FCVAR_ARCHIVE|FCVAR_USERINFO, "enable lag compensation" );
+	Cvar_Get( "msg", "0", FCVAR_USERINFO|FCVAR_ARCHIVE, "message filter for server notifications" );
+	Cvar_Get( "team", "", FCVAR_USERINFO, "player team" );
+	Cvar_Get( "skin", "", FCVAR_USERINFO, "player skin" );
 
-	Cvar_Get( "hud_scale", "0", CVAR_ARCHIVE|CVAR_LATCH, "scale hud at current resolution" );
-	Cvar_Get( "skin", "", CVAR_USERINFO, "player skin" ); // XDM 3.3 want this cvar
-	cl_updaterate = Cvar_Get( "cl_updaterate", "60", CVAR_USERINFO|CVAR_ARCHIVE, "refresh rate of server messages" );
-	Cvar_Get( "cl_background", "0", CVAR_READ_ONLY, "indicate what background map is running" );
-	Cvar_Get( "cl_msglevel", "0", CVAR_USERINFO|CVAR_ARCHIVE, "message filter for server notifications" );
+	cl_showfps = Cvar_Get( "cl_showfps", "1", FCVAR_ARCHIVE, "show client fps" );
+	cl_nosmooth = Cvar_Get( "cl_nosmooth", "0", FCVAR_ARCHIVE, "disable smooth up stair climbing and interpolate position in multiplayer" );
+	cl_smoothtime = Cvar_Get( "cl_smoothtime", "0.1", FCVAR_ARCHIVE, "time to smooth up" );
+	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "10", FCVAR_ARCHIVE, "how many additional history commands are sent" );
+	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", FCVAR_ARCHIVE, "Max number of command packets sent to server per second" );
+	cl_draw_particles = Cvar_Get( "cl_draw_particles", "1", FCVAR_ARCHIVE, "Disable any particle effects" );
+	cl_draw_beams = Cvar_Get( "cl_draw_beams", "1", FCVAR_ARCHIVE, "Disable view beams" );
+	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", FCVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
+	cl_showerror = Cvar_Get( "cl_showerror", "0", FCVAR_ARCHIVE, "show prediction error" );
+	cl_bmodelinterp = Cvar_Get( "cl_bmodelinterp", "1", FCVAR_ARCHIVE, "enable bmodel interpolation" );
+	cl_clockreset = Cvar_Get( "cl_clockreset", "0.1", FCVAR_ARCHIVE, "frametime delta maximum value before reset" );
+	cl_fixtimerate = Cvar_Get( "cl_fixtimerate", "7.5", FCVAR_ARCHIVE, "time in msec to client clock adjusting" );
+	Cvar_Get( "hud_scale", "0", FCVAR_ARCHIVE|FCVAR_LATCH, "scale hud at current resolution" );
+	Cvar_Get( "cl_background", "0", FCVAR_READ_ONLY, "indicate what background map is running" );
+
 
 	// these two added to shut up CS 1.5 about 'unknown' commands
-	Cvar_Get( "lightgamma", "1", CVAR_ARCHIVE, "ambient lighting level (legacy, unused)" );
-	Cvar_Get( "direct", "1", CVAR_ARCHIVE, "direct lighting level (legacy, unused)" );
+	Cvar_Get( "lightgamma", "1", FCVAR_ARCHIVE, "ambient lighting level (legacy, unused)" );
+	Cvar_Get( "direct", "1", FCVAR_ARCHIVE, "direct lighting level (legacy, unused)" );
 	Cvar_Get( "voice_serverdebug", "0", 0, "debug voice (legacy, unused)" );
 
 	// interpolation cvars
-	Cvar_Get( "ex_interp", "0", 0, "" );
 	Cvar_Get( "ex_maxerrordistance", "0", 0, "" );
 
 	// server commands
@@ -1908,7 +1994,8 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("internetservers", CL_InternetServers_f, "collect info about internet servers" );
 	Cmd_AddCommand ("cd", CL_PlayCDTrack_f, "Play cd-track (not real cd-player of course)" );
 
-	Cmd_AddCommand ("userinfo", CL_Userinfo_f, "print current client userinfo" );
+	Cmd_AddCommand ("setinfo", CL_SetInfo_f, "examine or change the userinfo string (alias of userinfo)" );
+	Cmd_AddCommand ("userinfo", CL_SetInfo_f, "examine or change the userinfo string (alias of setinfo)" );
 	Cmd_AddCommand ("physinfo", CL_Physinfo_f, "print current client physinfo" );
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f, "disconnect from server" );
 	Cmd_AddCommand ("record", CL_Record_f, "record a demo" );
@@ -1922,6 +2009,7 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("escape", CL_Escape_f, "escape from game to menu" );
 	Cmd_AddCommand ("pointfile", CL_ReadPointFile_f, "show leaks on a map (if present of course)" );
 	Cmd_AddCommand ("linefile", CL_ReadLineFile_f, "show leaks on a map (if present of course)" );
+	Cmd_AddCommand ("fullserverinfo", CL_FullServerinfo_f, "sent by server when serverinfo changes" );
 	
 	Cmd_AddCommand ("quit", CL_Quit_f, "quit from game" );
 	Cmd_AddCommand ("exit", CL_Quit_f, "quit from game" );
@@ -1976,7 +2064,7 @@ void CL_AdjustClock( void )
 		return;
 
 	if( cl_fixtimerate->value < 0.0f )
-		Cvar_SetFloat( "cl_fixtimerate", 7.5f );
+		Cvar_SetValue( "cl_fixtimerate", 7.5f );
 
 	if( fabs( cl.timedelta ) >= 0.001f )
 	{

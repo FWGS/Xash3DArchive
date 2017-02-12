@@ -60,7 +60,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 	byte		buf[MAX_SYSPATH]; // 1 kb
 	int		i, nummaps;
 
-	t = FS_Search( va( "maps/%s*.bsp", s ), true, con_gamemaps->integer );
+	t = FS_Search( va( "maps/%s*.bsp", s ), true, con_gamemaps->value );
 	if( !t ) return false;
 
 	FS_FileBase( t->filenames[0], matchbuf ); 
@@ -79,7 +79,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			
 		if( Q_stricmp( ext, "bsp" )) continue;
 		Q_strncpy( message, "^1error^7", sizeof( message ));
-		f = FS_Open( t->filenames[i], "rb", con_gamemaps->integer );
+		f = FS_Open( t->filenames[i], "rb", con_gamemaps->value );
 	
 		if( f )
 		{
@@ -939,22 +939,22 @@ static void Cmd_WriteHelp(const char *name, const char *unused, const char *desc
 
 void Cmd_WriteVariables( file_t *f )
 {
-	Cvar_LookupVars( CVAR_ARCHIVE, NULL, f, Cmd_WriteCvar ); 
+	Cvar_LookupVars( FCVAR_ARCHIVE, NULL, f, Cmd_WriteCvar ); 
 }
 
 void Cmd_WriteServerVariables( file_t *f )
 {
-	Cvar_LookupVars( CVAR_SERVERNOTIFY, NULL, f, Cmd_WriteServerCvar ); 
+	Cvar_LookupVars( FCVAR_SERVER, NULL, f, Cmd_WriteServerCvar ); 
 }
 
 void Cmd_WriteOpenGLVariables( file_t *f )
 {
-	Cvar_LookupVars( CVAR_GLCONFIG, NULL, f, Cmd_WriteOpenGLCvar ); 
+	Cvar_LookupVars( FCVAR_GLCONFIG, NULL, f, Cmd_WriteOpenGLCvar ); 
 }
 
 void Cmd_WriteRenderVariables( file_t *f )
 {
-	Cvar_LookupVars( CVAR_RENDERINFO, NULL, f, Cmd_WriteRenderCvar ); 
+	Cvar_LookupVars( FCVAR_RENDERINFO, NULL, f, Cmd_WriteCvar ); 
 }
 
 /*
@@ -966,7 +966,8 @@ Writes key bindings and archived cvars to config.cfg
 */
 void Host_WriteConfig( void )
 {
-	kbutton_t	*mlook, *jlook;
+	kbutton_t	*mlook = NULL;
+	kbutton_t	*jlook = NULL;
 	file_t	*f;
 
 	if( !clgame.hInstance ) return;
@@ -980,10 +981,14 @@ void Host_WriteConfig( void )
 		FS_Printf( f, "//\t\t\tconfig.cfg - archive of cvars\n" );
 		FS_Printf( f, "//=======================================================================\n" );
 		Key_WriteBindings( f );
-		Cmd_WriteVariables( f );
+		Cvar_WriteVariables( f, FCVAR_ARCHIVE );
+		Info_WriteVars( f );
 
-		mlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_mlook" );
-		jlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_jlook" );
+		if( clgame.hInstance )
+		{
+			mlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_mlook" );
+			jlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_jlook" );
+		}
 
 		if( mlook && ( mlook->state & 1 )) 
 			FS_Printf( f, "+mlook\n" );

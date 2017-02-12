@@ -54,7 +54,7 @@ typically is a func_wall, func_breakable, func_ladder etc
 */
 static qboolean R_StaticEntity( cl_entity_t *ent )
 {
-	if( !gl_allow_static->integer )
+	if( !gl_allow_static->value )
 		return false;
 
 	if( ent->curstate.rendermode != kRenderNormal )
@@ -402,7 +402,7 @@ R_AddEntity
 */
 qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 {
-	if( !r_drawentities->integer )
+	if( !r_drawentities->value )
 		return false; // not allow to drawing
 
 	if( !clent || !clent->model )
@@ -475,13 +475,13 @@ static void R_Clear( int bitMask )
 {
 	int	bits;
 
-	if( gl_overview->integer )
+	if( gl_overview->value )
 		pglClearColor( 0.0f, 1.0f, 0.0f, 1.0f ); // green background (Valve rules)
 	else pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 
 	bits = GL_DEPTH_BUFFER_BIT;
 
-	if( RI.drawWorld && r_fastsky->integer )
+	if( RI.drawWorld && r_fastsky->value )
 		bits |= GL_COLOR_BUFFER_BIT;
 	if( glState.stencilEnabled )
 		bits |= GL_STENCIL_BUFFER_BIT;
@@ -767,7 +767,7 @@ static void R_SetupFrame( void )
 
 	VectorCopy( RI.vieworg, RI.pvsorigin );
 
-	if( !r_lockcull->integer )
+	if( !r_lockcull->value )
 	{
 		VectorCopy( RI.vieworg, RI.cullorigin );
 		VectorCopy( RI.vforward, RI.cull_vforward );
@@ -780,7 +780,7 @@ static void R_SetupFrame( void )
 	// sort opaque entities by model type to avoid drawing model shadows under alpha-surfaces
 	qsort( tr.solid_entities, tr.num_solid_entities, sizeof( cl_entity_t* ), R_SolidEntityCompare );
 
-	if( !gl_nosort->integer )
+	if( !gl_nosort->value )
 	{
 		// sort translucents entities by rendermode and distance
 		qsort( tr.trans_entities, tr.num_trans_entities, sizeof( cl_entity_t* ), R_TransEntityCompare );
@@ -1202,19 +1202,19 @@ void R_BeginFrame( qboolean clearScene )
 {
 	glConfig.softwareGammaUpdate = false;	// in case of possible fails
 
-	if(( gl_clear->integer || gl_overview->integer ) && clearScene && cls.state != ca_cinematic )
+	if(( gl_clear->value || gl_overview->value ) && clearScene && cls.state != ca_cinematic )
 	{
 		pglClear( GL_COLOR_BUFFER_BIT );
 	}
 
 	// update gamma
-	if( vid_gamma->modified )
+	if( FBitSet( vid_gamma->flags, FCVAR_CHANGED ))
 	{
 		if( glConfig.deviceSupportsGamma )
 		{
 			SCR_RebuildGammaTable();
 			GL_UpdateGammaRamp();
-			vid_gamma->modified = false;
+			ClearBits( vid_gamma->flags, FCVAR_CHANGED );
 		}
 		else
 		{
@@ -1231,7 +1231,7 @@ void R_BeginFrame( qboolean clearScene )
 	pglDrawBuffer( GL_BACK );
 
 	// update texture parameters
-	if( gl_texture_nearest->modified || gl_texture_anisotropy->modified || gl_texture_lodbias->modified )
+	if( FBitSet( gl_texture_nearest->flags|gl_texture_anisotropy->flags|gl_texture_lodbias->flags, FCVAR_CHANGED ))
 		R_SetTextureParameters();
 
 	// swapinterval stuff
@@ -1248,12 +1248,12 @@ R_RenderFrame
 */
 void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 {
-	if( r_norefresh->integer )
+	if( r_norefresh->value )
 		return;
 
 	tr.realframecount++;
 
-	if( RI.drawOrtho != gl_overview->integer )
+	if( RI.drawOrtho != gl_overview->value )
 		tr.fResetVis = true;
 
 	// completely override rendering
@@ -1274,11 +1274,11 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	RI.clipFlags = 15;
 	RI.drawWorld = drawWorld;
 	RI.thirdPerson = cl.thirdperson;
-	RI.drawOrtho = (RI.drawWorld) ? gl_overview->integer : 0;
+	RI.drawOrtho = (RI.drawWorld) ? gl_overview->value : 0;
 
 	GL_BackendStartFrame( fd );
 
-	if( !r_lockcull->integer )
+	if( !r_lockcull->value )
 		VectorCopy( fd->vieworg, RI.cullorigin );
 	VectorCopy( fd->vieworg, RI.pvsorigin );
 
@@ -1288,10 +1288,10 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	RI.viewport[2] = fd->viewport[2];
 	RI.viewport[3] = fd->viewport[3];
 
-	if( gl_finish->integer && drawWorld )
+	if( gl_finish->value && drawWorld )
 		pglFinish();
 
-	if( gl_allow_mirrors->integer )
+	if( gl_allow_mirrors->value )
 	{
 		// render mirrors
 		R_FindMirrors( fd );

@@ -386,8 +386,8 @@ static void SPR_AdjustSize( float *x, float *y, float *w, float *h )
 	if( !x && !y && !w && !h ) return;
 
 	// scale for screen sizes
-	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
+	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
+	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
 
 	if( x ) *x *= xscale;
 	if( y ) *y *= yscale;
@@ -410,8 +410,8 @@ void PicAdjustSize( float *x, float *y, float *w, float *h )
 	if( !x && !y && !w && !h ) return;
 
 	// scale for screen sizes
-	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
+	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
+	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
 
 	if( x ) *x *= xscale;
 	if( y ) *y *= yscale;
@@ -636,7 +636,7 @@ void CL_DrawScreenFade( void )
 	if( sf->fadeFlags & FFADE_MODULATE )
 		GL_SetRenderMode( kRenderTransAdd );
 	else GL_SetRenderMode( kRenderTransTexture );
-	R_DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, cls.fillImage );
+	R_DrawStretchPic( 0, 0, scr_width->value, scr_height->value, 0, 0, 1, 1, cls.fillImage );
 	pglColor4ub( 255, 255, 255, 255 );
 }
 
@@ -837,7 +837,7 @@ void CL_DrawCrosshair( void )
 	int		x, y, width, height;
 	cl_entity_t	*pPlayer;
 
-	if( !clgame.ds.pCrosshair || cl.refdef.crosshairangle[2] || !cl_crosshair->integer )
+	if( !clgame.ds.pCrosshair || cl.refdef.crosshairangle[2] || !cl_crosshair->value )
 		return;
 
 	pPlayer = CL_GetLocalPlayer();
@@ -869,8 +869,8 @@ void CL_DrawCrosshair( void )
 		VectorAdd( cl.refdef.vieworg, forward, point );
 		R_WorldToScreen( point, screen );
 
-		x += 0.5f * screen[0] * scr_width->integer + 0.5f;
-		y += 0.5f * screen[1] * scr_height->integer + 0.5f;
+		x += 0.5f * screen[0] * scr_width->value + 0.5f;
+		y += 0.5f * screen[1] * scr_height->value + 0.5f;
 	}
 
 	clgame.ds.pSprite = clgame.ds.pCrosshair;
@@ -899,15 +899,15 @@ static void CL_DrawLoading( float percent )
 	x = ( clgame.scrInfo.iWidth - width ) >> 1;
 	y = ( clgame.scrInfo.iHeight - height) >> 1;
 
-	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
+	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
+	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
 
 	x *= xscale;
 	y *= yscale;
 	width *= xscale;
 	height *= yscale;
 
-	if( cl_allow_levelshots->integer )
+	if( cl_allow_levelshots->value )
           {
 		pglColor4ub( 128, 128, 128, 255 );
 		GL_SetRenderMode( kRenderTransTexture );
@@ -947,8 +947,8 @@ static void CL_DrawPause( void )
 	x = ( clgame.scrInfo.iWidth - width ) >> 1;
 	y = ( clgame.scrInfo.iHeight - height) >> 1;
 
-	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
+	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
+	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
 
 	x *= xscale;
 	y *= yscale;
@@ -1432,7 +1432,7 @@ static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 
 	if( Cvar_VariableInteger( "hud_scale" ))
 	{
-		if( scr_width->integer < 640 )
+		if( scr_width->value < 640 )
 		{
 			// virtual screen space 320x200
 			clgame.scrInfo.iWidth = 320;
@@ -1448,8 +1448,8 @@ static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 	}
 	else
 	{
-		clgame.scrInfo.iWidth = scr_width->integer;
-		clgame.scrInfo.iHeight = scr_height->integer;
+		clgame.scrInfo.iWidth = scr_width->value;
+		clgame.scrInfo.iHeight = scr_height->value;
 		clgame.scrInfo.iFlags &= ~SCRINFO_STRETCHED;
 	}
 
@@ -1560,30 +1560,25 @@ pfnGetPlayerInfo
 static void pfnGetPlayerInfo( int ent_num, hud_player_info_t *pinfo )
 {
 	player_info_t	*player;
-	cl_entity_t	*ent;
-	qboolean		spec = false;
 
-	ent = CL_GetEntityByIndex( ent_num );
 	ent_num -= 1; // player list if offset by 1 from ents
 
 	if( ent_num >= cl.maxclients || ent_num < 0 || !cl.players[ent_num].name[0] )
 	{
-		memset( pinfo, 0, sizeof( *pinfo ));
+		pinfo->name = NULL;
+		pinfo->thisplayer = false;
 		return;
 	}
 
 	player = &cl.players[ent_num];
 	pinfo->thisplayer = ( ent_num == cl.playernum ) ? true : false;
-	if( ent ) spec = ent->curstate.spectator;
-
 	pinfo->name = player->name;
 	pinfo->model = player->model;
-
-	pinfo->spectator = spec;		
+	pinfo->spectator = player->spectator;		
 	pinfo->ping = player->ping;
 	pinfo->packetloss = player->packet_loss;
-	pinfo->topcolor = Q_atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
-	pinfo->bottomcolor = Q_atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
+	pinfo->topcolor = player->topcolor;
+	pinfo->bottomcolor = player->bottomcolor;
 }
 
 /*
@@ -1686,7 +1681,7 @@ int pfnDrawConsoleString( int x, int y, char *string )
 
 	if( !string || !*string ) return 0; // silent ignore
 	clgame.ds.adjust_size = true;
-	Con_SetFont( con_fontsize->integer );
+	Con_SetFont( con_fontsize->value );
 	drawLen = Con_DrawString( x, y, string, clgame.ds.textColor );
 	MakeRGBA( clgame.ds.textColor, 255, 255, 255, 255 );
 	clgame.ds.adjust_size = false;
@@ -1720,7 +1715,7 @@ compute string length in screen pixels
 */
 void pfnDrawConsoleStringLen( const char *pText, int *length, int *height )
 {
-	Con_SetFont( con_fontsize->integer );
+	Con_SetFont( con_fontsize->value );
 	Con_DrawStringLen( pText, length, height );
 	Con_RestoreFont();
 }
@@ -1807,7 +1802,7 @@ pfnPhysInfo_ValueForKey
 */
 static const char* pfnPhysInfo_ValueForKey( const char *key )
 {
-	return Info_ValueForKey( cl.frame.client.physinfo, key );
+	return Info_ValueForKey( cls.physinfo, key );
 }
 
 /*
@@ -1988,8 +1983,7 @@ pfnIsSpectateOnly
 */
 static int pfnIsSpectateOnly( void )
 {
-	cl_entity_t *pPlayer = CL_GetLocalPlayer();
-	return pPlayer ? (pPlayer->curstate.spectator != 0) : 0;
+	return (cls.spectator != 0);
 }
 
 /*
@@ -2504,13 +2498,22 @@ PlayerInfo_SetValueForKey
 */
 void PlayerInfo_SetValueForKey( const char *key, const char *value )
 {
-	cvar_t	*var;
+	convar_t	*var;
 
-	var = (cvar_t *)Cvar_FindVar( key );
-	if( !var || !(var->flags & CVAR_USERINFO ))
-		return;
+	if( !Q_strcmp( Info_ValueForKey( cls.userinfo, key ), value ))
+		return; // not changes ?
 
-	Cvar_DirectSet( var, value );
+	var = Cvar_FindVar( key );
+
+	if( var && FBitSet( var->flags, FCVAR_USERINFO ))
+	{
+		Cvar_DirectSet( var, value );
+	}
+	else if( Info_SetValueForStarKey( cls.userinfo, key, value, MAX_INFO_STRING ))
+	{
+		// time to update server copy of userinfo
+		CL_ServerCommand( true, "setinfo \"%s\" \"%s\"\n", key, value );
+	}
 }
 
 /*
@@ -2531,38 +2534,23 @@ qboolean pfnGetPlayerUniqueID( int iPlayer, char playerID[16] )
 =============
 pfnGetTrackerIDForPlayer
 
+obsolete, unused
 =============
 */
 int pfnGetTrackerIDForPlayer( int playerSlot )
 {
-	playerSlot -= 1;	// make into a client index
-
-	if( !cl.players[playerSlot].userinfo[0] || !cl.players[playerSlot].name[0] )
-			return 0;
-	return Q_atoi( Info_ValueForKey( cl.players[playerSlot].userinfo, "*tracker" ));
+	return 0;
 }
 
 /*
 =============
 pfnGetPlayerForTrackerID
 
+obsolete, unused
 =============
 */
 int pfnGetPlayerForTrackerID( int trackerID )
 {
-	int	i;
-
-	for( i = 0; i < MAX_CLIENTS; i++ )
-	{
-		if( !cl.players[i].userinfo[0] || !cl.players[i].name[0] )
-			continue;
-
-		if( Q_atoi( Info_ValueForKey( cl.players[i].userinfo, "*tracker" )) == trackerID )
-		{
-			// make into a player slot
-			return (i+1);
-		}
-	}
 	return 0;
 }
 
@@ -2756,7 +2744,7 @@ LocalPlayerInfo_ValueForKey
 */
 const char *LocalPlayerInfo_ValueForKey( const char* key )
 {
-	return Info_ValueForKey( Cvar_Userinfo(), key );
+	return Info_ValueForKey( cls.userinfo, key );
 }
 
 /*
@@ -3814,7 +3802,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnGetViewAngles,
 	pfnSetViewAngles,
 	CL_GetMaxClients,
-	Cvar_SetFloat,
+	Cvar_SetValue,
 	Cmd_Argc,
 	Cmd_Argv,
 	Con_Printf,
@@ -3878,7 +3866,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnGetMousePos,
 	pfnSetMousePos,
 	pfnSetMouseEnable,
-	Cvar_GetList,
+	Cvar_GetListHead,
 	Cmd_GetFirstFunctionHandle,
 	Cmd_GetNextFunctionHandle,
 	Cmd_GetName,
@@ -3929,15 +3917,15 @@ void CL_UnloadProgs( void )
 	if( !( !Q_stricmp( GI->gamedir, "hlfx" ) && GI->version == 0.5f ))
 		clgame.dllFuncs.pfnShutdown();
 
-	Cvar_FullSet( "cl_background", "0", CVAR_READ_ONLY );
-	Cvar_FullSet( "host_clientloaded", "0", CVAR_INIT );
+	Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
+	Cvar_FullSet( "host_clientloaded", "0", FCVAR_READ_ONLY );
 
 	Com_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
 	memset( &clgame, 0, sizeof( clgame ));
 
-	Cvar_Unlink( CVAR_CLIENTDLL );
+	Cvar_Unlink( FCVAR_CLIENTDLL );
 	Cmd_Unlink( CMD_CLIENTDLL );
 }
 
@@ -4038,10 +4026,7 @@ qboolean CL_LoadProgs( const char *name )
 		return false;
 	}
 
-	Cvar_Get( "cl_nopred", "1", CVAR_ARCHIVE, "disable client movement predicting" );
-	cl_lw = Cvar_Get( "cl_lw", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable client weapon predicting" );
-	Cvar_Get( "cl_lc", "0", CVAR_ARCHIVE|CVAR_USERINFO, "enable lag compensation" );
-	Cvar_FullSet( "host_clientloaded", "1", CVAR_INIT );
+	Cvar_FullSet( "host_clientloaded", "1", FCVAR_READ_ONLY );
 
 	clgame.maxRemapInfos = 0; // will be alloc on first call CL_InitEdicts();
 	clgame.maxEntities = 2; // world + localclient (have valid entities not in game)

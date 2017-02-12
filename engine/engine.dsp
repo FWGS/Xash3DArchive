@@ -316,6 +316,10 @@ SOURCE=.\common\host.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\host_cmd.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\hpak.c
 # End Source File
 # Begin Source File
@@ -481,6 +485,10 @@ SOURCE=.\server\sv_game.c
 # Begin Source File
 
 SOURCE=.\server\sv_init.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\server\sv_log.c
 # End Source File
 # Begin Source File
 

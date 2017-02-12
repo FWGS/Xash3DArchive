@@ -144,7 +144,7 @@ static qboolean DS_CreateBuffers( void *hInst )
 	}
 	else MsgDev( D_NOTE, "- failed\n" );
 
-	if( !primary_format_set || !s_primary->integer )
+	if( !primary_format_set || !s_primary->value )
 	{
 		// create the secondary buffer we'll actually work with
 		memset( &dsbuf, 0, sizeof( dsbuf ));
@@ -348,7 +348,7 @@ int SNDDMA_Init( void *hInst )
 
 	memset( &dma, 0, sizeof( dma ));
 
-	s_primary = Cvar_Get( "s_primary", "0", CVAR_INIT, "use direct primary buffer" ); 
+	s_primary = Cvar_Get( "s_primary", "0", FCVAR_READ_ONLY, "use direct primary buffer" ); 
 
 	// init DirectSound
 	stat = SNDDMA_InitDirect( hInst );

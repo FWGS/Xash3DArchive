@@ -202,14 +202,17 @@ static void UI_UpdateUserinfo( void )
 {
 	player_info_t	*player;
 
-	if( !userinfo->modified ) return;
+	if( !host.userinfo_changed )
+		return;
+
 	player = &gameui.playerinfo;
 
-	Q_strncpy( player->userinfo, Cvar_Userinfo(), sizeof( player->userinfo ));
+	Q_strncpy( player->userinfo, cls.userinfo, sizeof( player->userinfo ));
 	Q_strncpy( player->name, Info_ValueForKey( player->userinfo, "name" ), sizeof( player->name ));
 	Q_strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
 	player->topcolor = Q_atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
 	player->bottomcolor = Q_atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
+	host.userinfo_changed = false; // we got it
 }
 	
 void Host_Credits( void )
@@ -895,7 +898,7 @@ static ui_enginefuncs_t gEngfuncs =
 	Cvar_VariableValue,
 	Cvar_VariableString,
 	Cvar_Set,
-	Cvar_SetFloat,
+	Cvar_SetValue,
 	Cmd_AddGameUICommand,
 	pfnClientCmd,
 	Cmd_RemoveCommand,
@@ -968,13 +971,13 @@ void UI_UnloadProgs( void )
 	// deinitialize game
 	gameui.dllFuncs.pfnShutdown();
 
-	Cvar_FullSet( "host_gameuiloaded", "0", CVAR_INIT );
+	Cvar_FullSet( "host_gameuiloaded", "0", FCVAR_READ_ONLY );
 
 	Com_FreeLibrary( gameui.hInstance );
 	Mem_FreePool( &gameui.mempool );
 	memset( &gameui, 0, sizeof( gameui ));
 
-	Cvar_Unlink( CVAR_GAMEUIDLL );
+	Cvar_Unlink( FCVAR_GAMEUIDLL );
 	Cmd_Unlink( CMD_GAMEUIDLL );
 }
 
@@ -1024,7 +1027,7 @@ qboolean UI_LoadProgs( void )
 		return false;
 	}
 
-	Cvar_FullSet( "host_gameuiloaded", "1", CVAR_INIT );
+	Cvar_FullSet( "host_gameuiloaded", "1", FCVAR_READ_ONLY );
 
 	// setup gameinfo
 	for( i = 0; i < SI.numgames; i++ )

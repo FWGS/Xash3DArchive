@@ -619,7 +619,7 @@ void R_FindMirrors( const ref_params_t *fd )
 
 	VectorCopy( RI.vieworg, RI.pvsorigin );
 
-	if( !r_lockcull->integer )
+	if( !r_lockcull->value )
 	{
 		VectorCopy( RI.vieworg, RI.cullorigin );
 		VectorCopy( RI.vforward, RI.cull_vforward );

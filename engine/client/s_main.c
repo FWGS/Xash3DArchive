@@ -701,7 +701,7 @@ qboolean SND_CheckPHS( channel_t *ch )
 {
 	mleaf_t	*leaf;
 
-	if( !s_phs->integer )
+	if( !s_phs->value )
 		return true;
 
 	if( !ch->dist_mult && ch->entnum )
@@ -736,11 +736,11 @@ void S_SpatializeChannel( int *left_vol, int *right_vol, int master_vol, float g
 	lscale = 1.0f - dot;
 
 	// add in distance effect
-	if( s_cull->integer ) scale = gain * rscale / 2;
+	if( s_cull->value ) scale = gain * rscale / 2;
 	else scale = ( 1.0f - dist ) * rscale;
 	*right_vol = (int)( master_vol * scale );
 
-	if( s_cull->integer ) scale = gain * lscale / 2;
+	if( s_cull->value ) scale = gain * lscale / 2;
 	else scale = ( 1.0f - dist ) * lscale;
 	*left_vol = (int)( master_vol * scale );
 
@@ -764,7 +764,7 @@ void SND_Spatialize( channel_t *ch )
 	// anything coming from the view entity will allways be full volume
 	if( S_IsClient( ch->entnum ))
 	{
-		if( !s_cull->integer )
+		if( !s_cull->value )
 		{
 			ch->leftvol = ch->master_vol;
 			ch->rightvol = ch->master_vol;
@@ -815,7 +815,7 @@ void SND_Spatialize( channel_t *ch )
 		dot *= blend;
 	}
 
-	if( s_cull->integer )
+	if( s_cull->value )
 	{
 		// calculate gain based on distance, atmospheric attenuation, interposed objects
 		// perform compression as gain approaches 1.0
@@ -1885,7 +1885,7 @@ void S_RenderFrame( ref_params_t *fd )
 	AngleVectors( fd->viewangles, s_listener.forward, s_listener.right, s_listener.up );
 
 	if( cl.worldmodel != NULL )
-		Mod_FatPVS( s_listener.origin, FATPHS_RADIUS, s_listener.pasbytes, world.visbytes, false, !s_phs->integer );
+		Mod_FatPVS( s_listener.origin, FATPHS_RADIUS, s_listener.pasbytes, world.visbytes, false, !s_phs->value );
 
 	// update general area ambient sound sources
 	S_UpdateAmbientSounds();
@@ -1904,7 +1904,7 @@ void S_RenderFrame( ref_params_t *fd )
 		// try to combine static sounds with a previous channel of the same
 		// sound effect so we don't mix five torches every frame
 		// g-cont: perfomance option, probably kill stereo effect in most cases
-		if( i >= MAX_DYNAMIC_CHANNELS && s_combine_sounds->integer )
+		if( i >= MAX_DYNAMIC_CHANNELS && s_combine_sounds->value )
 		{
 			// see if it can just use the last one
 			if( combine && combine->sfx == ch->sfx )
@@ -1963,11 +1963,11 @@ void S_RenderFrame( ref_params_t *fd )
 		}
 
 		// to differentiate modes
-		if( s_cull->integer && s_phs->integer )
+		if( s_cull->value && s_phs->value )
 			VectorSet( info.color, 0.0f, 1.0f, 0.0f );
-		else if( s_phs->integer )
+		else if( s_phs->value )
 			VectorSet( info.color, 1.0f, 1.0f, 0.0f );
-		else if( s_cull->integer )
+		else if( s_cull->value )
 			VectorSet( info.color, 1.0f, 0.0f, 0.0f );
 		else VectorSet( info.color, 1.0f, 1.0f, 1.0f );
 		info.index = 0;
@@ -2131,23 +2131,23 @@ qboolean S_Init( void )
 		return false;
 	}
 
-	s_volume = Cvar_Get( "volume", "0.7", CVAR_ARCHIVE, "sound volume" );
-	s_musicvolume = Cvar_Get( "musicvolume", "1.0", CVAR_ARCHIVE, "background music volume" );
+	s_volume = Cvar_Get( "volume", "0.7", FCVAR_ARCHIVE, "sound volume" );
+	s_musicvolume = Cvar_Get( "musicvolume", "1.0", FCVAR_ARCHIVE, "background music volume" );
 	s_mixahead = Cvar_Get( "_snd_mixahead", "0.12", 0, "how much sound to mix ahead of time" );
-	s_show = Cvar_Get( "s_show", "0", CVAR_ARCHIVE, "show playing sounds" );
-	s_lerping = Cvar_Get( "s_lerping", "0", CVAR_ARCHIVE, "apply interpolation to sound output" );
-	s_ambient_level = Cvar_Get( "ambient_level", "0.3", CVAR_ARCHIVE, "volume of environment noises (water and wind)" );
-	s_ambient_fade = Cvar_Get( "ambient_fade", "1000", CVAR_ARCHIVE, "rate of volume fading when client is moving" );
-	s_combine_sounds = Cvar_Get( "s_combine_channels", "1", CVAR_ARCHIVE, "combine channels with same sounds" ); 
+	s_show = Cvar_Get( "s_show", "0", FCVAR_ARCHIVE, "show playing sounds" );
+	s_lerping = Cvar_Get( "s_lerping", "0", FCVAR_ARCHIVE, "apply interpolation to sound output" );
+	s_ambient_level = Cvar_Get( "ambient_level", "0.3", FCVAR_ARCHIVE, "volume of environment noises (water and wind)" );
+	s_ambient_fade = Cvar_Get( "ambient_fade", "1000", FCVAR_ARCHIVE, "rate of volume fading when client is moving" );
+	s_combine_sounds = Cvar_Get( "s_combine_channels", "1", FCVAR_ARCHIVE, "combine channels with same sounds" ); 
 	snd_foliage_db_loss = Cvar_Get( "snd_foliage_db_loss", "4", 0, "foliage loss factor" ); 
 	snd_gain_max = Cvar_Get( "snd_gain_max", "1", 0, "gain maximal threshold" );
 	snd_gain_min = Cvar_Get( "snd_gain_min", "0.01", 0, "gain minimal threshold" );
 	s_refdist = Cvar_Get( "s_refdist", "36", 0, "soundlevel reference distance" );
 	s_refdb = Cvar_Get( "s_refdb", "60", 0, "soundlevel refernce dB" );
 	snd_gain = Cvar_Get( "snd_gain", "1", 0, "sound default gain" );
-	s_cull = Cvar_Get( "s_cull", "0", CVAR_ARCHIVE, "cull sounds by geometry" );
+	s_cull = Cvar_Get( "s_cull", "0", FCVAR_ARCHIVE, "cull sounds by geometry" );
 	s_test = Cvar_Get( "s_test", "0", 0, "engine developer cvar for quick testing new features" );
-	s_phs = Cvar_Get( "s_phs", "0", CVAR_ARCHIVE, "cull sounds by PHS" );
+	s_phs = Cvar_Get( "s_phs", "0", FCVAR_ARCHIVE, "cull sounds by PHS" );
 
 	Cmd_AddCommand( "play", S_Play_f, "playing a specified sound file" );
 	Cmd_AddCommand( "playvol", S_PlayVol_f, "playing a specified sound file with specified volume" );
@@ -2174,11 +2174,10 @@ qboolean S_Init( void )
 	memset( ambient_sfx, 0, sizeof( ambient_sfx ));
 
 	MIX_InitAllPaintbuffers ();
-
+	SX_Init ();
 	S_InitScaletable ();
 	S_StopAllSounds ();
 	VOX_Init ();
-	AllocDsps ();
 
 	return true;
 }
@@ -2205,7 +2204,7 @@ void S_Shutdown( void )
 	S_FreeRawChannels ();
 	S_FreeSounds ();
 	VOX_Shutdown ();
-	FreeDsps ();
+	SX_Free ();
 
 	SNDDMA_Shutdown ();
 	MIX_FreeAllPaintbuffers ();

@@ -111,8 +111,8 @@ void Netchan_Init( void )
 	net_showpackets = Cvar_Get ("net_showpackets", "0", 0, "show network packets" );
 	net_chokeloopback = Cvar_Get( "net_chokeloop", "0", 0, "apply bandwidth choke to loopback packets" );
 	net_showdrop = Cvar_Get( "net_showdrop", "0", 0, "show packets that are dropped" );
-	net_speeds = Cvar_Get( "net_speeds", "0", CVAR_ARCHIVE, "show network packets" );
-	net_qport = Cvar_Get( "net_qport", va( "%i", port ), CVAR_INIT, "current quake netport" );
+	net_speeds = Cvar_Get( "net_speeds", "0", FCVAR_ARCHIVE, "show network packets" );
+	net_qport = Cvar_Get( "net_qport", va( "%i", port ), FCVAR_READ_ONLY, "current quake netport" );
 
 	net_mempool = Mem_AllocPool( "Network Pool" );
 
@@ -193,7 +193,7 @@ Returns true if the bandwidth choke isn't active
 qboolean Netchan_CanPacket( netchan_t *chan )
 {
 	// never choke loopback packets.
-	if( !net_chokeloopback->integer && NET_IsLocalAddress( chan->remote_address ))
+	if( !net_chokeloopback->value && NET_IsLocalAddress( chan->remote_address ))
 	{
 		chan->cleartime = host.realtime;
 		return true;
@@ -1161,7 +1161,7 @@ void Netchan_UpdateProgress( netchan_t *chan )
 
 	}
 
-	Cvar_SetFloat( "scr_download", bestpercent );
+	Cvar_SetValue( "scr_download", bestpercent );
 }
 
 /*
@@ -1551,7 +1551,7 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	// discard stale or duplicated packets
 	if( sequence <= (uint)chan->incoming_sequence )
 	{
-		if( net_showdrop->integer )
+		if( net_showdrop->value )
 		{
 			const char *adr = NET_AdrToString( chan->remote_address );
 
@@ -1564,7 +1564,7 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 
 	// dropped packets don't keep the message from being used
 	net_drop = sequence - ( chan->incoming_sequence + 1 );
-	if( net_drop > 0 && net_showdrop->integer )
+	if( net_drop > 0 && net_showdrop->value )
 		Msg( "%s:Dropped %i packets at %i\n", NET_AdrToString( chan->remote_address ), sequence - (chan->incoming_sequence + 1), sequence );
 
 	// if the current outgoing reliable message has been acknowledged

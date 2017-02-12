@@ -49,7 +49,7 @@ void CL_RunLightStyles( void )
 	// 'm' is normal light, 'a' is no light, 'z' is double bright
 	for( i = 0, ls = cl.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
-		if( r_fullbright->integer || !cl.worldmodel->lightdata )
+		if( r_fullbright->value || !cl.worldmodel->lightdata )
 		{
 			tr.lightstylevalue[i] = 256 * 256;
 			tr.lightcache[i] = 3.0f;
@@ -77,7 +77,7 @@ void CL_RunLightStyles( void )
 			tr.lightcache[i] = ( ls->map[0] / 12.0f ) * 3.0f * scale;
 			continue;
 		}
-		else if( !ls->interp || !cl_lightstyle_lerping->integer )
+		else if( !ls->interp || !cl_lightstyle_lerping->value )
 		{
 			tr.lightstylevalue[i] = ls->map[flight%ls->length] * 22 * scale;
 			tr.lightcache[i] = ( ls->map[flight%ls->length] / 12.0f ) * 3.0f * scale;
@@ -374,7 +374,7 @@ get_light:
 	pnodes = pmodel->nodes;
 	m_pGround = NULL;
 
-	if( r_lighting_extended->integer && !secondpass )
+	if( r_lighting_extended->value && !secondpass )
 	{
 		CL_SetTraceHull( 2 );
 		CL_PlayerTraceExt( start, end, PM_STUDIO_IGNORE, R_LightTraceFilter, &trace );
@@ -441,7 +441,7 @@ get_light:
 	}
 
 	// add dynamic lights
-	if( radius && r_dynamic->integer )
+	if( radius && r_dynamic->value )
 	{
 		int	lnum, total; 
 		float	f;
@@ -509,7 +509,7 @@ void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
 	VectorClear( local );
 
 	// add dynamic lights
-	if( radius > 0.0f && r_dynamic->integer )
+	if( radius > 0.0f && r_dynamic->value )
 	{
 		for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
 		{

@@ -36,7 +36,7 @@ qboolean CL_IsPlayerIndex( int idx )
 
 qboolean CL_IsPredicted( void )
 {
-	if( !cl_predict->integer || !cl.frame.valid || cl.background )
+	if( cl_nopred->value || !cl.frame.valid || cl.background || cls.spectator )
 		return false;
 
 	if( !cl.validsequence || ( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CL_UPDATE_MASK )
@@ -134,7 +134,7 @@ int CL_InterpolateModel( cl_entity_t *e )
 
 	if( cl.first_frame ) return 0;
 
-	if( !e->model || ( e->model->name[0] == '*' && !cl_bmodelinterp->integer ) || RP_LOCALCLIENT( e ) || cl.maxclients <= 1 )
+	if( !e->model || ( e->model->name[0] == '*' && !cl_bmodelinterp->value ) || RP_LOCALCLIENT( e ) || cl.maxclients <= 1 )
 		return 1;
 
 	if( cl.predicted.moving && cl.predicted.onground == e->index )
@@ -417,7 +417,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		// don't add himself on firstperson
 		if( RP_LOCALCLIENT( ent ) && !cl.thirdperson && cls.key_dest != key_menu && cl.refdef.viewentity == ( cl.playernum + 1 ))
 		{
-			if( gl_allow_mirrors->integer && world.has_mirrors )
+			if( gl_allow_mirrors->value && world.has_mirrors )
 			{
 				if( !R_AddEntity( ent, entityType ))
 					return false;
@@ -1041,7 +1041,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		cls.changedemo = false;		// changedemo is done
 
 		SCR_MakeLevelShot();		// make levelshot if needs
-		Cvar_SetFloat( "scr_loading", 0.0f );	// reset progress bar	
+		Cvar_SetValue( "scr_loading", 0.0f );	// reset progress bar	
 		Netchan_ReportFlow( &cls.netchan );
  
 		if(( cls.demoplayback || cls.disable_servercount != cl.servercount ) && cl.video_prepped )

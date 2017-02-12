@@ -211,11 +211,7 @@ void Con_ClearTyping( void )
 	// free the old autocomplete list
 	for( i = 0; i < con.matchCount; i++ )
 	{
-		if( con.cmds[i] != NULL )
-		{
-			Mem_Free( con.cmds[i] );
-			con.cmds[i] = NULL;
-		}
+		freestring( con.cmds[i] );
 	}
 
 	con.matchCount = 0;
@@ -451,7 +447,7 @@ void Con_CheckResize( void )
 	if( con.curFont && con.curFont->hFontTexture )
 		charWidth = con.curFont->charWidths['M'] - 1;
 
-	width = ( scr_width->integer / charWidth ) - 2;
+	width = ( scr_width->value / charWidth ) - 2;
 	if( !glw_state.initialized ) width = 78;
 
 	if( width == con.linewidth )
@@ -578,9 +574,9 @@ static void Con_LoadConchars( void )
 		Con_LoadConsoleFont( i, con.chars + i );
 
 	// select properly fontsize
-	if( scr_width->integer <= 640 )
+	if( scr_width->value <= 640 )
 		fontSize = 0;
-	else if( scr_width->integer >= 1280 )
+	else if( scr_width->value >= 1280 )
 		fontSize = 2;
 	else fontSize = 1;
 
@@ -603,8 +599,8 @@ static void Con_TextAdjustSize( int *x, int *y, int *w, int *h )
 	if( !x && !y && !w && !h ) return;
 
 	// scale for screen sizes
-	xscale = scr_width->integer / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->integer / (float)clgame.scrInfo.iHeight;
+	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
+	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
 
 	if( x ) *x *= xscale;
 	if( y ) *y *= yscale;
@@ -829,11 +825,11 @@ void Con_Init( void )
 	int	i;
 
 	// must be init before startup video subsystem
-	scr_width = Cvar_Get( "width", "640", 0, "screen width" );
-	scr_height = Cvar_Get( "height", "480", 0, "screen height" );
-	scr_conspeed = Cvar_Get( "scr_conspeed", "600", CVAR_ARCHIVE, "console moving speed" );
-	con_notifytime = Cvar_Get( "con_notifytime", "3", CVAR_ARCHIVE, "notify time to live" );
-	con_fontsize = Cvar_Get( "con_fontsize", "1", CVAR_ARCHIVE, "console font number (0, 1 or 2)" );
+	scr_width = Cvar_Get( "width", "640", FCVAR_READ_ONLY, "screen width" );
+	scr_height = Cvar_Get( "height", "480", FCVAR_READ_ONLY, "screen height" );
+	scr_conspeed = Cvar_Get( "scr_conspeed", "600", FCVAR_ARCHIVE, "console moving speed" );
+	con_notifytime = Cvar_Get( "con_notifytime", "3", FCVAR_ARCHIVE, "notify time to live" );
+	con_fontsize = Cvar_Get( "con_fontsize", "1", FCVAR_ARCHIVE, "console font number (0, 1 or 2)" );
 
 	// init the console buffer
 	con.bufsize = CON_TEXTSIZE;
@@ -1698,10 +1694,10 @@ int Con_DrawDebugLines( void )
 			int	fontTall;
 
 			Con_DrawStringLen( con.notify[i].szNotify, &len, &fontTall );
-			x = scr_width->integer - Q_max( defaultX, len ) - 10;
+			x = scr_width->value - Q_max( defaultX, len ) - 10;
 			fontTall += 1;
 
-			if( y + fontTall > (int)scr_height->integer - 20 )
+			if( y + fontTall > (int)scr_height->value - 20 )
 				return count;
 
 			count++;
@@ -1850,7 +1846,7 @@ void Con_DrawSolidConsole( int lines )
 	// draw the background
 	GL_SetRenderMode( kRenderNormal );
 	pglColor4ub( 255, 255, 255, 255 ); // to prevent grab color from screenfade
-	R_DrawStretchPic( 0, lines - scr_height->integer, scr_width->integer, scr_height->integer, 0, 0, 1, 1, con.background );
+	R_DrawStretchPic( 0, lines - scr_height->value, scr_width->value, scr_height->value, 0, 0, 1, 1, con.background );
 
 	if( !con.curFont || host.developer <= 0 )
 		return; // nothing to draw
@@ -1866,10 +1862,10 @@ void Con_DrawSolidConsole( int lines )
 
 		Q_snprintf( curbuild, MAX_STRING, "Xash3D %i/%g (hw build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( ));
 		Con_DrawStringLen( curbuild, &stringLen, &charH );
-		start = scr_width->integer - stringLen;
+		start = scr_width->value - stringLen;
 		stringLen = Con_StringLength( curbuild );
 
-		fraction = lines / (float)scr_height->integer;
+		fraction = lines / (float)scr_height->value;
 		color[3] = Q_min( fraction * 2.0f, 1.0f ) * 255; // fadeout version number
 
 		for( i = 0; i < stringLen; i++ )
@@ -1932,17 +1928,17 @@ void Con_DrawConsole( void )
 
 	if( cls.state == ca_connecting || cls.state == ca_connected )
 	{
-		if( !cl_allow_levelshots->integer )
+		if( !cl_allow_levelshots->value )
 		{
 			if(( Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" )) && cls.key_dest != key_console )
 				con.vislines = con.showlines = 0;
-			else con.vislines = con.showlines = scr_height->integer;
+			else con.vislines = con.showlines = scr_height->value;
 		}
 		else
 		{
 			if( host.developer >= 4 )
 			{
-				con.vislines = (scr_height->integer >> 1);	// keep console open
+				con.vislines = ((int)scr_height->value >> 1);	// keep console open
 			}
 			else
 			{
@@ -1963,7 +1959,7 @@ void Con_DrawConsole( void )
 	case ca_disconnected:
 		if( cls.key_dest != key_menu && host.developer )
 		{
-			Con_DrawSolidConsole( scr_height->integer );
+			Con_DrawSolidConsole( scr_height->value );
 			Key_SetKeyDest( key_console );
 		}
 		break;
@@ -1981,7 +1977,7 @@ void Con_DrawConsole( void )
 		if( Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" ))
 		{
 			if( cls.key_dest == key_console ) 
-				Con_DrawSolidConsole( scr_height->integer );
+				Con_DrawSolidConsole( scr_height->value );
 		}
 		else
 		{
@@ -2008,7 +2004,7 @@ void Con_DrawVersion( void )
 	// draws the current build
 	byte	*color = g_color_table[7];
 	int	i, stringLen, width = 0, charH;
-	int	start, height = scr_height->integer;
+	int	start, height = scr_height->value;
 	qboolean	draw_version = false;
 	string	curbuild;
 
@@ -2022,7 +2018,7 @@ void Con_DrawVersion( void )
 
 	if( !host.force_draw_version )
 	{
-		if(( cls.key_dest != key_menu && !draw_version ) || gl_overview->integer == 2 )
+		if(( cls.key_dest != key_menu && !draw_version ) || gl_overview->value == 2 )
 			return;
 	}
 
@@ -2030,7 +2026,7 @@ void Con_DrawVersion( void )
 		Q_snprintf( curbuild, MAX_STRING, "Xash3D v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( ));
 	else Q_snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( )); 
 	Con_DrawStringLen( curbuild, &stringLen, &charH );
-	start = scr_width->integer - stringLen * 1.05f;
+	start = scr_width->value - stringLen * 1.05f;
 	stringLen = Con_StringLength( curbuild );
 	height -= charH * 1.05f;
 
@@ -2053,8 +2049,8 @@ void Con_RunConsole( void )
 	if( host.developer && cls.key_dest == key_console )
 	{
 		if( cls.state == ca_disconnected )
-			con.showlines = scr_height->integer;	// full screen
-		else con.showlines = (scr_height->integer >> 1);	// half screen	
+			con.showlines = scr_height->value;	// full screen
+		else con.showlines = ((int)scr_height->value >> 1);	// half screen	
 	}
 	else con.showlines = 0; // none visible
 
@@ -2066,7 +2062,7 @@ void Con_RunConsole( void )
 		else host.realframetime = HOST_FRAMETIME;
 	}
 
-	lines_per_frame = bound( 1, fabs( scr_conspeed->value ) * host.realframetime, scr_height->integer );
+	lines_per_frame = bound( 1, fabs( scr_conspeed->value ) * host.realframetime, scr_height->value );
 
 	if( con.showlines < con.vislines )
 	{
@@ -2130,7 +2126,7 @@ void Con_VidInit( void )
 
 		if( !con.background )
 		{
-			if( scr_width->integer < 640 )
+			if( scr_width->value < 640 )
 			{
 				if( FS_FileExists( "cached/conback400", false ))
 					con.background = GL_LoadTexture( "cached/conback400", NULL, 0, TF_IMAGE, NULL );
@@ -2152,7 +2148,7 @@ void Con_VidInit( void )
 
 		if( !con.background )
 		{
-			if( scr_width->integer < 640 )
+			if( scr_width->value < 640 )
 			{
 				if( FS_FileExists( "cached/loading400", false ))
 					con.background = GL_LoadTexture( "cached/loading400", NULL, 0, TF_IMAGE, NULL );

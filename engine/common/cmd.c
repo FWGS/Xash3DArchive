@@ -917,7 +917,7 @@ void Cmd_ExecuteString( char *text )
 	cmd_condlevel = 0;
 
 	// cvar value substitution
-	if( cmd_scripting && cmd_scripting->integer )
+	if( cmd_scripting && cmd_scripting->value )
 	{
 		while( *text )
 		{
@@ -1022,7 +1022,8 @@ void Cmd_ForwardToServer( void )
 
 	if( cls.state != ca_connected && cls.state != ca_active )
 	{
-		MsgDev( D_INFO, "Can't \"%s\", not connected\n", Cmd_Argv( 0 ));
+		if( Q_stricmp( Cmd_Argv( 0 ), "setinfo" ))
+			MsgDev( D_INFO, "Can't \"%s\", not connected\n", Cmd_Argv( 0 ));
 		return; // not connected
 	}
 

@@ -735,7 +735,7 @@ static void NET_AdjustLag( void )
 	dt = bound( 0.0, dt, 0.1 );
 	lasttime = host.realtime;
 
-	if( host.developer >= D_ERROR || !net_fakelag->integer )
+	if( host.developer >= D_ERROR || !net_fakelag->value )
 	{
 		if( net_fakelag->value != net.fakelag )
 		{
@@ -751,7 +751,7 @@ static void NET_AdjustLag( void )
 	else
 	{
 		MsgDev( D_INFO, "Server must enable dev-mode to activate fakelag\n" );
-		Cvar_SetFloat( "fakelag", 0.0 );
+		Cvar_SetValue( "fakelag", 0.0 );
 		net.fakelag = 0.0f;
 	}
 }
@@ -795,13 +795,13 @@ static qboolean NET_LagPacket( qboolean newdata, netsrc_t sock, netadr_t *from, 
 				}
 				else
 				{
-					if( Com_RandomLong( 0, 100 ) <= net_fakeloss->integer )
+					if( Com_RandomLong( 0, 100 ) <= net_fakeloss->value )
 						return false;
 				}
 			}
 			else
 			{
-				Cvar_SetFloat( "fakeloss", 0.0 );
+				Cvar_SetValue( "fakeloss", 0.0 );
 			}
 		}
 
@@ -1295,8 +1295,8 @@ static void NET_OpenIP( void )
 
 	if( net.ip_sockets[NS_SERVER] == INVALID_SOCKET )
 	{
-		port = net_iphostport->integer;
-		if( !port ) port = net_hostport->integer;
+		port = net_iphostport->value;
+		if( !port ) port = net_hostport->value;
 		if( !port ) port = PORT_SERVER; // forcing to default
 		net.ip_sockets[NS_SERVER] = NET_IPSocket( net_ipname->string, port, false );
 
@@ -1310,8 +1310,8 @@ static void NET_OpenIP( void )
 
 	if( net.ip_sockets[NS_CLIENT] == INVALID_SOCKET )
 	{
-		port = net_ipclientport->integer;
-		if( !port ) port = net_clientport->integer;
+		port = net_ipclientport->value;
+		if( !port ) port = net_clientport->value;
 		if( !port ) port = PORT_ANY; // forcing to default
 		net.ip_sockets[NS_CLIENT] = NET_IPSocket( net_ipname->string, port, false );
 
@@ -1391,8 +1391,8 @@ void NET_OpenIPX( void )
 
 	if( net.ipx_sockets[NS_SERVER] == INVALID_SOCKET )
 	{
-		port = net_ipxhostport->integer;
-		if( !port ) port = net_hostport->integer;
+		port = net_ipxhostport->value;
+		if( !port ) port = net_hostport->value;
 		if( !port ) port = PORT_SERVER; // forcing to default
 		net.ipx_sockets[NS_SERVER] = NET_IPXSocket( port );
 	}
@@ -1402,8 +1402,8 @@ void NET_OpenIPX( void )
 
 	if( net.ipx_sockets[NS_CLIENT] == INVALID_SOCKET )
 	{
-		port = net_ipxclientport->integer;
-		if( !port ) port = net_clientport->integer;
+		port = net_ipxclientport->value;
+		if( !port ) port = net_clientport->value;
 		if( !port ) port = PORT_ANY; // forcing to default
 		net.ipx_sockets[NS_CLIENT] = NET_IPXSocket( port );
 
@@ -1461,7 +1461,7 @@ void NET_GetLocalAddress( void )
 			{
 				net_local.port = address.sin_port;
 				Msg( "Server IP address %s\n", NET_AdrToString( net_local ));
-				Cvar_FullSet( "net_address", va( NET_AdrToString( net_local )), CVAR_READ_ONLY );
+				Cvar_FullSet( "net_address", va( NET_AdrToString( net_local )), FCVAR_READ_ONLY );
 			}
 		}
 		else
@@ -1623,14 +1623,14 @@ void NET_Init( void )
 	if( net.initialized ) return;
 
 	net_clockwindow = Cvar_Get( "clockwindow", "0.5", 0, "timewindow to execute client moves" );
-	net_address = Cvar_Get( "net_address", "0", CVAR_READ_ONLY, "contain local address of current client" );
-	net_ipname = Cvar_Get( "ip", "localhost", CVAR_INIT, "network ip address" );
-	net_iphostport = Cvar_Get( "ip_hostport", "0", CVAR_INIT, "network ip host port" );
-	net_ipxhostport = Cvar_Get( "ipx_hostport", "0", CVAR_INIT, "network ipx host port" );
-	net_hostport = Cvar_Get( "hostport", va( "%i", PORT_SERVER ), CVAR_INIT, "network default host port" );
-	net_ipclientport = Cvar_Get( "ip_clientport", "0", CVAR_INIT, "network ip client port" );
-	net_ipxclientport = Cvar_Get( "ipx_clientport", "0", CVAR_INIT, "network ipx client port" );
-	net_clientport = Cvar_Get( "clientport", va( "%i", PORT_CLIENT ), CVAR_INIT, "network default client port" );
+	net_address = Cvar_Get( "net_address", "0", FCVAR_READ_ONLY, "contain local address of current client" );
+	net_ipname = Cvar_Get( "ip", "localhost", FCVAR_READ_ONLY, "network ip address" );
+	net_iphostport = Cvar_Get( "ip_hostport", "0", FCVAR_READ_ONLY, "network ip host port" );
+	net_ipxhostport = Cvar_Get( "ipx_hostport", "0", FCVAR_READ_ONLY, "network ipx host port" );
+	net_hostport = Cvar_Get( "hostport", va( "%i", PORT_SERVER ), FCVAR_READ_ONLY, "network default host port" );
+	net_ipclientport = Cvar_Get( "ip_clientport", "0", FCVAR_READ_ONLY, "network ip client port" );
+	net_ipxclientport = Cvar_Get( "ipx_clientport", "0", FCVAR_READ_ONLY, "network ipx client port" );
+	net_clientport = Cvar_Get( "clientport", va( "%i", PORT_CLIENT ), FCVAR_READ_ONLY, "network default client port" );
 	net_fakelag = Cvar_Get( "fakelag", "0", 0, "lag all incoming network data (including loopback) by xxx ms." );
 	net_fakeloss = Cvar_Get( "fakeloss", "0", 0, "act like we dropped the packet this % of the time." );
 
@@ -1665,11 +1665,11 @@ void NET_Init( void )
 
 	// specify custom host port
 	if( Sys_GetParmFromCmdLine( "-port", cmd ) && Q_isdigit( cmd ))
-		Cvar_FullSet( "hostport", cmd, CVAR_INIT );
+		Cvar_FullSet( "hostport", cmd, FCVAR_READ_ONLY );
 
 	// adjust clockwindow
 	if( Sys_GetParmFromCmdLine( "-clockwindow", cmd ))
-		Cvar_SetFloat( "clockwindow", Q_atof( cmd ));
+		Cvar_SetValue( "clockwindow", Q_atof( cmd ));
 
 	net.sequence_number = 1;
 	net.initialized = true;

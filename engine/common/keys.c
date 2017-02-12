@@ -559,10 +559,10 @@ void Key_Event( int key, qboolean down )
 		switch( cls.key_dest )
 		{
 		case key_game:
-			if( gl_showtextures->integer )
+			if( gl_showtextures->value )
 			{
 				// close texture atlas
-				Cvar_SetFloat( "r_showtextures", 0.0f );
+				Cvar_SetValue( "r_showtextures", 0.0f );
 				return;
 			}
 			if( host.mouse_visible && cls.state != ca_cinematic )

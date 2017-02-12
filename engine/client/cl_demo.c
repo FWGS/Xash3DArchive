@@ -490,7 +490,7 @@ void CL_DrawDemoRecording( void )
 	Q_memprint( pos ), (int)(cls.demotime / 60.0f ), (int)fmod( cls.demotime, 60.0f ));
 
 	Con_DrawStringLen( string, &len, NULL );
-	Con_DrawString(( scr_width->integer - len) >> 1, scr_height->integer >> 2, string, color );
+	Con_DrawString(((int)scr_width->value - len) >> 1, (int)scr_height->value >> 2, string, color );
 }
 
 /*
@@ -935,7 +935,7 @@ void CL_StopPlayback( void )
 	else
 	{
 		// let game known about demo state	
-		Cvar_FullSet( "cl_background", "0", CVAR_READ_ONLY );
+		Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
 		cls.state = ca_disconnected;
 		cls.connect_time = 0;
 		cls.demonum = -1;
@@ -1273,6 +1273,7 @@ void CL_PlayDemo_f( void )
 	cls.demoplayback = true;
 	cls.state = ca_connected;
 	cl.background = (cls.demonum != -1) ? true : false;
+	cls.spectator = false;
 
 	demo.starttime = CL_GetDemoPlaybackClock(); // for determining whether to read another message
 
@@ -1321,7 +1322,7 @@ void CL_StartDemos_f( void )
 	if( !SV_Active() && !cls.demoplayback )
 	{
 		// run demos loop in background mode
-		Cvar_SetFloat( "v_dark", 1.0f );
+		Cvar_SetValue( "v_dark", 1.0f );
 		cls.demonum = 0;
 		CL_NextDemo ();
 	}

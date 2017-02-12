@@ -38,7 +38,7 @@ qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags )
 	const mplane_t	*p;
 
 	// client.dll may use additional passes for render custom mirrors etc
-	if( r_nocull->integer )
+	if( r_nocull->value )
 		return false;
 
 	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit<<=1, p++ )
@@ -100,7 +100,7 @@ qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipf
 	const mplane_t *p;
 
 	// client.dll may use additional passes for render custom mirrors etc
-	if( r_nocull->integer )
+	if( r_nocull->value )
 		return false;
 
 	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit<<=1, p++ )
@@ -171,14 +171,14 @@ qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 	if( surf->pdecals && ( e->curstate.rendermode == kRenderTransTexture || e->curstate.rendermode == kRenderTransAdd ))
 		return false;
 
-	if( r_nocull->integer )
+	if( r_nocull->value )
 		return false;
 
 	// world surfaces can be culled by vis frame too
 	if( RI.currententity == clgame.entities && surf->visframe != tr.framecount )
 		return true;
 
-	if( r_faceplanecull->integer && glState.faceCull != 0 )
+	if( r_faceplanecull->value && glState.faceCull != 0 )
 	{
 		if( e->curstate.scale == 0.0f )
 		{

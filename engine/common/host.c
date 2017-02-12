@@ -33,7 +33,6 @@ convar_t	*host_serverstate;
 convar_t	*host_gameloaded;
 convar_t	*host_clientloaded;
 convar_t	*host_limitlocal;
-convar_t	*host_cheats;
 convar_t	*host_maxfps;
 convar_t	*host_framerate;
 convar_t	*con_gamemaps;
@@ -161,7 +160,7 @@ Host_SetServerState
 */
 void Host_SetServerState( int state )
 {
-	Cvar_FullSet( "host_serverstate", va( "%i", state ), CVAR_INIT );
+	Cvar_FullSet( "host_serverstate", va( "%i", state ), FCVAR_READ_ONLY );
 }
 
 void Host_NewInstance( const char *name, const char *finalmsg )
@@ -902,7 +901,7 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 
 	// share developer level across all dlls
 	Q_snprintf( dev_level, sizeof( dev_level ), "%i", host.developer );
-	Cvar_Get( "developer", dev_level, CVAR_INIT, "current developer level" );
+	Cvar_Get( "developer", dev_level, FCVAR_READ_ONLY, "current developer level" );
 	Cmd_AddCommand( "exec", Host_Exec_f, "execute a script file" );
 	Cmd_AddCommand( "memlist", Host_MemStats_f, "prints memory pool information" );
 
@@ -916,7 +915,7 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	if( GI->secure )
 	{
 		// clear all developer levels when game is protected
-		Cvar_FullSet( "developer", "0", CVAR_INIT );
+		Cvar_FullSet( "developer", "0", FCVAR_READ_ONLY );
 		host.developer = host.old_developer = 0;
 		host.con_showalways = false;
 	}
@@ -959,29 +958,15 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 		Cmd_AddCommand ( "net_error", Net_Error_f, "send network bad message from random place");
           }
 
-	host_cheats = Cvar_Get( "sv_cheats", "0", CVAR_LATCH, "allow cheat variables to enable" );
-	host_maxfps = Cvar_Get( "fps_max", "72", CVAR_ARCHIVE, "host fps upper limit" );
+	host_maxfps = Cvar_Get( "fps_max", "72", FCVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
-	host_serverstate = Cvar_Get( "host_serverstate", "0", CVAR_INIT, "displays current server state" );
-	host_gameloaded = Cvar_Get( "host_gameloaded", "0", CVAR_INIT, "inidcates a loaded game.dll" );
-	host_clientloaded = Cvar_Get( "host_clientloaded", "0", CVAR_INIT, "inidcates a loaded client.dll" );
+	host_serverstate = Cvar_Get( "host_serverstate", "0", FCVAR_READ_ONLY, "displays current server state" );
+	host_gameloaded = Cvar_Get( "host_gameloaded", "0", FCVAR_READ_ONLY, "inidcates a loaded game.dll" );
+	host_clientloaded = Cvar_Get( "host_clientloaded", "0", FCVAR_READ_ONLY, "inidcates a loaded client.dll" );
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
-	con_gamemaps = Cvar_Get( "con_mapfilter", "1", CVAR_ARCHIVE, "when true show only maps in game folder" );
-	build = Cvar_Get( "build", va( "%i", Q_buildnum()), CVAR_INIT, "returns a current build number" );
-	ver = Cvar_Get( "ver", va( "%i/%g (hw build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( )), CVAR_INIT, "shows an engine version" );
-
-	// content control
-	Cvar_Get( "violence_hgibs", "1", CVAR_ARCHIVE, "show human gib entities" );
-	Cvar_Get( "violence_agibs", "1", CVAR_ARCHIVE, "show alien gib entities" );
-	Cvar_Get( "violence_hblood", "1", CVAR_ARCHIVE, "draw human blood" );
-	Cvar_Get( "violence_ablood", "1", CVAR_ARCHIVE, "draw alien blood" );
-
-	if( host.type != HOST_DEDICATED )
-	{
-		// when we in developer-mode automatically turn cheats on
-		if( host.developer > 1 ) Cvar_SetFloat( "sv_cheats", 1.0f );
-		Cbuf_AddText( "exec video.cfg\n" );
-	}
+	con_gamemaps = Cvar_Get( "con_mapfilter", "1", FCVAR_ARCHIVE, "when true show only maps in game folder" );
+	build = Cvar_Get( "build", va( "%i", Q_buildnum()), FCVAR_READ_ONLY, "returns a current build number" );
+	ver = Cvar_Get( "ver", va( "%i/%g (hw build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( )), FCVAR_READ_ONLY, "shows an engine version" );
 
 	Mod_Init();
 	NET_Init();
@@ -991,11 +976,11 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	if( pChangeGame != NULL )
 	{
 		Cmd_AddCommand( "game", Host_ChangeGame_f, "change game" );
-		Cvar_Get( "host_allow_changegame", "1", CVAR_READ_ONLY, "allows to change games" );
+		Cvar_Get( "host_allow_changegame", "1", FCVAR_READ_ONLY, "allows to change games" );
 	}
 	else
 	{
-		Cvar_Get( "host_allow_changegame", "0", CVAR_READ_ONLY, "allows to change games" );
+		Cvar_Get( "host_allow_changegame", "0", FCVAR_READ_ONLY, "allows to change games" );
 	}
 
 	SV_Init();

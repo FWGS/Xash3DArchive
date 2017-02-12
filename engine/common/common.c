@@ -499,7 +499,34 @@ void pfnGetModelBounds( model_t *mod, float *mins, float *maxs )
 		if( maxs ) VectorClear( maxs );
 	}
 }
-	
+
+/*
+=============
+pfnCvar_RegisterServerVariable
+
+standard path to register game variable
+=============
+*/
+void pfnCvar_RegisterServerVariable( cvar_t *variable )
+{
+	if( variable != NULL )
+		SetBits( variable->flags, FCVAR_EXTDLL );
+	Cvar_RegisterVariable( (convar_t *)variable );
+}
+
+/*
+=============
+pfnCvar_RegisterEngineVariable
+
+use with precaution: this cvar will NOT unlinked
+after game.dll is unloaded
+=============
+*/
+void pfnCvar_RegisterEngineVariable( cvar_t *variable )
+{
+	Cvar_RegisterVariable( (convar_t *)variable );
+}
+
 /*
 =============
 pfnCvar_RegisterVariable
@@ -510,7 +537,7 @@ cvar_t *pfnCvar_RegisterClientVariable( const char *szName, const char *szValue,
 {
 	if( FBitSet( flags, FCVAR_GLCONFIG ))
 		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( "enable or disable %s", szName ));
-	return (cvar_t *)Cvar_Get( szName, szValue, flags|CVAR_CLIENTDLL, "client cvar" );
+	return (cvar_t *)Cvar_Get( szName, szValue, flags|FCVAR_CLIENTDLL, "client cvar" );
 }
 
 /*
@@ -523,7 +550,7 @@ cvar_t *pfnCvar_RegisterGameUIVariable( const char *szName, const char *szValue,
 {
 	if( FBitSet( flags, FCVAR_GLCONFIG ))
 		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( "enable or disable %s", szName ));
-	return (cvar_t *)Cvar_Get( szName, szValue, flags|CVAR_GAMEUIDLL, "GameUI cvar" );
+	return (cvar_t *)Cvar_Get( szName, szValue, flags|FCVAR_GAMEUIDLL, "GameUI cvar" );
 }
 
 /*
@@ -535,7 +562,19 @@ can return NULL
 */
 cvar_t *pfnCVarGetPointer( const char *szVarName )
 {
-	return (cvar_t *)Cvar_FindVar( szVarName );
+	return (cvar_t *)Cvar_FindVarExt( szVarName, FCVAR_READ_ONLY|FCVAR_GLCONFIG );
+}
+
+/*
+=============
+pfnCVarDirectSet
+
+allow to set cvar directly
+=============
+*/
+void pfnCVarDirectSet( cvar_t *var, const char *szValue )
+{
+	Cvar_DirectSet( (convar_t *)var, szValue );
 }
 
 /*

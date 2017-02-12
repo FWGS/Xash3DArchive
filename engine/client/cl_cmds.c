@@ -207,7 +207,7 @@ void CL_ScreenShot_f( void )
 	int	i;
 	string	checkname;
 
-	if( gl_overview->integer == 1 )
+	if( gl_overview->value == 1 )
 	{
 		// special case for write overview image and script file
 		Q_snprintf( cls.shotname, sizeof( cls.shotname ), "overviews/%s.bmp", clgame.mapname );
@@ -245,7 +245,7 @@ void CL_SnapShot_f( void )
 	int	i;
 	string	checkname;
 
-	if( gl_overview->integer == 1 )
+	if( gl_overview->value == 1 )
 	{
 		// special case for write overview image and script file
 		Q_snprintf( cls.shotname, sizeof( cls.shotname ), "overviews/%s.bmp", clgame.mapname );

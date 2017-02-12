@@ -782,7 +782,7 @@ void S_MixBufferUpsample2x( int count, portable_samplepair_t *pbuffer, portable_
 		pbuffer[i-1] = pbuffer[j];
 	}
 
-	if( !s_lerping->integer ) return;
+	if( !s_lerping->value ) return;
 	
 	// pass forward through buffer, interpolate all even slots
 	switch( filtertype )

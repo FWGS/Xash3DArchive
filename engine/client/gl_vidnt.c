@@ -27,7 +27,6 @@ GNU General Public License for more details.
 #define WINDOW_EX_STYLE		(0)
 #define WINDOW_NAME			"Xash3D Window" // Half-Life
 
-convar_t	*renderinfo;
 convar_t	*gl_extensions;
 convar_t	*gl_alphabits;
 convar_t	*gl_stencilbits;
@@ -57,8 +56,6 @@ convar_t	*gl_test;
 
 convar_t	*r_xpos;
 convar_t	*r_ypos;
-convar_t	*r_width;
-convar_t	*r_height;
 convar_t	*r_speeds;
 convar_t	*r_fullbright;
 convar_t	*r_norefresh;
@@ -605,9 +602,9 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	if( cvarname )
 	{
 		// system config disable extensions
-		parm = Cvar_Get( cvarname, "1", CVAR_GLCONFIG, va( "enable or disable %s", name ));
+		parm = Cvar_Get( cvarname, "1", FCVAR_GLCONFIG, va( "enable or disable %s", name ));
 
-		if( parm->integer == 0 || ( gl_extensions->integer == 0 && r_ext != GL_OPENGL_110 ))
+		if( parm->value == 0 || ( gl_extensions->value == 0 && r_ext != GL_OPENGL_110 ))
 		{
 			MsgDev( D_NOTE, "- disabled\n" );
 			GL_SetExtension( r_ext, 0 );
@@ -696,14 +693,14 @@ void GL_UpdateSwapInterval( void )
 	{
 		if( pwglSwapIntervalEXT )
 			pwglSwapIntervalEXT( 0 );
-		gl_swapInterval->modified = true;
+		SetBits( gl_swapInterval->flags, FCVAR_CHANGED );
 	}
-	else if( gl_swapInterval->modified )
+	else if( FBitSet( gl_swapInterval->flags, FCVAR_CHANGED ))
 	{
-		gl_swapInterval->modified = false;
+		ClearBits( gl_swapInterval->flags, FCVAR_CHANGED );
 
 		if( pwglSwapIntervalEXT )
-			pwglSwapIntervalEXT( gl_swapInterval->integer );
+			pwglSwapIntervalEXT( gl_swapInterval->value );
 	}
 }
 
@@ -972,10 +969,10 @@ void VID_StartupGamma( void )
 	if( !glConfig.deviceSupportsGamma )
 	{
 		// force to set cvar
-		Cvar_FullSet( "gl_ignorehwgamma", "1", CVAR_GLCONFIG );
+		Cvar_FullSet( "gl_ignorehwgamma", "1", FCVAR_GLCONFIG );
 	}
 
-	if( gl_ignorehwgamma->integer )
+	if( gl_ignorehwgamma->value )
 	{
 		glConfig.deviceSupportsGamma = false;	// even if supported!
 		BuildGammaTable( vid_gamma->value, GAMMA );
@@ -1046,7 +1043,7 @@ void VID_StartupGamma( void )
 		Mem_Free( savedGamma );
 	}
 
-	vid_gamma->modified = true;
+	SetBits( vid_gamma->flags, FCVAR_CHANGED );
 }
 
 /*
@@ -1081,8 +1078,8 @@ qboolean GL_SetPixelformat( void )
 		return false;
 
 	// set alpha/stencil
-	alphaBits = bound( 0, gl_alphabits->integer, 8 );
-	stencilBits = bound( 0, gl_stencilbits->integer, 8 );
+	alphaBits = bound( 0, gl_alphabits->value, 8 );
+	stencilBits = bound( 0, gl_stencilbits->value, 8 );
 
 	if( glw_state.desktopBitsPixel < 32 )
 	{
@@ -1159,9 +1156,9 @@ void R_SaveVideoMode( int vid_mode )
 	glState.height = vidmode[mode].height;
 	glState.wideScreen = vidmode[mode].wideScreen;
 
-	Cvar_FullSet( "width", va( "%i", vidmode[mode].width ), CVAR_READ_ONLY );
-	Cvar_FullSet( "height", va( "%i", vidmode[mode].height ), CVAR_READ_ONLY );
-	Cvar_SetFloat( "vid_mode", mode ); // merge if it out of bounds
+	Cvar_FullSet( "width", va( "%i", vidmode[mode].width ), FCVAR_READ_ONLY );
+	Cvar_FullSet( "height", va( "%i", vidmode[mode].height ), FCVAR_READ_ONLY );
+	Cvar_SetValue( "vid_mode", mode ); // merge if it out of bounds
 
 	MsgDev( D_NOTE, "Set: %s [%dx%d]\n", vidmode[mode].desc, vidmode[mode].width, vidmode[mode].height );
 }
@@ -1180,7 +1177,7 @@ qboolean R_DescribeVIDMode( int width, int height )
 		if( vidmode[i].width == width && vidmode[i].height == height )
 		{
 			// found specified mode
-			Cvar_SetFloat( "vid_mode", i );
+			Cvar_SetValue( "vid_mode", i );
 			return true;
 		}
 	}
@@ -1265,8 +1262,8 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 
 	if( !fullscreen )
 	{
-		x = r_xpos->integer;
-		y = r_ypos->integer;
+		x = r_xpos->value;
+		y = r_ypos->value;
 
 		// adjust window coordinates if necessary 
 		// so that the window is completely on screen
@@ -1378,8 +1375,8 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 	
 	R_SaveVideoMode( vid_mode );
 
-	width = r_width->integer;
-	height = r_height->integer;
+	width = scr_width->value;
+	height = scr_height->value;
 
 	// check our desktop attributes
 	hDC = GetDC( GetDesktopWindow( ));
@@ -1402,13 +1399,13 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 		dm.dmPelsHeight = height;
 		dm.dmFields = DM_PELSWIDTH|DM_PELSHEIGHT;
 
-		if( vid_displayfrequency->integer > 0 )
+		if( vid_displayfrequency->value > 0 )
 		{
-			if( vid_displayfrequency->integer < 60 ) Cvar_SetFloat( "vid_displayfrequency", 60 );
-			if( vid_displayfrequency->integer > 100 ) Cvar_SetFloat( "vid_displayfrequency", 100 );
+			if( vid_displayfrequency->value < 60 ) Cvar_SetValue( "vid_displayfrequency", 60 );
+			if( vid_displayfrequency->value > 100 ) Cvar_SetValue( "vid_displayfrequency", 100 );
 
 			dm.dmFields |= DM_DISPLAYFREQUENCY;
-			dm.dmDisplayFrequency = vid_displayfrequency->integer;
+			dm.dmDisplayFrequency = vid_displayfrequency->value;
 		}
 
 		cds_result = ChangeDisplaySettings( &dm, CDS_FULLSCREEN );
@@ -1448,11 +1445,11 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 		{
 			int	freq_specified = 0;
 
-			if( vid_displayfrequency->integer > 0 )
+			if( vid_displayfrequency->value > 0 )
 			{
 				// clear out custom frequency
-				freq_specified = vid_displayfrequency->integer;
-				Cvar_SetFloat( "vid_displayfrequency", 0.0f );
+				freq_specified = vid_displayfrequency->value;
+				Cvar_SetValue( "vid_displayfrequency", 0.0f );
 				dm.dmFields &= ~DM_DISPLAYFREQUENCY;
 				dm.dmDisplayFrequency = 0;
 			}
@@ -1501,7 +1498,7 @@ qboolean VID_SetMode( void )
 	qboolean	fullscreen;
 	rserr_t	err;
 
-	if( vid_mode->integer == -1 )	// trying to get resolution automatically by default
+	if( vid_mode->value == -1 )	// trying to get resolution automatically by default
 	{
 		HDC	hDCScreen = GetDC( NULL );
 		int	iScreenWidth = GetDeviceCaps( hDCScreen, HORZRES );
@@ -1511,35 +1508,35 @@ qboolean VID_SetMode( void )
 
 		if( R_DescribeVIDMode( iScreenWidth, iScreenHeight ))
 		{
-			MsgDev( D_NOTE, "found specified vid mode %i [%ix%i]\n", vid_mode->integer, iScreenWidth, iScreenHeight );
-			Cvar_SetFloat( "fullscreen", 1 );
+			MsgDev( D_NOTE, "found specified vid mode %i [%ix%i]\n", (int)vid_mode->value, iScreenWidth, iScreenHeight );
+			Cvar_SetValue( "fullscreen", 1 );
 		}
 		else
 		{
 			MsgDev( D_NOTE, "failed to set specified vid mode [%ix%i]\n", iScreenWidth, iScreenHeight );
-			Cvar_SetFloat( "vid_mode", VID_DEFAULTMODE );
+			Cvar_SetValue( "vid_mode", VID_DEFAULTMODE );
 		}
 	}
 
-	fullscreen = vid_fullscreen->integer;
-	gl_swapInterval->modified = true;
+	fullscreen = vid_fullscreen->value;
+	SetBits( gl_swapInterval->flags, FCVAR_CHANGED );
 
-	if(( err = R_ChangeDisplaySettings( vid_mode->integer, fullscreen )) == rserr_ok )
+	if(( err = R_ChangeDisplaySettings( vid_mode->value, fullscreen )) == rserr_ok )
 	{
-		glConfig.prev_mode = vid_mode->integer;
+		glConfig.prev_mode = vid_mode->value;
 	}
 	else
 	{
 		if( err == rserr_invalid_fullscreen )
 		{
-			Cvar_SetFloat( "fullscreen", 0 );
+			Cvar_SetValue( "fullscreen", 0 );
 			MsgDev( D_ERROR, "VID_SetMode: fullscreen unavailable in this mode\n" );
-			if(( err = R_ChangeDisplaySettings( vid_mode->integer, false )) == rserr_ok )
+			if(( err = R_ChangeDisplaySettings( vid_mode->value, false )) == rserr_ok )
 				return true;
 		}
 		else if( err == rserr_invalid_mode )
 		{
-			Cvar_SetFloat( "vid_mode", glConfig.prev_mode );
+			Cvar_SetValue( "vid_mode", glConfig.prev_mode );
 			MsgDev( D_ERROR, "VID_SetMode: invalid mode\n" );
 		}
 
@@ -1563,14 +1560,14 @@ check vid modes and fullscreen
 */
 void VID_CheckChanges( void )
 {
-	if( cl_allow_levelshots->modified )
+	if( FBitSet( cl_allow_levelshots->flags, FCVAR_CHANGED ))
           {
 		GL_FreeTexture( cls.loadingBar );
 		SCR_RegisterTextures(); // reload 'lambda' image
-		cl_allow_levelshots->modified = false;
+		ClearBits( cl_allow_levelshots->flags, FCVAR_CHANGED );
           }
  
-	if( renderinfo->modified )
+	if( host.renderinfo_changed )
 	{
 		if( !VID_SetMode( ))
 		{
@@ -1579,7 +1576,7 @@ void VID_CheckChanges( void )
 		}
 		else
 		{
-			renderinfo->modified = false;
+			host.renderinfo_changed = false;
 			SCR_VidInit(); // tell the client.dll what vid_mode has changed
 		}
 	}
@@ -1711,12 +1708,12 @@ void R_RenderInfo_f( void )
 	}
 
 	Msg( "\n" );
-	Msg( "MODE: %i, %i x %i %s\n", vid_mode->integer, r_width->integer, r_height->integer, vidmode[vid_mode->integer].desc );
+	Msg( "MODE: %i, %i x %i %s\n", vid_mode->value, scr_width->value, scr_height->value, vidmode[(int)vid_mode->value].desc );
 	Msg( "GAMMA: %s\n", (glConfig.deviceSupportsGamma) ? "hardware" : "software" );
 	Msg( "\n" );
-	Msg( "PICMIP: %i\n", gl_picmip->integer );
-	Msg( "SKYMIP: %i\n", gl_skymip->integer );
-	Msg( "VERTICAL SYNC: %s\n", gl_swapInterval->integer ? "enabled" : "disabled" );
+	Msg( "PICMIP: %i\n", gl_picmip->value );
+	Msg( "SKYMIP: %i\n", gl_skymip->value );
+	Msg( "VERTICAL SYNC: %s\n", gl_swapInterval->value ? "enabled" : "disabled" );
 	Msg( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
 		glConfig.alpha_bits, glConfig.depth_bits, glConfig.stencil_bits );
 }
@@ -1730,74 +1727,73 @@ GL_InitCommands
 */
 void GL_InitCommands( void )
 {
-	Cbuf_Execute();
-
 	// system screen width and height (don't suppose for change from console at all)
-	r_width = Cvar_Get( "width", "640", CVAR_READ_ONLY, "screen width" );
-	r_height = Cvar_Get( "height", "480", CVAR_READ_ONLY, "screen height" );
-	renderinfo = Cvar_Get( "@renderinfo", "0", CVAR_READ_ONLY, "" ); // use ->modified value only
-	r_speeds = Cvar_Get( "r_speeds", "0", CVAR_ARCHIVE, "shows renderer speeds" );
-	r_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
+	r_speeds = Cvar_Get( "r_speeds", "0", FCVAR_ARCHIVE, "shows renderer speeds" );
+	r_fullbright = Cvar_Get( "r_fullbright", "0", FCVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
 	r_norefresh = Cvar_Get( "r_norefresh", "0", 0, "disable 3D rendering (use with caution)" );
-	r_lighting_extended = Cvar_Get( "r_lighting_extended", "1", CVAR_ARCHIVE, "allow to get lighting from world and bmodels" );
-	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "0.6", CVAR_ARCHIVE, "lightstyles modulate scale" );
-	r_lighting_ambient = Cvar_Get( "r_lighting_ambient", "0.3", CVAR_ARCHIVE, "map ambient lighting scale" );
-	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", CVAR_ARCHIVE, "making FOV adjustment for wide-screens" );
+	r_lighting_extended = Cvar_Get( "r_lighting_extended", "1", FCVAR_ARCHIVE, "allow to get lighting from world and bmodels" );
+	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "0.6", FCVAR_ARCHIVE, "lightstyles modulate scale" );
+	r_lighting_ambient = Cvar_Get( "r_lighting_ambient", "0.3", FCVAR_ARCHIVE, "map ambient lighting scale" );
+	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", FCVAR_ARCHIVE, "making FOV adjustment for wide-screens" );
 	r_novis = Cvar_Get( "r_novis", "0", 0, "ignore vis information (perfomance test)" );
 	r_nocull = Cvar_Get( "r_nocull", "0", 0, "ignore frustrum culling (perfomance test)" );
 	r_faceplanecull = Cvar_Get( "r_faceplanecull", "1", 0, "ignore face plane culling (perfomance test)" );
-	r_detailtextures = Cvar_Get( "r_detailtextures", "1", CVAR_ARCHIVE, "enable detail textures support, use '2' for autogenerate detail.txt" );
-	r_lockpvs = Cvar_Get( "r_lockpvs", "0", CVAR_CHEAT, "lockpvs area at current point (pvs test)" );
-	r_lockcull = Cvar_Get( "r_lockcull", "0", CVAR_CHEAT, "lock frustrum area at current point (cull test)" );
-	r_dynamic = Cvar_Get( "r_dynamic", "1", CVAR_ARCHIVE, "allow dynamic lighting (dlights, lightstyles)" );
-	r_lightmap = Cvar_Get( "r_lightmap", "0", CVAR_CHEAT, "lightmap debugging tool" );
-	r_fastsky = Cvar_Get( "r_fastsky", "0", CVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
-	r_drawentities = Cvar_Get( "r_drawentities", "1", CVAR_CHEAT|CVAR_ARCHIVE, "render entities" );
-	r_flaresize = Cvar_Get( "r_flaresize", "200", CVAR_ARCHIVE, "set flares size" );
-	r_lefthand = Cvar_Get( "hand", "0", CVAR_ARCHIVE, "viewmodel handedness" );
-	r_decals = Cvar_Get( "r_decals", "4096", CVAR_ARCHIVE, "sets the maximum number of decals" );
-	r_xpos = Cvar_Get( "r_xpos", "130", CVAR_RENDERINFO, "window position by horizontal" );
-	r_ypos = Cvar_Get( "r_ypos", "48", CVAR_RENDERINFO, "window position by vertical" );
+	r_detailtextures = Cvar_Get( "r_detailtextures", "1", FCVAR_ARCHIVE, "enable detail textures support, use '2' for autogenerate detail.txt" );
+	r_lockpvs = Cvar_Get( "r_lockpvs", "0", FCVAR_CHEAT, "lockpvs area at current point (pvs test)" );
+	r_lockcull = Cvar_Get( "r_lockcull", "0", FCVAR_CHEAT, "lock frustrum area at current point (cull test)" );
+	r_dynamic = Cvar_Get( "r_dynamic", "1", FCVAR_ARCHIVE, "allow dynamic lighting (dlights, lightstyles)" );
+	r_lightmap = Cvar_Get( "r_lightmap", "0", FCVAR_CHEAT, "lightmap debugging tool" );
+	r_fastsky = Cvar_Get( "r_fastsky", "0", FCVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
+	r_drawentities = Cvar_Get( "r_drawentities", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render entities" );
+	r_flaresize = Cvar_Get( "r_flaresize", "200", FCVAR_ARCHIVE, "set flares size" );
+	r_lefthand = Cvar_Get( "hand", "0", FCVAR_ARCHIVE, "viewmodel handedness" );
+	r_decals = Cvar_Get( "r_decals", "4096", FCVAR_ARCHIVE, "sets the maximum number of decals" );
+	r_xpos = Cvar_Get( "r_xpos", "130", FCVAR_RENDERINFO, "window position by horizontal" );
+	r_ypos = Cvar_Get( "r_ypos", "48", FCVAR_RENDERINFO, "window position by vertical" );
 			
-	gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_GLCONFIG, "reduces resolution of textures by powers of 2" );
-	gl_skymip = Cvar_Get( "gl_skymip", "0", CVAR_GLCONFIG, "reduces resolution of skybox textures by powers of 2" );
-	gl_ignorehwgamma = Cvar_Get( "gl_ignorehwgamma", "0", CVAR_GLCONFIG, "ignore hardware gamma" );
-	gl_alphabits = Cvar_Get( "gl_alphabits", "8", CVAR_GLCONFIG, "pixelformat alpha bits (0 - auto)" );
-	gl_texture_nearest = Cvar_Get( "gl_texture_nearest", "0", CVAR_ARCHIVE, "disable texture filter" );
-	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_GLCONFIG, "down size non-power of two textures" );
-	gl_max_size = Cvar_Get( "gl_max_size", "512", CVAR_ARCHIVE, "no effect in Xash3D just a legacy" );
-	gl_stencilbits = Cvar_Get( "gl_stencilbits", "8", CVAR_GLCONFIG, "pixelformat stencil bits (0 - auto)" );
-	gl_check_errors = Cvar_Get( "gl_check_errors", "1", CVAR_ARCHIVE, "ignore video engine errors" );
-	gl_swapInterval = Cvar_Get( "gl_swapInterval", "0", CVAR_ARCHIVE,  "time beetween frames (in msec)" );
-	gl_extensions = Cvar_Get( "gl_extensions", "1", CVAR_GLCONFIG, "allow gl_extensions" );
-	gl_detailscale = Cvar_Get( "gl_detailscale", "4.0", CVAR_ARCHIVE, "default scale applies while auto-generate list of detail textures" );
-	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "2.0", CVAR_ARCHIVE, "textures anisotropic filter" );
-	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", CVAR_ARCHIVE, "LOD bias for mipmapped textures (prefomance|quality)" );
-	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", CVAR_GLCONFIG, "compress textures to safe video memory" ); 
-	gl_compensate_gamma_screenshots = Cvar_Get( "gl_compensate_gamma_screenshots", "0", CVAR_ARCHIVE, "allow to apply gamma for screenshots" ); 
-	gl_keeptjunctions = Cvar_Get( "gl_keeptjunctions", "1", CVAR_ARCHIVE, "but removing tjuncs causes blinking pixels" ); 
-	gl_allow_static = Cvar_Get( "gl_allow_static", "0", CVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
-	gl_allow_mirrors = Cvar_Get( "gl_allow_mirrors", "1", CVAR_ARCHIVE, "allow to draw mirror surfaces" );
-	gl_showtextures = Cvar_Get( "r_showtextures", "0", CVAR_CHEAT, "show all uploaded textures" );
-	gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE, "use glFinish instead of glFlush" );
-	gl_nosort = Cvar_Get( "gl_nosort", "0", CVAR_ARCHIVE, "disable sorting of translucent surfaces" );
-	gl_clear = Cvar_Get( "gl_clear", "0", CVAR_ARCHIVE, "clearing screen after each frame" );
+	gl_picmip = Cvar_Get( "gl_picmip", "0", FCVAR_GLCONFIG, "reduces resolution of textures by powers of 2" );
+	gl_skymip = Cvar_Get( "gl_skymip", "0", FCVAR_GLCONFIG, "reduces resolution of skybox textures by powers of 2" );
+	gl_ignorehwgamma = Cvar_Get( "gl_ignorehwgamma", "0", FCVAR_GLCONFIG, "ignore hardware gamma" );
+	gl_alphabits = Cvar_Get( "gl_alphabits", "8", FCVAR_GLCONFIG, "pixelformat alpha bits (0 - auto)" );
+	gl_texture_nearest = Cvar_Get( "gl_texture_nearest", "0", FCVAR_ARCHIVE, "disable texture filter" );
+	gl_round_down = Cvar_Get( "gl_round_down", "0", FCVAR_GLCONFIG, "down size non-power of two textures" );
+	gl_max_size = Cvar_Get( "gl_max_size", "512", FCVAR_ARCHIVE, "no effect in Xash3D just a legacy" );
+	gl_stencilbits = Cvar_Get( "gl_stencilbits", "8", FCVAR_GLCONFIG, "pixelformat stencil bits (0 - auto)" );
+	gl_check_errors = Cvar_Get( "gl_check_errors", "1", FCVAR_ARCHIVE, "ignore video engine errors" );
+	gl_swapInterval = Cvar_Get( "gl_swapInterval", "0", FCVAR_ARCHIVE,  "time beetween frames (in msec)" );
+	gl_extensions = Cvar_Get( "gl_extensions", "1", FCVAR_GLCONFIG, "allow gl_extensions" );
+	gl_detailscale = Cvar_Get( "gl_detailscale", "4.0", FCVAR_ARCHIVE, "default scale applies while auto-generate list of detail textures" );
+	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "2.0", FCVAR_ARCHIVE, "textures anisotropic filter" );
+	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", FCVAR_ARCHIVE, "LOD bias for mipmapped textures (prefomance|quality)" );
+	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", FCVAR_GLCONFIG, "compress textures to safe video memory" ); 
+	gl_compensate_gamma_screenshots = Cvar_Get( "gl_compensate_gamma_screenshots", "0", FCVAR_ARCHIVE, "allow to apply gamma for screenshots" ); 
+	gl_keeptjunctions = Cvar_Get( "gl_keeptjunctions", "1", FCVAR_ARCHIVE, "but removing tjuncs causes blinking pixels" ); 
+	gl_allow_static = Cvar_Get( "gl_allow_static", "0", FCVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
+	gl_allow_mirrors = Cvar_Get( "gl_allow_mirrors", "1", FCVAR_ARCHIVE, "allow to draw mirror surfaces" );
+	gl_showtextures = Cvar_Get( "r_showtextures", "0", FCVAR_CHEAT, "show all uploaded textures" );
+	gl_finish = Cvar_Get( "gl_finish", "0", FCVAR_ARCHIVE, "use glFinish instead of glFlush" );
+	gl_nosort = Cvar_Get( "gl_nosort", "0", FCVAR_ARCHIVE, "disable sorting of translucent surfaces" );
+	gl_clear = Cvar_Get( "gl_clear", "0", FCVAR_ARCHIVE, "clearing screen after each frame" );
 	gl_test = Cvar_Get( "gl_test", "0", 0, "engine developer cvar for quick testing new features" );
-	gl_wireframe = Cvar_Get( "gl_wireframe", "0", CVAR_ARCHIVE, "show wireframe overlay" );
+	gl_wireframe = Cvar_Get( "gl_wireframe", "0", FCVAR_ARCHIVE|FCVAR_SPONLY, "show wireframe overlay" );
 	gl_overview = Cvar_Get( "dev_overview", "0", 0, "show level overview" );
 
 	// these cvar not used by engine but some mods requires this
 	Cvar_Get( "gl_polyoffset", "-0.1", 0, "polygon offset for decals" );
  
 	// make sure r_swapinterval is checked after vid_restart
-	gl_swapInterval->modified = true;
+	SetBits( gl_swapInterval->flags, FCVAR_CHANGED );
 
-	vid_gamma = Cvar_Get( "gamma", "1.0", CVAR_ARCHIVE, "gamma amount" );
-	vid_mode = Cvar_Get( "vid_mode", VID_AUTOMODE, CVAR_RENDERINFO, "display resolution mode" );
-	vid_fullscreen = Cvar_Get( "fullscreen", "0", CVAR_RENDERINFO, "set in 1 to enable fullscreen mode" );
-	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", CVAR_RENDERINFO, "fullscreen refresh rate" );
+	vid_gamma = Cvar_Get( "gamma", "1.0", FCVAR_ARCHIVE, "gamma amount" );
+	vid_mode = Cvar_Get( "vid_mode", VID_AUTOMODE, FCVAR_RENDERINFO, "display resolution mode" );
+	vid_fullscreen = Cvar_Get( "fullscreen", "0", FCVAR_RENDERINFO, "set in 1 to enable fullscreen mode" );
+	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", FCVAR_RENDERINFO, "fullscreen refresh rate" );
 
 	Cmd_AddCommand( "r_info", R_RenderInfo_f, "display renderer info" );
+
+	// apply actual video mode to window
+	Cbuf_AddText( "exec video.cfg\n" );
+	Cbuf_Execute();
 }
 
 /*
@@ -1989,12 +1985,11 @@ void GL_InitExtensions( void )
 	if( GL_Support( GL_TEXTURE_2D_RECT_EXT ))
 		pglGetIntegerv( GL_MAX_RECTANGLE_TEXTURE_SIZE_EXT, &glConfig.max_2d_rectangle_size );
 
-	Cvar_Get( "gl_max_texture_size", "0", CVAR_INIT, "opengl texture max dims" );
-	Cvar_Set( "gl_max_texture_size", va( "%i", glConfig.max_2d_texture_size ));
+	Cvar_Get( "gl_max_texture_size", va( "%i", glConfig.max_2d_texture_size ), FCVAR_READ_ONLY, "opengl texture max dims" );
 
 	// MCD has buffering issues
 	if( Q_stristr( glConfig.renderer_string, "gdi" ))
-		Cvar_SetFloat( "gl_finish", 1 );
+		Cvar_SetValue( "gl_finish", 1 );
 
 	Cvar_Set( "gl_anisotropy", va( "%f", bound( 0, gl_texture_anisotropy->value, glConfig.max_texture_anisotropy )));
 
@@ -2048,7 +2043,7 @@ qboolean R_Init( void )
 		return false;
 	}
 
-	renderinfo->modified = false;
+	host.renderinfo_changed = false;
 	r_temppool = Mem_AllocPool( "Render Zone" );
 
 	GL_InitExtensions();
@@ -2104,7 +2099,7 @@ void GL_CheckForErrors_( const char *filename, const int fileline )
 	int	err;
 	char	*str;
 
-	if( !gl_check_errors->integer )
+	if( !gl_check_errors->value )
 		return;
 
 	if(( err = pglGetError( )) == GL_NO_ERROR )

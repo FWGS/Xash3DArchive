@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "cl_tent.h"
 #include "shake.h"
+#include "hltv.h"
 
 #define MSG_COUNT		32		// last 32 messages parsed
 #define MSG_MASK		(MSG_COUNT - 1)
@@ -62,7 +63,7 @@ const char *svc_strings[256] =
 	"svc_eventindex",
 	"svc_cdtrack",
 	"svc_restore",
-	"svc_serverinfo",
+	"svc_unused34",
 	"svc_weaponanim",
 	"svc_bspdecal",
 	"svc_roomtype",
@@ -645,8 +646,8 @@ void CL_ParseServerData( sizebuf_t *msg )
 	else cl.background = background;
 
 	if( cl.background )	// tell the game parts about background state
-		Cvar_FullSet( "cl_background", "1", CVAR_READ_ONLY );
-	else Cvar_FullSet( "cl_background", "0", CVAR_READ_ONLY );
+		Cvar_FullSet( "cl_background", "1", FCVAR_READ_ONLY );
+	else Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
 
 	if( !cls.changelevel ) 
 	{
@@ -674,16 +675,16 @@ void CL_ParseServerData( sizebuf_t *msg )
 	if( cls.demoplayback && ( cls.demonum != -1 ))
 		Cvar_Set( "cl_levelshot_name", va( "levelshots/%s_%s", cls.demoname, glState.wideScreen ? "16x9" : "4x3" ));
 	else Cvar_Set( "cl_levelshot_name", va( "levelshots/%s_%s", clgame.mapname, glState.wideScreen ? "16x9" : "4x3" ));
-	Cvar_SetFloat( "scr_loading", 0.0f ); // reset progress bar
+	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
 
-	if(( cl_allow_levelshots->integer && !cls.changelevel ) || cl.background )
+	if(( cl_allow_levelshots->value && !cls.changelevel ) || cl.background )
 	{
 		if( !FS_FileExists( va( "%s.bmp", cl_levelshot_name->string ), true )) 
 			Cvar_Set( "cl_levelshot_name", "*black" ); // render a black screen
 		cls.scrshot_request = scrshot_plaque; // request levelshot even if exist (check filetime)
 	}
 
-	if( scr_dark->integer )
+	if( scr_dark->value )
 	{
 		screenfade_t		*sf = &clgame.fade;
 		client_textmessage_t	*title;
@@ -705,7 +706,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 		sf->fadeReset += cl.time;
 		sf->fadeEnd += sf->fadeReset;
 		
-		Cvar_SetFloat( "v_dark", 0.0f );
+		Cvar_SetValue( "v_dark", 0.0f );
 	}
 
 	// need to prep refresh at next oportunity
@@ -773,15 +774,27 @@ void CL_ParseClientData( sizebuf_t *msg )
 		entity_state_t	*ps, *pps;
 		weapon_data_t	*wd, *pwd;
 
-		last_predicted = ( cl.last_incoming_sequence + ( cls.netchan.incoming_acknowledged - cl.last_command_ack )) & CL_UPDATE_MASK;
+		if( !cls.spectator )
+		{
+			last_predicted = ( cl.last_incoming_sequence + ( command_ack - cl.last_command_ack )) & CL_UPDATE_MASK;
 
-		pps = &cl.predict[last_predicted].playerstate;
-		pwd = cl.predict[last_predicted].weapondata;
-		ppcd = &cl.predict[last_predicted].client;
+			pps = &cl.predict[last_predicted].playerstate;
+			pwd = cl.predict[last_predicted].weapondata;
+			ppcd = &cl.predict[last_predicted].client;
 
-		ps = &frame->playerstate[cl.playernum];
-		wd = frame->weapondata;
-		pcd = &frame->client;
+			ps = &frame->playerstate[cl.playernum];
+			wd = frame->weapondata;
+			pcd = &frame->client;
+		}
+		else
+		{
+			ps = &cls.spectator_state.playerstate;
+			pps = &cls.spectator_state.playerstate;
+			pcd = &cls.spectator_state.client;
+			ppcd = &cls.spectator_state.client;
+			wd = cls.spectator_state.weapondata;
+			pwd = cls.spectator_state.weapondata;
+		}
 
 		clgame.dllFuncs.pfnTxferPredictionData( ps, pps, pcd, ppcd, wd, pwd );
 	}
@@ -816,8 +829,13 @@ void CL_ParseClientData( sizebuf_t *msg )
 		frame->latency = 0.0f;
 	}
 
-	if( hltv->integer ) return;	// clientdata for spectators ends here
-	
+	// clientdata for spectators ends here
+	if( cls.spectator )
+	{
+		cl.predicted.health = 1;
+		return;
+	}	
+
 	to_cd = &frame->client;
 	to_wd = frame->weapondata;
 
@@ -849,6 +867,11 @@ void CL_ParseClientData( sizebuf_t *msg )
 
 		MSG_ReadWeaponData( msg, &from_wd[idx], &to_wd[idx], cl.mtime[0] );
 	}
+
+	// make a local copy of physinfo
+	Q_strncpy( cls.physinfo, frame->client.physinfo,  sizeof( cls.physinfo ));
+
+	cl.predicted.health = frame->client.health;
 }
 
 /*
@@ -993,6 +1016,7 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 		Q_strncpy( player->model, Info_ValueForKey( player->userinfo, "model" ), sizeof( player->model ));
 		player->topcolor = Q_atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
 		player->bottomcolor = Q_atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
+		player->spectator = Q_atoi( Info_ValueForKey( player->userinfo, "*hltv" ));
 
 		if( slot == cl.playernum ) memcpy( &gameui.playerinfo, player, sizeof( player_info_t ));
 	}
@@ -1098,22 +1122,6 @@ void CL_UpdateUserPings( sizebuf_t *msg )
 
 /*
 ==============
-CL_ServerInfo
-
-change serverinfo
-==============
-*/
-void CL_ServerInfo( sizebuf_t *msg )
-{
-	string	key, value;
-
-	Q_strncpy( key, MSG_ReadString( msg ), sizeof( key ));
-	Q_strncpy( value, MSG_ReadString( msg ), sizeof( value ));
-	Info_SetValueForKey( cl.serverinfo, key, value );
-}
-
-/*
-==============
 CL_CheckingResFile
 
 ==============
@@ -1196,15 +1204,51 @@ void CL_ParseResourceList( sizebuf_t *msg )
 
 /*
 ==============
-CL_ParseDirector
+CL_ParseHLTV
 
 spectator message (hltv)
+sended from game.dll
+==============
+*/
+void CL_ParseHLTV( sizebuf_t *msg )
+{
+	switch( MSG_ReadByte( msg ))
+	{
+	case HLTV_ACTIVE:
+		cls.spectator = true;
+		break;
+	case HLTV_STATUS:
+			MSG_ReadLong( msg );
+			MSG_ReadShort( msg );
+			MSG_ReadWord( msg );
+			MSG_ReadLong( msg );
+			MSG_ReadLong( msg );
+			MSG_ReadWord( msg );
+		break;
+	case HLTV_LISTEN:
+//		cls.signon = SIGNONS;
+		NET_StringToAdr( MSG_ReadString( msg ), &cls.hltv_listen_address );
+//		NET_JoinGroup( cls.netchan.sock, cls.hltv_listen_address );
+		SCR_EndLoadingPlaque();
+		break;
+	default:
+		MsgDev( D_ERROR, "CL_ParseHLTV: unknown HLTV command.\n" );
+		break;
+	}
+}
+
+/*
+==============
+CL_ParseDirector
+
+spectator message (director)
+sended from game.dll
 ==============
 */
 void CL_ParseDirector( sizebuf_t *msg )
 {
-	byte	pbuf[256];
 	int	iSize = MSG_ReadByte( msg );
+	byte	pbuf[256];
 
 	// parse user message into buffer
 	MSG_ReadBytes( msg, pbuf, iSize );
@@ -1667,9 +1711,6 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			param2 = bound( 1, param2, MAX_CDTRACKS ); // loopnum
 			S_StartBackgroundTrack( clgame.cdtracks[param1-1], clgame.cdtracks[param2-1], 0 );
 			break;
-		case svc_serverinfo:
-			CL_ServerInfo( msg );
-			break;
 		case svc_eventindex:
 			CL_PrecacheEvent( msg );
 			break;
@@ -1686,7 +1727,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_roomtype:
 			param1 = MSG_ReadShort( msg );
-			Cvar_SetFloat( "room_type", param1 );
+			Cvar_SetValue( "room_type", param1 );
 			break;
 		case svc_chokecount:
 #if 0
@@ -1709,6 +1750,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_director:
 			CL_ParseDirector( msg );
+			break;
+		case svc_hltv:
+			CL_ParseHLTV( msg );
 			break;
 		case svc_studiodecal:
 			CL_ParseStudioDecal( msg );

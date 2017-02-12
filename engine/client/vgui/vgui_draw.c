@@ -35,7 +35,7 @@ void VGUI_DrawInit( void )
 	memset( g_textures, 0, sizeof( g_textures ));
 	g_textureId = g_iBoundTexture = 0;
 
-	vgui_colorstrings = Cvar_Get( "vgui_colorstrings", "0", CVAR_ARCHIVE, "allow colorstrings in VGUI texts" );
+	vgui_colorstrings = Cvar_Get( "vgui_colorstrings", "0", FCVAR_ARCHIVE, "allow colorstrings in VGUI texts" );
 }
 
 /*

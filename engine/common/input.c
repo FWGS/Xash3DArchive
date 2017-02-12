@@ -515,8 +515,8 @@ LONG IN_WndProc( HWND hWnd, UINT uMsg, UINT wParam, LONG lParam )
 			style = GetWindowLong( hWnd, GWL_STYLE );
 			AdjustWindowRect( &rect, style, FALSE );
 
-			Cvar_SetFloat( "r_xpos", xPos + rect.left );
-			Cvar_SetFloat( "r_ypos", yPos + rect.top );
+			Cvar_SetValue( "r_xpos", xPos + rect.left );
+			Cvar_SetValue( "r_ypos", yPos + rect.top );
 			GetWindowRect( host.hWnd, &real_rect );
 		}
 		break;
@@ -545,7 +545,7 @@ LONG IN_WndProc( HWND hWnd, UINT uMsg, UINT wParam, LONG lParam )
 		if( wParam == VK_RETURN )
 		{
 			// alt+enter fullscreen switch
-			Cvar_SetFloat( "fullscreen", !Cvar_VariableValue( "fullscreen" ));
+			Cvar_SetValue( "fullscreen", !Cvar_VariableValue( "fullscreen" ));
 			return 0;
 		}
 		// intentional fallthrough

@@ -171,7 +171,7 @@ void GL_ApplyTextureParams( gltexture_t *tex )
 	}
 	else
 	{
-		if( FBitSet( tex->flags, TF_NEAREST ) || gl_texture_nearest->integer )
+		if( FBitSet( tex->flags, TF_NEAREST ) || gl_texture_nearest->value )
 		{
 			pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST );
 			pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
@@ -275,7 +275,7 @@ static void GL_UpdateTextureParams( int iTexture )
 
 	if( tex->numMips <= 1 ) return;
 
-	if( FBitSet( tex->flags, TF_NEAREST ) || gl_texture_nearest->integer )
+	if( FBitSet( tex->flags, TF_NEAREST ) || gl_texture_nearest->value )
 	{
 		pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST );
 		pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
@@ -299,22 +299,22 @@ void R_SetTextureParameters( void )
 	if( GL_Support( GL_ANISOTROPY_EXT ))
 	{
 		if( gl_texture_anisotropy->value > glConfig.max_texture_anisotropy )
-			Cvar_SetFloat( "gl_anisotropy", glConfig.max_texture_anisotropy );
+			Cvar_SetValue( "gl_anisotropy", glConfig.max_texture_anisotropy );
 		else if( gl_texture_anisotropy->value < 1.0f )
-			Cvar_SetFloat( "gl_anisotropy", 1.0f );
+			Cvar_SetValue( "gl_anisotropy", 1.0f );
 	}
 
 	if( GL_Support( GL_TEXTURE_LOD_BIAS ))
 	{
 		if( gl_texture_lodbias->value < -glConfig.max_texture_lod_bias )
-			Cvar_SetFloat( "gl_texture_lodbias", -glConfig.max_texture_lod_bias );
+			Cvar_SetValue( "gl_texture_lodbias", -glConfig.max_texture_lod_bias );
 		else if( gl_texture_lodbias->value > glConfig.max_texture_lod_bias )
-			Cvar_SetFloat( "gl_texture_lodbias", glConfig.max_texture_lod_bias );
+			Cvar_SetValue( "gl_texture_lodbias", glConfig.max_texture_lod_bias );
 	}
 
-	gl_texture_anisotropy->modified = false;
-	gl_texture_lodbias->modified = false;
-	gl_texture_nearest->modified = false;
+	ClearBits( gl_texture_anisotropy->flags, FCVAR_CHANGED );
+	ClearBits( gl_texture_lodbias->flags, FCVAR_CHANGED );
+	ClearBits( gl_texture_nearest->flags, FCVAR_CHANGED );
 
 	// change all the existing mipmapped texture objects
 	for( i = 0; i < r_numTextures; i++ )
@@ -560,14 +560,14 @@ static void GL_SetTextureDimensions( gltexture_t *tex, int width, int height, in
 	if( FBitSet( tex->flags, TF_SKYSIDE ))
 	{
 		// let people sample down the sky textures for speed
-		width >>= gl_skymip->integer;
-		height >>= gl_skymip->integer;
+		width >>= (int)gl_skymip->value;
+		height >>= (int)gl_skymip->value;
 	}
 	else if( !FBitSet( tex->flags, TF_NOPICMIP ))
 	{
 		// let people sample down the world textures for speed
-		width >>= gl_picmip->integer;
-		height >>= gl_picmip->integer;
+		width >>= (int)gl_picmip->value;
+		height >>= (int)gl_picmip->value;
 	}
 
 	// set the texture dimensions
@@ -640,7 +640,7 @@ static void GL_SetTextureFormat( gltexture_t *tex, pixformat_t format, int chann
 	if( !FBitSet( tex->flags, TF_UNCOMPRESSED ) && !ImageDXT( format ))
 	{
 		// check if it should be compressed
-		if( gl_compress_textures->integer && GL_Support( GL_TEXTURE_COMPRESSION_EXT ))
+		if( gl_compress_textures->value && GL_Support( GL_TEXTURE_COMPRESSION_EXT ))
 			compressImage = true;
 	}
 

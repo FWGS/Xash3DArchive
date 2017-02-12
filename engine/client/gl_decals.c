@@ -108,8 +108,8 @@ static decal_t *R_DecalAlloc( decal_t *pdecal )
 {
 	int	limit = MAX_RENDER_DECALS;
 
-	if( r_decals->integer < limit )
-		limit = r_decals->integer;
+	if( r_decals->value < limit )
+		limit = r_decals->value;
 	
 	if( !limit ) return NULL;
 

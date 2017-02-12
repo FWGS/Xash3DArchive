@@ -639,11 +639,11 @@ static void Mod_FreeModel( model_t *mod )
 void Mod_Init( void )
 {
 	com_studiocache = Mem_AllocPool( "Studio Cache" );
-	mod_studiocache = Cvar_Get( "r_studiocache", "1", CVAR_ARCHIVE, "enables studio cache for speedup tracing hitboxes" );
-	r_wadtextures = Cvar_Get( "r_wadtextures", "1", CVAR_ARCHIVE, "completely ignore textures in the wad-files if disabled" );
+	mod_studiocache = Cvar_Get( "r_studiocache", "1", FCVAR_ARCHIVE, "enables studio cache for speedup tracing hitboxes" );
+	r_wadtextures = Cvar_Get( "r_wadtextures", "1", FCVAR_ARCHIVE, "completely ignore textures in the wad-files if disabled" );
  
 	if( host.type == HOST_NORMAL )
-		mod_allow_materials = Cvar_Get( "host_allow_materials", "0", CVAR_LATCH|CVAR_ARCHIVE, "allow HD textures" );
+		mod_allow_materials = Cvar_Get( "host_allow_materials", "0", FCVAR_LATCH|FCVAR_ARCHIVE, "allow HD textures" );
 	else mod_allow_materials = NULL; // no reason to load HD-textures for dedicated server
 
 	Cmd_AddCommand( "mapstats", Mod_PrintBSPFileSizes_f, "show stats for currently loaded map" );
@@ -921,7 +921,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 			}
 
 			// trying wad texture (force while r_wadtextures is 1)
-			if( !load_external && ( r_wadtextures->integer || mt->offsets[0] <= 0 ))
+			if( !load_external && ( r_wadtextures->value || mt->offsets[0] <= 0 ))
 			{
 				Q_snprintf( texname, sizeof( texname ), "%s.mip", mt->name );
 

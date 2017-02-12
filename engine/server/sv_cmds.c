@@ -64,7 +64,7 @@ void SV_BroadcastPrintf( sv_client_t *ignore, int level, char *fmt, ... )
 	// echo to console
 	if( host.type == HOST_DEDICATED ) Msg( "%s", string );
 
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( level < cl->messagelevel || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;
@@ -85,7 +85,7 @@ SV_BroadcastCommand
 Sends text to all active clients
 =================
 */
-void SV_BroadcastCommand( char *fmt, ... )
+void SV_BroadcastCommand( const char *fmt, ... )
 {
 	char	string[MAX_SYSPATH];
 	va_list	argptr;	
@@ -120,7 +120,7 @@ qboolean SV_SetPlayer( void )
 		return false;
           }
 
-	if( sv_maxclients->integer == 1 || Cmd_Argc() < 2 )
+	if( svs.maxclients == 1 || Cmd_Argc() < 2 )
 	{
 		// special case for local client
 		svs.currentPlayer = svs.clients;
@@ -134,7 +134,7 @@ qboolean SV_SetPlayer( void )
 	if( Q_isdigit( s ) || (s[0] == '-' && Q_isdigit( s + 1 )))
 	{
 		idnum = Q_atoi( s );
-		if( idnum < 0 || idnum >= sv_maxclients->integer )
+		if( idnum < 0 || idnum >= svs.maxclients )
 		{
 			Msg( "Bad client slot: %i\n", idnum );
 			return false;
@@ -152,7 +152,7 @@ qboolean SV_SetPlayer( void )
 	}
 
 	// check for a name match
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( !cl->state ) continue;
 		if( !Q_strcmp( cl->name, s ))
@@ -195,7 +195,7 @@ void SV_Map_f( void )
 	FS_StripExtension( mapname );
 	
 	// determine spawn entity classname
-	if( sv_maxclients->integer == 1 )
+	if( svs.maxclients == 1 )
 		spawn_entity = GI->sp_entity;
 	else spawn_entity = GI->mp_entity;
 
@@ -219,11 +219,8 @@ void SV_Map_f( void )
 		return;
 	}
 
-	// init network stuff
-	NET_Config(( sv_maxclients->integer > 1 ));
-
 	// changing singleplayer to multiplayer or back. refresh the player count
-	if(( sv_maxclients->modified ) || ( deathmatch->modified ) || ( coop->modified ) || ( teamplay->modified ))
+	if( FBitSet( sv_maxclients->flags, FCVAR_CHANGED ))
 		Host_ShutdownServer();
 
 	SCR_BeginLoadingPlaque( false );
@@ -294,10 +291,9 @@ void SV_MapBackground_f( void )
 	sv.loadgame = false; // set right state
 
 	// reset all multiplayer cvars
-	Cvar_FullSet( "coop", "0",  CVAR_LATCH );
-	Cvar_FullSet( "teamplay", "0",  CVAR_LATCH );
-	Cvar_FullSet( "deathmatch", "0",  CVAR_LATCH );
-	Cvar_FullSet( "maxplayers", "1", CVAR_LATCH );
+	Cvar_FullSet( "maxplayers", "1", FCVAR_LATCH );
+	Cvar_SetValue( "deathmatch", 0 );
+	Cvar_SetValue( "coop", 0 );
 
 	SCR_BeginLoadingPlaque( true );
 
@@ -482,7 +478,7 @@ void SV_ChangeLevel_f( void )
 	FS_StripExtension( mapname );
 
 	// determine spawn entity classname
-	if( sv_maxclients->integer == 1 )
+	if( svs.maxclients == 1 )
 		spawn_entity = GI->sp_entity;
 	else spawn_entity = GI->mp_entity;
 
@@ -502,7 +498,7 @@ void SV_ChangeLevel_f( void )
 
 	if( c >= 3 && !FBitSet( flags, MAP_HAS_LANDMARK ))
 	{
-		if( sv_validate_changelevel->integer )
+		if( sv_validate_changelevel->value )
 		{
 			// NOTE: we find valid map but specified landmark it's doesn't exist
 			// run simple changelevel like in q1, throw warning
@@ -520,7 +516,7 @@ void SV_ChangeLevel_f( void )
 
 	if( c == 2 && !FBitSet( flags, MAP_HAS_SPAWNPOINT ))
 	{
-		if( sv_validate_changelevel->integer )
+		if( sv_validate_changelevel->value )
 		{
 			MsgDev( D_INFO, "SV_ChangeLevel: map %s doesn't have a valid spawnpoint. Ignored.\n", mapname );
 			return;	
@@ -530,7 +526,7 @@ void SV_ChangeLevel_f( void )
 	// bad changelevel position invoke enables in one-way transition
 	if( sv.net_framenum < 15 )
 	{
-		if( sv_validate_changelevel->integer )
+		if( sv_validate_changelevel->value )
 		{
 			MsgDev( D_INFO, "SV_ChangeLevel: a infinite changelevel detected.\n" );
 			MsgDev( D_INFO, "Changelevel will be disabled until a next save\\restore.\n" );
@@ -703,7 +699,7 @@ void SV_Status_f( void )
 	Msg( "num score ping    name            lastmsg address               port \n" );
 	Msg( "--- ----- ------- --------------- ------- --------------------- ------\n" );
 
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		int	j, l;
 		char	*s;
@@ -762,7 +758,7 @@ void SV_ConSay_f( void )
 
 	Q_strncat( text, p, MAX_SYSPATH );
 
-	for( i = 0, client = svs.clients; i < sv_maxclients->integer; i++, client++ )
+	for( i = 0, client = svs.clients; i < svs.maxclients; i++, client++ )
 	{
 		if( client->state != cs_spawned )
 			continue;
@@ -785,13 +781,76 @@ void SV_Heartbeat_f( void )
 ===========
 SV_ServerInfo_f
 
-Examine serverinfo string
+Examine or change the serverinfo string
 ===========
 */
 void SV_ServerInfo_f( void )
 {
-	Msg( "Server info settings:\n" );
-	Info_Print( Cvar_Serverinfo( ));
+	convar_t	*var;
+
+	if( Cmd_Argc() == 1 )
+	{
+		Msg( "Server info settings:\n" );
+		Info_Print( svs.serverinfo );
+		Msg( "Total %i symbols\n", Q_strlen( svs.serverinfo ));
+		return;
+	}
+
+	if( Cmd_Argc() != 3 )
+	{
+		Msg( "Usage: serverinfo [ <key> <value> ]\n");
+		return;
+	}
+
+	if( Cmd_Argv(1)[0] == '*' )
+	{
+		Msg( "Star variables cannot be changed.\n" );
+		return;
+	}
+
+	// if this is a cvar, change it too	
+	var = Cvar_FindVar( Cmd_Argv( 1 ));
+	if( var )
+	{
+		freestring( var->string ); // free the old value string	
+		var->string = copystring( Cmd_Argv( 2 ));
+		var->value = Q_atof( var->string );
+	}
+
+	Info_SetValueForStarKey( svs.serverinfo, Cmd_Argv( 1 ), Cmd_Argv( 2 ), MAX_SERVERINFO_STRING );
+	SV_BroadcastCommand( "fullserverinfo \"%s\"\n", SV_Serverinfo( ));
+}
+
+/*
+===========
+SV_LocalInfo_f
+
+Examine or change the localinfo string
+===========
+*/
+void SV_LocalInfo_f( void )
+{
+	if( Cmd_Argc() == 1 )
+	{
+		Msg( "Local info settings:\n" );
+		Info_Print( svs.localinfo );
+		Msg( "Total %i symbols\n", Q_strlen( svs.localinfo ));
+		return;
+	}
+
+	if( Cmd_Argc() != 3 )
+	{
+		Msg( "Usage: localinfo [ <key> <value> ]\n");
+		return;
+	}
+
+	if( Cmd_Argv(1)[0] == '*' )
+	{
+		Msg( "Star variables cannot be changed.\n" );
+		return;
+	}
+
+	Info_SetValueForStarKey( svs.localinfo, Cmd_Argv(1), Cmd_Argv(2), MAX_LOCALINFO_STRING );
 }
 
 /*
@@ -949,7 +1008,8 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "kick", SV_Kick_f, "kick a player off the server by number or name" );
 	Cmd_AddCommand( "kill", SV_Kill_f, "die instantly" );
 	Cmd_AddCommand( "status", SV_Status_f, "print server status information" );
-	Cmd_AddCommand( "serverinfo", SV_ServerInfo_f, "print server settings" );
+	Cmd_AddCommand( "localinfo", SV_LocalInfo_f, "examine or change the localinfo string" );
+	Cmd_AddCommand( "serverinfo", SV_ServerInfo_f, "examine or change the serverinfo string" );
 	Cmd_AddCommand( "clientinfo", SV_ClientInfo_f, "print user infostring (player num required)" );
 	Cmd_AddCommand( "playersonly", SV_PlayersOnly_f, "freezes time, except for players" );
 	Cmd_AddCommand( "restart", SV_Restart_f, "restarting current level" );
@@ -984,6 +1044,7 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "kick" );
 	Cmd_RemoveCommand( "kill" );
 	Cmd_RemoveCommand( "status" );
+	Cmd_RemoveCommand( "localinfo" );
 	Cmd_RemoveCommand( "serverinfo" );
 	Cmd_RemoveCommand( "clientinfo" );
 	Cmd_RemoveCommand( "playersonly" );

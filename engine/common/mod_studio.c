@@ -212,7 +212,7 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 	bSkipShield = false;
 	*numhitboxes = 0; // assume error
 
-	if( mod_studiocache->integer )
+	if( mod_studiocache->value )
 	{
 		bonecache = Mod_CheckStudioCache( model, frame, sequence, angles, origin, size, pcontroller, pblending );
 
@@ -263,7 +263,7 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 	// tell trace code about hitbox count
 	*numhitboxes = (bSkipShield) ? (mod_studiohdr->numhitboxes - 1) : (mod_studiohdr->numhitboxes);
 
-	if( mod_studiocache->integer )
+	if( mod_studiocache->value )
 	{
 		Mod_AddToStudioCache( frame, sequence, angles, origin, size, pcontroller, pblending, model, studio_hull, *numhitboxes );
 	}
@@ -769,7 +769,7 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *origin, 
 	if( origin != NULL )
 		Matrix3x4_VectorTransform( studio_bones[pAtt[iAttachment].bone], pAtt[iAttachment].org, origin );
 
-	if( sv_allow_studio_attachment_angles->integer && origin != NULL && angles != NULL )
+	if( sv_allow_studio_attachment_angles->value && origin != NULL && angles != NULL )
 	{
 		vec3_t	forward, bonepos;
 

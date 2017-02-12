@@ -167,7 +167,7 @@ void Image_Init( void )
 {
 	// init pools
 	host.imagepool = Mem_AllocPool( "ImageLib Pool" );
-	gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_GLCONFIG, "down size non-power of two textures" );
+	gl_round_down = Cvar_Get( "gl_round_down", "0", FCVAR_GLCONFIG, "down size non-power of two textures" );
 
 	// install image formats (can be re-install later by Image_Setup)
 	switch( host.type )
@@ -251,8 +251,8 @@ Image_RoundDimensions
 void Image_RoundDimensions( int *width, int *height )
 {
 	// find nearest power of two, rounding down if desired
-	*width = NearestPOW( *width, gl_round_down->integer );
-	*height = NearestPOW( *height, gl_round_down->integer );
+	*width = NearestPOW( *width, (int)gl_round_down->value );
+	*height = NearestPOW( *height, (int)gl_round_down->value );
 }
 
 qboolean Image_ValidSize( const char *name )

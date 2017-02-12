@@ -307,7 +307,7 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 	float	*v;
 	int	i;
 
-	if( r_fastsky->integer )
+	if( r_fastsky->value )
 		return;
 
 	if( clgame.movevars.skyangle )

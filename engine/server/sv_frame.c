@@ -415,7 +415,7 @@ void SV_EmitPings( sizebuf_t *msg )
 
 	MSG_BeginServerCmd( msg, svc_pings );
 
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( cl->state != cs_spawned )
 			continue;
@@ -677,7 +677,7 @@ void SV_UpdateToReliableMessages( void )
 	int		i;
 
 	// check for changes to be sent over the reliable streams to all clients
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( !cl->edict ) continue;	// not in game yet
 
@@ -722,7 +722,7 @@ void SV_UpdateToReliableMessages( void )
 	}
 
 	// now send the reliable and server datagrams to all clients.
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( cl->state < cs_connected || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;	// reliables go to all connected or spawned
@@ -783,7 +783,7 @@ void SV_SendClientMessages( void )
 	SV_UpdateToReliableMessages ();
 
 	// send a message to each connected client
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( !cl->state || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;
@@ -794,7 +794,7 @@ void SV_SendClientMessages( void )
 			continue;
 		}
 
-		if( !host_limitlocal->integer && NET_IsLocalAddress( cl->netchan.remote_address ))
+		if( !host_limitlocal->value && NET_IsLocalAddress( cl->netchan.remote_address ))
 			SetBits( cl->flags, FCL_SEND_NET_MESSAGE );
 
 		if( cl->state == cs_spawned )
@@ -819,7 +819,7 @@ void SV_SendClientMessages( void )
 			// If we haven't gotten a message in sv_failuretime seconds, then stop sending messages to this client
 			// until we get another packet in from the client. This prevents crash/drop and reconnect where they are
 			// being hosed with "sequenced packet without connection" packets.
-			if( sv_failuretime->value < ( host.realtime - cl->netchan.last_received ))
+			if( sv_failuretime.value < ( host.realtime - cl->netchan.last_received ))
 				ClearBits( cl->flags, FCL_SEND_NET_MESSAGE );
 		}
 
@@ -867,7 +867,7 @@ void SV_SendMessagesToAll( void )
 	if( sv.state == ss_dead )
 		return;
 
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( cl->state >= cs_connected )
 			SetBits( cl->flags, FCL_SEND_NET_MESSAGE );
@@ -891,7 +891,7 @@ void SV_SkipUpdates( void )
 	if( sv.state == ss_dead )
 		return;
 
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( cl->state != cs_spawned || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;
@@ -916,7 +916,7 @@ void SV_InactivateClients( void )
 		return;
 
 	// send a message to each connected client
-	for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( !cl->state || !cl->edict )
 			continue;

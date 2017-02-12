@@ -35,7 +35,7 @@ qboolean R_SpeedsMessage( char *out, size_t size )
 		// otherwise pass to default handler
 	}
 
-	if( r_speeds->integer <= 0 ) return false;
+	if( r_speeds->value <= 0 ) return false;
 	if( !out || !size ) return false;
 
 	Q_strncpy( out, r_speeds_msg, size );
@@ -65,10 +65,10 @@ void GL_BackendEndFrame( const ref_params_t *fd )
 	// go into 2D mode (in case we draw PlayerSetup between two 2d calls)
 	if( !RI.drawWorld ) R_Set2DMode( true );
 
-	if( r_speeds->integer <= 0 || !RI.drawWorld || fd->nextView )
+	if( r_speeds->value <= 0 || !RI.drawWorld || fd->nextView )
 		return;
 
-	switch( r_speeds->integer )
+	switch( (int)r_speeds->value )
 	{
 	case 1:
 		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i wpoly, %3i bpoly\n%3i epoly, %3i spoly",
@@ -458,7 +458,7 @@ void VID_ImageAdjustGamma( byte *in, uint width, uint height )
 	byte	r_gammaTable[256];	// adjust screenshot gamma
 	byte	*p = in;
 
-	if( !gl_compensate_gamma_screenshots->integer )
+	if( !gl_compensate_gamma_screenshots->value )
 		return;
 
 	// rebuild the gamma table	
@@ -530,11 +530,11 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 	switch( shot_type )
 	{
 	case VID_SCREENSHOT:
-		if( !gl_overview->integer )
+		if( !gl_overview->value )
 			VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // scrshot gamma
 		break;
 	case VID_SNAPSHOT:
-		if( !gl_overview->integer )
+		if( !gl_overview->value )
 			VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // scrshot gamma
 		FS_AllowDirectPaths( true );
 		break;
@@ -682,7 +682,7 @@ void R_ShowTextures( void )
 	static qboolean	showHelp = true;
 	string		shortname;
 
-	if( !gl_showtextures->integer )
+	if( !gl_showtextures->value )
 		return;
 
 	if( showHelp )
@@ -700,8 +700,8 @@ void R_ShowTextures( void )
 
 rebuild_page:
 	total = base_w * base_h;
-	start = total * (gl_showtextures->integer - 1);
-	end = total * gl_showtextures->integer;
+	start = total * (gl_showtextures->value - 1);
+	end = total * gl_showtextures->value;
 	if( end > MAX_TEXTURES ) end = MAX_TEXTURES;
 
 	w = glState.width / base_w;
@@ -716,10 +716,10 @@ rebuild_page:
 		if( pglIsTexture( image->texnum )) j++;
 	}
 
-	if( i == MAX_TEXTURES && gl_showtextures->integer != 1 )
+	if( i == MAX_TEXTURES && gl_showtextures->value != 1 )
 	{
 		// bad case, rewind to one and try again
-		Cvar_SetFloat( "r_showtextures", max( 1, gl_showtextures->integer - 1 ));
+		Cvar_SetValue( "r_showtextures", max( 1, gl_showtextures->value - 1 ));
 		if( ++numTries < 2 ) goto rebuild_page;	// to prevent infinite loop
 	}
 

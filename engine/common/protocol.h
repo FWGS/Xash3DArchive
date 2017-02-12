@@ -53,7 +53,7 @@ GNU General Public License for more details.
 #define svc_eventindex		31	// [index][eventname]
 #define svc_cdtrack			32	// [string] trackname
 #define svc_restore			33	// [string] savename
-#define svc_serverinfo		34	// [string] key [string] value
+// reserved
 #define svc_weaponanim		35	// [byte]iAnim [byte]body
 #define svc_bspdecal		36	// [float*3][short][short][short]
 #define svc_roomtype		37	// [short] room type
@@ -69,7 +69,7 @@ GNU General Public License for more details.
 #define svc_crosshairangle		47	// [byte][byte]
 #define svc_soundfade		48	// [float*4] sound fade parms
 #define svc_filetxferfailed		49	// [string]
-#define svc_hltv			50
+#define svc_hltv			50	// sending from the game.dll
 #define svc_director		51	// <variable sized>
 #define svc_studiodecal		52	// [float*3][float*3][short][short][byte]
 #define svc_voicedata		53	// [byte][short][...]
@@ -87,7 +87,7 @@ GNU General Public License for more details.
 #define clc_stringcmd		3	// [string] message
 #define clc_delta			4	// [byte] sequence number, requests delta compression of message
 #define clc_resourcelist		5
-#define clc_userinfo		6	// [[userinfo string]
+// reserved
 #define clc_fileconsistency		7
 #define clc_voicedata		8
 #define clc_requestcvarvalue		9
@@ -149,6 +149,12 @@ GNU General Public License for more details.
 #define FDECAL_USESAXIS		0x20	// Uses the s axis field to determine orientation (footprints)
 #define FDECAL_STUDIO		0x40	// Indicates a studio decal
 #define FDECAL_LOCAL_SPACE		0x80	// decal is in local space (any decal after serialization)
+
+// game type
+#define GAME_SINGLEPLAYER		0
+#define GAME_DEATHMATCH		1
+#define GAME_COOP			2
+#define GAME_TEAMPLAY		4
 
 // Max number of history commands to send ( 2 by default ) in case of dropped packets
 #define NUM_BACKUP_COMMAND_BITS	4

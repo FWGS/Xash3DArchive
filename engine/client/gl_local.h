@@ -655,8 +655,6 @@ extern convar_t	*gl_nosort;
 extern convar_t	*gl_clear;
 extern convar_t	*gl_test;		// cvar to testify new effects
 
-extern convar_t	*r_width;
-extern convar_t	*r_height;
 extern convar_t	*r_speeds;
 extern convar_t	*r_fullbright;
 extern convar_t	*r_norefresh;

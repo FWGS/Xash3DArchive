@@ -329,7 +329,7 @@ void CL_SetSolidPlayers( int playernum )
 	physent_t		*pe;
 	int		i;
 
-	if( !cl_solid_players->integer )
+	if( !cl_solid_players->value )
 		return;
 
 	for( i = 0; i < cl.maxclients; i++ )
@@ -875,7 +875,7 @@ void CL_SetupPMove( playermove_t *pmove, local_state_t *from, usercmd_t *ucmd, q
 	pmove->waterjumptime = cd->waterjumptime;
 	pmove->dead = (cd->health <= 0.0f ) ? true : false;
 	pmove->deadflag = cd->deadflag;
-	pmove->spectator = (ps->spectator != 0);
+	pmove->spectator = (cls.spectator != 0);
 	pmove->movetype = ps->movetype;
 	pmove->onground = ps->onground;
 	pmove->waterlevel = cd->waterlevel;
@@ -1014,7 +1014,7 @@ void CL_CheckPredictionError( void )
 	// save the prediction error for interpolation
 	if( FBitSet( cl.frame.client.flags, EF_NOINTERP ) || ( len > ( maxspd * 2.0f )))
 	{
-		if( cl_showerror->integer && ( len > ( maxspd * 2.0f )) && host.developer >= D_ERROR )
+		if( cl_showerror->value && ( len > ( maxspd * 2.0f )) && host.developer >= D_ERROR )
 			MsgDev( D_INFO, "CL_Predict: player teleported on %i: %g > %g\n", cl.parsecount, len, ( maxspd * 2.0f ));
 
 		// a teleport or something or gamepaused
@@ -1022,7 +1022,7 @@ void CL_CheckPredictionError( void )
 	}
 	else
 	{
-		if( cl_showerror->integer && len > 0.25f && host.developer >= D_ERROR )
+		if( cl_showerror->value && len > 0.25f && host.developer >= D_ERROR )
 			MsgDev( D_INFO, "CL_Predict: prediction error on %i: %g\n", cl.parsecount, len );
 
 		VectorCopy( cl.frame.playerstate[cl.playernum].origin, cl.predicted.origins[frame] );
@@ -1103,7 +1103,7 @@ void CL_PredictMovement( void )
 		// fake prediction code
 		// we need to perform cl_lw prediction while cl_predict is disabled
 		// because cl_lw is enabled by default in Half-Life
-		if( !cl_lw->integer )
+		if( !cl_lw->value )
 		{
 			cl.predicted.viewmodel = cl.frame.client.viewmodel;
 			return;
@@ -1276,7 +1276,7 @@ void CL_PredictMovement( void )
 			cl.predicted.correction_time = cl.predicted.correction_time - host.frametime;
 
 			if( cl_smoothtime->value <= 0 )
-				Cvar_SetFloat( "cl_smoothtime", 0.1 );
+				Cvar_SetValue( "cl_smoothtime", 0.1 );
 
 			if( cl.predicted.correction_time < 0 )
 				cl.predicted.correction_time = 0;

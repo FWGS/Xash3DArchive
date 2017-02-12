@@ -180,7 +180,7 @@ static void CL_DrawSegs( int modelIndex, float frame, int rendermode, const vec3
 	HSPRITE	m_hSprite;
 	beamseg_t	curSeg;
 
-	if( !cl_draw_beams->integer )
+	if( !cl_draw_beams->value )
 		return;
 	
 	m_hSprite = R_GetSpriteTexture( Mod_Handle( modelIndex ), frame );

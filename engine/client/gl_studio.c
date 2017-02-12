@@ -140,24 +140,24 @@ void R_StudioInit( void )
 {
 	float	pixelAspect, fov_x = 90.0f, fov_y;
 
-	r_studio_lambert = Cvar_Get( "r_studio_lambert", "2", CVAR_ARCHIVE, "bonelighting lambert value" );
-	r_studio_lerping = Cvar_Get( "r_studio_lerping", "1", CVAR_ARCHIVE, "enables studio animation lerping" );
+	r_studio_lambert = Cvar_Get( "r_studio_lambert", "2", FCVAR_ARCHIVE, "bonelighting lambert value" );
+	r_studio_lerping = Cvar_Get( "r_studio_lerping", "1", FCVAR_ARCHIVE, "enables studio animation lerping" );
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
-	cl_himodels = Cvar_Get( "cl_himodels", "1", CVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
-	r_studio_lighting = Cvar_Get( "r_studio_lighting", "1", CVAR_ARCHIVE, "studio lighting models ( 0 - normal, 1 - extended, 2 - experimental )" );
-	r_studio_sort_textures = Cvar_Get( "r_studio_sort_textures", "0", CVAR_ARCHIVE, "sort additive and normal textures for right drawing" );
+	cl_himodels = Cvar_Get( "cl_himodels", "1", FCVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
+	r_studio_lighting = Cvar_Get( "r_studio_lighting", "1", FCVAR_ARCHIVE, "studio lighting models ( 0 - normal, 1 - extended, 2 - experimental )" );
+	r_studio_sort_textures = Cvar_Get( "r_studio_sort_textures", "0", FCVAR_ARCHIVE, "sort additive and normal textures for right drawing" );
 
 	// NOTE: some mods with custom studiomodel renderer may cause error when menu trying draw player model out of the loaded game
-	r_customdraw_playermodel = Cvar_Get( "r_customdraw_playermodel", "0", CVAR_ARCHIVE, "allow to drawing playermodel in menu with client renderer" );
+	r_customdraw_playermodel = Cvar_Get( "r_customdraw_playermodel", "0", FCVAR_ARCHIVE, "allow to drawing playermodel in menu with client renderer" );
 
 	// recalc software X and Y alias scale (this stuff is used only by HL software renderer but who knews...)
-	pixelAspect = ((float)scr_height->integer / (float)scr_width->integer);
-	if( scr_width->integer < 640 )
+	pixelAspect = ((float)scr_height->value / (float)scr_width->value);
+	if( scr_width->value < 640 )
 		pixelAspect *= (320.0f / 240.0f);
 	else pixelAspect *= (640.0f / 480.0f);
 
-	fov_y = V_CalcFov( &fov_x, scr_width->integer, scr_height->integer );
-	aliasXscale = (float)scr_width->integer / fov_y; // stub
+	fov_y = V_CalcFov( &fov_x, scr_width->value, scr_height->value );
+	aliasXscale = (float)scr_width->value / fov_y; // stub
 	aliasYscale = aliasXscale * pixelAspect;
 
 	Matrix3x4_LoadIdentity( g_aliastransform );
@@ -473,7 +473,7 @@ qboolean R_CullStudioModel( cl_entity_t *e )
 	if( !e || !e->model || !e->model->cache.data )
 		return true;
 
-	if( e == &clgame.viewent && ( r_lefthand->integer >= 2 || gl_overview->integer ))
+	if( e == &clgame.viewent && ( r_lefthand->value >= 2 || gl_overview->value ))
 		return true; // hidden
 
 	if( !R_StudioComputeBBox( e, NULL ))
@@ -580,7 +580,7 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 
 	Matrix3x4_CreateFromEntity( g_rotationmatrix, angles, origin, 1.0f );
 
-	if( e == &clgame.viewent && r_lefthand->integer == 1 )
+	if( e == &clgame.viewent && r_lefthand->value == 1 )
 	{
 		// inverse the right vector (should work in Opposing Force)
 		g_rotationmatrix[0][1] = -g_rotationmatrix[0][1];
@@ -1465,7 +1465,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	plight = &g_studiolight;
 	plight->numdlights = 0;	// clear previous dlights
 
-	if( r_studio_lighting->integer == 2 )
+	if( r_studio_lighting->value == 2 )
 	{
 		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
 
@@ -1505,7 +1505,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	lightinfo->shadelight = (ambient.r + ambient.g + ambient.b) / 3;
 	lightinfo->ambientlight = lightinfo->shadelight;
 
-	if( !ent || !ent->model || !r_dynamic->integer )
+	if( !ent || !ent->model || !r_dynamic->value )
 		return;
 
 	for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
@@ -1577,13 +1577,13 @@ void R_StudioEntityLight( alight_t *lightinfo )
 
 	ent = RI.currententity;
 
-	if( !ent || !ent->model || !r_dynamic->integer )
+	if( !ent || !ent->model || !r_dynamic->value )
 		return;
 
 	plight = &g_studiolight;
 	plight->numelights = 0;	// clear previous elights
 
-	if( r_studio_lighting->integer == 2 )
+	if( r_studio_lighting->value == 2 )
 	{
 		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
 
@@ -1997,7 +1997,7 @@ static void R_StudioDrawPoints( void )
 		}
 	}
 
-	if( r_studio_sort_textures->integer )
+	if( r_studio_sort_textures->value )
 	{
 		// sort opaque and translucent for right results
 		qsort( g_sortedMeshes, m_pSubModel->nummesh, sizeof( sortedmesh_t ), R_StudioMeshCompare );
@@ -2184,7 +2184,7 @@ static void R_StudioDrawHulls( void )
 	int	i, j;
 	float	alpha;
 
-	if( r_drawentities->integer == 4 )
+	if( r_drawentities->value == 4 )
 		alpha = 0.5f;
 	else alpha = 1.0f;
 
@@ -2753,11 +2753,11 @@ void R_StudioRenderFinal( void )
 	rendermode = R_StudioGetForceFaceFlags() ? kRenderTransAdd : RI.currententity->curstate.rendermode;
 	R_StudioSetupRenderer( rendermode );
 	
-	if( r_drawentities->integer == 2 )
+	if( r_drawentities->value == 2 )
 	{
 		R_StudioDrawBones();
 	}
-	else if( r_drawentities->integer == 3 )
+	else if( r_drawentities->value == 3 )
 	{
 		R_StudioDrawHulls();
 	}
@@ -2773,19 +2773,19 @@ void R_StudioRenderFinal( void )
 		}
 	}
 
-	if( r_drawentities->integer == 4 )
+	if( r_drawentities->value == 4 )
 	{
 		GL_SetRenderMode( kRenderTransAdd );
 		R_StudioDrawHulls( );
 		GL_SetRenderMode( kRenderNormal );
 	}
 
-	if( r_drawentities->integer == 5 )
+	if( r_drawentities->value == 5 )
 	{
 		R_StudioDrawAbsBBox( );
 	}
 
-	if( r_drawentities->integer == 6 )
+	if( r_drawentities->value == 6 )
 	{
 		R_StudioDrawAttachments();
 	}
@@ -3063,7 +3063,7 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 
 	if( flags & STUDIO_RENDER )
 	{
-		if( cl_himodels->integer && RI.currentmodel != RI.currententity->model  )
+		if( cl_himodels->value && RI.currentmodel != RI.currententity->model  )
 		{
 			// show highest resolution multiplayer model
 			RI.currententity->curstate.body = 255;
@@ -3250,14 +3250,14 @@ void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 
 	if( e == &clgame.viewent )
 		m_fDoInterp = true;	// viewmodel can't properly animate without lerping
-	else if( r_studio_lerping->integer )
+	else if( r_studio_lerping->value )
 		m_fDoInterp = (e->curstate.effects & EF_NOINTERP) ? false : true;
 	else m_fDoInterp = false;
 
 	prevFrame = e->latched.prevframe;
 
 	// prevent to crash some mods like HLFX in menu Customize
-	if( !RI.drawWorld && !r_customdraw_playermodel->integer )
+	if( !RI.drawWorld && !r_customdraw_playermodel->value )
 	{
 		if( e->player )
 			result = R_StudioDrawPlayer( flags, &e->curstate );
@@ -3336,7 +3336,7 @@ R_DrawViewModel
 */
 void R_DrawViewModel( void )
 {
-	if( RI.refdef.onlyClientDraw || r_drawviewmodel->integer == 0 )
+	if( RI.refdef.onlyClientDraw || r_drawviewmodel->value == 0 )
 		return;
 
 	// ignore in thirdperson, camera view or client is died
@@ -3359,7 +3359,7 @@ void R_DrawViewModel( void )
 	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
 
 	// backface culling for left-handed weapons
-	if( r_lefthand->integer == 1 || g_iBackFaceCull )
+	if( r_lefthand->value == 1 || g_iBackFaceCull )
 		GL_FrontFace( !glState.frontFace );
 
 	if( !cl.weaponstarttime ) cl.weaponstarttime = cl.time;
@@ -3372,7 +3372,7 @@ void R_DrawViewModel( void )
 	pglDepthRange( gldepthmin, gldepthmax );
 
 	// backface culling for left-handed weapons
-	if( r_lefthand->integer == 1 || g_iBackFaceCull )
+	if( r_lefthand->value == 1 || g_iBackFaceCull )
 		GL_FrontFace( !glState.frontFace );
 
 	RI.currententity = NULL;

@@ -184,7 +184,7 @@ void NetGraph_DrawTimes( wrect_t rect, int x, int w )
 	rgba_t	colors = { 0.9 * 255, 0.9 * 255, 0.7 * 255, 255 };
 	wrect_t	fill;
 
-	Con_DrawString( pt.x, pt.y, va( "%i/s", cl_cmdrate->integer ), colors );
+	Con_DrawString( pt.x, pt.y, va( "%i/s", cl_cmdrate->value ), colors );
 
 	for( a = 0; a < w; a++ )
 	{
@@ -267,19 +267,19 @@ void NetGraph_DrawTextFields( int x, int y, int count, float avg, int packet_los
 	float		latency = count > 0 ? Q_max( 0,  avg / count - 0.5 * host.frametime - 1000.0 / cl_updaterate->value ) : 0;
 	float		framerate = 1.0 / host.realframetime;
 
-	Con_DrawString( x, y - net_graphheight->integer, va( "%.1f fps" , framerate ), colors );
-	Con_DrawString( x + 75, y - net_graphheight->integer, va( "%i ms" , (int)latency ), colors );
-	Con_DrawString( x + 150, y - net_graphheight->integer, va( "%i/s" , cl_updaterate->integer ), colors );
+	Con_DrawString( x, y - net_graphheight->value, va( "%.1f fps" , framerate ), colors );
+	Con_DrawString( x + 75, y - net_graphheight->value, va( "%i ms" , (int)latency ), colors );
+	Con_DrawString( x + 150, y - net_graphheight->value, va( "%i/s" , cl_updaterate->value ), colors );
 
 	if( netstat_cmdinfo[i].size )
 		lastout = netstat_cmdinfo[i].size;
 
-	Con_DrawString( x, y - net_graphheight->integer + 15, va( "in :  %i %.2f k/s", netstat_graph[i].msgbytes, cls.netchan.flow[FLOW_INCOMING].avgkbytespersec ), colors );
+	Con_DrawString( x, y - net_graphheight->value + 15, va( "in :  %i %.2f k/s", netstat_graph[i].msgbytes, cls.netchan.flow[FLOW_INCOMING].avgkbytespersec ), colors );
 
-	Con_DrawString( x, y - net_graphheight->integer + 30, va( "out:  %i %.2f k/s", lastout, cls.netchan.flow[FLOW_OUTGOING].avgkbytespersec ), colors );
+	Con_DrawString( x, y - net_graphheight->value + 30, va( "out:  %i %.2f k/s", lastout, cls.netchan.flow[FLOW_OUTGOING].avgkbytespersec ), colors );
 
-	if( net_graph->integer > 2 )
-		Con_DrawString( x, y - net_graphheight->integer + 45, va( "loss: %i choke: %i", packet_loss, packet_choke ), colors );
+	if( net_graph->value > 2 )
+		Con_DrawString( x, y - net_graphheight->value + 45, va( "loss: %i choke: %i", packet_loss, packet_choke ), colors );
 
 }
 
@@ -296,7 +296,7 @@ int NetGraph_DrawDataSegment( wrect_t *fill, int bytes, byte r, byte g, byte b, 
 
 	fill->top -= h;
 
-	if( net_graphfillsegments->integer )
+	if( net_graphfillsegments->value )
 		fill->bottom = h;
 	else fill->bottom = 1;
 
@@ -383,7 +383,7 @@ void NetGraph_DrawDataUsage( int x, int y, int w, int maxmsgbytes )
 
 		NetGraph_DrawRect( &fill, color );
 
-		if( net_graph->integer < 2 )
+		if( net_graph->value < 2 )
 			continue;
 
 		fill.top = y - net_graphheight->value - 1;
@@ -431,7 +431,7 @@ void NetGraph_DrawDataUsage( int x, int y, int w, int maxmsgbytes )
 		NetGraph_DrawRect( &fill, color );
 	}
 
-	if( net_graph->integer >= 2 )
+	if( net_graph->value >= 2 )
 		NetGraph_DrawHatches( x, y - net_graphheight->value - 1, maxmsgbytes );
 }
 
@@ -447,12 +447,12 @@ void NetGraph_GetScreenPos( wrect_t *rect, int *w, int *x, int *y )
 	rect->right = clgame.scrInfo.iWidth;
 	rect->bottom = clgame.scrInfo.iHeight;
 
-	*w = Q_min( NET_TIMINGS, net_graphwidth->integer );
+	*w = Q_min( NET_TIMINGS, net_graphwidth->value );
 	if( rect->right < *w + 10 )
 		*w = rect->right - 10;
 
 	// detect x and y position
-	switch( net_graphpos->integer )
+	switch( (int)net_graphpos->value )
 	{
 	case 1: // right sided
 		*x = rect->left + rect->right - 5 - *w;
@@ -482,17 +482,17 @@ void SCR_DrawNetGraph( void )
 	int	maxmsgbytes;
 	int	w, x, y;
 
-	if( !net_graph->integer )
+	if( !net_graph->value )
 		return;
 
 	if( net_scale->value <= 0 )
-		Cvar_SetFloat( "net_scale", 0.1f );
+		Cvar_SetValue( "net_scale", 0.1f );
 
 	NetGraph_GetScreenPos( &rect, &w, &x, &y );
 
 	NetGraph_GetFrameData( &maxmsgbytes, &avg_ping, &ping_count );
 
-	if( net_graph->integer < 3 )
+	if( net_graph->value < 3 )
 	{
 		NetGraph_DrawTimes( rect, x, w );
 		NetGraph_DrawDataUsage( x, y, w, maxmsgbytes );
@@ -503,12 +503,12 @@ void SCR_DrawNetGraph( void )
 
 void CL_InitNetgraph( void )
 {
-	net_graph = Cvar_Get( "net_graph", "0", CVAR_ARCHIVE, "draw network usage graph" );
-	net_graphpos = Cvar_Get( "net_graphpos", "1", CVAR_ARCHIVE, "network usage graph position" );
-	net_scale = Cvar_Get( "net_scale", "5", CVAR_ARCHIVE, "network usage graph scale level" );
-	net_graphwidth = Cvar_Get( "net_graphwidth", "192", CVAR_ARCHIVE, "network usage graph width" );
-	net_graphheight = Cvar_Get( "net_graphheight", "64", CVAR_ARCHIVE, "network usage graph height" );
-	net_graphfillsegments = Cvar_Get( "net_graphfillsegments", "1", CVAR_ARCHIVE, "fill segments in network usage graph" );
+	net_graph = Cvar_Get( "net_graph", "0", FCVAR_ARCHIVE, "draw network usage graph" );
+	net_graphpos = Cvar_Get( "net_graphpos", "1", FCVAR_ARCHIVE, "network usage graph position" );
+	net_scale = Cvar_Get( "net_scale", "5", FCVAR_ARCHIVE, "network usage graph scale level" );
+	net_graphwidth = Cvar_Get( "net_graphwidth", "192", FCVAR_ARCHIVE, "network usage graph width" );
+	net_graphheight = Cvar_Get( "net_graphheight", "64", FCVAR_ARCHIVE, "network usage graph height" );
+	net_graphfillsegments = Cvar_Get( "net_graphfillsegments", "1", FCVAR_ARCHIVE, "fill segments in network usage graph" );
 	packet_loss = packet_choke = 0.0;
 
 	NetGraph_InitColors();

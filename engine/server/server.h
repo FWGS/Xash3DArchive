@@ -355,16 +355,21 @@ typedef struct
 	qboolean		initialized;		// sv_init has completed
 	double		timestart;		// just for profiling
 
+	int		maxclients;		// server max clients
+
 	int		groupmask;
 	int		groupop;
+
+	char		serverinfo[MAX_SERVERINFO_STRING];
+	char		localinfo[MAX_LOCALINFO_STRING];
 
 	double		changelevel_next_time;	// don't execute multiple changelevels at once time
 	int		spawncount;		// incremented each server start
 						// used to check late spawns
-	sv_client_t	*clients;			// [sv_maxclients->integer]
+	sv_client_t	*clients;			// [svs.maxclients]
 	sv_client_t	*currentPlayer;		// current client who network message sending on
 	int		currentPlayerNum;		// for easy acess to some global arrays
-	int		num_client_entities;	// sv_maxclients->integer*UPDATE_BACKUP*MAX_PACKET_ENTITIES
+	int		num_client_entities;	// svs.maxclients*UPDATE_BACKUP*MAX_PACKET_ENTITIES
 	int		next_client_entities;	// next client_entity to use
 	entity_state_t	*packet_entities;		// [num_client_entities]
 	entity_state_t	*baselines;		// [GI->max_edicts]
@@ -380,52 +385,55 @@ extern	server_t		sv;			// local server
 extern	svgame_static_t	svgame;			// persistant game info
 extern	areanode_t	sv_areanodes[];		// AABB dynamic tree
 
+extern convar_t		sv_lan;
+extern convar_t		sv_lan_rate;
+extern convar_t		sv_unlag;
+extern convar_t		sv_maxunlag;
+extern convar_t		sv_unlagpush;
+extern convar_t		sv_unlagsamples;
+extern convar_t		rcon_password;
+extern convar_t		sv_instancedbaseline;
+extern convar_t		sv_minupdaterate;
+extern convar_t		sv_maxupdaterate;
+extern convar_t		sv_newunit;
+extern convar_t		sv_clienttrace;
+extern convar_t		sv_failuretime;
+extern convar_t		sv_send_resources;
+extern convar_t		sv_send_logos;
+extern convar_t		sv_allow_upload;
+extern convar_t		sv_allow_download;
+extern convar_t		sv_airaccelerate;
+extern convar_t		sv_accelerate;
+extern convar_t		sv_friction;
+extern convar_t		sv_edgefriction;
+extern convar_t		sv_gravity;
+extern convar_t		sv_stopspeed;
+extern convar_t		sv_maxspeed;
+extern convar_t		sv_stepsize;
+extern convar_t		sv_maxvelocity;
+extern convar_t		sv_rollangle;
+extern convar_t		sv_rollspeed;
+extern convar_t		sv_skyname;
+extern convar_t		sv_skyspeed;
+extern convar_t		sv_skyangle;
+extern convar_t		sv_consistency;
+extern convar_t		deathmatch;
+extern convar_t		skill;
+extern convar_t		coop;
+
 extern	convar_t		*sv_pausable;		// allows pause in multiplayer
-extern	convar_t		*sv_newunit;
-extern	convar_t		*sv_airaccelerate;
-extern	convar_t		*sv_accelerate;
-extern	convar_t		*sv_friction;
-extern	convar_t		*sv_edgefriction;
-extern	convar_t		*sv_maxvelocity;
-extern	convar_t		*sv_gravity;
-extern	convar_t		*sv_stopspeed;
 extern	convar_t		*sv_check_errors;
 extern	convar_t		*sv_reconnect_limit;
 extern	convar_t		*sv_lighting_modulate;
-extern	convar_t		*rcon_password;
 extern	convar_t		*hostname;
-extern	convar_t		*sv_stepsize;
-extern	convar_t		*sv_rollangle;
-extern	convar_t		*sv_rollspeed;
-extern	convar_t		*sv_maxspeed;
 extern	convar_t		*sv_maxclients;
-extern	convar_t		*sv_skyname;
-extern	convar_t		*serverinfo;
-extern	convar_t		*sv_failuretime;
-extern	convar_t		*sv_unlag;
 extern	convar_t		*sv_novis;
-extern	convar_t		*sv_maxunlag;
-extern	convar_t		*sv_unlagpush;
-extern	convar_t		*sv_unlagsamples;
-extern	convar_t		*sv_allow_upload;
-extern	convar_t		*sv_allow_download;
 extern	convar_t		*sv_allow_studio_attachment_angles;
 extern	convar_t		*sv_allow_rotate_pushables;
-extern	convar_t		*sv_clienttrace;
-extern	convar_t		*sv_send_resources;
-extern	convar_t		*sv_send_logos;
 extern	convar_t		*sv_sendvelocity;
-extern	convar_t		*sv_skyspeed;
-extern	convar_t		*sv_skyangle;
 extern	convar_t		*sv_quakehulls;
 extern	convar_t		*sv_validate_changelevel;
-extern	convar_t		*mp_consistency;
 extern	convar_t		*public_server;
-extern	convar_t		*physinfo;
-extern	convar_t		*deathmatch;
-extern	convar_t		*teamplay;
-extern	convar_t		*skill;
-extern	convar_t		*coop;
 
 //===========================================================
 //
@@ -493,7 +501,7 @@ void SV_WaterMove( edict_t *ent );
 void SV_SendClientMessages( void );
 void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... );
 void SV_BroadcastPrintf( sv_client_t *ignore, int level, char *fmt, ... );
-void SV_BroadcastCommand( char *fmt, ... );
+void SV_BroadcastCommand( const char *fmt, ... );
 
 //
 // sv_client.c
@@ -585,6 +593,7 @@ byte *pfnSetFatPAS( const float *org );
 int pfnPrecacheModel( const char *s );
 int pfnNumberOfEntities( void );
 void SV_RestartStaticEnts( void );
+char *SV_Localinfo( void );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 {

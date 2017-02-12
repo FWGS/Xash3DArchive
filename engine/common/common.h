@@ -35,6 +35,8 @@ extern "C" {
 
 #define MAX_STRING		256	// generic string
 #define MAX_INFO_STRING	256	// infostrings are transmitted across network
+#define MAX_SERVERINFO_STRING	512	// server handles too many settings. expand to 1024?
+#define MAX_LOCALINFO_STRING	32768	// localinfo used on server and not sended to the clients
 #define MAX_SYSPATH		1024	// system filepath
 #define MAX_PRINT_MSG	8192	// how many symbols can handle single call of Msg or MsgDev
 #define MAX_MODS		512	// environment games that engine can keep visible
@@ -54,7 +56,7 @@ extern "C" {
 #define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
 #define ColorIndex( c )	((( c ) - '0' ) & 7 )
 
-#define Mod_AllowMaterials()	( mod_allow_materials != NULL && mod_allow_materials->integer && !( host.features & ENGINE_DISABLE_HDTEXTURES ))
+#define Mod_AllowMaterials()	( mod_allow_materials != NULL && (int)mod_allow_materials->value && !( host.features & ENGINE_DISABLE_HDTEXTURES ))
 
 typedef unsigned long	dword;
 typedef unsigned int	uint;
@@ -62,6 +64,8 @@ typedef char		string[MAX_STRING];
 typedef struct file_s	file_t;		// normal file
 typedef struct wfile_s	wfile_t;		// wad file
 typedef struct stream_s	stream_t;		// sound stream for background music playing
+
+typedef void (*setpair_t)( const char *key, const char *value, void *buffer, void *numpairs );
 
 typedef struct
 {
@@ -89,6 +93,7 @@ typedef enum
 #include "ref_params.h"
 #include "com_model.h"
 #include "crtlib.h"
+#include "cvar.h"
 
 #define XASH_VERSION	0.98f		// engine current version
 
@@ -322,6 +327,7 @@ typedef struct host_parm_s
 	int		old_developer;	// keep real dev state (we need enable dev-mode in multiplayer)
 	qboolean		key_overstrike;	// key overstrike mode
 	qboolean		stuffcmdsrun;	// execute stuff commands
+	qboolean		allow_cheats;	// this host will allow cheating
 	qboolean		con_showalways;	// show console always (developer and dedicated)
 	qboolean		com_handlecolon;	// allow COM_ParseFile to handle colon as single char
 	qboolean		change_game;	// initialize when game is changed
@@ -333,6 +339,11 @@ typedef struct host_parm_s
 	qboolean		force_draw_version;	// used when fraps is loaded
 	qboolean		write_to_clipboard;	// put image to clipboard instead of disk
 	qboolean		crashed;		// set to true if crashed
+
+	// some settings were changed and needs to global update
+	qboolean		userinfo_changed;
+	qboolean		movevars_changed;
+	qboolean		renderinfo_changed;
 
 	char		rootdir[256];	// member root directory
 	char		gamefolder[64];	// it's a default gamefolder	
@@ -673,6 +684,8 @@ qboolean SV_Active( void );
 
 ==============================================================
 */
+void pfnCvar_RegisterServerVariable( cvar_t *variable );
+void pfnCvar_RegisterEngineVariable( cvar_t *variable );
 cvar_t *pfnCvar_RegisterClientVariable( const char *szName, const char *szValue, int flags );
 cvar_t *pfnCvar_RegisterGameUIVariable( const char *szName, const char *szValue, int flags );
 char *COM_MemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
@@ -686,6 +699,7 @@ void *Cache_Check( byte *mempool, struct cache_user_s *c );
 void COM_TrimSpace( const char *source, char *dest );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 void pfnGetModelBounds( model_t *mod, float *mins, float *maxs );
+void pfnCVarDirectSet( cvar_t *var, const char *szValue );
 void pfnGetGameDir( char *szGetGameDir );
 int pfnDecalIndex( const char *m );
 int pfnGetModelType( model_t *mod );
@@ -786,6 +800,7 @@ qboolean CL_IsInMenu( void );
 qboolean CL_IsInConsole( void );
 qboolean CL_IsThirdPerson( void );
 qboolean CL_IsIntermission( void );
+char *CL_Userinfo( void );
 float CL_GetServerTime( void );
 float CL_GetLerpFrac( void );
 void CL_CharEvent( int key );
@@ -803,7 +818,9 @@ void SV_StartMusic( const char *curtrack, const char *looptrack, long position )
 void SV_CreateDecal( struct sizebuf_s *msg, const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags, float scale );
 void SV_CreateStudioDecal( struct sizebuf_s *msg, const float *origin, const float *start, int decalIndex, int entityIndex, int modelIndex,
 int flags, struct modelstate_s *state );
+void Log_Printf( const char *fmt, ... );
 struct sizebuf_s *SV_GetReliableDatagram( void );
+void SV_BroadcastCommand( const char *fmt, ... );
 qboolean SV_RestoreCustomDecal( struct decallist_s *entry, edict_t *pEdict, qboolean adjacent );
 void SV_BroadcastPrintf( struct sv_client_s *ignore, int level, char *fmt, ... );
 int R_CreateDecalList( struct decallist_s *pList, qboolean changelevel );
@@ -813,6 +830,7 @@ qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *posi
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
+void CL_ServerCommand( qboolean reliable, char *fmt, ... );
 const char *CL_MsgInfo( int cmd );
 void SV_DrawDebugTriangles( void );
 void SV_DrawOrthoTriangles( void );
@@ -838,6 +856,7 @@ void CL_Disconnect( void );
 void CL_ClearEdicts( void );
 void CL_Crashed( void );
 qboolean CL_NextDemo( void );
+char *SV_Serverinfo( void );
 void CL_Drop( void );
 void SCR_Init( void );
 void SCR_UpdateScreen( void );
@@ -854,12 +873,11 @@ void UI_NXPrintf( struct con_nprint_s *info, char *fmt, ... );
 char *Info_ValueForKey( const char *s, const char *key );
 void Info_RemovePrefixedKeys( char *start, char prefix );
 qboolean Info_RemoveKey( char *s, const char *key );
-qboolean Info_SetValueForKey( char *s, const char *key, const char *value );
+qboolean Info_SetValueForKey( char *s, const char *key, const char *value, int maxsize );
 qboolean Info_SetValueForStarKey( char *s, const char *key, const char *value, int maxsize );
-qboolean Info_Validate( const char *s );
+qboolean Info_IsValid( const char *s );
+void Info_WriteVars( file_t *f );
 void Info_Print( const char *s );
-char *Cvar_Userinfo( void );
-char *Cvar_Serverinfo( void );
 void Cmd_WriteVariables( file_t *f );
 qboolean Cmd_CheckMapsList( qboolean fRefresh );
 qboolean Cmd_AutocompleteName( const char *source, char *buffer, size_t bufsize );
@@ -876,7 +894,6 @@ struct cmd_s *Cmd_GetFirstFunctionHandle( void );
 struct cmd_s *Cmd_GetNextFunctionHandle( struct cmd_s *cmd );
 struct cmdalias_s *Cmd_AliasGetList( void );
 char *Cmd_GetName( struct cmd_s *cmd );
-cvar_t *Cvar_GetList( void );
 void Cmd_Null_f( void );
 extern const char *svc_strings[256];
 extern const char *clc_strings[11];

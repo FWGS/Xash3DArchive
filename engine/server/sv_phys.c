@@ -70,7 +70,7 @@ void SV_CheckAllEnts( void )
 	edict_t		*e;
 	int		i;
 
-	if( !sv_check_errors->integer || sv.state != ss_active )
+	if( !sv_check_errors->value || sv.state != ss_active )
 		return;
 
 	if(( nextcheck - Sys_DoubleTime()) > 0.0 )
@@ -141,15 +141,15 @@ void SV_CheckVelocity( edict_t *ent )
 			ent->v.origin[i] = 0.0f;
 		}
 
-		if( ent->v.velocity[i] > sv_maxvelocity->value )
+		if( ent->v.velocity[i] > sv_maxvelocity.value )
 		{
 			MsgDev( D_INFO, "Got a velocity too high on %s\n", STRING( ent->v.classname ));
-			ent->v.velocity[i] = sv_maxvelocity->value;
+			ent->v.velocity[i] = sv_maxvelocity.value;
 		}
-		else if( ent->v.velocity[i] < -sv_maxvelocity->value )
+		else if( ent->v.velocity[i] < -sv_maxvelocity.value )
 		{
 			MsgDev( D_INFO, "Got a velocity too low on %s\n", STRING( ent->v.classname ));
-			ent->v.velocity[i] = -sv_maxvelocity->value;
+			ent->v.velocity[i] = -sv_maxvelocity.value;
 		}
 	}
 }
@@ -303,7 +303,7 @@ void SV_AngularMove( edict_t *ent, float frametime, float friction )
 	VectorMA( ent->v.angles, frametime, ent->v.avelocity, ent->v.angles );
 	if( friction == 0.0f ) return;
 
-	adjustment = frametime * (sv_stopspeed->value / 10.0f) * sv_friction->value * fabs( friction );
+	adjustment = frametime * (sv_stopspeed.value / 10.0f) * sv_friction.value * fabs( friction );
 
 	for( i = 0; i < 3; i++ )
 	{
@@ -337,7 +337,7 @@ void SV_LinearMove( edict_t *ent, float frametime, float friction )
 	VectorMA( ent->v.origin, frametime, ent->v.velocity, ent->v.origin );
 	if( friction == 0.0f ) return;
 
-	adjustment = frametime * (sv_stopspeed->value / 10.0f) * sv_friction->value * fabs( friction );
+	adjustment = frametime * (sv_stopspeed.value / 10.0f) * sv_friction.value * fabs( friction );
 
 	for( i = 0; i < 3; i++ )
 	{
@@ -705,7 +705,7 @@ void SV_AddGravity( edict_t *ent )
 	else ent_gravity = 1.0f;
 
 	// add gravity incorrectly
-	ent->v.velocity[2] -= ( ent_gravity * sv_gravity->value * sv.frametime );
+	ent->v.velocity[2] -= ( ent_gravity * sv_gravity.value * sv.frametime );
 	ent->v.velocity[2] += ( ent->v.basevelocity[2] * sv.frametime );
 	ent->v.basevelocity[2] = 0.0f;
 
@@ -728,7 +728,7 @@ void SV_AddHalfGravity( edict_t *ent, float timestep )
 	else ent_gravity = 1.0f;
 
 	// Add 1/2 of the total gravitational effects over this timestep
-	ent->v.velocity[2] -= ( 0.5f * ent_gravity * sv_gravity->value * timestep );
+	ent->v.velocity[2] -= ( 0.5f * ent_gravity * sv_gravity.value * timestep );
 	ent->v.velocity[2] += ( ent->v.basevelocity[2] * sv.frametime );
 	ent->v.basevelocity[2] = 0.0f;
 	
@@ -758,7 +758,7 @@ qboolean SV_AllowPushRotate( edict_t *ent )
 	if( !mod || mod->type != mod_brush )
 		return true;
 
-	if( !sv_allow_rotate_pushables->integer )
+	if( !sv_allow_rotate_pushables->value )
 		return false;
 
 	return (mod->flags & MODEL_HAS_ORIGIN) ? true : false;
@@ -1498,7 +1498,7 @@ void SV_Physics_Toss( edict_t *ent )
 		VectorAdd( ent->v.velocity, ent->v.basevelocity, move );
 		vel = DotProduct( move, move );
 
-		if( ent->v.velocity[2] < sv_gravity->value * sv.frametime )
+		if( ent->v.velocity[2] < sv_gravity.value * sv.frametime )
 		{
 			// we're rolling on the ground, add static friction.
 			ent->v.groundentity = trace.ent;
@@ -1589,11 +1589,11 @@ void SV_Physics_Step( edict_t *ent )
 
 			if( speed )
 			{
-				friction = sv_friction->value * ent->v.friction;	// factor
+				friction = sv_friction.value * ent->v.friction;	// factor
 				ent->v.friction = 1.0f; // g-cont. ???
 				if( wasonmover ) friction *= 0.5f; // add a little friction
 
-				control = (speed < sv_stopspeed->value) ? sv_stopspeed->value : speed;
+				control = (speed < sv_stopspeed.value) ? sv_stopspeed.value : speed;
 				newspeed = speed - (sv.frametime * control * friction);
 				if( newspeed < 0 ) newspeed = 0;
 				newspeed /= speed;
@@ -1776,11 +1776,11 @@ void SV_Physics( void )
 	// animate lightstyles (used for GetEntityIllum)
 	SV_RunLightStyles ();
 
-	if( sv_skyspeed->value )
+	if( sv_skyspeed.value )
 	{
 		// evaluate sky rotation.
-		float skyAngle = sv_skyangle->value + sv_skyspeed->value * sv.frametime;
-		Cvar_SetFloat( "sv_skyangle", anglemod( skyAngle ));
+		float skyAngle = sv_skyangle.value + sv_skyspeed.value * sv.frametime;
+		Cvar_SetValue( "sv_skyangle", anglemod( skyAngle ));
 	}
 
 	// decrement svgame.numEntities if the highest number entities died
@@ -1894,7 +1894,7 @@ void SV_DrawOrthoTriangles( void )
 void SV_UpdateFogSettings( unsigned int packed_fog )
 {
 	svgame.movevars.fog_settings = packed_fog;
-	physinfo->modified = true; // force to transmit
+	host.movevars_changed = true; // force to transmit
 }
 
 /*

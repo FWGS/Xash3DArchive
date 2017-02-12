@@ -41,8 +41,8 @@ R_SpriteInit
 */
 void R_SpriteInit( void )
 {
-	r_sprite_lerping = Cvar_Get( "r_sprite_lerping", "1", CVAR_ARCHIVE, "enables sprite animation lerping" );
-	r_sprite_lighting = Cvar_Get( "r_sprite_lighting", "1", CVAR_ARCHIVE, "enables sprite lighting (blood etc)" );
+	r_sprite_lerping = Cvar_Get( "r_sprite_lerping", "1", FCVAR_ARCHIVE, "enables sprite animation lerping" );
+	r_sprite_lighting = Cvar_Get( "r_sprite_lighting", "1", FCVAR_ARCHIVE, "enables sprite lighting (blood etc)" );
 }
 
 /*
@@ -531,7 +531,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 	lerpFrac = 1.0f;
 
 	// misc info
-	if( r_sprite_lerping->integer )
+	if( r_sprite_lerping->value )
 		m_fDoInterp = (ent->curstate.effects & EF_NOINTERP) ? false : true;
 	else m_fDoInterp = false;
 
@@ -725,7 +725,7 @@ qboolean R_CullSpriteModel( cl_entity_t *e, vec3_t origin )
 	if( !e->model->cache.data )
 		return true;
 
-	if( e == &clgame.viewent && r_lefthand->integer >= 2 )
+	if( e == &clgame.viewent && r_lefthand->value >= 2 )
 		return true;
 
 	if( !R_SpriteComputeBBox( e, NULL ))
@@ -868,7 +868,7 @@ static void R_DrawSpriteQuad( mspriteframe_t *frame, vec3_t org, vec3_t v_right,
 
 static qboolean R_SpriteHasLightmap( cl_entity_t *e, int texFormat )
 {
-	if( !r_sprite_lighting->integer )
+	if( !r_sprite_lighting->value )
 		return false;
 	
 	if( texFormat != SPR_ALPHTEST )

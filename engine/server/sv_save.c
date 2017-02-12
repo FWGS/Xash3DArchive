@@ -619,7 +619,7 @@ int SV_IsValidSave( void )
 		return 0;
 	}
 
-	if( sv_maxclients->integer != 1 )
+	if( svs.maxclients != 1 )
 	{
 		Msg( "Can't save multiplayer games.\n" );
 		return 0;
@@ -789,8 +789,8 @@ void SV_SaveGameStateGlobals( SAVERESTOREDATA *pSaveData )
 	header.connectionCount = pSaveData->connectionCount;
 	header.time = svgame.globals->time;
 
-	if( sv_skyname->string[0] )
-		Q_strncpy( header.skyName, sv_skyname->string, sizeof( header.skyName ));
+	if( sv_skyname.string[0] )
+		Q_strncpy( header.skyName, sv_skyname.string, sizeof( header.skyName ));
 	else Q_strncpy( header.skyName, "", sizeof( header.skyName ));
 
 	Q_strncpy( header.mapName, sv.name, sizeof( header.mapName ));
@@ -1527,29 +1527,29 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 
 	SV_EntityPatchRead( pSaveData, level );
 
-	Cvar_SetFloat( "skill", header.skillLevel );
+	Cvar_SetValue( "skill", header.skillLevel );
 	Q_strncpy( sv.name, header.mapName, sizeof( sv.name ));
 	svgame.globals->mapname = MAKE_STRING( sv.name );
 	Cvar_Set( "sv_skyname", header.skyName );
 
 	// restore sky parms
-	Cvar_SetFloat( "sv_skycolor_r", header.skyColor_r );
-	Cvar_SetFloat( "sv_skycolor_g", header.skyColor_g );
-	Cvar_SetFloat( "sv_skycolor_b", header.skyColor_b );
-	Cvar_SetFloat( "sv_skyvec_x", header.skyVec_x );
-	Cvar_SetFloat( "sv_skyvec_y", header.skyVec_y );
-	Cvar_SetFloat( "sv_skyvec_z", header.skyVec_z );
-	Cvar_SetFloat( "sv_skydir_x", header.skyDir_x );
-	Cvar_SetFloat( "sv_skydir_y", header.skyDir_y );
-	Cvar_SetFloat( "sv_skydir_z", header.skyDir_z );
-	Cvar_SetFloat( "sv_skyangle", header.skyAngle );
-	Cvar_SetFloat( "sv_skyspeed", header.skySpeed );
+	Cvar_SetValue( "sv_skycolor_r", header.skyColor_r );
+	Cvar_SetValue( "sv_skycolor_g", header.skyColor_g );
+	Cvar_SetValue( "sv_skycolor_b", header.skyColor_b );
+	Cvar_SetValue( "sv_skyvec_x", header.skyVec_x );
+	Cvar_SetValue( "sv_skyvec_y", header.skyVec_y );
+	Cvar_SetValue( "sv_skyvec_z", header.skyVec_z );
+	Cvar_SetValue( "sv_skydir_x", header.skyDir_x );
+	Cvar_SetValue( "sv_skydir_y", header.skyDir_y );
+	Cvar_SetValue( "sv_skydir_z", header.skyDir_z );
+	Cvar_SetValue( "sv_skyangle", header.skyAngle );
+	Cvar_SetValue( "sv_skyspeed", header.skySpeed );
 
 	// restore serverflags
 	svgame.globals->serverflags = header.serverflags;
 
 	if( header.wateralpha <= 0.0f ) header.wateralpha = 1.0f; // make compatibility with old saves
-	Cvar_SetFloat( "sv_wateralpha", header.wateralpha );
+	Cvar_SetValue( "sv_wateralpha", header.wateralpha );
 
 	// re-base the savedata since we re-ordered the entity/table / restore fields
 	SaveRestore_Rebase( pSaveData );
@@ -1916,7 +1916,6 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 	}
 
 	// init network stuff
-	NET_Config(( sv_maxclients->integer > 1 ));
 	Q_strncpy( level, mapname, MAX_STRING );
 	Q_strncpy( oldlevel, sv.name, MAX_STRING );
 	sv.background = false;
@@ -2121,10 +2120,7 @@ qboolean SV_LoadGame( const char *pName )
 	if( !FS_FileExists( name, true ))
 		return false;
 
-	// init network stuff
-	NET_Config( false ); // close network sockets
-
-	if( sv.background || sv_maxclients->integer > 1 )
+	if( sv.background || svs.maxclients > 1 )
 		SV_Shutdown( true );
 	sv.background = false;
 
@@ -2157,10 +2153,9 @@ qboolean SV_LoadGame( const char *pName )
 		return false;
 	}
 
-	Cvar_FullSet( "coop", "0", CVAR_LATCH );
-	Cvar_FullSet( "teamplay", "0", CVAR_LATCH );
-	Cvar_FullSet( "deathmatch", "0", CVAR_LATCH );
-	Cvar_FullSet( "maxplayers", "1", CVAR_LATCH );
+	Cvar_FullSet( "maxplayers", "1", FCVAR_LATCH );
+	Cvar_SetValue( "deathmatch", 0 );
+	Cvar_SetValue( "coop", 0 );
 
 	return Host_NewGame( gameHeader.mapName, true );
 }

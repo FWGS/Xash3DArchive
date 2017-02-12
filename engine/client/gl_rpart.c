@@ -238,7 +238,7 @@ particle_t *CL_AllocParticle( void (*callback)( particle_t*, float ))
 {
 	particle_t	*p;
 
-	if( !cl_draw_particles->integer )
+	if( !cl_draw_particles->value )
 		return NULL;
 
 	// never alloc particles when we not in game
@@ -532,7 +532,7 @@ void CL_DrawParticles( void )
 	float		frametime;
 	static int	framecount = -1;
 
-	if( !cl_draw_particles->integer )
+	if( !cl_draw_particles->value )
 		return;
 
 	// don't evaluate particles when executes many times
@@ -544,12 +544,14 @@ void CL_DrawParticles( void )
 	}
 	else frametime = 0.0f;
 
-	if( tracerred->modified || tracergreen->modified || tracerblue->modified )
+	if( FBitSet( tracerred->flags|tracergreen->flags|tracerblue->flags, FCVAR_CHANGED ))
 	{
 		gTracerColors[4][0] = (byte)(tracerred->value * 255);
 		gTracerColors[4][1] = (byte)(tracergreen->value * 255);
 		gTracerColors[4][2] = (byte)(tracerblue->value * 255);
-		tracerred->modified = tracergreen->modified = tracerblue->modified = false;
+		ClearBits( tracerred->flags, FCVAR_CHANGED );
+		ClearBits( tracergreen->flags, FCVAR_CHANGED );
+		ClearBits( tracerblue->flags, FCVAR_CHANGED );
 	}
 
 	while( 1 ) 

@@ -57,7 +57,7 @@ void SCR_DrawFPS( int height )
 	char		fpsstring[64];
 	int		offset;
 
-	if( cls.state != ca_active || !cl_showfps->integer || cl.background )
+	if( cls.state != ca_active || !cl_showfps->value || cl.background )
 		return; 
 
 	switch( cls.scrshot_action )
@@ -93,14 +93,14 @@ void SCR_DrawFPS( int height )
 		if( curfps < minfps ) minfps = curfps;
 		if( curfps > maxfps ) maxfps = curfps;
 
-		if( cl_showfps->integer == 2 )
+		if( cl_showfps->value == 2 )
 			Q_snprintf( fpsstring, sizeof( fpsstring ), "fps: ^1%4i min, ^3%4i cur, ^2%4i max", minfps, curfps, maxfps );
 		else Q_snprintf( fpsstring, sizeof( fpsstring ), "%4i fps", curfps );
 		MakeRGBA( color, 255, 255, 255, 255 );
           }
 
 	Con_DrawStringLen( fpsstring, &offset, NULL );
-	Con_DrawString( scr_width->integer - offset - 4, height, fpsstring, color );
+	Con_DrawString( scr_width->value - offset - 4, height, fpsstring, color );
 }
 
 /*
@@ -124,7 +124,7 @@ void SCR_NetSpeeds( void )
 	int		cur_clfps = 0;
 	rgba_t		color;
 
-	if( !net_speeds->integer || cls.demoplayback || cls.state != ca_active )
+	if( !net_speeds->value || cls.demoplayback || cls.state != ca_active )
 		return;
 
 	if( cl_serverframetime() != 0 )
@@ -144,7 +144,7 @@ void SCR_NetSpeeds( void )
 	Q_snprintf( msg, sizeof( msg ), "sv fps: ^1%4i min, ^3%4i cur, ^2%4i max\ncl fps: ^1%4i min, ^3%4i cur, ^2%4i max\nGame Time: %02d:%02d\nTotal sended to server: %s\nTotal received from server: %s\n",
 	min_svfps, cur_svfps, max_svfps, min_clfps, cur_clfps, max_clfps, (int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended ), Q_memprint( cls.netchan.total_received ));
 
-	x = scr_width->integer - 320;
+	x = scr_width->value - 320;
 	y = 384;
 
 	Con_DrawStringLen( NULL, NULL, &height );
@@ -180,7 +180,7 @@ void SCR_RSpeeds( void )
 		char	*p, *start, *end;
 		rgba_t	color;
 
-		x = scr_width->integer - 340;
+		x = scr_width->value - 340;
 		y = 64;
 
 		Con_DrawStringLen( NULL, NULL, &height );
@@ -231,7 +231,7 @@ void SCR_MakeScreenShot( void )
 
 	if( cls.envshot_viewsize > 0 )
 		viewsize = cls.envshot_viewsize;
-	else viewsize = cl_envshot_size->integer;
+	else viewsize = cl_envshot_size->value;
 
 	switch( cls.scrshot_action )
 	{
@@ -284,11 +284,11 @@ SCR_DrawPlaque
 */
 void SCR_DrawPlaque( void )
 {
-	if(( cl_allow_levelshots->integer && !cls.changelevel ) || cl.background )
+	if(( cl_allow_levelshots->value && !cls.changelevel ) || cl.background )
 	{
 		int levelshot = GL_LoadTexture( cl_levelshot_name->string, NULL, 0, TF_IMAGE, NULL );
 		GL_SetRenderMode( kRenderNormal );
-		R_DrawStretchPic( 0, 0, scr_width->integer, scr_height->integer, 0, 0, 1, 1, levelshot );
+		R_DrawStretchPic( 0, 0, scr_width->value, scr_height->value, 0, 0, 1, 1, levelshot );
 		if( !cl.background ) CL_DrawHUD( CL_LOADING );
 	}
 }
@@ -346,7 +346,7 @@ SCR_DirtyScreen
 void SCR_DirtyScreen( void )
 {
 	SCR_AddDirtyPoint( 0, 0 );
-	SCR_AddDirtyPoint( scr_width->integer - 1, scr_height->integer - 1 );
+	SCR_AddDirtyPoint( scr_width->value - 1, scr_height->value - 1 );
 }
 
 /*
@@ -359,7 +359,7 @@ void SCR_TileClear( void )
 	int	i, top, bottom, left, right;
 	dirty_t	clear;
 
-	if( scr_viewsize->integer >= 120 )
+	if( scr_viewsize->value >= 120 )
 		return; // full screen rendering
 
 	// erase rect will be the union of the past three frames
@@ -543,7 +543,7 @@ void SCR_RegisterTextures( void )
 
 	// register gfx.wad images
 	cls.pauseIcon = GL_LoadTexture( "gfx.wad/paused.lmp", NULL, 0, TF_IMAGE, NULL );
-	if( cl_allow_levelshots->integer )
+	if( cl_allow_levelshots->value )
 		cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE, NULL );
 	else cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE, NULL ); 
 	cls.tileImage = GL_LoadTexture( "gfx.wad/backtile.lmp", NULL, 0, TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP, NULL );
@@ -559,7 +559,7 @@ Keybinding command
 */
 void SCR_SizeUp_f( void )
 {
-	Cvar_SetFloat( "viewsize", min( scr_viewsize->value + 10, 120 ));
+	Cvar_SetValue( "viewsize", Q_min( scr_viewsize->value + 10, 120 ));
 }
 
 
@@ -572,7 +572,7 @@ Keybinding command
 */
 void SCR_SizeDown_f( void )
 {
-	Cvar_SetFloat( "viewsize", max( scr_viewsize->value - 10, 30 ));
+	Cvar_SetValue( "viewsize", Q_max( scr_viewsize->value - 10, 30 ));
 }
 
 /*
@@ -587,8 +587,8 @@ void SCR_VidInit( void )
 	memset( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
 
 	// update screen sizes for menu
-	gameui.globals->scrWidth = scr_width->integer;
-	gameui.globals->scrHeight = scr_height->integer;
+	gameui.globals->scrWidth = scr_width->value;
+	gameui.globals->scrHeight = scr_height->value;
 
 	SCR_RebuildGammaTable();
 	VGui_Startup ();
@@ -615,13 +615,13 @@ void SCR_Init( void )
 	MsgDev( D_NOTE, "SCR_Init()\n" );
 	scr_centertime = Cvar_Get( "scr_centertime", "2.5", 0, "centerprint hold time" );
 	cl_levelshot_name = Cvar_Get( "cl_levelshot_name", "*black", 0, "contains path to current levelshot" );
-	cl_allow_levelshots = Cvar_Get( "allow_levelshots", "0", CVAR_ARCHIVE, "allow engine to use indivdual levelshots instead of 'loading' image" );
+	cl_allow_levelshots = Cvar_Get( "allow_levelshots", "0", FCVAR_ARCHIVE, "allow engine to use indivdual levelshots instead of 'loading' image" );
 	scr_loading = Cvar_Get( "scr_loading", "0", 0, "loading bar progress" );
 	scr_download = Cvar_Get( "scr_download", "0", 0, "downloading bar progress" );
 	cl_testlights = Cvar_Get( "cl_testlights", "0", 0, "test dynamic lights" );
-	cl_envshot_size = Cvar_Get( "cl_envshot_size", "256", CVAR_ARCHIVE, "envshot size of cube side" );
+	cl_envshot_size = Cvar_Get( "cl_envshot_size", "256", FCVAR_ARCHIVE, "envshot size of cube side" );
 	scr_dark = Cvar_Get( "v_dark", "0", 0, "starts level from dark screen" );
-	scr_viewsize = Cvar_Get( "viewsize", "120", CVAR_ARCHIVE, "screen size" );
+	scr_viewsize = Cvar_Get( "viewsize", "120", FCVAR_ARCHIVE, "screen size" );
 	
 	// register our commands
 	Cmd_AddCommand( "timerefresh", SCR_TimeRefresh_f, "turn quickly and print rendering statistcs" );

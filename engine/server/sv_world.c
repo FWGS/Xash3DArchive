@@ -190,7 +190,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	// author: The FiEctro
 	hull = &model->hulls[Com_RandomLong( 0, 0 )];
 #endif
-	if( sv_quakehulls->integer == 1 )
+	if( sv_quakehulls->value == 1 )
 	{
 		// Using quake-style hull select for my Quake remake
 		if( size[0] < 3.0f || ( model->flags & MODEL_LIQUID && ent->v.solid != SOLID_TRIGGER ))
@@ -201,7 +201,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 
 		VectorSubtract( hull->clip_mins, mins, offset );
 	}
-	else if( sv_quakehulls->integer == 2 )
+	else if( sv_quakehulls->value == 2 )
 	{
 		// undocumented feature: auto hull select
 		hull = SV_HullAutoSelect( model, mins, maxs, size, offset );
@@ -295,7 +295,7 @@ hull_t *SV_HullForStudioModel( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t of
 
 		if( FBitSet( ent->v.flags, FL_CLIENT|FL_FAKECLIENT ))
 		{
-			if( sv_clienttrace->value == 0.0f )
+			if( sv_clienttrace.value == 0.0f )
 			{
 				// so no way to trace studiomodels by hitboxes
 				// use bbox instead
@@ -303,7 +303,7 @@ hull_t *SV_HullForStudioModel( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t of
 			}
 			else
 			{
-				scale = sv_clienttrace->value * 0.5f;
+				scale = sv_clienttrace.value * 0.5f;
 				VectorSet( size, 1.0f, 1.0f, 1.0f );
 			}
 		}

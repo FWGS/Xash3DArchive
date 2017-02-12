@@ -221,7 +221,7 @@ void R_ParseDetailTextures( const char *filename )
 	texture_t	*tex;
 	int	i;
 
-	if( r_detailtextures->integer >= 2 && !FS_FileExists( filename, false ))
+	if( r_detailtextures->value >= 2 && !FS_FileExists( filename, false ))
 	{
 		// use built-in generator for detail textures
 		R_CreateDetailTexturesList( filename );
@@ -443,7 +443,7 @@ void R_NewMap( void )
 	R_ClearDecals(); // clear all level decals
 
 	// upload detailtextures
-	if( r_detailtextures->integer )
+	if( r_detailtextures->value )
 	{
 		string	mapname, filepath;
 

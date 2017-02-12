@@ -114,6 +114,7 @@ typedef struct
 	vec3_t		lastorigin;
 	double		correction_time;
 	int		viewmodel;
+	int		health;		// client health
 	int		onground;
 	int		waterlevel;
 	int		usehull;
@@ -171,7 +172,7 @@ typedef struct
 	float		timedelta;		// floating delta between two updates
 	ref_params_t	refdef;			// shared refdef
 
-	char		serverinfo[MAX_INFO_STRING];
+	char		serverinfo[MAX_SERVERINFO_STRING];
 	player_info_t	players[MAX_CLIENTS];
 	event_state_t	events;
 
@@ -211,11 +212,11 @@ of server connections
 typedef enum
 {
 	ca_uninitialized = 0,
+	ca_cinematic,	// playing a cinematic, not connected to a server
 	ca_disconnected, 	// not talking to a server
 	ca_connecting,	// sending request packets to the server
 	ca_connected,	// netchan_t established, waiting for svc_serverdata
 	ca_active,	// game views should be displayed
-	ca_cinematic,	// playing a cinematic, not connected to a server
 } connstate_t;
 
 typedef enum
@@ -467,6 +468,8 @@ typedef struct
 	keydest_t		key_dest;
 
 	byte		*mempool;			// client premamnent pool: edicts etc
+
+	netadr_t		hltv_listen_address;
 	
 	int		quakePort;		// a 16 bit value that allows quake servers
 						// to work around address translating routers
@@ -474,7 +477,12 @@ typedef struct
 	// connection information
 	string		servername;		// name of server from original connect
 	double		connect_time;		// for connection retransmits
+	qboolean		spectator;		// not a real player, just spectator
 
+	local_state_t	spectator_state;		// init as client startup
+
+	char		userinfo[MAX_INFO_STRING];
+	char		physinfo[MAX_INFO_STRING];	// read-only
 
 	sizebuf_t		datagram;			// unreliable stuff. gets sent in CL_Move about cl_cmdrate times per second.
 	byte		datagram_buf[NET_MAX_PAYLOAD];
@@ -555,7 +563,7 @@ extern gameui_static_t	gameui;
 //
 // cvars
 //
-extern convar_t	*cl_predict;
+extern convar_t	*cl_nopred;
 extern convar_t	*cl_showfps;
 extern convar_t	*cl_envshot_size;
 extern convar_t	*cl_timeout;
@@ -585,8 +593,6 @@ extern convar_t	*scr_viewsize;
 extern convar_t	*scr_download;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_dark;	// start from dark
-extern convar_t	*userinfo;
-extern convar_t	*hltv;
 
 //=============================================================================
 

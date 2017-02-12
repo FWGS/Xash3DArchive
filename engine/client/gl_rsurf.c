@@ -231,8 +231,8 @@ void GL_SetupFogColorForSurfaces( void )
 		return;
 	}
 
-	div = (r_detailtextures->integer) ? 2.0f : 1.0f;
-	factor = (r_detailtextures->integer) ? 3.0f : 2.0f;
+	div = (r_detailtextures->value) ? 2.0f : 1.0f;
+	factor = (r_detailtextures->value) ? 3.0f : 2.0f;
 	fogColor[0] = pow( RI.fogColor[0] / div, ( 1.0f / factor ));
 	fogColor[1] = pow( RI.fogColor[1] / div, ( 1.0f / factor ));
 	fogColor[2] = pow( RI.fogColor[2] / div, ( 1.0f / factor ));
@@ -368,7 +368,7 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 	}
 
 	// remove co-linear points - Ed
-	if( !gl_keeptjunctions->integer && !( fa->flags & SURF_UNDERWATER ))
+	if( !gl_keeptjunctions->value && !( fa->flags & SURF_UNDERWATER ))
 	{
 		for( i = 0; i < lnumverts; i++ )
 		{
@@ -822,7 +822,7 @@ void R_BlendLightmaps( void )
 	mextrasurf_t	*info;
 	int		i;
 
-	if( r_fullbright->integer || !cl.worldmodel->lightdata )
+	if( r_fullbright->value || !cl.worldmodel->lightdata )
 		return;
 
 	GL_SetupFogColorForSurfaces ();
@@ -843,7 +843,7 @@ void R_BlendLightmaps( void )
 			return;	// disabled by user
 	}
 
-	if( !r_lightmap->integer )
+	if( !r_lightmap->value )
 	{
 		pglEnable( GL_BLEND );
 
@@ -874,7 +874,7 @@ void R_BlendLightmaps( void )
 	}
 
 	// render dynamic lightmaps
-	if( r_dynamic->integer )
+	if( r_dynamic->value )
 	{
 		LM_InitBlock();
 
@@ -956,7 +956,7 @@ void R_BlendLightmaps( void )
 		}
 	}
 
-	if( !r_lightmap->integer )
+	if( !r_lightmap->value )
 	{
 		pglDisable( GL_BLEND );
 
@@ -1139,7 +1139,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 		draw_fullbrights = true;
 	}
 
-	if( r_detailtextures->integer )
+	if( r_detailtextures->value )
 	{
 		mextrasurf_t *es = SURF_INFO( fa, RI.currentmodel );
 
@@ -1176,7 +1176,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	DrawSurfaceDecals( fa );
 
 	// NOTE: draw mirror through in mirror show dummy lightmapped texture
-	if( fa->flags & SURF_REFLECT && RP_NORMALPASS() && r_lighting_extended->integer )
+	if( fa->flags & SURF_REFLECT && RP_NORMALPASS() && r_lighting_extended->value )
 		return; // no lightmaps for mirror
 
 	if( fa->flags & SURF_DRAWTILED )
@@ -1194,7 +1194,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	{
 dynamic:
 		// NOTE: at this point we have only valid textures
-		if( r_dynamic->integer ) is_dynamic = true;
+		if( r_dynamic->value ) is_dynamic = true;
 	}
 
 	if( is_dynamic )
@@ -1498,7 +1498,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 		if( R_CullSurface( psurf, 0 ))
 			continue;
 
-		if( need_sort && !gl_nosort->integer )
+		if( need_sort && !gl_nosort->value )
 		{
 			world.draw_surfaces[num_sorted] = psurf;
 			num_sorted++;
@@ -1511,7 +1511,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 		}
 	}
 
-	if( need_sort && !gl_nosort->integer )
+	if( need_sort && !gl_nosort->value )
 		qsort( world.draw_surfaces, num_sorted, sizeof( msurface_t* ), R_SurfaceCompare );
 
 	// draw sorted translucent surfaces
@@ -1852,7 +1852,7 @@ void R_DrawTriangleOutlines( void )
 	glpoly_t		*p;
 	float		*v;
 		
-	if( !gl_wireframe->integer )
+	if( !gl_wireframe->value )
 		return;
 
 	pglDisable( GL_TEXTURE_2D );
@@ -1962,25 +1962,25 @@ void R_MarkLeaves( void )
 
 	if( !RI.drawWorld ) return;
 
-	if( r_novis->modified || tr.fResetVis )
+	if( FBitSet( r_novis->flags, FCVAR_CHANGED ) || tr.fResetVis )
 	{
 		// force recalc viewleaf
-		r_novis->modified = false;
+		ClearBits( r_novis->flags, FCVAR_CHANGED );
 		tr.fResetVis = false;
 		RI.viewleaf = NULL;
 	}
 
-	if( RI.viewleaf == RI.oldviewleaf && !r_novis->integer && RI.viewleaf != NULL )
+	if( RI.viewleaf == RI.oldviewleaf && !r_novis->value && RI.viewleaf != NULL )
 		return;
 
 	// development aid to let you run around
 	// and see exactly where the pvs ends
-	if( r_lockpvs->integer ) return;
+	if( r_lockpvs->value ) return;
 
 	RI.oldviewleaf = RI.viewleaf;
 	tr.visframecount++;
 
-	if( r_novis->integer || RI.drawOrtho || !RI.viewleaf || !cl.worldmodel->visdata )
+	if( r_novis->value || RI.drawOrtho || !RI.viewleaf || !cl.worldmodel->visdata )
 	{
 		// mark everything
 		for( i = 0; i < cl.worldmodel->numleafs; i++ )
@@ -1990,7 +1990,7 @@ void R_MarkLeaves( void )
 		return;
 	}
 
-	Mod_FatPVS( RI.pvsorigin, REFPVS_RADIUS, RI.visbytes, world.visbytes, FBitSet( RI.params, RP_OLDVIEWLEAF ), r_novis->integer );
+	Mod_FatPVS( RI.pvsorigin, REFPVS_RADIUS, RI.visbytes, world.visbytes, FBitSet( RI.params, RP_OLDVIEWLEAF ), r_novis->value );
 
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
 	{
@@ -2063,7 +2063,7 @@ void GL_RebuildLightmaps( void )
 	model_t	*m;
 
 	if( !cl.world ) return;	// wait for worldmodel
-	vid_gamma->modified = false;
+	ClearBits( vid_gamma->flags, FCVAR_CHANGED );
 
 	// release old lightmaps
 	for( i = 0; i < MAX_LIGHTMAPS; i++ )
@@ -2185,6 +2185,6 @@ void GL_BuildLightmaps( void )
 		clgame.drawFuncs.GL_BuildLightmaps( );
 	}
 
-	if( !gl_keeptjunctions->integer )
+	if( !gl_keeptjunctions->value )
 		MsgDev( D_INFO, "Eliminate %i vertexes\n", nColinElim );
 }

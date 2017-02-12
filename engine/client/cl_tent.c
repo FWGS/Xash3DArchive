@@ -1631,7 +1631,7 @@ void CL_Explosion( vec3_t pos, int model, float scale, float framerate, int flag
 	if( flags & TE_EXPLFLAG_NOSOUND ) return;
 
 	hSound = S_RegisterSound( va( "weapons/explode%i.wav", Com_RandomLong( 3, 5 )));
-	S_StartSound( pos, 0, CHAN_AUTO, hSound, VOL_NORM, ATTN_NORM, PITCH_NORM, 0 );
+	S_StartSound( pos, 0, CHAN_AUTO, hSound, VOL_NORM, 0.3f, PITCH_NORM, 0 );
 }
 
 /*
@@ -2574,9 +2574,9 @@ void CL_TestLights( void )
 	float	f, r;
 	dlight_t	*dl;
 
-	if( !cl_testlights->integer ) return;
+	if( !cl_testlights->value ) return;
 	
-	for( i = 0; i < bound( 1, cl_testlights->integer, MAX_DLIGHTS ); i++ )
+	for( i = 0; i < bound( 1, cl_testlights->value, MAX_DLIGHTS ); i++ )
 	{
 		dl = &cl_dlights[i];
 
