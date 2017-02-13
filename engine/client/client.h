@@ -98,6 +98,7 @@ typedef struct runcmd_s
 #define CL_UPDATE_MASK	(CL_UPDATE_BACKUP - 1)
 extern int CL_UPDATE_BACKUP;
 
+#define SIGNONS		2		// signon messages to receive before connected
 #define INVALID_HANDLE	0xFFFF		// for XashXT cache system
 
 #define cl_serverframetime()	(cl.mtime[0] - cl.mtime[1])
@@ -150,6 +151,7 @@ typedef struct
 	qboolean		thirdperson;
 	qboolean		background;		// not real game, just a background
 	qboolean		first_frame;		// first rendering frame
+	qboolean		proxy_redirect;		// spectator stuff
 
 	uint		checksum;			// for catching cheater maps
 
@@ -211,12 +213,12 @@ of server connections
 */
 typedef enum
 {
-	ca_uninitialized = 0,
-	ca_cinematic,	// playing a cinematic, not connected to a server
-	ca_disconnected, 	// not talking to a server
+	ca_disconnected = 0,// not talking to a server
 	ca_connecting,	// sending request packets to the server
 	ca_connected,	// netchan_t established, waiting for svc_serverdata
+	ca_validate,	// download resources, validating, auth on server
 	ca_active,	// game views should be displayed
+	ca_cinematic,	// playing a cinematic, not connected to a server
 } connstate_t;
 
 typedef enum
@@ -470,12 +472,13 @@ typedef struct
 	byte		*mempool;			// client premamnent pool: edicts etc
 
 	netadr_t		hltv_listen_address;
-	
+
+	int		signon;			// 0 to SIGNONS, for the signon sequence.	
 	int		quakePort;		// a 16 bit value that allows quake servers
 						// to work around address translating routers
 						// g-cont. this port allow many copies of engine in multiplayer game
 	// connection information
-	string		servername;		// name of server from original connect
+	char		servername[MAX_QPATH];	// name of server from original connect
 	double		connect_time;		// for connection retransmits
 	qboolean		spectator;		// not a real player, just spectator
 
@@ -588,6 +591,7 @@ extern convar_t	*cl_fixtimerate;
 extern convar_t	*gl_showtextures;
 extern convar_t	*cl_bmodelinterp;
 extern convar_t	*cl_lw;		// local weapons
+extern convar_t	*cl_showevents;
 extern convar_t	*scr_centertime;
 extern convar_t	*scr_viewsize;
 extern convar_t	*scr_download;
@@ -633,6 +637,7 @@ void CL_ProcessFile( qboolean successfully_received, const char *filename );
 void CL_WriteUsercmd( sizebuf_t *msg, int from, int to );
 void CL_GetChallengePacket( void );
 void CL_PingServers_f( void );
+void CL_SignonReply( void );
 void CL_ClearState( void );
 
 //

@@ -47,6 +47,7 @@ convar_t	*cl_fixtimerate;
 convar_t	*cl_solid_players;
 convar_t	*cl_draw_beams;
 convar_t	*cl_updaterate;
+convar_t	*cl_showevents;
 convar_t	*cl_cmdrate;
 convar_t	*cl_interp;
 convar_t	*cl_dlmax;
@@ -97,6 +98,11 @@ qboolean CL_IsIntermission( void )
 qboolean CL_IsPlaybackDemo( void )
 {
 	return cls.demoplayback;
+}
+
+qboolean CL_IsRecordDemo( void )
+{
+	return cls.demorecording;
 }
 
 qboolean CL_DisableVisibility( void )
@@ -186,6 +192,31 @@ qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
 	}
 
 	return false;
+}
+
+/*
+===============
+CL_CheckClientState
+
+finalize connection process and begin new frame
+with new cls.state
+===============
+*/
+void CL_CheckClientState( void )
+{
+	if(( cls.state == ca_connected || cls.state == ca_validate ) && ( cls.signon == SIGNONS ))
+	{	
+		// first update is the final signon stage
+		cls.state = ca_active;
+		cl.force_refdef = true;
+		cls.changelevel = false;
+		cls.changedemo = false;
+		cl.first_frame = true;
+
+		Cvar_SetValue( "scr_loading", 0.0f );
+		Netchan_ReportFlow( &cls.netchan );
+		SCR_MakeLevelShot();
+	}
 }
 
 /*
@@ -690,7 +721,7 @@ Called after an Host_Error was thrown
 */
 void CL_Drop( void )
 {
-	if( cls.state == ca_uninitialized )
+	if( !cls.initialized )
 		return;
 	CL_Disconnect();
 }
@@ -735,6 +766,7 @@ void CL_CheckForResend( void )
 	// if the local server is running and we aren't then connect
 	if( cls.state == ca_disconnected && SV_Active( ))
 	{
+		cls.signon = 0;
 		cls.state = ca_connecting;
 		Q_strncpy( cls.servername, "localhost", sizeof( cls.servername ));
 		// we don't need a challenge on the localhost
@@ -753,6 +785,7 @@ void CL_CheckForResend( void )
 	{
 		MsgDev( D_ERROR, "CL_CheckForResend: bad server address\n" );
 		cls.state = ca_disconnected;
+		cls.signon = 0;
 		return;
 	}
 
@@ -797,6 +830,7 @@ void CL_Connect_f( void )
 	Q_strncpy( cls.servername, server, sizeof( cls.servername ));
 	cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 	cls.spectator = false;
+	cls.signon = 0;
 }
 
 /*
@@ -946,6 +980,7 @@ void CL_Disconnect( void )
 	Netchan_Clear( &cls.netchan );
 
 	cls.state = ca_disconnected;
+	cls.signon = 0;
 
 	// restore gamefolder here (in case client was connected to another game)
 	CL_ChangeGame( GI->gamefolder, true );
@@ -1096,6 +1131,7 @@ void CL_Reconnect_f( void )
 	{
 		cls.demonum = cls.movienum = -1;	// not in the demo loop now
 		cls.state = ca_connected;
+		cls.signon = 0;
 
 		// clear channel and stuff
 		Netchan_Clear( &cls.netchan );
@@ -1125,6 +1161,8 @@ void CL_Reconnect_f( void )
 
 		cls.demonum = cls.movienum = -1;	// not in the demo loop now
 		cls.state = ca_connecting;
+		cls.signon = 0;
+
 		Msg( "reconnecting...\n" );
 	}
 }
@@ -1483,6 +1521,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
 		MSG_WriteString( &cls.netchan.message, "new" );
 		cls.state = ca_connected;
+		cls.signon = 0;
 
 		cl.validsequence = 0;		// haven't gotten a valid frame update yet
 		cl.delta_sequence = -1;		// we'll request a full delta from the baseline
@@ -1747,6 +1786,40 @@ void CL_ReadPackets( void )
 }
 
 /*
+=====================
+CL_SignonReply
+
+An svc_signonnum has been received, perform a client side setup
+=====================
+*/
+void CL_SignonReply( void )
+{
+	// g-cont. my favorite message :-)
+	MsgDev( D_INFO, "CL_SignonReply: %i\n", cls.signon );
+
+	switch( cls.signon )
+	{
+	case 1:
+		CL_ServerCommand( true, "sendents" );
+		Mem_PrintStats();
+		break;
+	case 2:
+		SCR_EndLoadingPlaque(); // allow normal screen updates
+		if( cl.proxy_redirect && !cls.spectator )
+		{
+			MsgDev( D_ERROR, "CL_SignonReply: redirected to invalid server\n" );
+			CL_Disconnect();
+		}
+		cl.proxy_redirect = false;
+#if 0
+		if( cls.demoplayback )
+			Sequence_OnLevelLoad( clgame.mapname );
+#endif
+		break;
+	}
+}
+
+/*
 ====================
 CL_ProcessFile
 
@@ -1925,6 +1998,7 @@ CL_InitLocal
 void CL_InitLocal( void )
 {
 	cls.state = ca_disconnected;
+	cls.signon = 0;
 
 	Cvar_RegisterVariable( &cl_test );
 
@@ -1968,7 +2042,7 @@ void CL_InitLocal( void )
 	cl_fixtimerate = Cvar_Get( "cl_fixtimerate", "7.5", FCVAR_ARCHIVE, "time in msec to client clock adjusting" );
 	Cvar_Get( "hud_scale", "0", FCVAR_ARCHIVE|FCVAR_LATCH, "scale hud at current resolution" );
 	Cvar_Get( "cl_background", "0", FCVAR_READ_ONLY, "indicate what background map is running" );
-
+	cl_showevents = Cvar_Get( "cl_showevents", "0", FCVAR_ARCHIVE, "show events playback" );
 
 	// these two added to shut up CS 1.5 about 'unknown' commands
 	Cvar_Get( "lightgamma", "1", FCVAR_ARCHIVE, "ambient lighting level (legacy, unused)" );
@@ -2110,17 +2184,66 @@ void CL_PrepareFrame( void )
 
 /*
 ==================
+Host_ClientFrame
+
+==================
+*/
+void _Host_ClientFrame( void )
+{
+#if 0
+	// if client is not active, do nothing
+	if( !cls.initialized ) return;
+
+	CL_CheckClientState();
+
+	Host_InputFrame();
+
+	ClientDLL_UpdateClientData();
+
+	// if running the server locally, make intentions now
+	if( SV_Active( )) CL_Move ();
+#endif
+}
+
+/*
+==================
 Host_RenderFrame
 
 ==================
 */
 void Host_RenderFrame( void )
 {
+#if 0
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
 
-	// update the screen
-	SCR_UpdateScreen ();
+	// if running the server remotely, send intentions now after
+	// the incoming messages have been read
+	if( !SV_Active( )) CL_Move ();
+
+	ClientDLL_Frame( host_frametime );
+	CL_SetLastUpdate();
+	CL_ReadPackets();
+	CL_RedoPrediction();
+	Voice_Idle(host_frametime);
+	CL_EmitEntities();
+	CL_CheckForResend();
+	while (CL_RequestMissingResources());
+	CL_UpdateSoundFade();
+
+	Host_CheckConnectionFailure();
+
+	CL_HTTPUpdate();
+	Steam_ClientRunFrame();
+	ClientDLL_CAM_Think();
+	CL_MoveSpectatorCamera();
+
+	Host_UpdateScreen ();
+	CL_DecayLights ();
+	Host_UpdateSounds ();
+	CDAudio_Update();
+	CL_AdjustClock();
+#endif
 }
 
 /*
@@ -2170,34 +2293,17 @@ void Host_ClientFrame( void )
 		if( !cl.audio_prepped ) CL_PrepSound();
 	}
 
-	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-	{
-		// send a new command message to the server
-		CL_SendCommand();
+	// update the screen
+	SCR_UpdateScreen ();
 
-		// predict all unacknowledged movements
-		CL_PredictMovement();
+	// update audio
+	S_RenderFrame( &cl.refdef );
 
-		// setup view, add visible ents
-		CL_PrepareFrame();
+	// send a new command message to the server
+	CL_SendCommand();
 
-		// update audio
-		S_RenderFrame( &cl.refdef );
-	}
-	else
-	{
-		// update the screen
-		SCR_UpdateScreen ();
-
-		// update audio
-		S_RenderFrame( &cl.refdef );
-
-		// send a new command message to the server
-		CL_SendCommand();
-
-		// predict all unacknowledged movements
-		CL_PredictMovement();
-	}
+	// predict all unacknowledged movements
+	CL_PredictMovement();
 
 	// adjust client time
 	CL_AdjustClock();

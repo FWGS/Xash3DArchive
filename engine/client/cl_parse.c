@@ -397,6 +397,27 @@ void CL_ParseServerTime( sizebuf_t *msg )
 
 /*
 ==================
+CL_ParseSignon
+
+==================
+*/
+void CL_ParseSignon( sizebuf_t *msg )
+{
+	int	i = MSG_ReadByte( msg );
+
+	if( i <= cls.signon )
+	{
+		MsgDev( D_ERROR, "received signon %i when at %i\n", i, cls.signon );
+		CL_Disconnect();
+		return;
+	}
+
+	cls.signon = i;
+	CL_SignonReply();
+}
+
+/*
+==================
 CL_ParseMovevars
 
 ==================
@@ -1215,6 +1236,7 @@ void CL_ParseHLTV( sizebuf_t *msg )
 	switch( MSG_ReadByte( msg ))
 	{
 	case HLTV_ACTIVE:
+		cl.proxy_redirect = true;
 		cls.spectator = true;
 		break;
 	case HLTV_STATUS:
@@ -1226,7 +1248,7 @@ void CL_ParseHLTV( sizebuf_t *msg )
 			MSG_ReadWord( msg );
 		break;
 	case HLTV_LISTEN:
-//		cls.signon = SIGNONS;
+		cls.signon = SIGNONS;
 		NET_StringToAdr( MSG_ReadString( msg ), &cls.hltv_listen_address );
 //		NET_JoinGroup( cls.netchan.sock, cls.hltv_listen_address );
 		SCR_EndLoadingPlaque();
@@ -1671,6 +1693,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			break;
 		case svc_setpause:
 			cl.refdef.paused = ( MSG_ReadOneBit( msg ) != 0 );
+			break;
+		case svc_signonnum:
+			CL_ParseSignon( msg );
 			break;
 		case svc_deltamovevars:
 			CL_ParseMovevars( msg );

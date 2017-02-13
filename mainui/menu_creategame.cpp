@@ -101,12 +101,11 @@ static void UI_CreateGame_Begin( void )
 	CVAR_SET_FLOAT( "hltv", uiCreateGame.hltv.enabled );
 
 	BACKGROUND_TRACK( NULL, NULL );
+	HOST_WRITECONFIG ( "settings.rc" );
 
 	// all done, start server
 	if( uiCreateGame.dedicatedServer.enabled )
 	{
-		HOST_WRITECONFIG ( CVAR_GET_STRING( "servercfgfile" ));
-
 		char cmd[128];
 		sprintf( cmd, "#%s", gMenu.m_gameinfo.gamefolder );
 
@@ -116,10 +115,8 @@ static void UI_CreateGame_Begin( void )
 	}
 	else
 	{
-		HOST_WRITECONFIG ( CVAR_GET_STRING( "lservercfgfile" ));
-
 		char cmd[128];
-		sprintf( cmd, "exec %s\nmap %s\n", CVAR_GET_STRING( "lservercfgfile" ), CVAR_GET_STRING( "defaultmap" ));
+		sprintf( cmd, "exec %s\nmap %s\n", "settings.rc", CVAR_GET_STRING( "defaultmap" ));
 	
 		CLIENT_COMMAND( FALSE, cmd );
 	}

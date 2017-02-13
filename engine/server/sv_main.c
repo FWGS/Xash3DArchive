@@ -509,7 +509,9 @@ qboolean SV_RunGameFrame( void )
 {
 	int	numFrames = 0;
 
-	if( !( sv.simulating = SV_IsSimulating( )))
+	sv.simulating = SV_IsSimulating( );
+
+	if( sv.simulating == false )
 		return true;
 
 	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
@@ -522,16 +524,16 @@ qboolean SV_RunGameFrame( void )
 			sv.time += sv.frametime;
 			numFrames++;
 		}
-		return (numFrames != 0);
 	}
 	else
 	{
 		SV_Physics();
 
 		sv.time += sv.frametime;
-
-		return true;
+		numFrames++;
 	}
+
+	return (numFrames != 0);
 }
 
 /*
@@ -547,7 +549,7 @@ void Host_ServerFrame( void )
 
 	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
 		sv.frametime = ( 1.0 / (double)( GAME_FPS - 0.01 )); // FP issues
-	else sv.frametime = host.frametime;
+	else sv.frametime = host.frametime; // GoldSrc style
 
 	if( sv.simulating || sv.state != ss_active )
 		sv.time_residual += host.frametime;
@@ -767,7 +769,7 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_friction);
 	Cvar_RegisterVariable (&sv_edgefriction);
 	Cvar_RegisterVariable (&sv_stopspeed);
-	sv_maxclients = Cvar_Get( "maxplayers", "1", FCVAR_LATCH, "server max capacity" );
+	sv_maxclients = Cvar_Get( "maxplayers", "1", FCVAR_LATCH|FCVAR_SERVER|FCVAR_UNLOGGED, "server max capacity" );
 	sv_check_errors = Cvar_Get( "sv_check_errors", "0", FCVAR_ARCHIVE, "check edicts for errors" );
 	public_server = Cvar_Get ("public", "0", FCVAR_SERVER, "change server type from private to public" );
 	sv_lighting_modulate = Cvar_Get( "r_lighting_modulate", "0.6", FCVAR_ARCHIVE, "lightstyles modulate scale" );

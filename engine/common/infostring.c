@@ -204,6 +204,7 @@ char *Info_ValueForKey( const char *s, const char *key )
 
 		while( count < (MAX_KV_SIZE - 1) && *s != '\\' )
 		{
+			if( !*s ) return "";
 			*o++ = *s++;
 			count++;
 		}

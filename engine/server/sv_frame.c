@@ -297,19 +297,20 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 	int		i, j, ev;
 
 	memset( &nullargs, 0, sizeof( nullargs ));
-
 	es = &cl->events;
 
 	// count events
 	for( ev = 0; ev < MAX_EVENT_QUEUE; ev++ )
 	{
-		if( es->ei[ev].index ) ev_count++;
+		if( es->ei[ev].index )
+			ev_count++;
 	}
 
 	// nothing to send
 	if( !ev_count ) return; // nothing to send
 
-	if( ev_count >= 31 ) ev_count = 31;
+	if ( ev_count >= MAX_EVENT_QUEUE / 2 )
+		ev_count = ( MAX_EVENT_QUEUE / 2 ) - 1;
 
 	for( i = 0; i < MAX_EVENT_QUEUE; i++ )
 	{
@@ -326,13 +327,7 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 				break;
 		}
 
-		if( j >= to->num_entities )
-		{
-			// couldn't find
-			info->packet_index = to->num_entities;
-			info->args.entindex = ent_index;
-		}
-		else
+		if( j < to->num_entities )
 		{
 			info->packet_index = j;
 			info->args.ducking = 0;
@@ -344,6 +339,12 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 				VectorClear( info->args.angles );
 
 			VectorClear( info->args.velocity );
+		}
+		else
+		{
+			// couldn't find
+			info->packet_index = to->num_entities;
+			info->args.entindex = ent_index;
 		}
 	}
 
@@ -389,7 +390,7 @@ static void SV_EmitEvents( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 			if( info->fire_time )
 			{
 				MSG_WriteOneBit( msg, 1 );
-				MSG_WriteWord( msg, Q_rint( info->fire_time * 100.0f ));
+				MSG_WriteWord( msg, ( info->fire_time * 100.0f ));
 			}
 			else MSG_WriteOneBit( msg, 0 );
 		}
@@ -799,7 +800,7 @@ void SV_SendClientMessages( void )
 
 		if( cl->state == cs_spawned )
 		{
-			if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ) || ( host.realtime + host.frametime ) >= cl->next_messagetime )
+			if(( host.realtime + sv.frametime ) >= cl->next_messagetime )
 				SetBits( cl->flags, FCL_SEND_NET_MESSAGE );
 		}
 
@@ -835,9 +836,7 @@ void SV_SendClientMessages( void )
 			}
 
 			// now that we were able to send, reset timer to point to next possible send time.
-			if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-				cl->next_messagetime = host.realtime + cl->cl_updaterate;
-			else cl->next_messagetime = host.realtime + host.frametime + cl->cl_updaterate;
+			cl->next_messagetime = host.realtime + sv.frametime + cl->cl_updaterate;
 			ClearBits( cl->flags, FCL_SEND_NET_MESSAGE );
 
 			// NOTE: we should send frame even if server is not simulated to prevent overflow

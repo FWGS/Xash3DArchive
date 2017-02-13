@@ -905,28 +905,10 @@ Appends lines containing "set variable value" for all variables
 with the archive flag set to true.
 ============
 */
-static void Cmd_WriteCvar(const char *name, const char *string, const char *desc, void *f )
-{
-	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
-	FS_Printf( f, "%s \"%s\"\n", name, string );
-}
-
-static void Cmd_WriteServerCvar(const char *name, const char *string, const char *desc, void *f )
-{
-	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
-	FS_Printf( f, "set %s \"%s\"\n", name, string );
-}
-
 static void Cmd_WriteOpenGLCvar( const char *name, const char *string, const char *desc, void *f )
 {
 	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
 	FS_Printf( f, "setgl %s \"%s\"\n", name, string );
-}
-
-static void Cmd_WriteRenderCvar( const char *name, const char *string, const char *desc, void *f )
-{
-	if( !desc || !*desc ) return; // ignore cvars without description (fantom variables)
-	FS_Printf( f, "setr %s \"%s\"\n", name, string );
 }
 
 static void Cmd_WriteHelp(const char *name, const char *unused, const char *desc, void *f )
@@ -937,24 +919,9 @@ static void Cmd_WriteHelp(const char *name, const char *unused, const char *desc
 	FS_Printf( f, "%s\t\t\t\"%s\"\n", name, desc );
 }
 
-void Cmd_WriteVariables( file_t *f )
-{
-	Cvar_LookupVars( FCVAR_ARCHIVE, NULL, f, Cmd_WriteCvar ); 
-}
-
-void Cmd_WriteServerVariables( file_t *f )
-{
-	Cvar_LookupVars( FCVAR_SERVER, NULL, f, Cmd_WriteServerCvar ); 
-}
-
 void Cmd_WriteOpenGLVariables( file_t *f )
 {
 	Cvar_LookupVars( FCVAR_GLCONFIG, NULL, f, Cmd_WriteOpenGLCvar ); 
-}
-
-void Cmd_WriteRenderVariables( file_t *f )
-{
-	Cvar_LookupVars( FCVAR_RENDERINFO, NULL, f, Cmd_WriteCvar ); 
 }
 
 /*
@@ -1020,9 +987,9 @@ void Host_WriteServerConfig( const char *name )
 	{
 		FS_Printf( f, "//=======================================================================\n" );
 		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", Q_timestamp( TIME_YEAR_ONLY ));
-		FS_Printf( f, "//\t\t\tserver.cfg - server temporare config\n" );
+		FS_Printf( f, "//\t\tsettings.rc - multiplayer server temporare config\n" );
 		FS_Printf( f, "//=======================================================================\n" );
-		Cmd_WriteServerVariables( f );
+		Cvar_WriteVariables( f, FCVAR_SERVER );
 		FS_Close( f );
 	}
 	else MsgDev( D_ERROR, "Couldn't write %s.\n", name );
@@ -1074,7 +1041,7 @@ void Host_WriteVideoConfig( void )
 		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", Q_timestamp( TIME_YEAR_ONLY ));
 		FS_Printf( f, "//\t\tvideo.cfg - archive of renderer variables\n");
 		FS_Printf( f, "//=======================================================================\n" );
-		Cmd_WriteRenderVariables( f );
+		Cvar_WriteVariables( f, FCVAR_RENDERINFO );
 		FS_Close( f );	
 	}                                                
 	else MsgDev( D_ERROR, "can't update video.cfg.\n" );

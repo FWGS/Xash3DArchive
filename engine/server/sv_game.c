@@ -933,7 +933,7 @@ void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, eve
 	{
 		// send event delay
 		MSG_WriteOneBit( msg, 1 );
-		MSG_WriteWord( msg, Q_rint( delay * 100.0f ));
+		MSG_WriteWord( msg, ( delay * 100.0f ));
 	}
 	else MSG_WriteOneBit( msg, 0 );
 
@@ -3814,10 +3814,13 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 				}
 			}
 
-			// g-cont. probably this code never calls (and not needs)
-			if( bestslot != -1 && j == MAX_EVENT_QUEUE )
+			if( j >= MAX_EVENT_QUEUE )
 			{
-				ei = &es->ei[bestslot];
+				if( bestslot != -1 )
+				{
+					Msg( "Unreachable code called!\n" );
+					ei = &cl->events.ei[bestslot];
+				}
 			}
 		}
 				

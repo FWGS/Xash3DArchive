@@ -1872,8 +1872,8 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	if( Q_strlen( val )) cl->messagelevel = Q_atoi( val );
 
 	if( Q_atoi( Info_ValueForKey( cl->userinfo, "cl_nopred" )))
-		SetBits( cl->flags, FCL_PREDICT_MOVEMENT );
-	else ClearBits( cl->flags, FCL_PREDICT_MOVEMENT );
+		ClearBits( cl->flags, FCL_PREDICT_MOVEMENT );
+	else SetBits( cl->flags, FCL_PREDICT_MOVEMENT );
 
 	if( Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lc" )))
 		SetBits( cl->flags, FCL_LAG_COMPENSATION );
@@ -2336,8 +2336,8 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	frame->ping_time -= cl->lastcmd.msec * 0.5f / 1000.0f;
 	frame->ping_time = Q_max( 0.0f, frame->ping_time );
 
-	if( player->v.animtime > svgame.globals->time + host.frametime )
-		player->v.animtime = svgame.globals->time + host.frametime;
+	if( player->v.animtime > svgame.globals->time + sv.frametime )
+		player->v.animtime = svgame.globals->time + sv.frametime;
 }
 
 /*

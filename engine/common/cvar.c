@@ -687,7 +687,7 @@ void Cvar_SetGL_f( void )
 		return;
 	}
 
-	Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), FCVAR_GLCONFIG );
+	Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), 0 );
 }
 
 /*

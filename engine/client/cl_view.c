@@ -172,17 +172,6 @@ void V_SetupRefDef( void )
 	clgame.viewent.curstate.number = cl.playernum + 1;
 	clgame.viewent.curstate.entityType = ET_NORMAL;
 	clgame.viewent.index = cl.playernum + 1;
-
-	// calc refdef first so viewent can get an actual
-	// player position, angles etc
-	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-	{
-		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
-		V_MergeOverviewRefdef();
-
-		R_ClearScene ();
-		CL_AddEntities ();
-	}
 }
 
 /*
@@ -232,16 +221,13 @@ void V_RenderView( void )
 	if( !cl.video_prepped || ( UI_IsVisible() && !cl.background ))
 		return; // still loading
 
-	if( !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+	if( cl.frame.valid && ( cl.force_refdef || !cl.refdef.paused ))
 	{
-		if( cl.frame.valid && ( cl.force_refdef || !cl.refdef.paused ))
-		{
-			cl.force_refdef = false;
+		cl.force_refdef = false;
 
-			R_ClearScene ();
-			CL_AddEntities ();
-			V_SetupRefDef ();
-		}
+		R_ClearScene ();
+		CL_AddEntities ();
+		V_SetupRefDef ();
 	}
 
 	R_Set2DMode( false );
@@ -250,17 +236,13 @@ void V_RenderView( void )
 
 	tr.framecount++;	// g-cont. keep actual frame for all viewpasses
 
-	if( !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+	do
 	{
-		do
-		{
-			clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
-			V_MergeOverviewRefdef();
-			R_RenderFrame( &cl.refdef, true );
-			cl.refdef.onlyClientDraw = false;
-		} while( cl.refdef.nextView );
-	}
-	else R_RenderFrame( &cl.refdef, true );
+		clgame.dllFuncs.pfnCalcRefdef( &cl.refdef );
+		V_MergeOverviewRefdef();
+		R_RenderFrame( &cl.refdef, true );
+		cl.refdef.onlyClientDraw = false;
+	} while( cl.refdef.nextView );
 
 	// draw debug triangles on a server
 	SV_DrawDebugTriangles ();
@@ -309,18 +291,7 @@ void V_PostRender( void )
 		Con_DrawVersion();
 		Con_DrawDebug(); // must be last
 
-		if( !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-			S_ExtraUpdate();
-	}
-
-	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-	{
-		// don't update sound too fast
-		if(( host.realtime - oldtime ) >= HOST_FRAMETIME )
-		{
-			oldtime = host.realtime;
-			CL_ExtraUpdate();
-		}
+		S_ExtraUpdate();
 	}
 
 	SCR_MakeScreenShot();

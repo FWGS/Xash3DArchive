@@ -90,7 +90,7 @@ void Host_PrintEngineFeatures( void )
 		MsgDev( D_REPORT, "^3EXT:^7 Compensate quake bug enabled\n" );
 
 	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-		MsgDev( D_REPORT, "^3EXT:^7 fixed main cycle\n" );
+		MsgDev( D_REPORT, "^3EXT:^7 runnung server at constant fps\n" );
 }
 
 /*
@@ -161,6 +161,34 @@ Host_SetServerState
 void Host_SetServerState( int state )
 {
 	Cvar_FullSet( "host_serverstate", va( "%i", state ), FCVAR_READ_ONLY );
+}
+
+/*
+==================
+Host_CheckSleep
+==================
+*/
+void Host_CheckSleep( void )
+{
+	if( host.type == HOST_DEDICATED )
+	{
+		// let the dedicated server some sleep
+		Sys_Sleep( 1 );
+	}
+	else
+	{
+		if( host.state == HOST_NOFOCUS )
+		{
+			if( Host_ServerState() && CL_IsInGame( ))
+				Sys_Sleep( 1 ); // listenserver
+			else Sys_Sleep( 20 ); // sleep 20 ms otherwise
+		}
+		else if( host.state == HOST_SLEEP )
+		{
+			// completely sleep in minimized state
+			Sys_Sleep( 20 );
+		}
+	}
 }
 
 void Host_NewInstance( const char *name, const char *finalmsg )
@@ -286,17 +314,29 @@ void Host_Minimize_f( void )
 	if( host.hWnd ) ShowWindow( host.hWnd, SW_MINIMIZE );
 }
 
+/*
+=================
+Host_IsLocalGame
+
+singleplayer game detect
+=================
+*/
 qboolean Host_IsLocalGame( void )
 {
-	if( CL_Active() && SV_Active() && CL_GetMaxClients() == 1 )
-		return true;
-	return false;
+	if( SV_Active( ))
+	{
+		return ( SV_GetMaxClients() == 1 ) ? true : false;
+	}
+	else
+	{
+		return ( CL_GetMaxClients() == 1 ) ? true : false;
+	}
 }
 
 qboolean Host_IsLocalClient( void )
 {
 	// only the local client have the active server
-	if( CL_Active() && SV_Active())
+	if( CL_Active( ) && SV_Active( ))
 		return true;
 	return false;
 }
@@ -474,86 +514,40 @@ void Host_GetCommands( void )
 
 /*
 ===================
-Host_FrameTime
+Host_CalcFPS
 
-Returns false if the time is too short to run a frame
+compute actual FPS for various modes
 ===================
 */
-qboolean Host_FrameTime( float time )
+double Host_CalcFPS( void )
 {
-	static double	oldtime;
-	double		minframetime;
-	double		fps;
+	double	fps = 0.0;
 
-	host.realtime += time;
-
-	// limit fps to withing tolerable range
-	fps = CL_GetDemoFramerate();
-	if( fps == 0.0 ) fps = bound( HOST_MINFPS, HOST_FPS, HOST_MAXFPS );
-	minframetime = ( 1.0 / fps );
-
-	if(( host.realtime - oldtime ) < minframetime )
-	{
-		// framerate is too high
-		return false;		
-	}
-
-	host.frametime = host.realtime - oldtime;
-	host.realframetime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
-	oldtime = host.realtime;
-
-	if( host_framerate->value > 0 && ( Host_IsLocalGame( )))
-	{
-		float fps = host_framerate->value;
-		if( fps > 1 ) fps = 1.0f / fps;
-		host.frametime = fps;
-	}
+	// NOTE: we should play demos with same fps as is was recorded
+	if( CL_IsPlaybackDemo() || CL_IsRecordDemo( ))
+		fps = CL_GetDemoFramerate();
+	else if( Host_IsLocalGame( ))
+		fps = host_maxfps->value;
 	else
-	{	// don't allow really long or short frames
-		host.frametime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
+	{
+		fps = host_maxfps->value;
+		if( fps == 0.0 ) fps = HOST_FPS; // default for multiplayer
+		fps = bound( MIN_FPS, fps, MAX_FPS );
 	}
 
-	return true;
-}
-
-/*
-===================
-Host_RenderTime
-
-Returns false if the time is too short to render a frame
-===================
-*/
-qboolean Host_RenderTime( float time )
-{
-	static double	oldtime;
-	static double	newtime;
-	double		fps;
-
-	newtime += time;
-
-	// dedicated's tic_rate regulates server frame rate.  Don't apply fps filter here.
-	fps = host_maxfps->value;
-
-	// clamp the fps in multiplayer games
-	if( fps != 0 )
+	// probably left part of this condition is redundant :-)
+	if( host.type != HOST_DEDICATED && Host_IsLocalGame( ))
 	{
-		double	minframetime;
-
-		// limit fps to withing tolerable range
-		fps = bound( MIN_FPS, fps, MAX_FPS );
-
-		minframetime = 1.0 / fps;
-
-		if(( newtime - oldtime ) < minframetime )
+		// ajdust fps for vertical synchronization
+		if( gl_vsync != NULL && gl_vsync->value )
 		{
-			// framerate is too high
-			return false;		
+			if( vid_displayfrequency->value != 0.0f )
+				fps = vid_displayfrequency->value;
+			else fps = 60.0; // default
 		}
 	}
 
-	oldtime = newtime;
-
-	return true;
+	return fps;
 }
 
 /*
@@ -566,46 +560,30 @@ Returns false if the time is too short to run a frame
 qboolean Host_FilterTime( float time )
 {
 	static double	oldtime;
-	float		fps;
+	double		fps;
 
 	host.realtime += time;
-
-	// dedicated's tic_rate regulates server frame rate.  Don't apply fps filter here.
-	fps = CL_GetDemoFramerate();
-	if( fps == 0.0 ) fps = host_maxfps->value;
+	fps = Host_CalcFPS( );
 
 	// clamp the fps in multiplayer games
-	if( fps != 0 )
+	if( fps != 0.0 )
 	{
-		float	minframetime;
-
 		// limit fps to withing tolerable range
 		fps = bound( MIN_FPS, fps, MAX_FPS );
 
-		minframetime = 1.0f / fps;
-
-		if(( host.realtime - oldtime ) < minframetime )
-		{
-			// framerate is too high
+		if(( host.realtime - oldtime ) < ( 1.0 / fps ))
 			return false;		
-		}
 	}
 
 	host.frametime = host.realtime - oldtime;
 	host.realframetime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
 	oldtime = host.realtime;
 
-	if( host_framerate->value > 0 && ( Host_IsLocalGame()))
-	{
-		float fps = host_framerate->value;
-		if( fps > 1 ) fps = 1.0f / fps;
-		host.frametime = fps;
-	}
-	else
-	{	// don't allow really long or short frames
-		host.frametime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
-	}
-	
+	// NOTE: allow only in singleplayer while demos are not active
+	if( host_framerate->value > 0.0f && Host_IsLocalGame() && !CL_IsPlaybackDemo() && !CL_IsRecordDemo())
+		host.frametime = bound( MIN_FRAMETIME, host_framerate->value, MAX_FRAMETIME );
+	else host.frametime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
+
 	return true;
 }
 
@@ -619,39 +597,18 @@ void Host_Frame( float time )
 	if( setjmp( host.abortframe ))
 		return;
 
-	// new-style game loop
-	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-	{
-		// decide the simulation time
-		if( Host_FrameTime( time ))
-		{
-			Host_InputFrame ();	// input frame
-			Host_GetCommands();	// dedicated
-			Host_ServerFrame(); // server frame
-			Host_ClientFrame(); // client frame
-			host.framecount++;
-		}
+	Host_CheckSleep();
 
-		// clamp the renderer time
-		if( !Host_RenderTime( time ))
-			return;
+	// decide the simulation time
+	if( !Host_FilterTime( time ))
+		return;
 
-		Host_RenderFrame (); // render frame
-	}
-	else	// classic game loop
-	{
-		Host_InputFrame ();	// input frame
+	Host_InputFrame ();  // input frame
+	Host_GetCommands (); // dedicated in
+	Host_ServerFrame (); // server frame
+	Host_ClientFrame (); // client frame
 
-		// decide the simulation time
-		if( !Host_FilterTime( time ))
-			return;
-
-		Host_GetCommands ();
-		Host_ServerFrame (); // server frame
-		Host_ClientFrame (); // client frame
-
-		host.framecount++;
-	}
+	host.framecount++;
 }
 
 /*
@@ -994,7 +951,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 		Cmd_AddCommand( "exit", Sys_Quit, "quit the game" );
 
 		// dedicated servers using settings from server.cfg file
-		Cbuf_AddText( va( "exec %s\n", Cvar_VariableString( "servercfgfile" )));
+		Cbuf_AddText( va( "exec %s\n", "settings.rc" ));
 		Cbuf_Execute();
 
 		Cbuf_AddText( va( "map %s\n", Cvar_VariableString( "defaultmap" )));

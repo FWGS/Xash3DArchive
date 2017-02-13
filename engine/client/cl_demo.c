@@ -170,9 +170,7 @@ overwrite host.frametime
 */
 double CL_GetDemoFramerate( void )
 {
-	if( cls.demoplayback || cls.demorecording )
-		return demo.header.host_fps;
-	return 0.0;
+	return bound( MIN_FPS, demo.header.host_fps, MAX_FPS );
 }
 
 /*
@@ -360,9 +358,7 @@ void CL_WriteDemoHeader( const char *name )
 	demo.header.id = IDEMOHEADER;
 	demo.header.dem_protocol = DEMO_PROTOCOL;
 	demo.header.net_protocol = PROTOCOL_VERSION;
-	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-		demo.header.host_fps = bound( HOST_MINFPS, HOST_FPS, HOST_MAXFPS );
-	else demo.header.host_fps = bound( HOST_MINFPS, host_maxfps->value, HOST_MAXFPS );
+	demo.header.host_fps = bound( MIN_FPS, host_maxfps->value, MAX_FPS );
 	Q_strncpy( demo.header.mapname, clgame.mapname, sizeof( demo.header.mapname ));
 	Q_strncpy( demo.header.comment, clgame.maptitle, sizeof( demo.header.comment ));
 	Q_strncpy( demo.header.gamedir, FS_Gamedir(), sizeof( demo.header.gamedir ));
@@ -939,6 +935,7 @@ void CL_StopPlayback( void )
 		cls.state = ca_disconnected;
 		cls.connect_time = 0;
 		cls.demonum = -1;
+		cls.signon = 0;
 
 		// and finally clear the state
 		CL_ClearState ();
@@ -1274,6 +1271,7 @@ void CL_PlayDemo_f( void )
 	cls.state = ca_connected;
 	cl.background = (cls.demonum != -1) ? true : false;
 	cls.spectator = false;
+	cls.signon = 0;
 
 	demo.starttime = CL_GetDemoPlaybackClock(); // for determining whether to read another message
 

@@ -39,7 +39,6 @@ convar_t	*gl_compensate_gamma_screenshots;
 convar_t	*gl_keeptjunctions;
 convar_t	*gl_showtextures;
 convar_t	*gl_detailscale;
-convar_t	*gl_swapInterval;
 convar_t	*gl_check_errors;
 convar_t	*gl_allow_static;
 convar_t	*gl_allow_mirrors;
@@ -51,6 +50,7 @@ convar_t	*gl_picmip;
 convar_t	*gl_skymip;
 convar_t	*gl_finish;
 convar_t	*gl_nosort;
+convar_t	*gl_vsync;
 convar_t	*gl_clear;
 convar_t	*gl_test;
 
@@ -693,14 +693,14 @@ void GL_UpdateSwapInterval( void )
 	{
 		if( pwglSwapIntervalEXT )
 			pwglSwapIntervalEXT( 0 );
-		SetBits( gl_swapInterval->flags, FCVAR_CHANGED );
+		SetBits( gl_vsync->flags, FCVAR_CHANGED );
 	}
-	else if( FBitSet( gl_swapInterval->flags, FCVAR_CHANGED ))
+	else if( FBitSet( gl_vsync->flags, FCVAR_CHANGED ))
 	{
-		ClearBits( gl_swapInterval->flags, FCVAR_CHANGED );
+		ClearBits( gl_vsync->flags, FCVAR_CHANGED );
 
 		if( pwglSwapIntervalEXT )
-			pwglSwapIntervalEXT( gl_swapInterval->value );
+			pwglSwapIntervalEXT( bound( -1, (int)gl_vsync->value, 1 ));
 	}
 }
 
@@ -1519,7 +1519,7 @@ qboolean VID_SetMode( void )
 	}
 
 	fullscreen = vid_fullscreen->value;
-	SetBits( gl_swapInterval->flags, FCVAR_CHANGED );
+	SetBits( gl_vsync->flags, FCVAR_CHANGED );
 
 	if(( err = R_ChangeDisplaySettings( vid_mode->value, fullscreen )) == rserr_ok )
 	{
@@ -1713,7 +1713,7 @@ void R_RenderInfo_f( void )
 	Msg( "\n" );
 	Msg( "PICMIP: %i\n", gl_picmip->value );
 	Msg( "SKYMIP: %i\n", gl_skymip->value );
-	Msg( "VERTICAL SYNC: %s\n", gl_swapInterval->value ? "enabled" : "disabled" );
+	Msg( "VERTICAL SYNC: %s\n", gl_vsync->value ? "enabled" : "disabled" );
 	Msg( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
 		glConfig.alpha_bits, glConfig.depth_bits, glConfig.stencil_bits );
 }
@@ -1760,7 +1760,7 @@ void GL_InitCommands( void )
 	gl_max_size = Cvar_Get( "gl_max_size", "512", FCVAR_ARCHIVE, "no effect in Xash3D just a legacy" );
 	gl_stencilbits = Cvar_Get( "gl_stencilbits", "8", FCVAR_GLCONFIG, "pixelformat stencil bits (0 - auto)" );
 	gl_check_errors = Cvar_Get( "gl_check_errors", "1", FCVAR_ARCHIVE, "ignore video engine errors" );
-	gl_swapInterval = Cvar_Get( "gl_swapInterval", "0", FCVAR_ARCHIVE,  "time beetween frames (in msec)" );
+	gl_vsync = Cvar_Get( "gl_vsync", "0", FCVAR_ARCHIVE,  "enable vertical syncronization" );
 	gl_extensions = Cvar_Get( "gl_extensions", "1", FCVAR_GLCONFIG, "allow gl_extensions" );
 	gl_detailscale = Cvar_Get( "gl_detailscale", "4.0", FCVAR_ARCHIVE, "default scale applies while auto-generate list of detail textures" );
 	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "2.0", FCVAR_ARCHIVE, "textures anisotropic filter" );
@@ -1781,8 +1781,8 @@ void GL_InitCommands( void )
 	// these cvar not used by engine but some mods requires this
 	Cvar_Get( "gl_polyoffset", "-0.1", 0, "polygon offset for decals" );
  
-	// make sure r_swapinterval is checked after vid_restart
-	SetBits( gl_swapInterval->flags, FCVAR_CHANGED );
+	// make sure gl_vsync is checked after vid_restart
+	SetBits( gl_vsync->flags, FCVAR_CHANGED );
 
 	vid_gamma = Cvar_Get( "gamma", "1.0", FCVAR_ARCHIVE, "gamma amount" );
 	vid_mode = Cvar_Get( "vid_mode", VID_AUTOMODE, FCVAR_RENDERINFO, "display resolution mode" );

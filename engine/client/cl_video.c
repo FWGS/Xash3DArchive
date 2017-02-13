@@ -163,6 +163,7 @@ void SCR_RunCinematic( void )
 		S_StopStreaming();
 		cls.movienum = -1;
 		cin_time = 0.0f;
+		cls.signon = 0;
 		return;
 	}
 
@@ -252,6 +253,7 @@ qboolean SCR_PlayCinematic( const char *arg )
 
 	cls.state = ca_cinematic;
 	cin_time = 0.0f;
+	cls.signon = 0;
 	
 	return true;
 }
@@ -288,6 +290,8 @@ void SCR_StopCinematic( void )
 	cin_time = 0.0f;
 
 	cls.state = ca_disconnected;
+	cls.signon = 0;
+
 	UI_SetActiveMenu( true );
 }
 

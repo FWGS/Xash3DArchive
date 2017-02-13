@@ -1954,8 +1954,6 @@ void Con_DrawConsole( void )
 	// if disconnected, render console full screen
 	switch( cls.state )
 	{
-	case ca_uninitialized:
-		break;
 	case ca_disconnected:
 		if( cls.key_dest != key_menu && host.developer )
 		{
@@ -2054,15 +2052,10 @@ void Con_RunConsole( void )
 	}
 	else con.showlines = 0; // none visible
 
-	// when level is loading frametime may be is wrong
-	if( cls.state == ca_connecting || cls.state == ca_connected )
-	{
-		if( !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-			host.realframetime = ( MAX_FPS / host_maxfps->value ) * MIN_FRAMETIME;
-		else host.realframetime = HOST_FRAMETIME;
-	}
-
 	lines_per_frame = bound( 1, fabs( scr_conspeed->value ) * host.realframetime, scr_height->value );
+
+	if( cls.state == ca_connecting || cls.state == ca_connected )
+		lines_per_frame = 0;
 
 	if( con.showlines < con.vislines )
 	{

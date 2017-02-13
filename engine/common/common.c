@@ -562,7 +562,7 @@ can return NULL
 */
 cvar_t *pfnCVarGetPointer( const char *szVarName )
 {
-	return (cvar_t *)Cvar_FindVarExt( szVarName, FCVAR_READ_ONLY|FCVAR_GLCONFIG );
+	return (cvar_t *)Cvar_FindVar( szVarName );
 }
 
 /*

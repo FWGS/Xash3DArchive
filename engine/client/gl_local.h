@@ -635,7 +635,6 @@ extern convar_t	*gl_texture_anisotropy;
 extern convar_t	*gl_extensions;
 extern convar_t	*gl_stencilbits;
 extern convar_t	*gl_ignorehwgamma;
-extern convar_t	*gl_swapInterval;
 extern convar_t	*gl_check_errors;
 extern convar_t	*gl_round_down;
 extern convar_t	*gl_texture_lodbias;

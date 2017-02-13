@@ -702,6 +702,11 @@ qboolean SV_Active( void )
 	return svs.initialized;
 }
 
+int SV_GetMaxClients( void )
+{
+	return svs.maxclients;
+}
+
 void SV_ForceError( void )
 {
 	// this is only for singleplayer testing

@@ -99,17 +99,12 @@ typedef enum
 
 // PERFORMANCE INFO
 #define MIN_FPS         	20.0		// host minimum fps value for maxfps.
-#define MAX_FPS         	500.0		// upper limit for maxfps.
+#define MAX_FPS         	100.0		// upper limit for maxfps.
+#define HOST_FPS		72.0		// multiplayer games typical fps
 
-#define MAX_FRAMETIME	0.1
-#define MIN_FRAMETIME	0.000001
-
-// HOST_FIXED_FRAMERATE stuff
-#define HOST_MINFPS		20.0
-#define HOST_MAXFPS		72.0
+#define MAX_FRAMETIME	0.25
+#define MIN_FRAMETIME	0.0001
 #define GAME_FPS		20.0
-#define HOST_FPS		60.0		// client and the server clamped at 60.0 fps max. Render clamped at fps_max cvar
-#define HOST_FRAMETIME	( 1.0 / HOST_FPS )
 
 #define MAX_CMD_TOKENS	80		// cmd tokens
 #define MAX_ENTNUMBER	99999		// for server and client parsing
@@ -148,12 +143,14 @@ void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile,
 #define Assert( f )
 #endif
 
+extern convar_t	*gl_vsync;
 extern convar_t	*scr_width;
 extern convar_t	*scr_height;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_download;
 extern convar_t	*cmd_scripting;
 extern convar_t	*cl_allow_levelshots;
+extern convar_t	*vid_displayfrequency;
 extern convar_t	*mod_allow_materials;
 extern convar_t	*host_limitlocal;
 extern convar_t	*host_maxfps;
@@ -838,6 +835,8 @@ double CL_GetDemoFramerate( void );
 qboolean UI_CreditsActive( void );
 void CL_ExtraUpdate( void );
 int CL_GetMaxClients( void );
+int SV_GetMaxClients( void );
+qboolean CL_IsRecordDemo( void );
 qboolean CL_IsPlaybackDemo( void );
 qboolean CL_IsBackgroundDemo( void );
 qboolean CL_IsBackgroundMap( void );

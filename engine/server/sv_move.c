@@ -215,7 +215,7 @@ void SV_WaterMove( edict_t *ent )
 
 	if( !( flags & FL_WATERJUMP ))
 	{
-		VectorMA( ent->v.velocity, ( ent->v.waterlevel * -0.8f * host.frametime ), ent->v.velocity, ent->v.velocity );
+		VectorMA( ent->v.velocity, ( ent->v.waterlevel * -0.8f * sv.frametime ), ent->v.velocity, ent->v.velocity );
 	}
 }
 
