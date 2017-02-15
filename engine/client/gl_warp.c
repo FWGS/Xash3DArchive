@@ -788,7 +788,7 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction )
 	if( noCull ) pglDisable( GL_CULL_FACE );
 
 	// set the current waveheight
-	if( p->verts[0][2] >= RI.refdef.vieworg[2] )
+	if( p->verts[0][2] >= RI.vieworg[2] )
 		waveHeight = -RI.currententity->curstate.scale;
 	else waveHeight = RI.currententity->curstate.scale;
 

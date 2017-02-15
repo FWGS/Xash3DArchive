@@ -433,9 +433,10 @@ void CL_ParseMovevars( sizebuf_t *msg )
 		R_SetupSky( clgame.movevars.skyName );
 
 	memcpy( &clgame.oldmovevars, &clgame.movevars, sizeof( movevars_t ));
+	clgame.entities->curstate.scale = clgame.movevars.waveHeight;
+
 	// keep features an actual!
 	clgame.oldmovevars.features = clgame.movevars.features = host.features;
-	clgame.entities->curstate.scale = cl.refdef.movevars->waveHeight;
 }
 
 /*
@@ -684,7 +685,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	else if( !cls.demoplayback )
 		Key_SetKeyDest( key_menu );
 
-	cl.refdef.viewentity = cl.playernum + 1; // always keep viewent an actual
+	cl.viewentity = cl.playernum + 1; // always keep viewent an actual
 
 	gameui.globals->maxClients = cl.maxclients;
 	Q_strncpy( gameui.globals->maptitle, clgame.maptitle, sizeof( gameui.globals->maptitle ));
@@ -799,9 +800,9 @@ void CL_ParseClientData( sizebuf_t *msg )
 		{
 			last_predicted = ( cl.last_incoming_sequence + ( command_ack - cl.last_command_ack )) & CL_UPDATE_MASK;
 
-			pps = &cl.predict[last_predicted].playerstate;
-			pwd = cl.predict[last_predicted].weapondata;
-			ppcd = &cl.predict[last_predicted].client;
+			pps = &cl.predicted_frames[last_predicted].playerstate;
+			pwd = cl.predicted_frames[last_predicted].weapondata;
+			ppcd = &cl.predicted_frames[last_predicted].client;
 
 			ps = &frame->playerstate[cl.playernum];
 			wd = frame->weapondata;
@@ -853,7 +854,7 @@ void CL_ParseClientData( sizebuf_t *msg )
 	// clientdata for spectators ends here
 	if( cls.spectator )
 	{
-		cl.predicted.health = 1;
+		cl.local.health = 1;
 		return;
 	}	
 
@@ -892,7 +893,10 @@ void CL_ParseClientData( sizebuf_t *msg )
 	// make a local copy of physinfo
 	Q_strncpy( cls.physinfo, frame->client.physinfo,  sizeof( cls.physinfo ));
 
-	cl.predicted.health = frame->client.health;
+	cl.local.maxspeed = frame->client.maxspeed;
+	cl.local.pushmsec = frame->client.pushmsec;
+	cl.local.weapons = frame->client.weapons;	// g-cont 32-bit predictable weapon limit !!!
+	cl.local.health = frame->client.health;
 }
 
 /*
@@ -951,9 +955,9 @@ set the view angle to this absolute value
 */
 void CL_ParseSetAngle( sizebuf_t *msg )
 {
-	cl.refdef.cl_viewangles[0] = MSG_ReadBitAngle( msg, 16 );
-	cl.refdef.cl_viewangles[1] = MSG_ReadBitAngle( msg, 16 );
-	cl.refdef.cl_viewangles[2] = MSG_ReadBitAngle( msg, 16 );
+	cl.viewangles[0] = MSG_ReadBitAngle( msg, 16 );
+	cl.viewangles[1] = MSG_ReadBitAngle( msg, 16 );
+	cl.viewangles[2] = MSG_ReadBitAngle( msg, 16 );
 }
 
 /*
@@ -968,7 +972,7 @@ void CL_ParseAddAngle( sizebuf_t *msg )
 	float	add_angle;
 	
 	add_angle = MSG_ReadBitAngle( msg, 16 );
-	cl.refdef.cl_viewangles[1] += add_angle;
+	cl.viewangles[YAW] += add_angle;
 }
 
 /*
@@ -980,9 +984,9 @@ offset crosshair angles
 */
 void CL_ParseCrosshairAngle( sizebuf_t *msg )
 {
-	cl.refdef.crosshairangle[0] = MSG_ReadChar( msg ) * 0.2f;
-	cl.refdef.crosshairangle[1] = MSG_ReadChar( msg ) * 0.2f;
-	cl.refdef.crosshairangle[2] = 0.0f; // not used for screen space
+	cl.crosshairangle[0] = MSG_ReadChar( msg ) * 0.2f;
+	cl.crosshairangle[1] = MSG_ReadChar( msg ) * 0.2f;
+	cl.crosshairangle[2] = 0.0f; // not used for screen space
 }
 
 /*
@@ -1619,7 +1623,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 			break;
 		case svc_setview:
-			cl.refdef.viewentity = MSG_ReadWord( msg );
+			cl.viewentity = MSG_ReadWord( msg );
 			break;
 		case svc_sound:
 		case svc_ambientsound:
@@ -1692,7 +1696,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			cl.frames[cl.parsecountmod].graphdata.tentities += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_setpause:
-			cl.refdef.paused = ( MSG_ReadOneBit( msg ) != 0 );
+			cl.paused = ( MSG_ReadOneBit( msg ) != 0 );
 			break;
 		case svc_signonnum:
 			CL_ParseSignon( msg );
@@ -1718,7 +1722,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			CL_UpdateUserinfo( msg );
 			break;
 		case svc_intermission:
-			cl.refdef.intermission = true;
+			cl.intermission = true;
 			break;
 		case svc_modelindex:
 			CL_PrecacheModel( msg );

@@ -19,7 +19,6 @@ GNU General Public License for more details.
 #include "gl_export.h"
 #include "com_model.h"
 #include "cl_entity.h"
-#include "ref_params.h"
 #include "render_api.h"
 #include "protocol.h"
 #include "dlight.h"
@@ -103,9 +102,10 @@ typedef struct
 	qboolean		drawWorld;	// ignore world for drawing PlayerModel
 	qboolean		thirdPerson;	// thirdperson camera is enabled
 	qboolean		isSkyVisible;	// sky is visible
+	qboolean		onlyClientDraw;	// disabled by client request
 	qboolean		drawOrtho;	// draw world as orthogonal projection	
 
-	ref_params_t	refdef;		// actual refdef
+	float		fov_x, fov_y;	// current view fov
 
 	cl_entity_t	*currententity;
 	model_t		*currentmodel;
@@ -118,6 +118,7 @@ typedef struct
 	mleaf_t		*oldviewleaf;
 	vec3_t		pvsorigin;
 	vec3_t		vieworg;		// locked vieworigin
+	vec3_t		viewangles;
 	vec3_t		vforward;
 	vec3_t		vright;
 	vec3_t		vup;
@@ -236,7 +237,6 @@ typedef struct
 } ref_speeds_t;
 
 extern ref_speeds_t		r_stats;
-extern ref_params_t		r_lastRefdef;
 extern ref_instance_t	RI;
 extern ref_globals_t	tr;
 
@@ -255,8 +255,8 @@ extern struct particle_s	*cl_free_trails;
 //
 // gl_backend.c
 //
-void GL_BackendStartFrame( const ref_params_t *fd );
-void GL_BackendEndFrame( const ref_params_t *fd );
+void GL_BackendStartFrame( void );
+void GL_BackendEndFrame( void );
 void GL_CleanUpTextureUnits( int last );
 void GL_Bind( GLint tmu, GLenum texnum );
 void GL_MultiTexCoord2f( GLenum texture, GLfloat s, GLfloat t );
@@ -327,7 +327,7 @@ void R_ShutdownImages( void );
 void R_BeginDrawMirror( msurface_t *fa );
 void R_EndDrawMirror( void );
 void R_DrawMirrors( void );
-void R_FindMirrors( const ref_params_t *fd );
+void R_FindMirrors( void );
 
 //
 // gl_refrag.c
@@ -351,7 +351,7 @@ int R_CountDlights( void );
 //
 void R_ClearScene( void );
 void R_LoadIdentity( void );
-void R_RenderScene( const ref_params_t *fd );
+void R_RenderScene( void );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
@@ -455,7 +455,7 @@ qboolean VID_ScreenShot( const char *filename, int shot_type );
 qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qboolean skyshot );
 void VID_RestoreGamma( void );
 void R_BeginFrame( qboolean clearScene );
-void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld );
+void R_RenderFrame( const struct ref_params_s *fd, qboolean drawWorld, float fov );
 void R_EndFrame( void );
 void R_ClearScene( void );
 void R_GetTextureParms( int *w, int *h, int texnum );

@@ -48,11 +48,9 @@ qboolean R_SpeedsMessage( char *out, size_t size )
 GL_BackendStartFrame
 ==============
 */
-void GL_BackendStartFrame( const ref_params_t *fd )
+void GL_BackendStartFrame( void )
 {
-	if( !fd->nextView ) r_speeds_msg[0] = '\0';
-
-	if( !RI.drawWorld ) R_Set2DMode( false );
+	r_speeds_msg[0] = '\0';
 }
 
 /*
@@ -60,12 +58,9 @@ void GL_BackendStartFrame( const ref_params_t *fd )
 GL_BackendEndFrame
 ==============
 */
-void GL_BackendEndFrame( const ref_params_t *fd )
+void GL_BackendEndFrame( void )
 {
-	// go into 2D mode (in case we draw PlayerSetup between two 2d calls)
-	if( !RI.drawWorld ) R_Set2DMode( true );
-
-	if( r_speeds->value <= 0 || !RI.drawWorld || fd->nextView )
+	if( r_speeds->value <= 0 || !RI.drawWorld )
 		return;
 
 	switch( (int)r_speeds->value )
@@ -608,7 +603,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 	r_side = Mem_Alloc( r_temppool, sizeof( rgbdata_t ));
 
 	// use client vieworg
-	if( !vieworg ) vieworg = cl.refdef.vieworg;
+	if( !vieworg ) vieworg = RI.vieworg;
 
 	for( i = 0; i < 6; i++ )
 	{

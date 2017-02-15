@@ -37,6 +37,7 @@ void CL_RunLightStyles( void )
 {
 	int		i, k, flight, clight;
 	float		l, c, lerpfrac, backlerp;
+	float		frametime = (cl.time - cl.oldtime);
 	float		scale;
 	lightstyle_t	*ls;
 
@@ -56,8 +57,8 @@ void CL_RunLightStyles( void )
 			continue;
 		}
 
-		if( !RI.refdef.paused && RI.refdef.frametime <= 0.1f )
-			ls->time += RI.refdef.frametime; // evaluate local time
+		if( !cl.paused && frametime <= 0.1f )
+			ls->time += frametime; // evaluate local time
 
 		flight = (int)Q_floor( ls->time * 10 );
 		clight = (int)Q_ceil( ls->time * 10 );
@@ -337,20 +338,12 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	model_t		*pmodel;
 	mnode_t		*pnodes;
 
-	if( !cl.refdef.movevars )
-	{
-		ambientLight->r = 255;
-		ambientLight->g = 255;
-		ambientLight->b = 255;
-		return;
-	}
-
 	// set to full bright if no light data
 	if( !cl.worldmodel || !cl.worldmodel->lightdata )
 	{
-		ambientLight->r = TextureToTexGamma( cl.refdef.movevars->skycolor_r );
-		ambientLight->g = TextureToTexGamma( cl.refdef.movevars->skycolor_g );
-		ambientLight->b = TextureToTexGamma( cl.refdef.movevars->skycolor_b );
+		ambientLight->r = TextureToTexGamma( clgame.movevars.skycolor_r );
+		ambientLight->g = TextureToTexGamma( clgame.movevars.skycolor_g );
+		ambientLight->b = TextureToTexGamma( clgame.movevars.skycolor_b );
 		return;
 	}
 

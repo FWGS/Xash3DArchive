@@ -397,7 +397,6 @@ void CL_ParseEvent( sizebuf_t *msg )
 	int		packet_index;
 	event_args_t	nullargs, args;
 	entity_state_t	*state;
-	cl_entity_t	*pEnt;
 	float		delay;
 
 	memset( &nullargs, 0, sizeof( nullargs ));
@@ -461,69 +460,6 @@ void CL_ParseEvent( sizebuf_t *msg )
 			// Place event on queue
 			CL_QueueEvent( FEV_SERVER, event_index, delay, &args );
 		}
-#if 0
-		if( packet_index != -1 )
-			state = &cls.packet_entities[(cl.frame.first_entity+packet_index)%cls.num_client_entities];
-		else state = NULL;
-
-		// it's a client. Override some params
-		if( args.entindex >= 1 && args.entindex <= cl.maxclients )
-		{
-			if(( args.entindex - 1 ) == cl.playernum )
-			{
-				if( state && !CL_IsPredicted( ))
-				{
-					// restore viewangles from angles
-					args.angles[PITCH] = -state->angles[PITCH] * 3;
-					args.angles[YAW] = state->angles[YAW];
-					args.angles[ROLL] = 0; // no roll
-				}
-				else
-				{
-					// get the predicted angles
-					VectorCopy( cl.refdef.cl_viewangles, args.angles );
-				}
-
-				VectorCopy( cl.frame.client.origin, args.origin );
-				VectorCopy( cl.frame.client.velocity, args.velocity );
-			}
-			else if( state )
-			{
-				// restore viewangles from angles
-				args.angles[PITCH] = -state->angles[PITCH] * 3;
-				args.angles[YAW] = state->angles[YAW];
-				args.angles[ROLL] = 0; // no roll
-
-				if( VectorIsNull( args.origin ))
-					VectorCopy( state->origin, args.origin );
-				if( VectorIsNull( args.velocity ))
-					VectorCopy( state->velocity, args.velocity );
-			}
-          
- 			COM_NormalizeAngles( args.angles );
- 		}
-		else if( state )
-		{
-			if( VectorIsNull( args.origin ))
-				VectorCopy( state->origin, args.origin );
-			if( VectorIsNull( args.angles ))
-				VectorCopy( state->angles, args.angles );
-			if( VectorIsNull( args.velocity ))
-				VectorCopy( state->velocity, args.velocity );
-		}
-		else if(( pEnt = CL_GetEntityByIndex( args.entindex )) != NULL )
-		{
-			if( VectorIsNull( args.origin ))
-				VectorCopy( pEnt->curstate.origin, args.origin );
-			if( VectorIsNull( args.angles ))
-				VectorCopy( pEnt->curstate.angles, args.angles );
-			if( VectorIsNull( args.velocity ))
-				VectorCopy( pEnt->curstate.velocity, args.velocity );
-		}
-
-		// g-cont. should we need find the event with same index?
-		CL_QueueEvent( FEV_SERVER, event_index, delay, &args );
-#endif
 	}
 }
 
@@ -537,18 +473,17 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 )
 {
 	event_args_t	args;
-	int		invokerIndex = 0;
+
+	if( flags & FEV_SERVER )
+	{
+		MsgDev( D_WARN, "CL_PlaybackEvent: event with FEV_SERVER flag!\n" );
+		return;
+	}
 
 	// first check event for out of bounds
 	if( eventindex < 1 || eventindex > MAX_EVENTS )
 	{
 		MsgDev( D_ERROR, "CL_PlaybackEvent: invalid eventindex %i\n", eventindex );
-		return;
-	}
-
-	if( flags & FEV_SERVER )
-	{
-		MsgDev( D_WARN, "CL_PlaybackEvent: event with FEV_SERVER flag!\n" );
 		return;
 	}
 
@@ -561,34 +496,15 @@ void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, floa
 
 	flags |= FEV_CLIENT; // it's a client event
 	flags &= ~(FEV_NOTHOST|FEV_HOSTONLY|FEV_GLOBAL);
-
 	if( delay < 0.0f ) delay = 0.0f; // fixup negative delays
-	invokerIndex = cl.playernum + 1; // only local client can issue client events
 
-	args.flags = 0;
-	args.entindex = invokerIndex;
+	memset( &args, 0, sizeof( args ));
 
-	if( !angles || VectorIsNull( angles ))
-		VectorCopy( cl.refdef.cl_viewangles, args.angles );
-	else VectorCopy( angles, args.angles );
-
-	if( !origin || VectorIsNull( origin ))
-	{
-		if( CL_IsPredicted( )) VectorCopy( cl.predicted.origin, args.origin );
-		else VectorCopy( cl.frame.client.origin, args.origin );
-	}
-	else VectorCopy( origin, args.origin );
-
-	if( CL_IsPredicted( ))
-	{
-		VectorCopy( cl.predicted.velocity, args.velocity );
-		args.ducking = (cl.predicted.usehull == 1);
-	}
-	else
-	{
-		VectorCopy( cl.frame.client.velocity, args.velocity );
-		args.ducking = cl.frame.client.bInDuck;
-	}
+	VectorCopy( origin, args.origin );
+	VectorCopy( angles, args.angles );
+	VectorCopy( cl.simvel, args.velocity );
+	args.entindex = cl.playernum + 1;
+	args.ducking = ( cl.local.usehull == 1 );
 
 	args.fparam1 = fparam1;
 	args.fparam2 = fparam2;

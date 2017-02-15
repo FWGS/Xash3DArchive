@@ -14,6 +14,7 @@ GNU General Public License for more details.
 */
 
 #include "common.h"
+#include "math.h"	// fabs...
 
 convar_t	*cvar_vars; // head of list
 convar_t	*cmd_scripting;

@@ -2517,7 +2517,7 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 	if(( pEnt->index - 1 ) == cl.playernum )
 	{
 		// get the predicted angles
-		AngleVectors( cl.refdef.cl_viewangles, forward, NULL, NULL );
+		AngleVectors( cl.viewangles, forward, NULL, NULL );
 	}
 	else
 	{
@@ -2534,7 +2534,7 @@ void CL_UpdateFlashlight( cl_entity_t *pEnt )
 	VectorClear( view_ofs );
 
 	if(( pEnt->index - 1 ) == cl.playernum )
-		VectorCopy( cl.refdef.viewheight, view_ofs );
+		VectorCopy( cl.viewheight, view_ofs );
 
 	VectorAdd( pEnt->origin, view_ofs, vecSrc );
 	VectorMA( vecSrc, FLASHLIGHT_DISTANCE, forward, vecEnd );
@@ -2584,7 +2584,7 @@ void CL_TestLights( void )
 		f = 64 * ( i / 4) + 128;
 
 		for( j = 0; j < 3; j++ )
-			dl->origin[j] = cl.refdef.vieworg[j] + cl.refdef.forward[j] * f + cl.refdef.right[j] * r;
+			dl->origin[j] = RI.vieworg[j] + RI.vforward[j] * f + RI.vright[j] * r;
 
 		dl->color.r = ((((i % 6) + 1) & 1)>>0) * 255;
 		dl->color.g = ((((i % 6) + 1) & 2)>>1) * 255;

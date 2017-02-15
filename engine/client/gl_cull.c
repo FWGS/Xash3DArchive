@@ -134,7 +134,7 @@ int R_CullModel( cl_entity_t *e, vec3_t origin, vec3_t mins, vec3_t maxs, float 
 	if( e->curstate.effects & EF_REFLECTONLY && !( RI.params & RP_MIRRORVIEW ))
 		return 1;
 
-	if( RP_LOCALCLIENT( e ) && !RI.thirdPerson && cl.refdef.viewentity == ( cl.playernum + 1 ))
+	if( RP_LOCALCLIENT( e ) && !RI.thirdPerson && cl.viewentity == ( cl.playernum + 1 ))
 	{
 		if(!( RI.params & RP_MIRRORVIEW ))
 			return 1;

@@ -474,7 +474,7 @@ void R_NewMap( void )
  		tx->texturechain = NULL;
 	}
 
-	R_SetupSky( cl.refdef.movevars->skyName );
+	R_SetupSky( clgame.movevars.skyName );
 
 	GL_BuildLightmaps ();
 }

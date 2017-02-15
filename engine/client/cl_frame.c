@@ -25,24 +25,11 @@ GNU General Public License for more details.
 #include "sound.h"
 #include "input.h"
 
-#define MAX_FORWARD		6
-
 qboolean CL_IsPlayerIndex( int idx )
 {
 	if( idx > 0 && idx <= cl.maxclients )
 		return true;
 	return false;
-}
-
-qboolean CL_IsPredicted( void )
-{
-	if( cl_nopred->value || !cl.frame.valid || cl.background || cls.spectator )
-		return false;
-
-	if( !cl.validsequence || ( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CL_UPDATE_MASK )
-		return false;
-
-	return true;
 }
 
 int CL_PushMoveFilter( physent_t *pe )
@@ -82,36 +69,52 @@ void CL_UpdatePositions( cl_entity_t *ent )
 
 	VectorCopy( ent->curstate.origin, ph->origin );
 	VectorCopy( ent->curstate.angles, ph->angles );
-	ph->animtime = cl.mtime[0];
+	ph->animtime = ent->curstate.animtime;	// !!!
+}
+
+/*
+==================
+CL_ResetPositions
+
+Interpolation init or reset after teleporting
+==================
+*/
+void CL_ResetPositions( cl_entity_t *ent )
+{
+	position_history_t	store;
+
+	if( !ent ) return;
+
+	store = ent->ph[ent->current_position];
+	ent->current_position = 1;
+
+	memset( ent->ph, 0, sizeof( position_history_t ) * HISTORY_MAX );
+	memcpy( &ent->ph[1], &store, sizeof( position_history_t ));
+	memcpy( &ent->ph[0], &store, sizeof( position_history_t ));
 }
 
 qboolean CL_FindInterpolationUpdates( cl_entity_t *ent, float targettime, position_history_t **ph0, position_history_t **ph1, int *ph0Index )
 {
-	qboolean	extrapolate;
+	qboolean	extrapolate = true;
 	int	i, i0, i1, imod;
 	float	at;
 
-	imod = ent->current_position - 1;
-	i0 = (imod + 1) & HISTORY_MASK;
-	i1 = imod & HISTORY_MASK;
+	imod = ent->current_position;
+	i0 = (imod - 0) & HISTORY_MASK;	// curpos (lerp end)
+	i1 = (imod - 1) & HISTORY_MASK;	// oldpos (lerp start)
 
-	extrapolate = true;
-
-	if( ent->ph[i0].animtime >= targettime )
+	for( i = 1; i < HISTORY_MAX - 1; i++ )
 	{
-		for( i = 0; i < HISTORY_MAX - 2; i++ )
-		{
-			at = ent->ph[imod & HISTORY_MASK].animtime;
-			if( at == 0.0f ) break;
+		at = ent->ph[( imod - i ) & HISTORY_MASK].animtime;
+		if( at == 0.0 ) break;
 
-			if( at < targettime )
-			{
-				i0 = (imod + 1) & HISTORY_MASK;
-				i1 = imod & HISTORY_MASK;
-				extrapolate = false;
-				break;
-			}
-			imod--;
+		if( targettime > at )
+		{
+			// found it
+			i0 = (( imod - i ) + 1 ) & HISTORY_MASK;
+			i1 = (( imod - i ) + 0 ) & HISTORY_MASK;
+			extrapolate = false;
+			break;
 		}
 	}
 
@@ -120,6 +123,49 @@ qboolean CL_FindInterpolationUpdates( cl_entity_t *ent, float targettime, positi
 	if( ph0Index != NULL ) *ph0Index = i0;
 
 	return extrapolate;
+}
+
+void CL_PureOrigin( cl_entity_t *ent, float t, vec3_t outorigin, vec3_t outangles )
+{
+	qboolean		extrapolate;
+	float		t1, t0, frac;
+	position_history_t	*ph0, *ph1;
+	vec3_t		delta;
+
+	// NOTE: ph0 is next, ph1 is a prev
+	extrapolate = CL_FindInterpolationUpdates( ent, t, &ph0, &ph1, NULL );
+
+	if ( !ph0 || !ph1 )
+		return;
+
+	t0 = ph0->animtime;
+	t1 = ph1->animtime;
+
+	if( t0 != 0.0f )
+	{
+		vec4_t	q, q1, q2;
+
+		VectorSubtract( ph0->origin, ph1->origin, delta );
+
+		if( t0 != t1 )
+			frac = ( t - t1 ) / ( t0 - t1 );
+		else frac = 1.0f;
+
+		frac = bound( 0.0f, frac, 1.2f );
+
+		VectorMA( ph1->origin, frac, delta, outorigin );
+
+		AngleQuaternion( ph0->angles, q1, false );
+		AngleQuaternion( ph1->angles, q2, false );
+		QuaternionSlerp( q2, q1, frac, q );
+		QuaternionAngle( q, outangles );
+	}
+	else
+	{
+		// no backup found
+		VectorCopy( ph1->origin, outorigin );
+		VectorCopy( ph1->angles, outangles );
+	}
 }
 
 int CL_InterpolateModel( cl_entity_t *e )
@@ -137,7 +183,7 @@ int CL_InterpolateModel( cl_entity_t *e )
 	if( !e->model || ( e->model->name[0] == '*' && !cl_bmodelinterp->value ) || RP_LOCALCLIENT( e ) || cl.maxclients <= 1 )
 		return 1;
 
-	if( cl.predicted.moving && cl.predicted.onground == e->index )
+	if( cl.local.moving && cl.local.onground == e->index )
 		return 1;
 
 	if( e->curstate.starttime != 0.0f && e->curstate.impacttime != 0.0f )
@@ -256,7 +302,7 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 		ent->angles[PITCH] = -ent->angles[PITCH] / 3.0f;
 
 	// make me lerp (multiplayer only. this code visually breaks XashXT parent system)
-	if( ent->index == cl.predicted.onground && cl.predicted.moving && ( cl.maxclients > 1 ))
+	if( ent->index == cl.local.onground && cl.local.moving && ( cl.maxclients > 1 ))
 	{
 		CL_InterpolateMovingEntity( ent );
 	}
@@ -389,6 +435,49 @@ void CL_UpdateEntityFields( cl_entity_t *ent )
 	}
 }
 
+/*
+=============
+CL_ComputePlayerOrigin
+
+interpolate non-local clients
+=============
+*/
+void CL_ComputePlayerOrigin( cl_entity_t *ent )
+{
+	float	targettime;
+	vec3_t	origin;
+	vec3_t	angles;
+
+	if( !ent->player || ent->index == ( cl.playernum + 1 ))
+		return;
+
+	targettime = cl.time - cl_interp->value;
+	CL_PureOrigin( ent, targettime, origin, angles );
+
+	VectorCopy( angles, ent->angles );
+	VectorCopy( origin, ent->origin );
+}
+
+/*
+=============
+CL_InterpolateEntity
+
+interpolate entity movement
+=============
+*/
+void CL_InterpolateEntity( cl_entity_t *ent )
+{
+	float	targettime;
+	vec3_t	origin;
+	vec3_t	angles;
+
+	targettime = cl.time - cl_interp->value;
+	CL_PureOrigin( ent, targettime, origin, angles );
+
+	VectorCopy( angles, ent->angles );
+	VectorCopy( origin, ent->origin );
+}
+
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 {
 	if( !ent || !ent->model )
@@ -415,7 +504,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 			return false;
 
 		// don't add himself on firstperson
-		if( RP_LOCALCLIENT( ent ) && !cl.thirdperson && cls.key_dest != key_menu && cl.refdef.viewentity == ( cl.playernum + 1 ))
+		if( RP_LOCALCLIENT( ent ) && !cl.local.thirdperson && cls.key_dest != key_menu && cl.viewentity == ( cl.playernum + 1 ))
 		{
 			if( gl_allow_mirrors->value && world.has_mirrors )
 			{
@@ -555,8 +644,8 @@ void CL_WeaponAnim( int iAnim, int body )
 {
 	cl_entity_t	*view = &clgame.viewent;
 
-	cl.weaponstarttime = 0;
-	cl.weaponsequence = iAnim;
+	cl.local.weaponstarttime = 0;
+	cl.local.weaponsequence = iAnim;
 
 	// anim is changed. update latchedvars
 	if( iAnim != view->curstate.sequence )
@@ -1064,83 +1153,6 @@ INTERPOLATE BETWEEN FRAMES TO GET RENDERING PARMS
 
 ==========================================================================
 */
-/*
-===============
-CL_SetIdealPitch
-===============
-*/
-void CL_SetIdealPitch( void )
-{
-	float	angleval, sinval, cosval;
-	float	z[MAX_FORWARD], view_z;
-	vec3_t	top, bottom, origin;
-	int	i, j;
-	int	step, dir, steps;
-	pmtrace_t	tr;
-
-	if( !( cl.frame.client.flags & FL_ONGROUND ))
-		return;
-
-	if( CL_IsPredicted( ))
-	{
-		VectorCopy( cl.predicted.origin, origin );
-		view_z = cl.predicted.viewofs[2];
-	}
-	else
-	{
-		VectorCopy( cl.frame.client.origin, origin );
-		view_z = cl.frame.client.view_ofs[2];
-	}		
-
-	angleval = cl.frame.playerstate[cl.playernum].angles[YAW] * M_PI2 / 360.0f;
-	SinCos( angleval, &sinval, &cosval );
-
-	for( i = 0; i < MAX_FORWARD; i++ )
-	{
-		top[0] = origin[0] + cosval * (i + 3.0f) * 12.0f;
-		top[1] = origin[1] + sinval * (i + 3.0f) * 12.0f;
-		top[2] = origin[2] + view_z;
-		
-		bottom[0] = top[0];
-		bottom[1] = top[1];
-		bottom[2] = top[2] - 160.0f;
-
-		// skip any monsters (only world and brush models)
-		tr = CL_TraceLine( top, bottom, PM_STUDIO_IGNORE );
-		if( tr.allsolid ) return; // looking at a wall, leave ideal the way is was
-
-		if( tr.fraction == 1.0f )
-			return;	// near a dropoff
-		
-		z[i] = top[2] + tr.fraction * (bottom[2] - top[2]);
-	}
-	
-	dir = 0;
-	steps = 0;
-
-	for( j = 1; j < i; j++ )
-	{
-		step = z[j] - z[j-1];
-		if( step > -ON_EPSILON && step < ON_EPSILON )
-			continue;
-
-		if( dir && ( step-dir > ON_EPSILON || step-dir < -ON_EPSILON ))
-			return; // mixed changes
-
-		steps++;	
-		dir = step;
-	}
-	
-	if( !dir )
-	{
-		cl.refdef.idealpitch = 0.0f;
-		return;
-	}
-	
-	if( steps < 2 ) return;
-	cl.refdef.idealpitch = -dir * cl_idealpitchscale->value;
-}
-
 /*
 ===============
 CL_AddPacketEntities

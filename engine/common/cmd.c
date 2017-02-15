@@ -1016,7 +1016,7 @@ void Cmd_ForwardToServer( void )
 	if( cls.demoplayback )
 	{
 		if( !Q_stricmp( Cmd_Argv( 0 ), "pause" ))
-			cl.refdef.paused ^= 1;
+			cl.paused ^= 1;
 		return;
 	}
 

@@ -222,7 +222,7 @@ void GL_SetupFogColorForSurfaces( void )
 	vec3_t	fogColor;
 	float	factor, div;
 
-	if(( !RI.fogEnabled && !RI.fogCustom ) || RI.refdef.onlyClientDraw || !RI.currententity )
+	if(( !RI.fogEnabled && !RI.fogCustom ) || RI.onlyClientDraw || !RI.currententity )
 		return;
 
 	if( RI.currententity->curstate.rendermode == kRenderTransTexture )
@@ -242,7 +242,7 @@ void GL_SetupFogColorForSurfaces( void )
 void GL_ResetFogColor( void )
 {
 	// restore fog here
-	if(( RI.fogEnabled || RI.fogCustom ) && !RI.refdef.onlyClientDraw )
+	if(( RI.fogEnabled || RI.fogCustom ) && !RI.onlyClientDraw )
 		pglFogfv( GL_FOG_COLOR, RI.fogColor );
 }
 
@@ -742,8 +742,8 @@ void DrawGLPoly( glpoly_t *p, float xScale, float yScale )
 		flAngle = ( flConveyorSpeed >= 0 ) ? 180 : 0;
 
 		SinCos( flAngle * ( M_PI / 180.0f ), &sy, &cy );
-		sOffset = RI.refdef.time * cy * flRate;
-		tOffset = RI.refdef.time * sy * flRate;
+		sOffset = cl.time * cy * flRate;
+		tOffset = cl.time * sy * flRate;
 	
 		// make sure that we are positive
 		if( sOffset < 0.0f ) sOffset += 1.0f + -(int)sOffset;
@@ -988,7 +988,7 @@ void R_RenderFullbrights( void )
 	if( !draw_fullbrights )
 		return;
 
-	if( RI.fogEnabled && !RI.refdef.onlyClientDraw )
+	if( RI.fogEnabled && !RI.onlyClientDraw )
 		pglDisable( GL_FOG );
 
 	pglEnable( GL_BLEND );
@@ -1021,7 +1021,7 @@ void R_RenderFullbrights( void )
 	draw_fullbrights = false;
 
 	// restore for here
-	if( RI.fogEnabled && !RI.refdef.onlyClientDraw )
+	if( RI.fogEnabled && !RI.onlyClientDraw )
 		pglEnable( GL_FOG );
 }
 
@@ -1283,7 +1283,7 @@ void R_DrawTextureChains( void )
 		if( !s || ( i == tr.skytexturenum ))
 			continue;
 
-		if(( s->flags & SURF_DRAWTURB ) && cl.refdef.movevars->wateralpha < 1.0f )
+		if(( s->flags & SURF_DRAWTURB ) && clgame.movevars.wateralpha < 1.0f )
 			continue;	// draw translucent water later
 
 		for( ; s != NULL; s = s->texturechain )
@@ -1305,11 +1305,11 @@ void R_DrawWaterSurfaces( void )
 	msurface_t	*s;
 	texture_t		*t;
 
-	if( !RI.drawWorld || RI.refdef.onlyClientDraw )
+	if( !RI.drawWorld || RI.onlyClientDraw )
 		return;
 
 	// non-transparent water is already drawed
-	if( cl.refdef.movevars->wateralpha >= 1.0f )
+	if( clgame.movevars.wateralpha >= 1.0f )
 		return;
 
 	// restore worldmodel
@@ -1324,7 +1324,7 @@ void R_DrawWaterSurfaces( void )
 	pglDisable( GL_ALPHA_TEST );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-	pglColor4f( 1.0f, 1.0f, 1.0f, cl.refdef.movevars->wateralpha );
+	pglColor4f( 1.0f, 1.0f, 1.0f, clgame.movevars.wateralpha );
 
 	for( i = 0; i < cl.worldmodel->numtextures; i++ )
 	{
@@ -1909,7 +1909,7 @@ void R_DrawWorld( void )
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
 
-	if( !RI.drawWorld || RI.refdef.onlyClientDraw )
+	if( !RI.drawWorld || RI.onlyClientDraw )
 		return;
 
 	VectorCopy( RI.cullorigin, tr.modelorg );

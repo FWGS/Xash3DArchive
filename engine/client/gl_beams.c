@@ -109,7 +109,7 @@ static qboolean ComputeBeamEntPosition( int beamEnt, vec3_t pt )
 		return false;
 	}
 
-	if(( pEnt->index - 1 ) == cl.playernum && !cl.thirdperson )
+	if(( pEnt->index - 1 ) == cl.playernum && !cl.local.thirdperson )
 	{
 		// if we view beam at firstperson use viewmodel instead
 		pEnt = &clgame.viewent;
@@ -1230,13 +1230,13 @@ void CL_UpdateBeam( BEAM *pbeam, float frametime )
 	pbeam->freq += frametime;
 
 	// Generate fractal noise
-	if( CL_IsInGame() && !cl.refdef.paused )
+	if( CL_IsInGame() && !cl.paused )
 	{
 		rgNoise[0] = 0;
 		rgNoise[NOISE_DIVISIONS] = 0;
 	}
 
-	if( pbeam->amplitude != 0 && CL_IsInGame() && !cl.refdef.paused )
+	if( pbeam->amplitude != 0 && CL_IsInGame() && !cl.paused )
 	{
 		if( pbeam->flags & FBEAM_SINENOISE )
 		{

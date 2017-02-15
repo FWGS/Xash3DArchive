@@ -90,7 +90,6 @@ typedef enum
 } instance_t;
 
 #include "system.h"
-#include "ref_params.h"
 #include "com_model.h"
 #include "crtlib.h"
 #include "cvar.h"
@@ -144,8 +143,6 @@ void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile,
 #endif
 
 extern convar_t	*gl_vsync;
-extern convar_t	*scr_width;
-extern convar_t	*scr_height;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_download;
 extern convar_t	*cmd_scripting;
@@ -857,6 +854,7 @@ void CL_Crashed( void );
 qboolean CL_NextDemo( void );
 char *SV_Serverinfo( void );
 void CL_Drop( void );
+void Con_Init( void );
 void SCR_Init( void );
 void SCR_UpdateScreen( void );
 void SCR_BeginLoadingPlaque( qboolean is_background );
@@ -887,6 +885,7 @@ float Com_RandomFloat( float fMin, float fMax );
 void TrimSpace( const char *source, char *dest );
 const byte *GL_TextureData( unsigned int texnum );
 void GL_FreeImage( const char *name );
+void VID_InitDefaultResolution( void );
 void VID_RestoreGamma( void );
 void UI_SetActiveMenu( qboolean fActive );
 struct cmd_s *Cmd_GetFirstFunctionHandle( void );

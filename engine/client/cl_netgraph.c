@@ -444,8 +444,8 @@ NetGraph_GetScreenPos
 void NetGraph_GetScreenPos( wrect_t *rect, int *w, int *x, int *y )
 {
 	rect->left = rect->top = 0;
-	rect->right = clgame.scrInfo.iWidth;
-	rect->bottom = clgame.scrInfo.iHeight;
+	rect->right = glState.width;
+	rect->bottom = glState.height;
 
 	*w = Q_min( NET_TIMINGS, net_graphwidth->value );
 	if( rect->right < *w + 10 )

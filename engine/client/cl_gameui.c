@@ -666,7 +666,10 @@ static void pfnRenderScene( const ref_params_t *fd )
 	// to avoid division by zero
 	if( !fd || fd->fov_x <= 0.0f || fd->fov_y <= 0.0f )
 		return;
-	R_RenderFrame( fd, false );
+
+	R_Set2DMode( false );
+	R_RenderFrame( fd, false, fd->fov_x );
+	R_Set2DMode( true );
 }
 
 /*

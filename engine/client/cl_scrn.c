@@ -22,8 +22,6 @@ GNU General Public License for more details.
 convar_t *scr_centertime;
 convar_t *scr_loading;
 convar_t *scr_download;
-convar_t *scr_width;
-convar_t *scr_height;
 convar_t *scr_viewsize;
 convar_t *cl_testlights;
 convar_t *cl_allow_levelshots;
@@ -100,7 +98,7 @@ void SCR_DrawFPS( int height )
           }
 
 	Con_DrawStringLen( fpsstring, &offset, NULL );
-	Con_DrawString( scr_width->value - offset - 4, height, fpsstring, color );
+	Con_DrawString( glState.width - offset - 4, height, fpsstring, color );
 }
 
 /*
@@ -144,7 +142,7 @@ void SCR_NetSpeeds( void )
 	Q_snprintf( msg, sizeof( msg ), "sv fps: ^1%4i min, ^3%4i cur, ^2%4i max\ncl fps: ^1%4i min, ^3%4i cur, ^2%4i max\nGame Time: %02d:%02d\nTotal sended to server: %s\nTotal received from server: %s\n",
 	min_svfps, cur_svfps, max_svfps, min_clfps, cur_clfps, max_clfps, (int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended ), Q_memprint( cls.netchan.total_received ));
 
-	x = scr_width->value - 320;
+	x = glState.width - 320;
 	y = 384;
 
 	Con_DrawStringLen( NULL, NULL, &height );
@@ -180,7 +178,7 @@ void SCR_RSpeeds( void )
 		char	*p, *start, *end;
 		rgba_t	color;
 
-		x = scr_width->value - 340;
+		x = glState.width - 340;
 		y = 64;
 
 		Con_DrawStringLen( NULL, NULL, &height );
@@ -288,7 +286,7 @@ void SCR_DrawPlaque( void )
 	{
 		int levelshot = GL_LoadTexture( cl_levelshot_name->string, NULL, 0, TF_IMAGE, NULL );
 		GL_SetRenderMode( kRenderNormal );
-		R_DrawStretchPic( 0, 0, scr_width->value, scr_height->value, 0, 0, 1, 1, levelshot );
+		R_DrawStretchPic( 0, 0, glState.width, glState.height, 0, 0, 1, 1, levelshot );
 		if( !cl.background ) CL_DrawHUD( CL_LOADING );
 	}
 }
@@ -346,7 +344,7 @@ SCR_DirtyScreen
 void SCR_DirtyScreen( void )
 {
 	SCR_AddDirtyPoint( 0, 0 );
-	SCR_AddDirtyPoint( scr_width->value - 1, scr_height->value - 1 );
+	SCR_AddDirtyPoint( glState.width - 1, glState.height - 1 );
 }
 
 /*
@@ -389,10 +387,10 @@ void SCR_TileClear( void )
 	if( clear.y2 <= clear.y1 )
 		return; // nothing disturbed
 
-	top = cl.refdef.viewport[1];
-	bottom = top + cl.refdef.viewport[3] - 1;
-	left = cl.refdef.viewport[0];
-	right = left + cl.refdef.viewport[2] - 1;
+	top = RI.viewport[1];
+	bottom = top + RI.viewport[3] - 1;
+	left = RI.viewport[0];
+	right = left + RI.viewport[2] - 1;
 
 	if( clear.y1 < top )
 	{	
@@ -587,8 +585,8 @@ void SCR_VidInit( void )
 	memset( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
 
 	// update screen sizes for menu
-	gameui.globals->scrWidth = scr_width->value;
-	gameui.globals->scrHeight = scr_height->value;
+	gameui.globals->scrWidth = glState.width;
+	gameui.globals->scrHeight = glState.height;
 
 	SCR_RebuildGammaTable();
 	VGui_Startup ();

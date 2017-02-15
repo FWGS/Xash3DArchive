@@ -271,10 +271,10 @@ void R_DrawMirrors( void )
 			RI.frustum[5].signbits = SignbitsForPlane( RI.frustum[5].normal );
 			RI.frustum[5].type = PLANE_NONAXIAL;
 
-			RI.refdef.viewangles[0] = anglemod( angles[0] );
-			RI.refdef.viewangles[1] = anglemod( angles[1] );
-			RI.refdef.viewangles[2] = anglemod( angles[2] );
-			VectorCopy( origin, RI.refdef.vieworg );
+			RI.viewangles[0] = anglemod( angles[0] );
+			RI.viewangles[1] = anglemod( angles[1] );
+			RI.viewangles[2] = anglemod( angles[2] );
+			VectorCopy( origin, RI.vieworg );
 			VectorCopy( origin, RI.cullorigin );
 
 			// put pvsorigin before the mirror plane to avoid get full visibility on world mirrors
@@ -305,7 +305,7 @@ void R_DrawMirrors( void )
 			}
 
 			tr.framecount++;
-			R_RenderScene( &RI.refdef );
+			R_RenderScene();
 			r_stats.c_mirror_passes++;
 
 			es->mirrortexturenum = R_AllocateMirrorTexture();
@@ -584,51 +584,16 @@ R_FindMirrors
 Build mirror chains for this frame
 ================
 */
-void R_FindMirrors( const ref_params_t *fd )
+void R_FindMirrors( void )
 {
-	vec3_t	viewOrg, viewAng;
-
-	if( !world.has_mirrors || RI.drawOrtho || !RI.drawWorld || RI.refdef.onlyClientDraw || !cl.worldmodel )
+	if( !world.has_mirrors || RI.drawOrtho || !RI.drawWorld || RI.onlyClientDraw || !cl.worldmodel )
 		return;
 
-	RI.refdef = *fd;
+	// NOTE: we already has initial params at this point like vieworg, viewangles
+	// all other will be sets into R_SetupFrustum
 
-	// build the transformation matrix for the given view angles
-	if( cl.thirdperson )
-	{
-		vec3_t	cam_ofs, vpn;
-
-		clgame.dllFuncs.CL_CameraOffset( cam_ofs );
-
-		viewAng[PITCH] = cam_ofs[PITCH];
-		viewAng[YAW] = cam_ofs[YAW];
-		viewAng[ROLL] = 0;
-
-		AngleVectors( viewAng, vpn, NULL, NULL );
-		VectorMA( RI.refdef.vieworg, -cam_ofs[ROLL], vpn, viewOrg );
-	}
-	else
-	{
-		VectorCopy( RI.refdef.vieworg, viewOrg );
-		VectorCopy( RI.refdef.viewangles, viewAng );
-	}
-
-	// build the transformation matrix for the given view angles
-	VectorCopy( viewOrg, RI.vieworg );
-	AngleVectors( viewAng, RI.vforward, RI.vright, RI.vup );
-
-	VectorCopy( RI.vieworg, RI.pvsorigin );
-
-	if( !r_lockcull->value )
-	{
-		VectorCopy( RI.vieworg, RI.cullorigin );
-		VectorCopy( RI.vforward, RI.cull_vforward );
-		VectorCopy( RI.vright, RI.cull_vright );
-		VectorCopy( RI.vup, RI.cull_vup );
-	}
-
-	R_FindViewLeaf();
-	R_SetupFrustum();
+	R_SetupFrustum ();
+	R_FindViewLeaf ();
 	R_MarkLeaves ();
 
 	VectorCopy( RI.cullorigin, tr.modelorg );

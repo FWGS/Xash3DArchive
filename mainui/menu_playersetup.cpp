@@ -479,7 +479,7 @@ static void UI_PlayerSetup_Init( void )
 		UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.view );
 	UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.name );
 
-	if( !gMenu.m_gameinfo.flags & GFL_NOMODELS )
+	if( !( gMenu.m_gameinfo.flags & GFL_NOMODELS ))
 	{
 		UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.model );
 		UI_AddItem( &uiPlayerSetup.menu, (void *)&uiPlayerSetup.topColor );

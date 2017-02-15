@@ -393,7 +393,7 @@ void Host_InputFrame( void )
 	}
 
 	// release mouse during pause or console typeing
-	if( cl.refdef.paused && cls.key_dest == key_game )
+	if( cl.paused && cls.key_dest == key_game )
 		shutdownMouse = true;
 	
 	if( shutdownMouse && !Cvar_VariableInteger( "fullscreen" ))

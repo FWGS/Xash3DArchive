@@ -67,7 +67,7 @@ static dllfunc_t cdll_exports[] =
 { "Demo_ReadBuffer", (void **)&clgame.dllFuncs.pfnDemo_ReadBuffer },
 { "CAM_Think", (void **)&clgame.dllFuncs.CAM_Think },
 { "CL_IsThirdPerson", (void **)&clgame.dllFuncs.CL_IsThirdPerson },
-{ "CL_CameraOffset", (void **)&clgame.dllFuncs.CL_CameraOffset },
+{ "CL_CameraOffset", (void **)&clgame.dllFuncs.CL_CameraOffset },	// unused callback. Now camera code is completely moved to the user area
 { "CL_CreateMove", (void **)&clgame.dllFuncs.CL_CreateMove },
 { "IN_ActivateMouse", (void **)&clgame.dllFuncs.IN_ActivateMouse },
 { "IN_DeactivateMouse", (void **)&clgame.dllFuncs.IN_DeactivateMouse },
@@ -139,7 +139,7 @@ returns true if thirdperson is enabled
 */
 qboolean CL_IsThirdPerson( void )
 {
-	return cl.thirdperson;
+	return cl.local.thirdperson;
 }
 
 /*
@@ -284,18 +284,18 @@ static int CL_AdjustXPos( float x, int width, int totalWidth )
 
 	if( x == -1 )
 	{
-		xPos = ( clgame.scrInfo.iWidth - width ) * 0.5f;
+		xPos = ( glState.width - width ) * 0.5f;
 	}
 	else
 	{
 		if ( x < 0 )
-			xPos = (1.0f + x) * clgame.scrInfo.iWidth - totalWidth;	// Alight right
+			xPos = (1.0f + x) * glState.width - totalWidth;	// Alight right
 		else // align left
-			xPos = x * clgame.scrInfo.iWidth;
+			xPos = x * glState.width;
 	}
 
-	if( xPos + width > clgame.scrInfo.iWidth )
-		xPos = clgame.scrInfo.iWidth - width;
+	if( xPos + width > glState.width )
+		xPos = glState.width - width;
 	else if( xPos < 0 )
 		xPos = 0;
 
@@ -315,19 +315,19 @@ static int CL_AdjustYPos( float y, int height )
 
 	if( y == -1 ) // centered?
 	{
-		yPos = ( clgame.scrInfo.iHeight - height ) * 0.5f;
+		yPos = ( glState.height - height ) * 0.5f;
 	}
 	else
 	{
 		// Alight bottom?
 		if( y < 0 )
-			yPos = (1.0f + y) * clgame.scrInfo.iHeight - height; // Alight bottom
+			yPos = (1.0f + y) * glState.height - height; // Alight bottom
 		else // align top
-			yPos = y * clgame.scrInfo.iHeight;
+			yPos = y * glState.height;
 	}
 
-	if( yPos + height > clgame.scrInfo.iHeight )
-		yPos = clgame.scrInfo.iHeight - height;
+	if( yPos + height > glState.height )
+		yPos = glState.height - height;
 	else if( yPos < 0 )
 		yPos = 0;
 
@@ -386,8 +386,8 @@ static void SPR_AdjustSize( float *x, float *y, float *w, float *h )
 	if( !x && !y && !w && !h ) return;
 
 	// scale for screen sizes
-	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
+	xscale = glState.width / (float)clgame.scrInfo.iWidth;
+	yscale = glState.height / (float)clgame.scrInfo.iHeight;
 
 	if( x ) *x *= xscale;
 	if( y ) *y *= yscale;
@@ -410,8 +410,8 @@ void PicAdjustSize( float *x, float *y, float *w, float *h )
 	if( !x && !y && !w && !h ) return;
 
 	// scale for screen sizes
-	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
+	xscale = glState.width / (float)clgame.scrInfo.iWidth;
+	yscale = glState.height / (float)clgame.scrInfo.iHeight;
 
 	if( x ) *x *= xscale;
 	if( y ) *y *= yscale;
@@ -583,7 +583,7 @@ void CL_DrawCenterPrint( void )
 
 		for( j = 0; j < lineLength; j++ )
 		{
-			if( x >= 0 && y >= 0 && x <= clgame.scrInfo.iWidth )
+			if( x >= 0 && y >= 0 && x <= glState.width )
 				x += Con_DrawCharacter( x, y, line[j], colorDefault );
 		}
 		y += charHeight;
@@ -636,7 +636,7 @@ void CL_DrawScreenFade( void )
 	if( sf->fadeFlags & FFADE_MODULATE )
 		GL_SetRenderMode( kRenderTransAdd );
 	else GL_SetRenderMode( kRenderTransTexture );
-	R_DrawStretchPic( 0, 0, scr_width->value, scr_height->value, 0, 0, 1, 1, cls.fillImage );
+	R_DrawStretchPic( 0, 0, glState.width, glState.height, 0, 0, 1, 1, cls.fillImage );
 	pglColor4ub( 255, 255, 255, 255 );
 }
 
@@ -837,7 +837,7 @@ void CL_DrawCrosshair( void )
 	int		x, y, width, height;
 	cl_entity_t	*pPlayer;
 
-	if( !clgame.ds.pCrosshair || cl.refdef.crosshairangle[2] || !cl_crosshair->value )
+	if( !clgame.ds.pCrosshair || cl.crosshairangle[2] || !cl_crosshair->value )
 		return;
 
 	pPlayer = CL_GetLocalPlayer();
@@ -846,31 +846,31 @@ void CL_DrawCrosshair( void )
 		return;
 
 	// any camera on
-	if( cl.refdef.viewentity != pPlayer->index )
+	if( cl.viewentity != pPlayer->index )
 		return;
 
 	// get crosshair dimension
 	width = clgame.ds.rcCrosshair.right - clgame.ds.rcCrosshair.left;
 	height = clgame.ds.rcCrosshair.bottom - clgame.ds.rcCrosshair.top;
 
-	x = clgame.scrInfo.iWidth / 2; 
-	y = clgame.scrInfo.iHeight / 2;
+	x = clgame.viewport[0] + ( clgame.viewport[2] >> 1 ); 
+	y = clgame.viewport[1] + ( clgame.viewport[3] >> 1 );
 
-	// g-cont - cl.refdef.crosshairangle is the autoaim angle.
+	// g-cont - cl.crosshairangle is the autoaim angle.
 	// if we're not using autoaim, just draw in the middle of the screen
-	if( !VectorIsNull( cl.refdef.crosshairangle ))
+	if( !VectorIsNull( cl.crosshairangle ))
 	{
 		vec3_t	angles;
 		vec3_t	forward;
 		vec3_t	point, screen;
 
-		VectorAdd( cl.refdef.viewangles, cl.refdef.crosshairangle, angles );
+		VectorAdd( cl.viewangles, cl.crosshairangle, angles );
 		AngleVectors( angles, forward, NULL, NULL );
-		VectorAdd( cl.refdef.vieworg, forward, point );
+		VectorAdd( RI.vieworg, forward, point );
 		R_WorldToScreen( point, screen );
 
-		x += 0.5f * screen[0] * scr_width->value + 0.5f;
-		y += 0.5f * screen[1] * scr_height->value + 0.5f;
+		x += ( clgame.viewport[2] >> 1 ) * screen[0] + 0.5f;
+		y += ( clgame.viewport[3] >> 1 ) * screen[1] + 0.5f;
 	}
 
 	clgame.ds.pSprite = clgame.ds.pCrosshair;
@@ -899,8 +899,8 @@ static void CL_DrawLoading( float percent )
 	x = ( clgame.scrInfo.iWidth - width ) >> 1;
 	y = ( clgame.scrInfo.iHeight - height) >> 1;
 
-	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
+	xscale = glState.width / (float)clgame.scrInfo.iWidth;
+	yscale = glState.height / (float)clgame.scrInfo.iHeight;
 
 	x *= xscale;
 	y *= yscale;
@@ -947,8 +947,8 @@ static void CL_DrawPause( void )
 	x = ( clgame.scrInfo.iWidth - width ) >> 1;
 	y = ( clgame.scrInfo.iHeight - height) >> 1;
 
-	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
+	xscale = glState.width / (float)clgame.scrInfo.iWidth;
+	yscale = glState.height / (float)clgame.scrInfo.iHeight;
 
 	x *= xscale;
 	y *= yscale;
@@ -965,7 +965,7 @@ void CL_DrawHUD( int state )
 	if( state == CL_ACTIVE && !cl.video_prepped )
 		state = CL_LOADING;
 
-	if( state == CL_ACTIVE && cl.refdef.paused )
+	if( state == CL_ACTIVE && cl.paused )
 		state = CL_PAUSED;
 
 	switch( state )
@@ -974,13 +974,13 @@ void CL_DrawHUD( int state )
 		CL_DrawScreenFade ();
 		CL_DrawCrosshair ();
 		CL_DrawCenterPrint ();
-		clgame.dllFuncs.pfnRedraw( cl.time, cl.refdef.intermission );
+		clgame.dllFuncs.pfnRedraw( cl.time, cl.intermission );
 		break;
 	case CL_PAUSED:
 		CL_DrawScreenFade ();
 		CL_DrawCrosshair ();
 		CL_DrawCenterPrint ();
-		clgame.dllFuncs.pfnRedraw( cl.time, cl.refdef.intermission );
+		clgame.dllFuncs.pfnRedraw( cl.time, cl.intermission );
 		CL_DrawPause();
 		break;
 	case CL_LOADING:
@@ -1429,10 +1429,11 @@ static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 {
 	// setup screen info
 	clgame.scrInfo.iSize = sizeof( clgame.scrInfo );
+	clgame.scrInfo.iFlags = SCRINFO_SCREENFLASH;
 
 	if( Cvar_VariableInteger( "hud_scale" ))
 	{
-		if( scr_width->value < 640 )
+		if( glState.width < 640 )
 		{
 			// virtual screen space 320x200
 			clgame.scrInfo.iWidth = 320;
@@ -1448,8 +1449,8 @@ static int pfnGetScreenInfo( SCREENINFO *pscrinfo )
 	}
 	else
 	{
-		clgame.scrInfo.iWidth = scr_width->value;
-		clgame.scrInfo.iHeight = scr_height->value;
+		clgame.scrInfo.iWidth = glState.width;
+		clgame.scrInfo.iHeight = glState.height;
 		clgame.scrInfo.iFlags &= ~SCRINFO_STRETCHED;
 	}
 
@@ -1590,7 +1591,7 @@ pfnPlaySoundByName
 static void pfnPlaySoundByName( const char *szSound, float volume )
 {
 	int hSound = S_RegisterSound( szSound );
-	S_StartSound( NULL, cl.refdef.viewentity, CHAN_ITEM, hSound, volume, ATTN_NORM, PITCH_NORM, SND_STOP_LOOPING );
+	S_StartSound( NULL, cl.viewentity, CHAN_ITEM, hSound, volume, ATTN_NORM, PITCH_NORM, SND_STOP_LOOPING );
 }
 
 /*
@@ -1612,7 +1613,7 @@ static void pfnPlaySoundByIndex( int iSound, float volume )
 		MsgDev( D_ERROR, "CL_PlaySoundByIndex: invalid sound handle %i\n", iSound );
 		return;
 	}
-	S_StartSound( NULL, cl.refdef.viewentity, CHAN_ITEM, hSound, volume, ATTN_NORM, PITCH_NORM, SND_STOP_LOOPING );
+	S_StartSound( NULL, cl.viewentity, CHAN_ITEM, hSound, volume, ATTN_NORM, PITCH_NORM, SND_STOP_LOOPING );
 }
 
 /*
@@ -1680,11 +1681,9 @@ int pfnDrawConsoleString( int x, int y, char *string )
 	int	drawLen;
 
 	if( !string || !*string ) return 0; // silent ignore
-	clgame.ds.adjust_size = true;
 	Con_SetFont( con_fontsize->value );
 	drawLen = Con_DrawString( x, y, string, clgame.ds.textColor );
 	MakeRGBA( clgame.ds.textColor, 255, 255, 255, 255 );
-	clgame.ds.adjust_size = false;
 	Con_RestoreFont();
 
 	return (x + drawLen); // exclude color prexfixes
@@ -1779,7 +1778,7 @@ return interpolated angles from previous frame
 */
 static void pfnGetViewAngles( float *angles )
 {
-	if( angles ) VectorCopy( cl.refdef.cl_viewangles, angles );
+	if( angles ) VectorCopy( cl.viewangles, angles );
 }
 
 /*
@@ -1791,7 +1790,7 @@ return interpolated angles from previous frame
 */
 static void pfnSetViewAngles( float *angles )
 {
-	if( angles ) VectorCopy( angles, cl.refdef.cl_viewangles );
+	if( angles ) VectorCopy( angles, cl.viewangles );
 }
 
 /*
@@ -2178,9 +2177,7 @@ pfnLocalPlayerDucking
 */
 int pfnLocalPlayerDucking( void )
 {
-	if( CL_IsPredicted( ))
-		return (cl.predicted.usehull == 1);
-	return cl.frame.client.bInDuck;
+	return (cl.local.usehull == 1) ? true : false;
 }
 
 /*
@@ -2191,12 +2188,7 @@ pfnLocalPlayerViewheight
 */
 void pfnLocalPlayerViewheight( float *view_ofs )
 {
-	// predicted or smoothed
-	if( !view_ofs ) return;
-
-	if( CL_IsPredicted( ))
-		VectorCopy( cl.predicted.viewofs, view_ofs );		
-	else VectorCopy( cl.frame.client.view_ofs, view_ofs );
+	if( view_ofs ) VectorCopy( cl.viewheight, view_ofs );		
 }
 
 /*
@@ -2792,7 +2784,7 @@ pfnPlaySoundVoiceByName
 void pfnPlaySoundVoiceByName( char *filename, float volume, int pitch )
 {
 	int hSound = S_RegisterSound( filename );
-	S_StartSound( NULL, cl.refdef.viewentity, CHAN_AUTO, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
+	S_StartSound( NULL, cl.viewentity, CHAN_AUTO, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
 }
 
 /*
@@ -2828,7 +2820,7 @@ pfnPlaySoundByNameAtPitch
 void pfnPlaySoundByNameAtPitch( char *filename, float volume, int pitch )
 {
 	int hSound = S_RegisterSound( filename );
-	S_StartSound( NULL, cl.refdef.viewentity, CHAN_STATIC, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
+	S_StartSound( NULL, cl.viewentity, CHAN_STATIC, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
 }
 
 /*
@@ -3119,10 +3111,10 @@ int TriWorldToScreen( float *world, float *screen )
 
 	retval = R_WorldToScreen( world, screen );
 
-	screen[0] =  0.5f * screen[0] * (float)cl.refdef.viewport[2];
-	screen[1] = -0.5f * screen[1] * (float)cl.refdef.viewport[3];
-	screen[0] += 0.5f * (float)cl.refdef.viewport[2];
-	screen[1] += 0.5f * (float)cl.refdef.viewport[3];
+	screen[0] =  0.5f * screen[0] * (float)clgame.viewport[2];
+	screen[1] = -0.5f * screen[1] * (float)clgame.viewport[3];
+	screen[0] += 0.5f * (float)clgame.viewport[2];
+	screen[1] += 0.5f * (float)clgame.viewport[3];
 
 	return retval;
 }
@@ -3937,9 +3929,6 @@ qboolean CL_LoadProgs( const char *name )
 	qboolean			critical_exports = true;
 
 	if( clgame.hInstance ) CL_UnloadProgs();
-
-	// setup globals
-	cl.refdef.movevars = &clgame.movevars;
 
 	// initialize PlayerMove
 	clgame.pmove = &gpMove;

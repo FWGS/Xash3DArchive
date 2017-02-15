@@ -461,8 +461,8 @@ void SCR_TimeRefresh_f( void )
 		R_BeginFrame( false );
 		for( i = 0; i < 128; i++ )
 		{
-			cl.refdef.viewangles[1] = i / 128.0 * 360.0f;
-			R_RenderFrame( &cl.refdef, true );
+			RI.viewangles[1] = i / 128.0 * 360.0f;
+			R_RenderScene();
 		}
 		R_EndFrame();
 	}
@@ -470,10 +470,10 @@ void SCR_TimeRefresh_f( void )
 	{
 		for( i = 0; i < 128; i++ )
 		{
-			cl.refdef.viewangles[1] = i / 128.0 * 360.0f;
+			RI.viewangles[1] = i / 128.0 * 360.0f;
 
 			R_BeginFrame( true );
-			R_RenderFrame( &cl.refdef, true );
+			R_RenderScene();
 			R_EndFrame();
 		}
 	}
@@ -492,6 +492,6 @@ viewpos (level-designer helper)
 */
 void SCR_Viewpos_f( void )
 {
-	Msg( "org ( %g %g %g )\n", cl.refdef.vieworg[0], cl.refdef.vieworg[1], cl.refdef.vieworg[2] );
-	Msg( "ang ( %g %g %g )\n", cl.refdef.viewangles[0], cl.refdef.viewangles[1], cl.refdef.viewangles[2] );
+	Msg( "org ( %g %g %g )\n", RI.vieworg[0], RI.vieworg[1], RI.vieworg[2] );
+	Msg( "ang ( %g %g %g )\n", RI.viewangles[0], RI.viewangles[1], RI.viewangles[2] );
 }

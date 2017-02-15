@@ -87,8 +87,6 @@ convar_t			*cl_himodels;
 cvar_t			r_shadows = { "r_shadows", "0", 0, 0 };	// dead cvar. especially disabled
 cvar_t			r_shadowalpha = { "r_shadowalpha", "0.5", 0, 0.8f };
 static r_studio_interface_t	*pStudioDraw;
-static float		aliasXscale, aliasYscale;	// software renderer scale
-static matrix3x4		g_aliastransform;		// software renderer transform
 static matrix3x4		g_rotationmatrix;
 static vec3_t		g_chrome_origin;
 static vec2_t		g_chrome[MAXSTUDIOVERTS];	// texture coords for surface normals
@@ -138,8 +136,6 @@ R_StudioInit
 */
 void R_StudioInit( void )
 {
-	float	pixelAspect, fov_x = 90.0f, fov_y;
-
 	r_studio_lambert = Cvar_Get( "r_studio_lambert", "2", FCVAR_ARCHIVE, "bonelighting lambert value" );
 	r_studio_lerping = Cvar_Get( "r_studio_lerping", "1", FCVAR_ARCHIVE, "enables studio animation lerping" );
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
@@ -150,17 +146,6 @@ void R_StudioInit( void )
 	// NOTE: some mods with custom studiomodel renderer may cause error when menu trying draw player model out of the loaded game
 	r_customdraw_playermodel = Cvar_Get( "r_customdraw_playermodel", "0", FCVAR_ARCHIVE, "allow to drawing playermodel in menu with client renderer" );
 
-	// recalc software X and Y alias scale (this stuff is used only by HL software renderer but who knews...)
-	pixelAspect = ((float)scr_height->value / (float)scr_width->value);
-	if( scr_width->value < 640 )
-		pixelAspect *= (320.0f / 240.0f);
-	else pixelAspect *= (640.0f / 480.0f);
-
-	fov_y = V_CalcFov( &fov_x, scr_width->value, scr_height->value );
-	aliasXscale = (float)scr_width->value / fov_y; // stub
-	aliasYscale = aliasXscale * pixelAspect;
-
-	Matrix3x4_LoadIdentity( g_aliastransform );
 	Matrix3x4_LoadIdentity( g_rotationmatrix );
 
 	g_nStudioCount = 0;
@@ -412,8 +397,8 @@ pfnGetAliasScale
 */
 static void pfnGetAliasScale( float *x, float *y )
 {
-	if( x ) *x = aliasXscale;
-	if( y ) *y = aliasYscale;
+	if( x ) *x = 1.0f;
+	if( y ) *y = 1.0f;
 }
 
 /*
@@ -446,7 +431,7 @@ pfnStudioGetAliasTransform
 */
 static float ***pfnStudioGetAliasTransform( void )
 {
-	return (float ***)g_aliastransform;
+	return NULL;
 }
 
 /*
@@ -539,10 +524,10 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 		// don't do it if the goalstarttime hasn't updated in a while.
 		// NOTE: Because we need to interpolate multiplayer characters, the interpolation time limit
 		// was increased to 1.0 s., which is 2x the max lag we are accounting for.
-		if( m_fDoInterp && ( RI.refdef.time < e->curstate.animtime + 1.0f ) && ( e->curstate.animtime != e->latched.prevanimtime ))
+		if( m_fDoInterp && ( cl.time < e->curstate.animtime + 1.0f ) && ( e->curstate.animtime != e->latched.prevanimtime ))
 		{
-			f = ( RI.refdef.time - e->curstate.animtime ) / ( e->curstate.animtime - e->latched.prevanimtime );
-			// Msg( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, RI.refdef.time );
+			f = ( cl.time - e->curstate.animtime ) / ( e->curstate.animtime - e->latched.prevanimtime );
+			// Msg( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, cl.time );
 		}
 
 		if( m_fDoInterp )
@@ -601,8 +586,8 @@ float R_StudioEstimateFrame( cl_entity_t *e, mstudioseqdesc_t *pseqdesc )
 	
 	if( m_fDoInterp )
 	{
-		if( RI.refdef.time < e->curstate.animtime ) dfdt = 0.0;
-		else dfdt = (RI.refdef.time - e->curstate.animtime) * e->curstate.framerate * pseqdesc->fps;
+		if( cl.time < e->curstate.animtime ) dfdt = 0.0;
+		else dfdt = (cl.time - e->curstate.animtime) * e->curstate.framerate * pseqdesc->fps;
 	}
 	else dfdt = 0;
 
@@ -638,7 +623,7 @@ float R_StudioEstimateInterpolant( cl_entity_t *e )
 
 	if( m_fDoInterp && ( e->curstate.animtime >= e->latched.prevanimtime + 0.01f ))
 	{
-		dadt = ( RI.refdef.time - e->curstate.animtime ) / 0.1f;
+		dadt = ( cl.time - e->curstate.animtime ) / 0.1f;
 		if( dadt > 2.0f ) dadt = 2.0f;
 	}
 	return dadt;
@@ -729,7 +714,7 @@ void R_StudioFxTransform( cl_entity_t *ent, matrix3x4 transform )
 		{
 			float	scale;
 
-			scale = 1.0f + ( RI.refdef.time - ent->curstate.animtime ) * 10.0f;
+			scale = 1.0f + ( cl.time - ent->curstate.animtime ) * 10.0f;
 			if( scale > 2.0f ) scale = 2.0f; // don't blow up more than 200%
 
 			transform[0][1] *= scale;
@@ -1158,7 +1143,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 		}
 	}
 
-	if( m_fDoInterp && e->latched.sequencetime && ( e->latched.sequencetime + 0.2f > RI.refdef.time) && ( e->latched.prevsequence < m_pStudioHeader->numseq ))
+	if( m_fDoInterp && e->latched.sequencetime && ( e->latched.sequencetime + 0.2f > cl.time) && ( e->latched.prevsequence < m_pStudioHeader->numseq ))
 	{
 		// blend from last sequence
 		static vec3_t	pos1b[MAXSTUDIOBONES];
@@ -1195,7 +1180,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 			}
 		}
 
-		s = 1.0f - ( RI.refdef.time - e->latched.sequencetime ) / 0.2f;
+		s = 1.0f - ( cl.time - e->latched.sequencetime ) / 0.2f;
 		R_StudioSlerpBones( q, pos, q1b, pos1b, s );
 	}
 	else
@@ -1306,7 +1291,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 			float	angle, sr, cr;
 			int	i;
 
-			angle = anglemod( RI.refdef.time * 40 ) * (M_PI2 / 360.0f);
+			angle = anglemod( cl.time * 40 ) * (M_PI2 / 360.0f);
 			SinCos( angle, &sr, &cr );
 
 			for( i = 0; i < 3; i++ )
@@ -1425,10 +1410,8 @@ void R_StudioGetShadowImpactAndDir( void )
 	float		angle;
 	vec3_t		skyAngles, origin, end;
 
-	if( !cl.refdef.movevars ) return; // e.g. in menu
-
 	// convert skyvec into angles then back into vector to avoid 0 0 0 direction
-	VectorAngles( (float *)&cl.refdef.movevars->skyvec_x, skyAngles );
+	VectorAngles( (float *)&clgame.movevars.skyvec_x, skyAngles );
 	angle = skyAngles[YAW] / 180 * M_PI;
 
 	Matrix3x4_OriginFromMatrix( g_bonestransform[0], origin );
@@ -1477,14 +1460,9 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 	else Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
 
 	// setup light dir
-	if( cl.refdef.movevars )
-	{
-		// pre-defined light vector
-		plight->lightvec[0] = cl.refdef.movevars->skyvec_x;
-		plight->lightvec[1] = cl.refdef.movevars->skyvec_y;
-		plight->lightvec[2] = cl.refdef.movevars->skyvec_z;
-	}
-	else VectorSet( plight->lightvec, 0.0f, 0.0f, -1.0f );
+	plight->lightvec[0] = clgame.movevars.skyvec_x;
+	plight->lightvec[1] = clgame.movevars.skyvec_y;
+	plight->lightvec[2] = clgame.movevars.skyvec_z;
 
 	if( VectorIsNull( plight->lightvec ))
 		VectorSet( plight->lightvec, 0.0f, 0.0f, -1.0f );
@@ -1510,7 +1488,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 
 	for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
 	{
-		if( dl->die < RI.refdef.time || !dl->radius )
+		if( dl->die < cl.time || !dl->radius )
 			continue;
 
 		VectorSubtract( dl->origin, origin, direction );
@@ -1596,7 +1574,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 
 	for( lnum = 0, el = cl_elights; lnum < MAX_ELIGHTS; lnum++, el++ )
 	{
-		if( el->die < RI.refdef.time || !el->radius )
+		if( el->die < cl.time || !el->radius )
 			continue;
 
 		VectorSubtract( el->origin, origin, direction );
@@ -2833,7 +2811,7 @@ void R_StudioEstimateGait( entity_state_t *pplayer )
 	vec3_t	est_velocity;
 	float	dt;
 
-	dt = bound( 0.0f, (RI.refdef.time - cl.oldtime), 1.0f );
+	dt = bound( 0.0f, (cl.time - cl.oldtime), 1.0f );
 
 	if( dt == 0.0f || m_pPlayerInfo->renderframe == tr.framecount )
 	{
@@ -2902,7 +2880,7 @@ void R_StudioProcessGait( entity_state_t *pplayer )
 	RI.currententity->latched.prevblending[0] = RI.currententity->curstate.blending[0];
 	RI.currententity->latched.prevseqblending[0] = RI.currententity->curstate.blending[0];
 
-	dt = bound( 0.0f, (RI.refdef.time - cl.oldtime), 1.0f );
+	dt = bound( 0.0f, (cl.time - cl.oldtime), 1.0f );
 	R_StudioEstimateGait( pplayer );
 
 	// calc side to side turning
@@ -3309,7 +3287,7 @@ R_RunViewmodelEvents
 */
 void R_RunViewmodelEvents( void )
 {
-	if( cl.refdef.nextView || cl.thirdperson || RI.params & RP_NONVIEWERREF )
+	if( cl.local.thirdperson || RI.params & RP_NONVIEWERREF )
 		return;
 
 	if( !Mod_Extradata( clgame.viewent.model ))
@@ -3319,9 +3297,9 @@ void R_RunViewmodelEvents( void )
 	RI.currentmodel = RI.currententity->model;
 	if( !RI.currentmodel ) return;
 
-	if( !cl.weaponstarttime ) cl.weaponstarttime = cl.time;
-	RI.currententity->curstate.animtime = cl.weaponstarttime;
-	RI.currententity->curstate.sequence = cl.weaponsequence;
+	if( !cl.local.weaponstarttime ) cl.local.weaponstarttime = cl.time;
+	RI.currententity->curstate.animtime = cl.local.weaponstarttime;
+	RI.currententity->curstate.sequence = cl.local.weaponsequence;
 
 	pStudioDraw->StudioDrawModel( STUDIO_EVENTS );
 
@@ -3336,14 +3314,14 @@ R_DrawViewModel
 */
 void R_DrawViewModel( void )
 {
-	if( RI.refdef.onlyClientDraw || r_drawviewmodel->value == 0 )
+	if( RI.onlyClientDraw || r_drawviewmodel->value == 0 )
 		return;
 
 	// ignore in thirdperson, camera view or client is died
-	if( cl.thirdperson || cl.refdef.health <= 0 || cl.refdef.viewentity != ( cl.playernum + 1 ))
+	if( cl.local.thirdperson || cl.local.health <= 0 || cl.viewentity != ( cl.playernum + 1 ))
 		return;
 
-	if( cl.refdef.nextView || RI.params & RP_NONVIEWERREF )
+	if( RI.params & RP_NONVIEWERREF )
 		return;
 
 	if( !Mod_Extradata( clgame.viewent.model ))
@@ -3362,9 +3340,9 @@ void R_DrawViewModel( void )
 	if( r_lefthand->value == 1 || g_iBackFaceCull )
 		GL_FrontFace( !glState.frontFace );
 
-	if( !cl.weaponstarttime ) cl.weaponstarttime = cl.time;
-	RI.currententity->curstate.animtime = cl.weaponstarttime;
-	RI.currententity->curstate.sequence = cl.weaponsequence;
+	if( !cl.local.weaponstarttime ) cl.local.weaponstarttime = cl.time;
+	RI.currententity->curstate.animtime = cl.local.weaponstarttime;
+	RI.currententity->curstate.sequence = cl.local.weaponsequence;
 
 	pStudioDraw->StudioDrawModel( STUDIO_RENDER );
 

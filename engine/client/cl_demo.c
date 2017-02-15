@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 #include "common.h"
 #include "client.h"
+#include "gl_local.h"
 #include "net_encode.h"
 
 #define dem_unknown		0	// unknown command
@@ -486,7 +487,7 @@ void CL_DrawDemoRecording( void )
 	Q_memprint( pos ), (int)(cls.demotime / 60.0f ), (int)fmod( cls.demotime, 60.0f ));
 
 	Con_DrawStringLen( string, &len, NULL );
-	Con_DrawString(((int)scr_width->value - len) >> 1, (int)scr_height->value >> 2, string, color );
+	Con_DrawString(( glState.width - len ) >> 1, glState.height >> 2, string, color );
 }
 
 /*
@@ -552,9 +553,9 @@ void CL_ReadDemoUserCmd( qboolean discard )
 		pcmd->sendsize = 1;
 
 		// always delta'ing from null
-		cl.refdef.cmd = &pcmd->cmd;
+		cl.cmd = &pcmd->cmd;
 
-		MSG_ReadDeltaUsercmd( &buf, &nullcmd, cl.refdef.cmd );
+		MSG_ReadDeltaUsercmd( &buf, &nullcmd, cl.cmd );
 
 		// make sure what interp info contain angles from different frames
 		// or lerping will stop working
@@ -566,7 +567,7 @@ void CL_ReadDemoUserCmd( qboolean discard )
 
 			// record update
 			a->starttime = demo.timestamp;
-			VectorCopy( cl.refdef.cmd->viewangles, a->viewangles );
+			VectorCopy( cl.viewangles, a->viewangles );
 			demo.lasttime = demo.timestamp;
 		}
 
@@ -731,7 +732,7 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 	// HACKHACK: changedemo issues
 	if( !cls.netchan.remote_address.type ) cls.netchan.remote_address.type = NA_LOOPBACK;
 
-	if(( !cl.background && ( cl.refdef.paused || cls.key_dest != key_game )) || cls.key_dest == key_console )
+	if(( !cl.background && ( cl.paused || cls.key_dest != key_game )) || cls.key_dest == key_console )
 	{
 		demo.starttime += host.frametime;
 		return false; // paused
@@ -891,9 +892,9 @@ void CL_DemoInterpolateAngles( void )
 		AngleQuaternion( next->viewangles, q1, false );
 		AngleQuaternion( prev->viewangles, q2, false );
 		QuaternionSlerp( q2, q1, frac, q );
-		QuaternionAngle( q, cl.refdef.cl_viewangles );
+		QuaternionAngle( q, cl.viewangles );
 	}
-	else VectorCopy( cl.refdef.cmd->viewangles, cl.refdef.cl_viewangles );
+	else VectorCopy( cl.cmd->viewangles, cl.viewangles );
 }
 
 /*

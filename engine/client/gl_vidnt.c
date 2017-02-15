@@ -1064,6 +1064,19 @@ void VID_RestoreGamma( void )
 
 /*
 =================
+VID_InitDefaultResolution
+=================
+*/
+void VID_InitDefaultResolution( void )
+{
+	// we need to have something valid here
+	// until video subsystem initialized
+	glState.width = 640;
+	glState.height = 480;
+}
+
+/*
+=================
 GL_SetPixelformat
 =================
 */
@@ -1155,9 +1168,6 @@ void R_SaveVideoMode( int vid_mode )
 	glState.width = vidmode[mode].width;
 	glState.height = vidmode[mode].height;
 	glState.wideScreen = vidmode[mode].wideScreen;
-
-	Cvar_FullSet( "width", va( "%i", vidmode[mode].width ), FCVAR_READ_ONLY );
-	Cvar_FullSet( "height", va( "%i", vidmode[mode].height ), FCVAR_READ_ONLY );
 	Cvar_SetValue( "vid_mode", mode ); // merge if it out of bounds
 
 	MsgDev( D_NOTE, "Set: %s [%dx%d]\n", vidmode[mode].desc, vidmode[mode].width, vidmode[mode].height );
@@ -1375,8 +1385,8 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 	
 	R_SaveVideoMode( vid_mode );
 
-	width = scr_width->value;
-	height = scr_height->value;
+	width = glState.width;
+	height = glState.height;
 
 	// check our desktop attributes
 	hDC = GetDC( GetDesktopWindow( ));
@@ -1708,7 +1718,7 @@ void R_RenderInfo_f( void )
 	}
 
 	Msg( "\n" );
-	Msg( "MODE: %i, %i x %i %s\n", vid_mode->value, scr_width->value, scr_height->value, vidmode[(int)vid_mode->value].desc );
+	Msg( "MODE: %i, %i x %i %s\n", vid_mode->value, glState.width, glState.height, vidmode[(int)vid_mode->value].desc );
 	Msg( "GAMMA: %s\n", (glConfig.deviceSupportsGamma) ? "hardware" : "software" );
 	Msg( "\n" );
 	Msg( "PICMIP: %i\n", gl_picmip->value );

@@ -26,6 +26,7 @@ convar_t	*scr_conspeed;
 convar_t	*con_fontsize;
 
 #define CON_TIMES		4	// notify lines
+#define CON_MAX_TIMES	64	// notify max lines
 #define COLOR_DEFAULT	'7'
 #define CON_HISTORY		64
 #define MAX_DBG_NOTIFY	128
@@ -87,6 +88,7 @@ typedef struct
 
 	int		lines_first;	// cyclic buffer
 	int		lines_count;
+	int		num_times;	// overlay lines count
 
 	// console scroll
 	int		backscroll;	// lines up from bottom to display
@@ -305,6 +307,25 @@ void Con_ToggleConsole_f( void )
 
 /*
 ================
+Con_SetTimes_f
+================
+*/
+void Con_SetTimes_f( void )
+{
+	int	newtimes;
+
+	if( Cmd_Argc() != 2 )
+	{
+		Msg( "Usage: contimes <n lines>\n" );
+		return;
+	}
+
+	newtimes = Q_atoi( Cmd_Argv( 1 ) );
+	con.num_times = bound( CON_TIMES, newtimes, CON_MAX_TIMES );
+}
+
+/*
+================
 Con_FixTimes
 
 Notifies the console code about the current time
@@ -447,7 +468,7 @@ void Con_CheckResize( void )
 	if( con.curFont && con.curFont->hFontTexture )
 		charWidth = con.curFont->charWidths['M'] - 1;
 
-	width = ( scr_width->value / charWidth ) - 2;
+	width = ( glState.width / charWidth ) - 2;
 	if( !glw_state.initialized ) width = 78;
 
 	if( width == con.linewidth )
@@ -574,9 +595,9 @@ static void Con_LoadConchars( void )
 		Con_LoadConsoleFont( i, con.chars + i );
 
 	// select properly fontsize
-	if( scr_width->value <= 640 )
+	if( glState.width <= 640 )
 		fontSize = 0;
-	else if( scr_width->value >= 1280 )
+	else if( glState.width >= 1280 )
 		fontSize = 2;
 	else fontSize = 1;
 
@@ -599,8 +620,8 @@ static void Con_TextAdjustSize( int *x, int *y, int *w, int *h )
 	if( !x && !y && !w && !h ) return;
 
 	// scale for screen sizes
-	xscale = scr_width->value / (float)clgame.scrInfo.iWidth;
-	yscale = scr_height->value / (float)clgame.scrInfo.iHeight;
+	xscale = (float)glState.width / (float)clgame.scrInfo.iWidth;
+	yscale = (float)glState.height / (float)clgame.scrInfo.iHeight;
 
 	if( x ) *x *= xscale;
 	if( y ) *y *= yscale;
@@ -824,9 +845,10 @@ void Con_Init( void )
 {
 	int	i;
 
+	if( host.type == HOST_DEDICATED )
+		return; // dedicated server already have console
+
 	// must be init before startup video subsystem
-	scr_width = Cvar_Get( "width", "640", FCVAR_READ_ONLY, "screen width" );
-	scr_height = Cvar_Get( "height", "480", FCVAR_READ_ONLY, "screen height" );
 	scr_conspeed = Cvar_Get( "scr_conspeed", "600", FCVAR_ARCHIVE, "console moving speed" );
 	con_notifytime = Cvar_Get( "con_notifytime", "3", FCVAR_ARCHIVE, "notify time to live" );
 	con_fontsize = Cvar_Get( "con_fontsize", "1", FCVAR_ARCHIVE, "console font number (0, 1 or 2)" );
@@ -837,6 +859,7 @@ void Con_Init( void )
 	con.maxlines = CON_MAXLINES;
 	con.lines = (con_lineinfo_t *)Z_Malloc( con.maxlines * sizeof( *con.lines ));
 	con.lines_first = con.lines_count = 0;
+	con.num_times = CON_TIMES; // default as 4
 
 	Con_CheckResize();
 
@@ -857,9 +880,10 @@ void Con_Init( void )
 	Cmd_AddCommand( "clear", Con_Clear_f, "clear console history" );
 	Cmd_AddCommand( "messagemode", Con_MessageMode_f, "enable message mode \"say\"" );
 	Cmd_AddCommand( "messagemode2", Con_MessageMode2_f, "enable message mode \"say_team\"" );
-
-	MsgDev( D_REPORT, "Console initialized.\n" );
+	Cmd_AddCommand( "contimes", Con_SetTimes_f, "change number of console overlay lines (4-64)" );
 	con.initialized = true;
+
+	MsgDev( D_INFO, "Console initialized.\n" );
 }
 
 /*
@@ -1694,10 +1718,10 @@ int Con_DrawDebugLines( void )
 			int	fontTall;
 
 			Con_DrawStringLen( con.notify[i].szNotify, &len, &fontTall );
-			x = scr_width->value - Q_max( defaultX, len ) - 10;
+			x = glState.width - Q_max( defaultX, len ) - 10;
 			fontTall += 1;
 
-			if( y + fontTall > (int)scr_height->value - 20 )
+			if( y + fontTall > glState.height - 20 )
 				return count;
 
 			count++;
@@ -1746,7 +1770,7 @@ void Con_DrawNotify( void )
 
 	if( host.developer && ( !Cvar_VariableInteger( "cl_background" ) && !Cvar_VariableInteger( "sv_background" )))
 	{
-		for( i = CON_LINES_COUNT - CON_TIMES; i < CON_LINES_COUNT; i++ )
+		for( i = CON_LINES_COUNT - con.num_times; i < CON_LINES_COUNT; i++ )
 		{
 			con_lineinfo_t	*l = &CON_LINES( i );
 
@@ -1846,7 +1870,7 @@ void Con_DrawSolidConsole( int lines )
 	// draw the background
 	GL_SetRenderMode( kRenderNormal );
 	pglColor4ub( 255, 255, 255, 255 ); // to prevent grab color from screenfade
-	R_DrawStretchPic( 0, lines - scr_height->value, scr_width->value, scr_height->value, 0, 0, 1, 1, con.background );
+	R_DrawStretchPic( 0, lines - glState.height, glState.width, glState.height, 0, 0, 1, 1, con.background );
 
 	if( !con.curFont || host.developer <= 0 )
 		return; // nothing to draw
@@ -1862,10 +1886,10 @@ void Con_DrawSolidConsole( int lines )
 
 		Q_snprintf( curbuild, MAX_STRING, "Xash3D %i/%g (hw build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( ));
 		Con_DrawStringLen( curbuild, &stringLen, &charH );
-		start = scr_width->value - stringLen;
+		start = glState.width - stringLen;
 		stringLen = Con_StringLength( curbuild );
 
-		fraction = lines / (float)scr_height->value;
+		fraction = lines / (float)glState.height;
 		color[3] = Q_min( fraction * 2.0f, 1.0f ) * 255; // fadeout version number
 
 		for( i = 0; i < stringLen; i++ )
@@ -1932,13 +1956,13 @@ void Con_DrawConsole( void )
 		{
 			if(( Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" )) && cls.key_dest != key_console )
 				con.vislines = con.showlines = 0;
-			else con.vislines = con.showlines = scr_height->value;
+			else con.vislines = con.showlines = glState.height;
 		}
 		else
 		{
 			if( host.developer >= 4 )
 			{
-				con.vislines = ((int)scr_height->value >> 1);	// keep console open
+				con.vislines = (glState.height >> 1);	// keep console open
 			}
 			else
 			{
@@ -1957,7 +1981,7 @@ void Con_DrawConsole( void )
 	case ca_disconnected:
 		if( cls.key_dest != key_menu && host.developer )
 		{
-			Con_DrawSolidConsole( scr_height->value );
+			Con_DrawSolidConsole( glState.height );
 			Key_SetKeyDest( key_console );
 		}
 		break;
@@ -1975,7 +1999,7 @@ void Con_DrawConsole( void )
 		if( Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" ))
 		{
 			if( cls.key_dest == key_console ) 
-				Con_DrawSolidConsole( scr_height->value );
+				Con_DrawSolidConsole( glState.height );
 		}
 		else
 		{
@@ -2002,7 +2026,7 @@ void Con_DrawVersion( void )
 	// draws the current build
 	byte	*color = g_color_table[7];
 	int	i, stringLen, width = 0, charH;
-	int	start, height = scr_height->value;
+	int	start, height = glState.height;
 	qboolean	draw_version = false;
 	string	curbuild;
 
@@ -2024,7 +2048,7 @@ void Con_DrawVersion( void )
 		Q_snprintf( curbuild, MAX_STRING, "Xash3D v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( ));
 	else Q_snprintf( curbuild, MAX_STRING, "v%i/%g (build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum( )); 
 	Con_DrawStringLen( curbuild, &stringLen, &charH );
-	start = scr_width->value - stringLen * 1.05f;
+	start = glState.width - stringLen * 1.05f;
 	stringLen = Con_StringLength( curbuild );
 	height -= charH * 1.05f;
 
@@ -2047,12 +2071,12 @@ void Con_RunConsole( void )
 	if( host.developer && cls.key_dest == key_console )
 	{
 		if( cls.state == ca_disconnected )
-			con.showlines = scr_height->value;	// full screen
-		else con.showlines = ((int)scr_height->value >> 1);	// half screen	
+			con.showlines = glState.height;	// full screen
+		else con.showlines = (glState.height >> 1);	// half screen	
 	}
 	else con.showlines = 0; // none visible
 
-	lines_per_frame = bound( 1, fabs( scr_conspeed->value ) * host.realframetime, scr_height->value );
+	lines_per_frame = bound( 1, fabs( scr_conspeed->value ) * host.realframetime, glState.height );
 
 	if( cls.state == ca_connecting || cls.state == ca_connected )
 		lines_per_frame = 0;
@@ -2119,18 +2143,9 @@ void Con_VidInit( void )
 
 		if( !con.background )
 		{
-			if( scr_width->value < 640 )
-			{
-				if( FS_FileExists( "cached/conback400", false ))
-					con.background = GL_LoadTexture( "cached/conback400", NULL, 0, TF_IMAGE, NULL );
-				else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE, NULL );
-			}
-			else
-			{
-				if( FS_FileExists( "cached/conback640", false ))
-					con.background = GL_LoadTexture( "cached/conback640", NULL, 0, TF_IMAGE, NULL );
-				else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE, NULL );
-			}
+			if( FS_FileExists( "cached/conback640", false ))
+				con.background = GL_LoadTexture( "cached/conback640", NULL, 0, TF_IMAGE, NULL );
+			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE, NULL );
 		}
 	}
 	else
@@ -2141,18 +2156,9 @@ void Con_VidInit( void )
 
 		if( !con.background )
 		{
-			if( scr_width->value < 640 )
-			{
-				if( FS_FileExists( "cached/loading400", false ))
-					con.background = GL_LoadTexture( "cached/loading400", NULL, 0, TF_IMAGE, NULL );
-				else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE, NULL );
-			}
-			else
-			{
-				if( FS_FileExists( "cached/loading640", false ))
-					con.background = GL_LoadTexture( "cached/loading640", NULL, 0, TF_IMAGE, NULL );
-				else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE, NULL );
-			}
+			if( FS_FileExists( "cached/loading640", false ))
+				con.background = GL_LoadTexture( "cached/loading640", NULL, 0, TF_IMAGE, NULL );
+			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE, NULL );
 		}
 	}
 

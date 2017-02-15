@@ -27,8 +27,7 @@ GNU General Public License for more details.
 msurface_t	*r_debug_surface;
 const char	*r_debug_hitbox;
 float		gldepthmin, gldepthmax;
-ref_params_t	r_lastRefdef;
-ref_instance_t	RI, prevRI;
+ref_instance_t	RI;
 
 static int R_RankForRenderMode( cl_entity_t *ent )
 {
@@ -271,16 +270,16 @@ int R_ComputeFxBlend( cl_entity_t *e )
 	switch( e->curstate.renderfx ) 
 	{
 	case kRenderFxPulseSlowWide:
-		blend = renderAmt + 0x40 * sin( RI.refdef.time * 2 + offset );	
+		blend = renderAmt + 0x40 * sin( cl.time * 2 + offset );	
 		break;
 	case kRenderFxPulseFastWide:
-		blend = renderAmt + 0x40 * sin( RI.refdef.time * 8 + offset );
+		blend = renderAmt + 0x40 * sin( cl.time * 8 + offset );
 		break;
 	case kRenderFxPulseSlow:
-		blend = renderAmt + 0x10 * sin( RI.refdef.time * 2 + offset );
+		blend = renderAmt + 0x10 * sin( cl.time * 2 + offset );
 		break;
 	case kRenderFxPulseFast:
-		blend = renderAmt + 0x10 * sin( RI.refdef.time * 8 + offset );
+		blend = renderAmt + 0x10 * sin( cl.time * 8 + offset );
 		break;
 	// JAY: HACK for now -- not time based
 	case kRenderFxFadeSlow:			
@@ -308,35 +307,35 @@ int R_ComputeFxBlend( cl_entity_t *e )
 		blend = renderAmt;
 		break;
 	case kRenderFxStrobeSlow:
-		blend = 20 * sin( RI.refdef.time * 4 + offset );
+		blend = 20 * sin( cl.time * 4 + offset );
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
 	case kRenderFxStrobeFast:
-		blend = 20 * sin( RI.refdef.time * 16 + offset );
+		blend = 20 * sin( cl.time * 16 + offset );
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
 	case kRenderFxStrobeFaster:
-		blend = 20 * sin( RI.refdef.time * 36 + offset );
+		blend = 20 * sin( cl.time * 36 + offset );
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
 	case kRenderFxFlickerSlow:
-		blend = 20 * (sin( RI.refdef.time * 2 ) + sin( RI.refdef.time * 17 + offset ));
+		blend = 20 * (sin( cl.time * 2 ) + sin( cl.time * 17 + offset ));
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
 	case kRenderFxFlickerFast:
-		blend = 20 * (sin( RI.refdef.time * 16 ) + sin( RI.refdef.time * 23 + offset ));
+		blend = 20 * (sin( cl.time * 16 ) + sin( cl.time * 23 + offset ));
 		if( blend < 0 ) blend = 0;
 		else blend = renderAmt;
 		break;
 	case kRenderFxHologram:
 	case kRenderFxDistort:
 		VectorCopy( e->origin, tmp );
-		VectorSubtract( tmp, RI.refdef.vieworg, tmp );
-		dist = DotProduct( tmp, RI.refdef.forward );
+		VectorSubtract( tmp, RI.vieworg, tmp );
+		dist = DotProduct( tmp, RI.vforward );
 			
 		// Turn off distance fade
 		if( e->curstate.renderfx == kRenderFxDistort )
@@ -515,7 +514,7 @@ R_GetFarClip
 static float R_GetFarClip( void )
 {
 	if( cl.worldmodel && RI.drawWorld )
-		return cl.refdef.movevars->zmax * 1.5f;
+		return clgame.movevars.zmax * 1.73f;
 	return 2048.0f;
 }
 
@@ -578,12 +577,23 @@ void R_SetupFrustum( void )
 	vec3_t	farPoint;
 	int	i;
 
-	// 0 - left
-	// 1 - right
-	// 2 - down
-	// 3 - up
-	// 4 - farclip
-	// 5 - nearclip
+	// first we need to compute FOV and other things that needs for frustum properly work
+	RI.fov_y = V_CalcFov( &RI.fov_x, RI.viewport[2], RI.viewport[3] );
+
+	// adjust FOV for widescreen
+	if( glState.wideScreen && RI.drawWorld && r_adjust_fov->value )
+		V_AdjustFov( &RI.fov_x, &RI.fov_y, RI.viewport[2], RI.viewport[3], false );
+
+	// build the transformation matrix for the given view angles
+	AngleVectors( RI.viewangles, RI.vforward, RI.vright, RI.vup );
+
+	if( !r_lockcull->value )
+	{
+		VectorCopy( RI.vieworg, RI.cullorigin );
+		VectorCopy( RI.vforward, RI.cull_vforward );
+		VectorCopy( RI.vright, RI.cull_vright );
+		VectorCopy( RI.vup, RI.cull_vup );
+	}
 
 	if( RI.drawOrtho )
 	{
@@ -591,14 +601,21 @@ void R_SetupFrustum( void )
 		return;
 	}
 
+	// 0 - left
+	// 1 - right
+	// 2 - down
+	// 3 - up
+	// 4 - farclip
+	// 5 - nearclip
+
 	// rotate RI.vforward right by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[0].normal, RI.cull_vup, RI.cull_vforward, -( 90 - RI.refdef.fov_x / 2 ));
+	RotatePointAroundVector( RI.frustum[0].normal, RI.cull_vup, RI.cull_vforward, -( 90 - RI.fov_x / 2 ));
 	// rotate RI.vforward left by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[1].normal, RI.cull_vup, RI.cull_vforward, 90 - RI.refdef.fov_x / 2 );
+	RotatePointAroundVector( RI.frustum[1].normal, RI.cull_vup, RI.cull_vforward, 90 - RI.fov_x / 2 );
 	// rotate RI.vforward up by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[2].normal, RI.cull_vright, RI.cull_vforward, 90 - RI.refdef.fov_y / 2 );
+	RotatePointAroundVector( RI.frustum[2].normal, RI.cull_vright, RI.cull_vforward, 90 - RI.fov_y / 2 );
 	// rotate RI.vforward down by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[3].normal, RI.cull_vright, RI.cull_vforward, -( 90 - RI.refdef.fov_y / 2 ));
+	RotatePointAroundVector( RI.frustum[3].normal, RI.cull_vright, RI.cull_vforward, -( 90 - RI.fov_y / 2 ));
 	// negate forward vector
 	VectorNegate( RI.cull_vforward, RI.frustum[4].normal );
 
@@ -620,7 +637,7 @@ void R_SetupFrustum( void )
 R_SetupProjectionMatrix
 =============
 */
-static void R_SetupProjectionMatrix( const ref_params_t *fd, matrix4x4 m )
+static void R_SetupProjectionMatrix( matrix4x4 m )
 {
 	GLdouble	xMin, xMax, yMin, yMax, zNear, zFar;
 
@@ -637,10 +654,10 @@ static void R_SetupProjectionMatrix( const ref_params_t *fd, matrix4x4 m )
 	zNear = 4.0f;
 	zFar = max( 256.0f, RI.farClip );
 
-	yMax = zNear * tan( fd->fov_y * M_PI / 360.0 );
+	yMax = zNear * tan( RI.fov_y * M_PI / 360.0 );
 	yMin = -yMax;
 
-	xMax = zNear * tan( fd->fov_x * M_PI / 360.0 );
+	xMax = zNear * tan( RI.fov_x * M_PI / 360.0 );
 	xMin = -xMax;
 
 	Matrix4x4_CreateProjection( m, xMax, xMin, yMax, yMin, zNear, zFar );
@@ -651,7 +668,7 @@ static void R_SetupProjectionMatrix( const ref_params_t *fd, matrix4x4 m )
 R_SetupModelviewMatrix
 =============
 */
-static void R_SetupModelviewMatrix( const ref_params_t *fd, matrix4x4 m )
+static void R_SetupModelviewMatrix( matrix4x4 m )
 {
 #if 0
 	Matrix4x4_LoadIdentity( m );
@@ -660,10 +677,10 @@ static void R_SetupModelviewMatrix( const ref_params_t *fd, matrix4x4 m )
 #else
 	Matrix4x4_CreateModelview( m );
 #endif
-	Matrix4x4_ConcatRotate( m, -fd->viewangles[2], 1, 0, 0 );
-	Matrix4x4_ConcatRotate( m, -fd->viewangles[0], 0, 1, 0 );
-	Matrix4x4_ConcatRotate( m, -fd->viewangles[1], 0, 0, 1 );
-	Matrix4x4_ConcatTranslate( m, -fd->vieworg[0], -fd->vieworg[1], -fd->vieworg[2] );
+	Matrix4x4_ConcatRotate( m, -RI.viewangles[2], 1, 0, 0 );
+	Matrix4x4_ConcatRotate( m, -RI.viewangles[0], 0, 1, 0 );
+	Matrix4x4_ConcatRotate( m, -RI.viewangles[1], 0, 0, 1 );
+	Matrix4x4_ConcatTranslate( m, -RI.vieworg[0], -RI.vieworg[1], -RI.vieworg[2] );
 }
 
 /*
@@ -753,28 +770,10 @@ R_SetupFrame
 */
 static void R_SetupFrame( void )
 {
-	vec3_t	viewOrg, viewAng;
-
-	VectorCopy( RI.refdef.vieworg, viewOrg );
-	VectorCopy( RI.refdef.viewangles, viewAng );
-
-	// build the transformation matrix for the given view angles
-	VectorCopy( viewOrg, RI.vieworg );
-	AngleVectors( viewAng, RI.vforward, RI.vright, RI.vup );
-
 	// setup viewplane dist
 	RI.viewplanedist = DotProduct( RI.vieworg, RI.vforward );
 
-	VectorCopy( RI.vieworg, RI.pvsorigin );
-
-	if( !r_lockcull->value )
-	{
-		VectorCopy( RI.vieworg, RI.cullorigin );
-		VectorCopy( RI.vforward, RI.cull_vforward );
-		VectorCopy( RI.vright, RI.cull_vright );
-		VectorCopy( RI.vup, RI.cull_vup );
-	}
-
+	// prepare events for viewmodel (e.g. muzzleflashes)
 	R_RunViewmodelEvents();
 
 	// sort opaque entities by model type to avoid drawing model shadows under alpha-surfaces
@@ -801,16 +800,16 @@ R_SetupGL
 */
 static void R_SetupGL( void )
 {
-	if( RI.refdef.waterlevel >= 3 )
+	if( RP_NORMALPASS() && ( cl.local.waterlevel >= 3 ))
 	{
 		float	f;
 		f = sin( cl.time * 0.4f * ( M_PI * 2.7f ));
-		RI.refdef.fov_x += f;
-		RI.refdef.fov_y -= f;
+		RI.fov_x += f;
+		RI.fov_y -= f;
 	}
 
-	R_SetupModelviewMatrix( &RI.refdef, RI.worldviewMatrix );
-	R_SetupProjectionMatrix( &RI.refdef, RI.projectionMatrix );
+	R_SetupModelviewMatrix( RI.worldviewMatrix );
+	R_SetupProjectionMatrix( RI.projectionMatrix );
 //	if( RI.params & RP_MIRRORVIEW ) RI.projectionMatrix[0][0] = -RI.projectionMatrix[0][0];
 
 	Matrix4x4_Concat( RI.worldviewProjectionMatrix, RI.projectionMatrix, RI.worldviewMatrix );
@@ -965,7 +964,7 @@ static void R_CheckFog( void )
 
 	RI.fogEnabled = false;
 
-	if( RI.refdef.waterlevel < 2 || !RI.drawWorld || !RI.viewleaf )
+	if( cl.local.waterlevel < 2 || !RI.drawWorld || !RI.viewleaf )
 		return;
 
 	ent = CL_GetWaterEntity( RI.vieworg );
@@ -979,7 +978,7 @@ static void R_CheckFog( void )
 		return;
 	}
 
-	if( RI.refdef.waterlevel < 3 ) return;
+	if( cl.local.waterlevel < 3 ) return;
 
 	if( !IsLiquidContents( RI.cached_contents ) && IsLiquidContents( cnt ))
 	{
@@ -1034,7 +1033,7 @@ R_DrawFog
 */
 void R_DrawFog( void )
 {
-	if( !RI.fogEnabled || RI.refdef.onlyClientDraw )
+	if( !RI.fogEnabled || RI.onlyClientDraw )
 		return;
 
 	pglEnable( GL_FOG );
@@ -1059,11 +1058,8 @@ void R_DrawEntitiesOnList( void )
 	R_DrawFog ();
 
 	// first draw solid entities
-	for( i = 0; i < tr.num_solid_entities; i++ )
+	for( i = 0; i < tr.num_solid_entities && !RI.onlyClientDraw; i++ )
 	{
-		if( RI.refdef.onlyClientDraw )
-			break;
-
 		RI.currententity = tr.solid_entities[i];
 		RI.currentmodel = RI.currententity->model;
 	
@@ -1086,7 +1082,7 @@ void R_DrawEntitiesOnList( void )
 		}
 	}
 
-	if( !RI.refdef.onlyClientDraw )
+	if( !RI.onlyClientDraw )
           {
 		CL_DrawBeams( false );
 	}
@@ -1105,11 +1101,8 @@ void R_DrawEntitiesOnList( void )
 	glState.drawTrans = true;
 
 	// then draw translucent entities
-	for( i = 0; i < tr.num_trans_entities; i++ )
+	for( i = 0; i < tr.num_trans_entities && !RI.onlyClientDraw; i++ )
 	{
-		if( RI.refdef.onlyClientDraw )
-			break;
-
 		RI.currententity = tr.trans_entities[i];
 		RI.currentmodel = RI.currententity->model;
 	
@@ -1138,7 +1131,7 @@ void R_DrawEntitiesOnList( void )
 		clgame.dllFuncs.pfnDrawTransparentTriangles ();
 	}
 
-	if( !RI.refdef.onlyClientDraw )
+	if( !RI.onlyClientDraw )
 	{
 		CL_DrawBeams( true );
 		CL_DrawParticles();
@@ -1161,20 +1154,18 @@ void R_DrawEntitiesOnList( void )
 ================
 R_RenderScene
 
-RI.refdef must be set before the first call
+R_SetupRefParams must be called right before
 ================
 */
-void R_RenderScene( const ref_params_t *fd )
+void R_RenderScene( void )
 {
-	RI.refdef = *fd;
-
 	if( !cl.worldmodel && RI.drawWorld )
 		Host_Error( "R_RenderView: NULL worldmodel\n" );
 
 	R_PushDlights();
 
-	R_SetupFrame();
 	R_SetupFrustum();
+	R_SetupFrame();
 	R_SetupGL();
 	R_Clear( ~0 );
 
@@ -1240,10 +1231,41 @@ void R_BeginFrame( qboolean clearScene )
 
 /*
 ===============
+R_SetupRefParams
+
+set initial params for renderer
+===============
+*/
+void R_SetupRefParams( const ref_params_t *fd, qboolean drawWorld, float fov )
+{
+	RI.params = RP_NONE;
+	RI.drawWorld = drawWorld;
+	RI.thirdPerson = cl.local.thirdperson;
+	RI.drawOrtho = (drawWorld) ? (int)gl_overview->value : 0;
+	RI.clipFlags = 15;	// top, bottom, left, right
+	RI.onlyClientDraw = fd->onlyClientDraw;
+	RI.farClip = 0;
+
+	// setup viewport
+	RI.viewport[0] = fd->viewport[0];
+	RI.viewport[1] = fd->viewport[1];
+	RI.viewport[2] = fd->viewport[2];
+	RI.viewport[3] = fd->viewport[3];
+
+	// calc FOV
+	RI.fov_x = fov; // this is a final fov value
+
+	VectorCopy( fd->vieworg, RI.vieworg );
+	VectorCopy( fd->viewangles, RI.viewangles );
+	VectorCopy( fd->vieworg, RI.pvsorigin );
+}
+
+/*
+===============
 R_RenderFrame
 ===============
 */
-void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
+void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld, float fov )
 {
 	if( r_norefresh->value )
 		return;
@@ -1264,26 +1286,7 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 		}
 	}
 
-	if( drawWorld ) r_lastRefdef = *fd;
-
-	RI.params = RP_NONE;
-	RI.farClip = 0;
-	RI.clipFlags = 15;
-	RI.drawWorld = drawWorld;
-	RI.thirdPerson = cl.thirdperson;
-	RI.drawOrtho = (RI.drawWorld) ? gl_overview->value : 0;
-
-	GL_BackendStartFrame( fd );
-
-	if( !r_lockcull->value )
-		VectorCopy( fd->vieworg, RI.cullorigin );
-	VectorCopy( fd->vieworg, RI.pvsorigin );
-
-	// setup viewport
-	RI.viewport[0] = fd->viewport[0];
-	RI.viewport[1] = fd->viewport[1];
-	RI.viewport[2] = fd->viewport[2];
-	RI.viewport[3] = fd->viewport[3];
+	R_SetupRefParams( fd, drawWorld, fov );
 
 	if( gl_finish->value && drawWorld )
 		pglFinish();
@@ -1291,13 +1294,11 @@ void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld )
 	if( gl_allow_mirrors->value )
 	{
 		// render mirrors
-		R_FindMirrors( fd );
+		R_FindMirrors ();
 		R_DrawMirrors ();
 	}
 
-	R_RenderScene( fd );
-
-	GL_BackendEndFrame( fd );
+	R_RenderScene();
 }
 
 /*
@@ -1324,34 +1325,33 @@ R_DrawCubemapView
 */
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 {
-	ref_params_t *fd;
-
 	if( clgame.drawFuncs.R_DrawCubemapView != NULL )
 	{
 		if( clgame.drawFuncs.R_DrawCubemapView( origin, angles, size ))
 			return;
 	}
 
-	fd = &RI.refdef;
-	*fd = r_lastRefdef;
-	fd->time = 0;
-	fd->viewport[0] = 0;
-	fd->viewport[1] = 0;
-	fd->viewport[2] = size;
-	fd->viewport[3] = size;
-	fd->fov_x = 90;
-	fd->fov_y = 90;
-	VectorCopy( origin, fd->vieworg );
-	VectorCopy( angles, fd->viewangles );
-	VectorCopy( fd->vieworg, RI.pvsorigin );
-		
-	// setup viewport
-	RI.viewport[0] = fd->viewport[0];
-	RI.viewport[1] = fd->viewport[1];
-	RI.viewport[2] = fd->viewport[2];
-	RI.viewport[3] = fd->viewport[3];
+	// basic params
+	RI.params = RP_NONE;
+	RI.drawWorld = true;
+	RI.thirdPerson = RI.drawOrtho = false;
+	RI.clipFlags = 15;	// top, bottom, left, right
+	RI.onlyClientDraw = false;
+	RI.farClip = 0;
 
-	R_RenderScene( fd );
+	// setup viewport
+	RI.viewport[0] = RI.viewport[1] = 0;
+	RI.viewport[2] = RI.viewport[3] = size;
+
+	// calc FOV
+	RI.fov_x = 90.0f; // this is a final fov value
+
+	// setup origin & angles
+	VectorCopy( origin, RI.vieworg );
+	VectorCopy( angles, RI.viewangles );
+	VectorCopy( origin, RI.pvsorigin );
+
+	R_RenderScene ();
 
 	RI.oldviewleaf = RI.viewleaf = NULL;		// force markleafs next frame
 }

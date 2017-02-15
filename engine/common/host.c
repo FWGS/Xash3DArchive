@@ -847,14 +847,18 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 
 	host.old_developer = host.developer;
 
-	Con_CreateConsole();
+	Con_CreateConsole(); // system console used by dedicated server or show fatal errors
 
-	// first text message into console or log 
+	// NOTE: this message couldn't be passed into game console but it doesn't matter
 	MsgDev( D_NOTE, "Sys_LoadLibrary: Loading xash.dll - ok\n" );
+
+	// get default screen res
+	VID_InitDefaultResolution();
 
 	// startup cmds and cvars subsystem
 	Cmd_Init();
 	Cvar_Init();
+	Con_Init();	// early console running to catch all the messages
 
 	// share developer level across all dlls
 	Q_snprintf( dev_level, sizeof( dev_level ), "%i", host.developer );

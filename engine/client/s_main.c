@@ -17,7 +17,7 @@ GNU General Public License for more details.
 #include "sound.h"
 #include "client.h"
 #include "con_nprint.h"
-#include "ref_params.h"
+#include "gl_local.h"
 #include "pm_local.h"
 
 #define SND_CLIP_DISTANCE		(float)(GI->soundclip_dist)
@@ -881,7 +881,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 		return;
 	}
 
-	if( !pos ) pos = cl.refdef.vieworg;
+	if( !pos ) pos = RI.vieworg;
 
 	// pick a channel to play on
 	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( ent, sfx );
@@ -1850,19 +1850,18 @@ void S_ExtraUpdate( void )
 
 /*
 ============
-S_RenderFrame
+SND_UpdateSound
 
 Called once each time through the main loop
 ============
 */
-void S_RenderFrame( ref_params_t *fd )
+void SND_UpdateSound( void )
 {
 	int		i, j, total;
 	channel_t		*ch, *combine;
 	con_nprint_t	info;
 
 	if( !dma.initialized ) return;
-	if( !fd ) return; // too early
 
 	// if the loading plaque is up, clear everything
 	// out to make sure we aren't looping a dirty
@@ -1873,16 +1872,16 @@ void S_RenderFrame( ref_params_t *fd )
 	// release raw-channels that no longer used more than 10 secs
 	S_FreeIdleRawChannels();
 
-	s_listener.entnum = fd->viewentity;	// can be camera entity too
-	s_listener.frametime = fd->frametime;
-	s_listener.waterlevel = fd->waterlevel;
+	s_listener.entnum = cl.viewentity;	// can be camera entity too
+	s_listener.frametime = (cl.time - cl.oldtime);
+	s_listener.waterlevel = cl.local.waterlevel;
 	s_listener.active = CL_IsInGame();
 	s_listener.inmenu = CL_IsInMenu();
-	s_listener.paused = fd->paused;
+	s_listener.paused = cl.paused;
 
-	VectorCopy( fd->vieworg, s_listener.origin );
-	VectorCopy( fd->simvel, s_listener.velocity );
-	AngleVectors( fd->viewangles, s_listener.forward, s_listener.right, s_listener.up );
+	VectorCopy( RI.vieworg, s_listener.origin );
+	VectorCopy( cl.simvel, s_listener.velocity );
+	AngleVectors( RI.viewangles, s_listener.forward, s_listener.right, s_listener.up );
 
 	if( cl.worldmodel != NULL )
 		Mod_FatPVS( s_listener.origin, FATPHS_RADIUS, s_listener.pasbytes, world.visbytes, false, !s_phs->value );

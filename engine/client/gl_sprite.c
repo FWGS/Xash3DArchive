@@ -499,7 +499,7 @@ mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw )
 	}
 	else if( psprite->frames[frame].type == FRAME_ANGLED )
 	{
-		int	angleframe = (int)(Q_rint(( RI.refdef.viewangles[1] - yaw + 45.0f ) / 360 * 8) - 4) & 7;
+		int	angleframe = (int)(Q_rint(( RI.viewangles[1] - yaw + 45.0f ) / 360 * 8) - 4) & 7;
 
 		// e.g. doom-style sprite monsters
 		pspritegroup = (mspritegroup_t *)psprite->frames[frame].frameptr;
@@ -554,25 +554,25 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 				// this can be happens when rendering switched between single and angled frames
 				// or change model on replace delta-entity
 				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-				ent->latched.prevanimtime = RI.refdef.time;
+				ent->latched.prevanimtime = cl.time;
 				lerpFrac = 1.0f;
 			}
                               
-			if( ent->latched.prevanimtime < RI.refdef.time )
+			if( ent->latched.prevanimtime < cl.time )
 			{
 				if( frame != ent->latched.prevblending[1] )
 				{
 					ent->latched.prevblending[0] = ent->latched.prevblending[1];
 					ent->latched.prevblending[1] = frame;
-					ent->latched.prevanimtime = RI.refdef.time;
+					ent->latched.prevanimtime = cl.time;
 					lerpFrac = 0.0f;
 				}
-				else lerpFrac = (RI.refdef.time - ent->latched.prevanimtime) * 10;
+				else lerpFrac = (cl.time - ent->latched.prevanimtime) * 10;
 			}
 			else
 			{
 				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-				ent->latched.prevanimtime = RI.refdef.time;
+				ent->latched.prevanimtime = cl.time;
 				lerpFrac = 0.0f;
 			}
 		}
@@ -586,7 +586,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 		{
 			// reset interpolation on change model
 			ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-			ent->latched.prevanimtime = RI.refdef.time;
+			ent->latched.prevanimtime = cl.time;
 			lerpFrac = 0.0f;
 		}
 
@@ -601,7 +601,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 		numframes = pspritegroup->numframes;
 		fullinterval = pintervals[numframes-1];
 		jinterval = pintervals[1] - pintervals[0];
-		time = RI.refdef.time;
+		time = cl.time;
 		jtime = 0.0f;
 
 		// when loading in Mod_LoadSpriteGroup, we guaranteed all interval values
@@ -631,7 +631,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 	{
 		// e.g. doom-style sprite monsters
 		float	yaw = ent->angles[YAW];
-		int	angleframe = (int)(Q_rint(( RI.refdef.viewangles[1] - yaw + 45.0f ) / 360 * 8) - 4) & 7;
+		int	angleframe = (int)(Q_rint(( RI.viewangles[1] - yaw + 45.0f ) / 360 * 8) - 4) & 7;
 
 		if( m_fDoInterp )
 		{
@@ -640,25 +640,25 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 				// this can be happens when rendering switched between single and angled frames
 				// or change model on replace delta-entity
 				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-				ent->latched.prevanimtime = RI.refdef.time;
+				ent->latched.prevanimtime = cl.time;
 				lerpFrac = 1.0f;
 			}
 
-			if( ent->latched.prevanimtime < RI.refdef.time )
+			if( ent->latched.prevanimtime < cl.time )
 			{
 				if( frame != ent->latched.prevblending[1] )
 				{
 					ent->latched.prevblending[0] = ent->latched.prevblending[1];
 					ent->latched.prevblending[1] = frame;
-					ent->latched.prevanimtime = RI.refdef.time;
+					ent->latched.prevanimtime = cl.time;
 					lerpFrac = 0.0f;
 				}
-				else lerpFrac = (RI.refdef.time - ent->latched.prevanimtime) * ent->curstate.framerate;
+				else lerpFrac = (cl.time - ent->latched.prevanimtime) * ent->curstate.framerate;
 			}
 			else
 			{
 				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-				ent->latched.prevanimtime = RI.refdef.time;
+				ent->latched.prevanimtime = cl.time;
 				lerpFrac = 0.0f;
 			}
 		}
@@ -816,9 +816,9 @@ qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, int *alpha, float *psc
 
 		TriWorldToScreen( origin, v );
 
-		if( v[0] < RI.refdef.viewport[0] || v[0] > RI.refdef.viewport[0] + RI.refdef.viewport[2] )
+		if( v[0] < RI.viewport[0] || v[0] > RI.viewport[0] + RI.viewport[2] )
 			return true; // do scissor
-		if( v[1] < RI.refdef.viewport[1] || v[1] > RI.refdef.viewport[1] + RI.refdef.viewport[3] )
+		if( v[1] < RI.viewport[1] || v[1] > RI.viewport[1] + RI.viewport[3] )
 			return true; // do scissor
 
 		blend *= R_SpriteGlowBlend( origin, e->curstate.rendermode, e->curstate.renderfx, *alpha, pscale );
