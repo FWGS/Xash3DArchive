@@ -567,7 +567,7 @@ void CL_ReadDemoUserCmd( qboolean discard )
 
 			// record update
 			a->starttime = demo.timestamp;
-			VectorCopy( cl.viewangles, a->viewangles );
+			VectorCopy( cl.cmd->viewangles, a->viewangles );
 			demo.lasttime = demo.timestamp;
 		}
 

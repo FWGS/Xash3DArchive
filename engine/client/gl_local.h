@@ -48,7 +48,7 @@ extern byte	*r_temppool;
 
 #define RP_NONVIEWERREF	(RP_MIRRORVIEW|RP_ENVVIEW)
 #define R_StudioOpaque( rm )	( rm == kRenderNormal || rm == kRenderTransAlpha )
-#define RP_LOCALCLIENT( e )	(CL_GetLocalPlayer() && ((e)->index == CL_GetLocalPlayer()->index && e->curstate.entityType == ET_PLAYER ))
+#define RP_LOCALCLIENT( e )	((e)->index == ( cl.playernum + 1 ) && e->player )
 #define RP_NORMALPASS()	((RI.params & RP_NONVIEWERREF) == 0 )
 
 #define TF_SKY		(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP|TF_NOPICMIP)
@@ -203,15 +203,15 @@ typedef struct
          
 	// OpenGL matrix states
 	qboolean		modelviewIdentity;
-	qboolean		fResetVis;
-	
+
 	int		visframecount;	// PVS frame
 	int		dlightframecount;	// dynamic light frame
-	int		realframecount;	// not including passes
 	int		framecount;
 
 	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
 	float		lightcache[MAX_LIGHTSTYLES];
+
+	double		frametime;	// special frametime for multipass rendering (will set to 0 on a nextview)
 
 	// cull info
 	vec3_t		modelorg;		// relative to viewpoint
@@ -250,7 +250,7 @@ extern dlight_t		cl_elights[MAX_ELIGHTS];
 
 extern struct beam_s	*cl_active_beams;
 extern struct beam_s	*cl_free_beams;
-extern struct particle_s	*cl_free_trails;
+extern struct particle_s	*cl_free_particles;
 
 //
 // gl_backend.c
@@ -355,7 +355,6 @@ void R_RenderScene( void );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
-int R_ComputeFxBlend( cl_entity_t *e );
 qboolean R_InitRenderAPI( void );
 void R_SetupFrustum( void );
 void R_FindViewLeaf( void );
@@ -416,6 +415,7 @@ void R_DrawSpriteModel( cl_entity_t *e );
 void R_StudioInit( void );
 void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded );
 struct mstudiotex_s *R_StudioGetTexture( cl_entity_t *e );
+float CL_GetStudioEstimatedFrame( cl_entity_t *ent );
 void R_DrawStudioModel( cl_entity_t *e );
 
 //
@@ -455,7 +455,7 @@ qboolean VID_ScreenShot( const char *filename, int shot_type );
 qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qboolean skyshot );
 void VID_RestoreGamma( void );
 void R_BeginFrame( qboolean clearScene );
-void R_RenderFrame( const struct ref_params_s *fd, qboolean drawWorld, float fov );
+void R_RenderFrame( const struct ref_viewpass_s *vp );
 void R_EndFrame( void );
 void R_ClearScene( void );
 void R_GetTextureParms( int *w, int *h, int texnum );
@@ -643,7 +643,6 @@ extern convar_t	*gl_compress_textures;
 extern convar_t	*gl_compensate_gamma_screenshots;
 extern convar_t	*gl_keeptjunctions;
 extern convar_t	*gl_detailscale;
-extern convar_t	*gl_overview;	// draw map in overview mode
 extern convar_t	*gl_wireframe;
 extern convar_t	*gl_allow_static;
 extern convar_t	*gl_allow_mirrors;

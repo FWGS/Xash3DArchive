@@ -28,6 +28,13 @@ gameui_static_t	gameui;
 void UI_UpdateMenu( float realtime )
 {
 	if( !gameui.hInstance ) return;
+
+	// menu time (not paused, not clamped)
+	gameui.globals->time = host.realtime;
+	gameui.globals->frametime = host.realframetime;
+	gameui.globals->demoplayback = cls.demoplayback;
+	gameui.globals->demorecording = cls.demorecording;
+
 	gameui.dllFuncs.pfnRedraw( realtime );
 	UI_UpdateUserinfo();
 }
@@ -661,15 +668,32 @@ pfnRenderScene
 for drawing playermodel previews
 ====================
 */
-static void pfnRenderScene( const ref_params_t *fd )
+static void pfnRenderScene( const ref_viewpass_t *rvp )
 {
 	// to avoid division by zero
-	if( !fd || fd->fov_x <= 0.0f || fd->fov_y <= 0.0f )
+	if( !rvp || rvp->fov_x <= 0.0f || rvp->fov_y <= 0.0f )
 		return;
 
+	// don't allow special modes from menu
+	((ref_viewpass_t *)&rvp)->flags = 0;
+
 	R_Set2DMode( false );
-	R_RenderFrame( fd, false, fd->fov_x );
+	R_RenderFrame( rvp );
 	R_Set2DMode( true );
+}
+
+/*
+====================
+pfnAddEntity
+
+adding player model into visible list
+====================
+*/
+static int pfnAddEntity( int entityType, cl_entity_t *ent )
+{
+	if( !R_AddEntity( ent, entityType ))
+		return false;
+	return true;
 }
 
 /*
@@ -926,7 +950,7 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnSetPlayerModel,
 	R_ClearScene,	
 	pfnRenderScene,
-	CL_AddEntity,
+	pfnAddEntity,
 	Host_Error,
 	FS_FileExists,
 	pfnGetGameDir,
@@ -959,8 +983,8 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnChangeInstance,
 	pfnStartBackgroundTrack,
 	pfnHostEndGame,
-	Com_RandomFloat,
-	Com_RandomLong,
+	COM_RandomFloat,
+	COM_RandomLong,
 	IN_SetCursor,
 	pfnIsMapValid,
 	GL_ProcessTexture,

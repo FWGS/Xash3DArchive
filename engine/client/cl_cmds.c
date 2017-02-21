@@ -207,7 +207,7 @@ void CL_ScreenShot_f( void )
 	int	i;
 	string	checkname;
 
-	if( gl_overview->value == 1 )
+	if( CL_IsDevOverviewMode() == 1 )
 	{
 		// special case for write overview image and script file
 		Q_snprintf( cls.shotname, sizeof( cls.shotname ), "overviews/%s.bmp", clgame.mapname );
@@ -245,7 +245,7 @@ void CL_SnapShot_f( void )
 	int	i;
 	string	checkname;
 
-	if( gl_overview->value == 1 )
+	if( CL_IsDevOverviewMode() == 1 )
 	{
 		// special case for write overview image and script file
 		Q_snprintf( cls.shotname, sizeof( cls.shotname ), "overviews/%s.bmp", clgame.mapname );
@@ -455,24 +455,24 @@ void SCR_TimeRefresh_f( void )
 
 	start = Sys_DoubleTime();
 
-	if( Cmd_Argc() == 2 )
+	// run without page flipping like GoldSrc
+	if( Cmd_Argc() == 1 )
 	{	
-		// run without page flipping
-		R_BeginFrame( false );
+		pglDrawBuffer( GL_FRONT );
 		for( i = 0; i < 128; i++ )
 		{
 			RI.viewangles[1] = i / 128.0 * 360.0f;
 			R_RenderScene();
 		}
+		pglFinish();
 		R_EndFrame();
 	}
 	else
 	{
 		for( i = 0; i < 128; i++ )
 		{
-			RI.viewangles[1] = i / 128.0 * 360.0f;
-
 			R_BeginFrame( true );
+			RI.viewangles[1] = i / 128.0 * 360.0f;
 			R_RenderScene();
 			R_EndFrame();
 		}

@@ -26,7 +26,8 @@ GNU General Public License for more details.
 #define MAX_CMD_BUFFER		8000
 #define CONNECTION_PROBLEM_TIME	15.0	// 15 seconds
 
-CVAR_DEFINE( cl_test, "cl_mycvar", "0", 0, "test variable on a new system" );
+CVAR_DEFINE_AUTO( mp_decals, "300", FCVAR_ARCHIVE, "decals limit in multiplayer" );
+CVAR_DEFINE_AUTO( dev_overview, "0", 0, "draw level in overview-mode" );
 convar_t	*rcon_client_password;
 convar_t	*rcon_address;
 convar_t	*cl_timeout;
@@ -38,6 +39,7 @@ convar_t	*cl_cmdbackup;
 convar_t	*cl_showerror;
 convar_t	*cl_bmodelinterp;
 convar_t	*cl_draw_particles;
+convar_t	*cl_draw_tracers;
 convar_t	*cl_lightstyle_lerping;
 convar_t	*cl_idealpitchscale;
 convar_t	*cl_nosmooth;
@@ -127,10 +129,10 @@ char *CL_Userinfo( void )
 
 int CL_IsDevOverviewMode( void )
 {
-	if( gl_overview->value )
+	if( dev_overview.value > 0.0f )
 	{
 		if( host.developer > 0 || cls.spectator )
-			return 1;
+			return (int)dev_overview.value;
 	}
 
 	return 0;
@@ -219,7 +221,6 @@ void CL_CheckClientState( void )
 	{	
 		// first update is the final signon stage
 		cls.state = ca_active;
-		cl.force_refdef = true;
 		cls.changelevel = false;
 		cls.changedemo = false;
 		cl.first_frame = true;
@@ -391,15 +392,11 @@ CL_UpdateFrameLerp
 */
 void CL_UpdateFrameLerp( void )
 {
-	// not in server yet, no entities to redraw
-	if( cls.state != ca_active ) return;
-
-	// we haven't received our first valid update from the server.
-	if( !cl.frame.valid || !cl.validsequence )
+	if( cls.state != ca_active || !cl.validsequence )
 		return;
 
 	// compute last interpolation amount
-	cl.commands[( cls.netchan.outgoing_sequence - 1 ) & CL_UPDATE_MASK].frame_lerp = cl.lerpFrac;
+	cl.commands[(cls.netchan.outgoing_sequence - 1) & CL_UPDATE_MASK].frame_lerp = CL_LerpPoint();
 }
 
 /*
@@ -422,7 +419,7 @@ qboolean CL_ProcessShowTexturesCmds( usercmd_t *cmd )
 	int		changed;
 	int		pressed, released;
 
-	if( !gl_showtextures->value || gl_overview->value )
+	if( !gl_showtextures->value || CL_IsDevOverviewMode( ))
 		return false;
 
 	changed = (oldbuttons ^ cmd->buttons);
@@ -453,7 +450,7 @@ qboolean CL_ProcessOverviewCmds( usercmd_t *cmd )
 	float		step = (2.0f / size) * host.realframetime;
 	float		step2 = step * 100.0f * (2.0f / ov->flZoom);
 
-	if( !gl_overview->value || gl_showtextures->value )
+	if( !CL_IsDevOverviewMode() || gl_showtextures->value )
 		return false;
 
 	if( ov->flZoom < 0.0f ) sign = -1;
@@ -533,14 +530,11 @@ void CL_CreateCmd( void )
 	int		input_override;
 	int		i, ms;
 
-	// store viewangles in case it's frozen
-	VectorCopy( cl.viewangles, angles );
-
-	CL_UpdateClientData();
-
 	if( cls.state < ca_connected || cls.state == ca_cinematic )
 		return;
 
+	// store viewangles in case it's will be freeze
+	VectorCopy( cl.viewangles, angles );
 	ms = bound( 1, host.frametime * 1000, 255 );
 	memset( &cmd, 0, sizeof( cmd ));
 	input_override = 0;
@@ -587,6 +581,9 @@ void CL_CreateCmd( void )
 
 	// demo always have commands so don't overwrite them
 	if( !cls.demoplayback ) cl.cmd = &pcmd->cmd;
+
+	// predict all unacknowledged movements
+	CL_PredictMovement( false );
 }
 
 void CL_WriteUsercmd( sizebuf_t *msg, int from, int to )
@@ -795,12 +792,12 @@ void CL_WritePacket( void )
 
 /*
 =================
-CL_SendCmd
+CL_SendCommand
 
 Called every frame to builds and sends a command packet to the server.
 =================
 */
-void CL_SendCmd( void )
+void CL_SendCommand( void )
 {
 	// we create commands even if a demo is playing,
 	CL_CreateCmd();
@@ -1589,7 +1586,6 @@ void CL_PrepVideo( void )
 	SCR_UpdateScreen ();
 
 	cl.video_prepped = true;
-	cl.force_refdef = true;
 }
 
 /*
@@ -1832,6 +1828,9 @@ void CL_ReadNetMessage( void )
 		cl.send_reply = true;
 	}
 
+	// build list of all solid entities per next frame (exclude clients)
+	CL_SetSolidEntities();
+
 	// check for fragmentation/reassembly related packets.
 	if( cls.state != ca_disconnected && Netchan_IncomingReady( &cls.netchan ))
 	{
@@ -1855,12 +1854,27 @@ void CL_ReadNetMessage( void )
 	CL_ProcessNetRequests();
 }
 
+/*
+=================
+CL_ReadPackets
+
+Updates the local time and reads/handles messages
+on client net connection.
+=================
+*/
 void CL_ReadPackets( void )
 {
-	CL_ReadNetMessage();
+	// decide the simulation time
+	cl.oldtime = cl.time;
 
-	cl.lerpFrac = CL_LerpPoint();
-	cl.lerpBack = 1.0f - cl.lerpFrac;
+	if( !cls.demoplayback && !cl.paused )
+		cl.time += host.frametime;
+
+	// demo time
+	if( cls.demorecording && !cls.demowaiting )
+		cls.demotime += host.frametime;
+
+	CL_ReadNetMessage();
 
 	cl.local.thirdperson = clgame.dllFuncs.CL_IsThirdPerson();
 #if 0
@@ -1868,14 +1882,12 @@ void CL_ReadPackets( void )
 	if( cl.maxclients > 1 && cls.state == ca_active && host.developer <= 1 )
 		Cvar_SetCheatState();
 #endif
-	CL_UpdateFrameLerp ();
-
-	// build list of all solid entities per next frame (exclude clients)
-	CL_SetSolidEntities();
-
 	// singleplayer never has connection timeout
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))
 		return;
+
+	// if in the debugger last frame, don't timeout
+	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
           
 	// check timeout
 	if( cls.state >= ca_connected && !cls.demoplayback && cls.state != ca_cinematic )
@@ -2109,7 +2121,8 @@ void CL_InitLocal( void )
 	cls.state = ca_disconnected;
 	cls.signon = 0;
 
-	Cvar_RegisterVariable( &cl_test );
+	Cvar_RegisterVariable( &mp_decals );
+	Cvar_RegisterVariable( &dev_overview );
 
 	// register our variables
 	cl_crosshair = Cvar_Get( "crosshair", "1", FCVAR_ARCHIVE, "show weapon chrosshair" );
@@ -2142,8 +2155,9 @@ void CL_InitLocal( void )
 	cl_smoothtime = Cvar_Get( "cl_smoothtime", "0.1", FCVAR_ARCHIVE, "time to smooth up" );
 	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "10", FCVAR_ARCHIVE, "how many additional history commands are sent" );
 	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", FCVAR_ARCHIVE, "Max number of command packets sent to server per second" );
-	cl_draw_particles = Cvar_Get( "cl_draw_particles", "1", FCVAR_ARCHIVE, "Disable any particle effects" );
-	cl_draw_beams = Cvar_Get( "cl_draw_beams", "1", FCVAR_ARCHIVE, "Disable view beams" );
+	cl_draw_particles = Cvar_Get( "r_drawparticles", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render particles" );
+	cl_draw_tracers = Cvar_Get( "r_drawtracers", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render tracers" );
+	cl_draw_beams = Cvar_Get( "r_drawbeams", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render beams" );
 	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", FCVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
 	cl_showerror = Cvar_Get( "cl_showerror", "0", FCVAR_ARCHIVE, "show prediction error" );
 	cl_bmodelinterp = Cvar_Get( "cl_bmodelinterp", "1", FCVAR_ARCHIVE, "enable bmodel interpolation" );
@@ -2157,9 +2171,6 @@ void CL_InitLocal( void )
 	Cvar_Get( "lightgamma", "1", FCVAR_ARCHIVE, "ambient lighting level (legacy, unused)" );
 	Cvar_Get( "direct", "1", FCVAR_ARCHIVE, "direct lighting level (legacy, unused)" );
 	Cvar_Get( "voice_serverdebug", "0", 0, "debug voice (legacy, unused)" );
-
-	// interpolation cvars
-	Cvar_Get( "ex_maxerrordistance", "0", 0, "" );
 
 	// server commands
 	Cmd_AddCommand ("noclip", NULL, "enable or disable no clipping mode" );
@@ -2217,22 +2228,6 @@ void CL_InitLocal( void )
 }
 
 //============================================================================
-
-/*
-==================
-CL_SendCommand
-
-==================
-*/
-void CL_SendCommand( void )
-{
-	// send intentions now
-	CL_SendCmd ();
-
-	// resend a connection request if necessary
-	CL_CheckForResend ();
-}
-
 /*
 ==================
 CL_AdjustClock
@@ -2271,66 +2266,26 @@ void CL_AdjustClock( void )
 
 /*
 ==================
-Host_ClientFrame
+Host_ClientBegin
 
 ==================
 */
-void _Host_ClientFrame( void )
+void Host_ClientBegin( void )
 {
-#if 0
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
 
+	// evaluate console animation
+	Con_RunConsole ();
+
+	// finalize connection process if needs
 	CL_CheckClientState();
 
-	Host_InputFrame();
-
-	ClientDLL_UpdateClientData();
+	// tell the client.dll about client data
+	CL_UpdateClientData();
 
 	// if running the server locally, make intentions now
-	if( SV_Active( )) CL_Move ();
-#endif
-}
-
-/*
-==================
-Host_RenderFrame
-
-==================
-*/
-void Host_RenderFrame( void )
-{
-#if 0
-	// if client is not active, do nothing
-	if( !cls.initialized ) return;
-
-	// if running the server remotely, send intentions now after
-	// the incoming messages have been read
-	if( !SV_Active( )) CL_Move ();
-
-	ClientDLL_Frame( host_frametime );
-	CL_SetLastUpdate();
-	CL_ReadPackets();
-	CL_RedoPrediction();
-	Voice_Idle(host_frametime);
-	CL_EmitEntities();
-	CL_CheckForResend();
-	while (CL_RequestMissingResources());
-	CL_UpdateSoundFade();
-
-	Host_CheckConnectionFailure();
-
-	CL_HTTPUpdate();
-	Steam_ClientRunFrame();
-	ClientDLL_CAM_Think();
-	CL_MoveSpectatorCamera();
-
-	Host_UpdateScreen ();
-	CL_DecayLights ();
-	Host_UpdateSounds ();
-	CDAudio_Update();
-	CL_AdjustClock();
-#endif
+	if( SV_Active( )) CL_SendCommand ();
 }
 
 /*
@@ -2344,41 +2299,41 @@ void Host_ClientFrame( void )
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
 
-	// decide the simulation time
-	cl.oldtime = cl.time;
-	cl.time += host.frametime;
-
-	// demo time
-	if( cls.demorecording && !cls.demowaiting )
-		cls.demotime += host.frametime;
-
-	if( gameui.hInstance )
-	{
-		// menu time (not paused, not clamped)
-		gameui.globals->time = host.realtime;
-		gameui.globals->frametime = host.realframetime;
-		gameui.globals->demoplayback = cls.demoplayback;
-		gameui.globals->demorecording = cls.demorecording;
-	}
-
-	// if in the debugger last frame, don't timeout
-	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
-
-	VGui_RunFrame ();
+	// if running the server remotely, send intentions now after
+	// the incoming messages have been read
+	if( !SV_Active( )) CL_SendCommand ();
 
 	clgame.dllFuncs.pfnFrame( host.frametime );
 
-	// fetch results from server
-	CL_ReadPackets();
+	// remember last received framenum
+	CL_SetLastUpdate ();
 
+	// read updates from server
+	CL_ReadPackets ();
+
+	// do prediction again in case we got
+	// a new portion updates from server
+	CL_RedoPrediction ();
+
+//	Voice_Idle( host.frametime );
+
+	CL_EmitEntities ();
+
+	// in case we lost connection
+	CL_CheckForResend ();
+
+//	while( CL_RequestMissingResources( ));
+
+//	CL_HTTPUpdate ();
+
+	// handle spectator movement
+	CL_MoveSpectatorCamera();
+
+	// catch changes video settings
 	VID_CheckChanges();
 
-	// allow sound and video DLL change
-	if( cls.state == ca_active )
-	{
-		if( !cl.video_prepped ) CL_PrepVideo();
-		if( !cl.audio_prepped ) CL_PrepSound();
-	}
+	// process VGUI
+	VGui_RunFrame ();
 
 	// update the screen
 	SCR_UpdateScreen ();
@@ -2386,25 +2341,18 @@ void Host_ClientFrame( void )
 	// update audio
 	SND_UpdateSound ();
 
-	// send a new command message to the server
-	CL_SendCommand();
-
-	// predict all unacknowledged movements
-	CL_PredictMovement( false );
-
-	// adjust client time
-	CL_AdjustClock();
-
 	// animate lightestyles
-	CL_RunLightStyles();
+	CL_RunLightStyles ();
 
 	// decay dynamic lights
 	CL_DecayLights ();
 
-	SCR_RunCinematic();
-	Con_RunConsole();
-}
+	// play avi-files
+	SCR_RunCinematic ();
 
+	// adjust client time
+	CL_AdjustClock ();
+}
 
 //============================================================================
 

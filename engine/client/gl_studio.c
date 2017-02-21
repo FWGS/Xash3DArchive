@@ -77,6 +77,12 @@ typedef struct sortedmesh_s
 	int		flags;			// face flags
 } sortedmesh_t;
 
+typedef struct
+{
+	double		time;
+	double		frametime;
+} studio_draw_state_t;
+ 
 convar_t			*r_studio_lerping;
 convar_t			*r_studio_lambert;
 convar_t			*r_studio_lighting;
@@ -106,6 +112,7 @@ static uint		g_nNumArrayVerts;
 static uint		g_nNumArrayElems;
 static vec3_t		g_lightvalues[MAXSTUDIOVERTS];
 static studiolight_t	g_studiolight;
+static studio_draw_state_t	g_studio;			// used for draw studiomodels
 char			g_nCachedBoneNames[MAXSTUDIOBONES][32];
 int			g_nCachedBones;		// number of bones in cache
 int			g_nStudioCount;		// for chrome update
@@ -195,6 +202,29 @@ static int R_StudioBodyVariations( model_t *mod )
 		count = count * pbodypart[i].nummodels;
 
 	return count;
+}
+
+/*
+================
+R_StudioSetupTimings
+
+init current time for a given model
+================
+*/
+static void R_StudioSetupTimings( void )
+{
+	if( RI.drawWorld )
+	{
+		// synchronize with server time
+		g_studio.time = cl.time;
+		g_studio.frametime = cl.time - cl.oldtime;
+	}
+	else
+	{
+		// menu stuff
+		g_studio.time = host.realtime;
+		g_studio.frametime = host.frametime;
+	}
 }
 
 /*
@@ -321,9 +351,10 @@ pfnGetPlayerState
 */
 entity_state_t *R_StudioGetPlayerState( int index )
 {
-	if( index < 0 || index > cl.maxclients )
+	if( index < 0 || index >= cl.maxclients )
 		return NULL;
-	return &cl.frame.playerstate[index];
+
+	return &cl.frames[cl.parsecountmod].playerstate[index];
 }
 
 /*
@@ -346,8 +377,8 @@ pfnGetEngineTimes
 static void pfnGetEngineTimes( int *framecount, double *current, double *old )
 {
 	if( framecount ) *framecount = tr.framecount;
-	if( current ) *current = cl.time;
-	if( old ) *old = cl.oldtime;
+	if( current ) *current = g_studio.time;
+	if( old ) *old = g_studio.time - g_studio.frametime;
 }
 
 /*
@@ -458,7 +489,7 @@ qboolean R_CullStudioModel( cl_entity_t *e )
 	if( !e || !e->model || !e->model->cache.data )
 		return true;
 
-	if( e == &clgame.viewent && ( r_lefthand->value >= 2 || gl_overview->value ))
+	if( e == &clgame.viewent && ( r_lefthand->value >= 2 || CL_IsDevOverviewMode( )))
 		return true; // hidden
 
 	if( !R_StudioComputeBBox( e, NULL ))
@@ -524,10 +555,10 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 		// don't do it if the goalstarttime hasn't updated in a while.
 		// NOTE: Because we need to interpolate multiplayer characters, the interpolation time limit
 		// was increased to 1.0 s., which is 2x the max lag we are accounting for.
-		if( m_fDoInterp && ( cl.time < e->curstate.animtime + 1.0f ) && ( e->curstate.animtime != e->latched.prevanimtime ))
+		if( m_fDoInterp && ( g_studio.time < e->curstate.animtime + 1.0f ) && ( e->curstate.animtime != e->latched.prevanimtime ))
 		{
-			f = ( cl.time - e->curstate.animtime ) / ( e->curstate.animtime - e->latched.prevanimtime );
-			// Msg( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, cl.time );
+			f = ( g_studio.time - e->curstate.animtime ) / ( e->curstate.animtime - e->latched.prevanimtime );
+			// Msg( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, g_studio.time );
 		}
 
 		if( m_fDoInterp )
@@ -583,11 +614,11 @@ StudioEstimateFrame
 float R_StudioEstimateFrame( cl_entity_t *e, mstudioseqdesc_t *pseqdesc )
 {
 	double	dfdt, f;
-	
+
 	if( m_fDoInterp )
 	{
-		if( cl.time < e->curstate.animtime ) dfdt = 0.0;
-		else dfdt = (cl.time - e->curstate.animtime) * e->curstate.framerate * pseqdesc->fps;
+		if( g_studio.time < e->curstate.animtime ) dfdt = 0.0;
+		else dfdt = (g_studio.time - e->curstate.animtime) * e->curstate.framerate * pseqdesc->fps;
 	}
 	else dfdt = 0;
 
@@ -623,10 +654,37 @@ float R_StudioEstimateInterpolant( cl_entity_t *e )
 
 	if( m_fDoInterp && ( e->curstate.animtime >= e->latched.prevanimtime + 0.01f ))
 	{
-		dadt = ( cl.time - e->curstate.animtime ) / 0.1f;
+		dadt = ( g_studio.time - e->curstate.animtime ) / 0.1f;
 		if( dadt > 2.0f ) dadt = 2.0f;
 	}
 	return dadt;
+}
+
+/*
+====================
+CL_GetStudioEstimatedFrame
+
+====================
+*/
+float CL_GetStudioEstimatedFrame( cl_entity_t *ent )
+{
+	studiohdr_t	*pstudiohdr;
+	mstudioseqdesc_t	*pseqdesc;
+	int		sequence;
+
+	if( ent->model != NULL && ent->model->type == mod_studio )
+	{
+		pstudiohdr = (studiohdr_t *)Mod_Extradata( ent->model );
+
+		if( pstudiohdr )
+		{
+			sequence = bound( 0, ent->curstate.sequence, pstudiohdr->numseq - 1 );
+			pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + sequence;
+			return R_StudioEstimateFrame( ent, pseqdesc );
+		}
+	}
+
+	return 0;
 }
 
 /*
@@ -693,28 +751,28 @@ void R_StudioFxTransform( cl_entity_t *ent, matrix3x4 transform )
 	{
 	case kRenderFxDistort:
 	case kRenderFxHologram:
-		if( !Com_RandomLong( 0, 49 ))
+		if( !COM_RandomLong( 0, 49 ))
 		{
-			int	axis = Com_RandomLong( 0, 1 );
+			int	axis = COM_RandomLong( 0, 1 );
 
 			if( axis == 1 ) axis = 2; // choose between x & z
-			VectorScale( transform[axis], Com_RandomFloat( 1.0f, 1.484f ), transform[axis] );
+			VectorScale( transform[axis], COM_RandomFloat( 1.0f, 1.484f ), transform[axis] );
 		}
-		else if( !Com_RandomLong( 0, 49 ))
+		else if( !COM_RandomLong( 0, 49 ))
 		{
 			float	offset;
-			int	axis = Com_RandomLong( 0, 1 );
+			int	axis = COM_RandomLong( 0, 1 );
 
 			if( axis == 1 ) axis = 2; // choose between x & z
-			offset = Com_RandomFloat( -10.0f, 10.0f );
-			transform[Com_RandomLong( 0, 2 )][3] += offset;
+			offset = COM_RandomFloat( -10.0f, 10.0f );
+			transform[COM_RandomLong( 0, 2 )][3] += offset;
 		}
 		break;
 	case kRenderFxExplode:
 		{
 			float	scale;
 
-			scale = 1.0f + ( cl.time - ent->curstate.animtime ) * 10.0f;
+			scale = 1.0f + ( g_studio.time - ent->curstate.animtime ) * 10.0f;
 			if( scale > 2.0f ) scale = 2.0f; // don't blow up more than 200%
 
 			transform[0][1] *= scale;
@@ -1143,7 +1201,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 		}
 	}
 
-	if( m_fDoInterp && e->latched.sequencetime && ( e->latched.sequencetime + 0.2f > cl.time) && ( e->latched.prevsequence < m_pStudioHeader->numseq ))
+	if( m_fDoInterp && e->latched.sequencetime && ( e->latched.sequencetime + 0.2f > g_studio.time ) && ( e->latched.prevsequence < m_pStudioHeader->numseq ))
 	{
 		// blend from last sequence
 		static vec3_t	pos1b[MAXSTUDIOBONES];
@@ -1180,7 +1238,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 			}
 		}
 
-		s = 1.0f - ( cl.time - e->latched.sequencetime ) / 0.2f;
+		s = 1.0f - ( g_studio.time - e->latched.sequencetime ) / 0.2f;
 		R_StudioSlerpBones( q, pos, q1b, pos1b, s );
 	}
 	else
@@ -1291,7 +1349,7 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 			float	angle, sr, cr;
 			int	i;
 
-			angle = anglemod( cl.time * 40 ) * (M_PI2 / 360.0f);
+			angle = anglemod( g_studio.time * 40 ) * (M_PI2 / 360.0f);
 			SinCos( angle, &sr, &cr );
 
 			for( i = 0; i < 3; i++ )
@@ -1488,7 +1546,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *lightinfo )
 
 	for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
 	{
-		if( dl->die < cl.time || !dl->radius )
+		if( dl->die < g_studio.time || !dl->radius )
 			continue;
 
 		VectorSubtract( dl->origin, origin, direction );
@@ -1574,7 +1632,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 
 	for( lnum = 0, el = cl_elights; lnum < MAX_ELIGHTS; lnum++, el++ )
 	{
-		if( el->die < cl.time || !el->radius )
+		if( el->die < g_studio.time || !el->radius )
 			continue;
 
 		VectorSubtract( el->origin, origin, direction );
@@ -1832,7 +1890,7 @@ void R_StudioSetRenderamt( int iRenderamt )
 	if( !RI.currententity ) return;
 
 	RI.currententity->curstate.renderamt = iRenderamt;
-	RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
+	RI.currententity->curstate.renderamt = CL_FxBlend( RI.currententity );
 }
 
 /*
@@ -2478,18 +2536,41 @@ static void R_StudioClientEvents( void )
 	mstudioevent_t	*pevent;
 	cl_entity_t	*e = RI.currententity;
 	int		i, sequence;
-	float		f, start;
+	float		end, start;
+
+	if( g_studio.frametime == 0.0 )
+		return; // gamepaused
+
+	if( FBitSet( e->curstate.effects, EF_MUZZLEFLASH ))
+	{
+		dlight_t	*el = CL_AllocElight( 0 );
+
+		ClearBits( e->curstate.effects, EF_MUZZLEFLASH );
+		VectorCopy( e->attachment[0], el->origin );
+		el->die = cl.time + 0.05f;
+		el->color.r = 255;
+		el->color.g = 192;
+		el->color.b = 64;
+		el->decay = 320;
+		el->radius = 16;
+	}
 
 	sequence = bound( 0, e->curstate.sequence, m_pStudioHeader->numseq - 1 );
 	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + sequence;
-	pevent = (mstudioevent_t *)((byte *)m_pStudioHeader + pseqdesc->eventindex);
 
-	// no events for this animation or gamepaused
-	if( pseqdesc->numevents == 0 || cl.time == cl.oldtime )
+	// no events for this animation
+	if( pseqdesc->numevents == 0 )
 		return;
 
-	f = R_StudioEstimateFrame( e, pseqdesc ) + 0.01f;	// get start offset
-	start = f - e->curstate.framerate * host.frametime * pseqdesc->fps;
+	end = R_StudioEstimateFrame( e, pseqdesc );
+	start = end - e->curstate.framerate * host.frametime * pseqdesc->fps;
+	pevent = (mstudioevent_t *)((byte *)m_pStudioHeader + pseqdesc->eventindex);
+
+	if( e->latched.sequencetime == e->curstate.animtime )
+	{
+		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ))
+			start = -0.01f;
+	}
 
 	for( i = 0; i < pseqdesc->numevents; i++ )
 	{
@@ -2497,7 +2578,7 @@ static void R_StudioClientEvents( void )
 		if( pevent[i].event < EVENT_CLIENT )
 			continue;
 
-		if( (float)pevent[i].frame > start && f >= (float)pevent[i].frame )
+		if( (float)pevent[i].frame > start && pevent[i].frame <= end )
 			clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
 	}
 }
@@ -2811,7 +2892,7 @@ void R_StudioEstimateGait( entity_state_t *pplayer )
 	vec3_t	est_velocity;
 	float	dt;
 
-	dt = bound( 0.0f, (cl.time - cl.oldtime), 1.0f );
+	dt = bound( 0.0f, g_studio.frametime, 1.0f );
 
 	if( dt == 0.0f || m_pPlayerInfo->renderframe == tr.framecount )
 	{
@@ -2880,7 +2961,7 @@ void R_StudioProcessGait( entity_state_t *pplayer )
 	RI.currententity->latched.prevblending[0] = RI.currententity->curstate.blending[0];
 	RI.currententity->latched.prevseqblending[0] = RI.currententity->curstate.blending[0];
 
-	dt = bound( 0.0f, (cl.time - cl.oldtime), 1.0f );
+	dt = bound( 0.0f, g_studio.frametime, 1.0f );
 	R_StudioEstimateGait( pplayer );
 
 	// calc side to side turning
@@ -3234,6 +3315,8 @@ void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 
 	prevFrame = e->latched.prevframe;
 
+	R_StudioSetupTimings();
+
 	// prevent to crash some mods like HLFX in menu Customize
 	if( !RI.drawWorld && !r_customdraw_playermodel->value )
 	{
@@ -3287,7 +3370,14 @@ R_RunViewmodelEvents
 */
 void R_RunViewmodelEvents( void )
 {
-	if( cl.local.thirdperson || RI.params & RP_NONVIEWERREF )
+	if( RI.onlyClientDraw || r_drawviewmodel->value == 0 )
+		return;
+
+	// ignore in thirdperson, camera view or client is died
+	if( cl.local.thirdperson || cl.local.health <= 0 || cl.viewentity != ( cl.playernum + 1 ))
+		return;
+
+	if( RI.params & RP_NONVIEWERREF )
 		return;
 
 	if( !Mod_Extradata( clgame.viewent.model ))
@@ -3297,7 +3387,9 @@ void R_RunViewmodelEvents( void )
 	RI.currentmodel = RI.currententity->model;
 	if( !RI.currentmodel ) return;
 
-	if( !cl.local.weaponstarttime ) cl.local.weaponstarttime = cl.time;
+	R_StudioSetupTimings();
+
+	if( !cl.local.weaponstarttime ) cl.local.weaponstarttime = g_studio.time;
 	RI.currententity->curstate.animtime = cl.local.weaponstarttime;
 	RI.currententity->curstate.sequence = cl.local.weaponsequence;
 
@@ -3331,7 +3423,9 @@ void R_DrawViewModel( void )
 	RI.currentmodel = RI.currententity->model;
 	if( !RI.currentmodel ) return;
 
-	RI.currententity->curstate.renderamt = R_ComputeFxBlend( RI.currententity );
+	R_StudioSetupTimings();
+
+	RI.currententity->curstate.renderamt = CL_FxBlend( RI.currententity );
 
 	// hack the depth range to prevent view model from poking into walls
 	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
@@ -3340,7 +3434,7 @@ void R_DrawViewModel( void )
 	if( r_lefthand->value == 1 || g_iBackFaceCull )
 		GL_FrontFace( !glState.frontFace );
 
-	if( !cl.local.weaponstarttime ) cl.local.weaponstarttime = cl.time;
+	if( !cl.local.weaponstarttime ) cl.local.weaponstarttime = g_studio.time;
 	RI.currententity->curstate.animtime = cl.local.weaponstarttime;
 	RI.currententity->curstate.sequence = cl.local.weaponsequence;
 

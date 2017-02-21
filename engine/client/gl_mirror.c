@@ -336,7 +336,7 @@ void R_DrawMirrors( void )
 		tr.mirror_entities[i].ent = NULL;
 	}
 
-	tr.framecount = oldframecount;	// restore real framecount
+	RI.viewleaf = NULL;		// force markleafs next frame
 	tr.num_mirror_entities = 0;
 	tr.num_mirrors_used = 0;
 }

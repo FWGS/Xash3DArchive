@@ -1110,7 +1110,6 @@ void SV_PutClientInServer( sv_client_t *cl )
 			MSG_WriteBitAngle( &cl->netchan.message, ent->v.angles[2], 16 );
 			ent->v.fixangle = 0;
 		}
-		SetBits( ent->v.effects, EF_NOINTERP );
 
 		// reset weaponanim
 		MSG_BeginServerCmd( &cl->netchan.message, svc_weaponanim );

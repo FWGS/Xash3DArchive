@@ -103,7 +103,7 @@ typedef struct ui_enginefuncs_s
 	struct cl_entity_s* (*pfnGetPlayerModel)( void );	// for drawing playermodel previews
 	void	(*pfnSetModel)( struct cl_entity_s *ed, const char *path );
 	void	(*pfnClearScene)( void );
-	void	(*pfnRenderScene)( const struct ref_params_s *fd );
+	void	(*pfnRenderScene)( const struct ref_viewpass_s *rvp );
 	int	(*CL_CreateVisibleEntity)( int type, struct cl_entity_s *ent );
 
 	// misc handlers

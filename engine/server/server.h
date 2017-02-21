@@ -174,8 +174,8 @@ typedef struct server_s
 	model_t		*worldmodel;	// pointer to world
 	uint		checksum;		// for catching cheater maps
 
+	qboolean		simulating;
 	qboolean		write_bad_message;	// just for debug
-	qboolean		simulating;	// physics is running
 	qboolean		paused;
 } server_t;
 

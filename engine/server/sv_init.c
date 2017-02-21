@@ -383,27 +383,14 @@ void SV_ActivateServer( void )
 
 	if( svs.maxclients > 1 )
 	{
-		// listenserver is executed on every map change in multiplayer
-		if( host.type != HOST_DEDICATED )
-		{
-#if 0
-			// temporare disable because it's broken TFC multiplayer
-			char *plservercfgfile = Cvar_VariableString( "lservercfgfile" );
-			if( *plservercfgfile ) Cbuf_AddText( va( "exec %s\n", plservercfgfile ));
-#endif
-		}
+		char *mapchangecfgfile = Cvar_VariableString( "mapchangecfgfile" );
+		if( *mapchangecfgfile ) Cbuf_AddText( va( "exec %s\n", mapchangecfgfile ));
 
 		if( public_server->value )
 		{
 			MsgDev( D_INFO, "Adding your server to master server list\n" );
 			Master_Add( );
 		}
-	}
-
-	// mapchangecfgfile
-	{
-		char *mapchangecfgfile = Cvar_VariableString( "mapchangecfgfile" );
-		if( *mapchangecfgfile ) Cbuf_AddText( va( "exec %s\n", mapchangecfgfile ));
 	}
 }
 

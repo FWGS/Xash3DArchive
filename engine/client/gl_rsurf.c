@@ -1957,20 +1957,20 @@ Mark the leaves and nodes that are in the PVS for the current leaf
 */
 void R_MarkLeaves( void )
 {
+	qboolean	novis = false;
 	mnode_t	*node;
 	int	i;
 
 	if( !RI.drawWorld ) return;
 
-	if( FBitSet( r_novis->flags, FCVAR_CHANGED ) || tr.fResetVis )
+	if( FBitSet( r_novis->flags, FCVAR_CHANGED ))
 	{
 		// force recalc viewleaf
 		ClearBits( r_novis->flags, FCVAR_CHANGED );
-		tr.fResetVis = false;
 		RI.viewleaf = NULL;
 	}
 
-	if( RI.viewleaf == RI.oldviewleaf && !r_novis->value && RI.viewleaf != NULL )
+	if( RI.viewleaf == RI.oldviewleaf && RI.viewleaf != NULL )
 		return;
 
 	// development aid to let you run around
@@ -1981,16 +1981,9 @@ void R_MarkLeaves( void )
 	tr.visframecount++;
 
 	if( r_novis->value || RI.drawOrtho || !RI.viewleaf || !cl.worldmodel->visdata )
-	{
-		// mark everything
-		for( i = 0; i < cl.worldmodel->numleafs; i++ )
-			cl.worldmodel->leafs[i+1].visframe = tr.visframecount;
-		for( i = 0; i < cl.worldmodel->numnodes; i++ )
-			cl.worldmodel->nodes[i].visframe = tr.visframecount;
-		return;
-	}
+		novis = true;
 
-	Mod_FatPVS( RI.pvsorigin, REFPVS_RADIUS, RI.visbytes, world.visbytes, FBitSet( RI.params, RP_OLDVIEWLEAF ), r_novis->value );
+	Mod_FatPVS( RI.pvsorigin, REFPVS_RADIUS, RI.visbytes, world.visbytes, FBitSet( RI.params, RP_OLDVIEWLEAF ), novis );
 
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
 	{

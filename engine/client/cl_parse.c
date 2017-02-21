@@ -236,6 +236,21 @@ int CL_UserMsgStub( const char *pszName, int iSize, void *pbuf )
 
 /*
 ==================
+CL_ParseViewEntity
+
+==================
+*/
+void CL_ParseViewEntity( sizebuf_t *msg )
+{
+	cl.viewentity = MSG_ReadWord( msg );
+
+	// check entity bounds in case we want
+	// to use this directly in clgame.entities[] array
+	cl.viewentity = bound( 0, cl.viewentity, clgame.maxEntities - 1 );
+}
+
+/*
+==================
 CL_ParseSoundPacket
 
 ==================
@@ -465,7 +480,7 @@ void CL_ParseParticles( sizebuf_t *msg )
 	{
 		particle_t	*p;
 
-		p = CL_AllocParticle( NULL );
+		p = R_AllocParticle( NULL );
 		if( !p ) return;
 
 		p->die += life;
@@ -475,7 +490,7 @@ void CL_ParseParticles( sizebuf_t *msg )
 		VectorCopy( org, p->org );
 		VectorCopy( dir, p->vel );
 	}
-	else CL_RunParticleEffect( org, dir, color, count );
+	else R_RunParticleEffect( org, dir, color, count );
 }
 
 /*
@@ -536,19 +551,62 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 		ent->trivial_accept = INVALID_HANDLE;
 
 	// setup the new static entity
-	CL_UpdateEntityFields( ent );
-
-	if( Mod_GetType( state.modelindex ) == mod_studio )
-	{
-		CL_UpdateStudioVars( ent, &state, true );
-
-		// animate studio model
-		ent->curstate.animtime = cl.time;
-		ent->curstate.framerate = 1.0f;
-		ent->latched.prevframe = 0.0f;
-	}
+	VectorCopy( ent->curstate.origin, ent->origin );
+	VectorCopy( ent->curstate.angles, ent->angles );
+	ent->model = Mod_Handle( state.modelindex );
+	ent->curstate.framerate = 1.0f;
+	CL_ResetLatchedVars( ent, true );
 
 	R_AddEfrags( ent );	// add link
+}
+
+/*
+==================
+CL_WeaponAnim
+
+Set new weapon animation
+==================
+*/
+void CL_WeaponAnim( int iAnim, int body )
+{
+	cl_entity_t	*view = &clgame.viewent;
+
+	cl.local.weaponstarttime = 0;
+	cl.local.weaponsequence = iAnim;
+
+	// anim is changed. update latchedvars
+	if( iAnim != view->curstate.sequence )
+	{
+		int	i;
+			
+		// save current blends to right lerping from last sequence
+		for( i = 0; i < 2; i++ )
+			view->latched.prevseqblending[i] = view->curstate.blending[i];
+		view->latched.prevsequence = view->curstate.sequence; // save old sequence
+
+		// save animtime
+		view->latched.prevanimtime = view->curstate.animtime;
+		view->latched.sequencetime = 0.0f;
+	}
+
+	view->curstate.animtime = cl.time;	// start immediately
+	view->curstate.framerate = 1.0f;
+	view->curstate.sequence = iAnim;
+	view->latched.prevframe = 0.0f;
+	view->curstate.scale = 1.0f;
+	view->curstate.frame = 0.0f;
+	view->curstate.body = body;
+
+	view->curstate.rendermode = kRenderNormal;
+	view->curstate.renderamt = 255;
+
+#if 0	// g-cont. for GlowShell testing
+	view->curstate.renderfx = kRenderFxGlowShell;
+	view->curstate.rendercolor.r = 255;
+	view->curstate.rendercolor.g = 128;
+	view->curstate.rendercolor.b = 0;
+	view->curstate.renderamt = 100;
+#endif
 }
 
 /*
@@ -657,6 +715,14 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	if( cl.maxclients > 1 && host.developer < 1 )
 		host.developer++;
+
+	// multiplayer game?
+	if( cl.maxclients != 1 )	
+	{
+		if( r_decals->value > mp_decals.value )
+			Cvar_SetValue( "r_decals", mp_decals.value );
+	}
+	else Cvar_Reset( "r_decals" );
 
 	// set the background state
 	if( cls.demoplayback && ( cls.demonum != -1 ))
@@ -806,7 +872,7 @@ void CL_ParseClientData( sizebuf_t *msg )
 
 			ps = &frame->playerstate[cl.playernum];
 			wd = frame->weapondata;
-			pcd = &frame->client;
+			pcd = &frame->clientdata;
 		}
 		else
 		{
@@ -858,7 +924,7 @@ void CL_ParseClientData( sizebuf_t *msg )
 		return;
 	}	
 
-	to_cd = &frame->client;
+	to_cd = &frame->clientdata;
 	to_wd = frame->weapondata;
 
 	// clear to old value before delta parsing
@@ -866,7 +932,7 @@ void CL_ParseClientData( sizebuf_t *msg )
 	{
 		int	delta_sequence = MSG_ReadByte( msg );
 
-		from_cd = &cl.frames[delta_sequence & CL_UPDATE_MASK].client;
+		from_cd = &cl.frames[delta_sequence & CL_UPDATE_MASK].clientdata;
 		from_wd = cl.frames[delta_sequence & CL_UPDATE_MASK].weapondata;
 	}
 	else
@@ -891,12 +957,12 @@ void CL_ParseClientData( sizebuf_t *msg )
 	}
 
 	// make a local copy of physinfo
-	Q_strncpy( cls.physinfo, frame->client.physinfo,  sizeof( cls.physinfo ));
+	Q_strncpy( cls.physinfo, frame->clientdata.physinfo,  sizeof( cls.physinfo ));
 
-	cl.local.maxspeed = frame->client.maxspeed;
-	cl.local.pushmsec = frame->client.pushmsec;
-	cl.local.weapons = frame->client.weapons;	// g-cont 32-bit predictable weapon limit !!!
-	cl.local.health = frame->client.health;
+	cl.local.maxspeed = frame->clientdata.maxspeed;
+	cl.local.pushmsec = frame->clientdata.pushmsec;
+	cl.local.weapons = frame->clientdata.weapons;
+	cl.local.health = frame->clientdata.health;
 }
 
 /*
@@ -912,7 +978,7 @@ void CL_ParseBaseline( sizebuf_t *msg )
 
 	Delta_InitClient ();	// finalize client delta's
 
-	newnum = MSG_ReadWord( msg );
+	newnum = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
 
 	if( newnum < 0 ) Host_Error( "CL_SpawnEdict: invalid number %i\n", newnum );
 	if( newnum >= clgame.maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
@@ -1623,7 +1689,7 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
 			break;
 		case svc_setview:
-			cl.viewentity = MSG_ReadWord( msg );
+			CL_ParseViewEntity( msg );
 			break;
 		case svc_sound:
 		case svc_ambientsound:

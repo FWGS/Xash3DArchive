@@ -408,7 +408,7 @@ void Cvar_DirectSet( convar_t *var, const char *value )
 	// check value
 	if( !value )
 	{
-		if( !FBitSet( var->flags, FCVAR_EXTENDED ))
+		if( !FBitSet( var->flags, FCVAR_EXTENDED|FCVAR_ALLOCATED ))
 		{
 			MsgDev( D_INFO, "%s has no default value and can't be reset.\n", var->name );
 			return;

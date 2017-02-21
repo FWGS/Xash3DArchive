@@ -94,7 +94,9 @@ GNU General Public License for more details.
 #define clc_requestcvarvalue2		10
 #define clc_lastmsg			10	// end client messages
 
-#define MAX_VISIBLE_PACKET		1024	// 1024 visible entities per frame (hl1 has 256)
+#define MAX_VISIBLE_PACKET_BITS	10
+#define MAX_VISIBLE_PACKET		(1<<MAX_VISIBLE_PACKET_BITS)	// 1024 visible entities per frame (hl1 has 256)
+#define MAX_VISIBLE_PACKET_VIS_BYTES	((MAX_VISIBLE_PACKET + 7 ) / 8)
 
 // additional protocol data
 #define MAX_CLIENT_BITS		5

@@ -2040,7 +2040,7 @@ void Con_DrawVersion( void )
 
 	if( !host.force_draw_version )
 	{
-		if(( cls.key_dest != key_menu && !draw_version ) || gl_overview->value == 2 )
+		if(( cls.key_dest != key_menu && !draw_version ) || CL_IsDevOverviewMode() == 2 )
 			return;
 	}
 
@@ -2076,10 +2076,10 @@ void Con_RunConsole( void )
 	}
 	else con.showlines = 0; // none visible
 
-	lines_per_frame = bound( 1, fabs( scr_conspeed->value ) * host.realframetime, glState.height );
-
 	if( cls.state == ca_connecting || cls.state == ca_connected )
-		lines_per_frame = 0;
+		host.realframetime = ( MAX_FPS / host_maxfps->value ) * MIN_FRAMETIME;
+
+	lines_per_frame = bound( 1, fabs( scr_conspeed->value ) * host.realframetime, glState.height );
 
 	if( con.showlines < con.vislines )
 	{

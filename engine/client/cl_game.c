@@ -106,14 +106,11 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 	if( !clgame.entities ) // not in game yet
 		return NULL;
 
+	if( index < 0 || index >= clgame.maxEntities )
+		return NULL;
+
 	if( index == 0 )
 		return cl.world;
-
-	if( index < 0 )
-		return clgame.dllFuncs.pfnGetUserEntity( abs( index ));
-
-	if( index >= clgame.maxEntities )
-		return NULL;
 
 	return CL_EDICT_NUM( index );
 }
@@ -834,19 +831,13 @@ Render crosshair
 */
 void CL_DrawCrosshair( void )
 {
-	int		x, y, width, height;
-	cl_entity_t	*pPlayer;
+	int	x, y, width, height;
 
-	if( !clgame.ds.pCrosshair || cl.crosshairangle[2] || !cl_crosshair->value )
+	if( !clgame.ds.pCrosshair || !cl_crosshair->value )
 		return;
 
-	pPlayer = CL_GetLocalPlayer();
-
-	if( cl.frame.client.deadflag != DEAD_NO || cl.frame.client.flags & FL_FROZEN )
-		return;
-
-	// any camera on
-	if( cl.viewentity != pPlayer->index )
+	// any camera on or client is died
+	if( cl.local.health <= 0 || cl.viewentity != ( cl.playernum + 1 ))
 		return;
 
 	// get crosshair dimension
@@ -864,7 +855,7 @@ void CL_DrawCrosshair( void )
 		vec3_t	forward;
 		vec3_t	point, screen;
 
-		VectorAdd( cl.viewangles, cl.crosshairangle, angles );
+		VectorAdd( RI.viewangles, cl.crosshairangle, angles );
 		AngleVectors( angles, forward, NULL, NULL );
 		VectorAdd( RI.vieworg, forward, point );
 		R_WorldToScreen( point, screen );
@@ -1824,7 +1815,7 @@ value that come from server
 */
 static float pfnGetClientMaxspeed( void )
 {
-	return cl.frame.client.maxspeed;
+	return cl.local.maxspeed;
 }
 
 /*
@@ -1871,11 +1862,7 @@ pfnIsNoClipping
 */
 int pfnIsNoClipping( void )
 {
-	cl_entity_t *pl = CL_GetLocalPlayer();
-
-	if( !pl ) return false;
-
-	return pl->curstate.movetype == MOVETYPE_NOCLIP;
+	return ( cl.frames[cl.parsecountmod].playerstate[cl.playernum].movetype == MOVETYPE_NOCLIP );
 }
 
 /*
@@ -1928,8 +1915,8 @@ void pfnCalcShake( void )
 
 		// compute random shake extents (the shake will settle down from this)
 		for( i = 0; i < 3; i++ )
-			clgame.shake.offset[i] = Com_RandomFloat( -clgame.shake.amplitude, clgame.shake.amplitude );
-		clgame.shake.angle = Com_RandomFloat( -clgame.shake.amplitude * 0.25f, clgame.shake.amplitude * 0.25f );
+			clgame.shake.offset[i] = COM_RandomFloat( -clgame.shake.amplitude, clgame.shake.amplitude );
+		clgame.shake.angle = COM_RandomFloat( -clgame.shake.amplitude * 0.25f, clgame.shake.amplitude * 0.25f );
 	}
 
 	// ramp down amplitude over duration (fraction goes from 1 to 0 linearly with slope 1/duration)
@@ -2888,27 +2875,29 @@ void TriRenderMode( int mode )
 	switch( mode )
 	{
 	case kRenderNormal:
-	default:	pglDisable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
+		pglDisable( GL_BLEND );
+		pglDepthMask( GL_TRUE );
+		break;
+	case kRenderTransAlpha:
+		pglEnable( GL_BLEND );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglDepthMask( GL_FALSE );
 		break;
 	case kRenderTransColor:
-	case kRenderTransAlpha:
 	case kRenderTransTexture:
-		// NOTE: TriAPI doesn't have 'solid' mode
 		pglEnable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderGlow:
 	case kRenderTransAdd:
+		pglBlendFunc( GL_ONE, GL_ONE );
 		pglEnable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		pglDepthMask( GL_FALSE );
 		break;
 	}
+
+	clgame.ds.renderMode = mode;
 }
 
 /*
@@ -2961,7 +2950,6 @@ draw triangle sequence
 void TriEnd( void )
 {
 	pglEnd();
-	pglDisable( GL_ALPHA_TEST );
 }
 
 /*
@@ -2972,11 +2960,14 @@ TriColor4f
 */
 void TriColor4f( float r, float g, float b, float a )
 {
-	clgame.ds.triColor[0] = (byte)bound( 0, (r * 255.0f), 255 );
-	clgame.ds.triColor[1] = (byte)bound( 0, (g * 255.0f), 255 );
-	clgame.ds.triColor[2] = (byte)bound( 0, (b * 255.0f), 255 );
-	clgame.ds.triColor[3] = (byte)bound( 0, (a * 255.0f), 255 );
-	pglColor4ub( clgame.ds.triColor[0], clgame.ds.triColor[1], clgame.ds.triColor[2], clgame.ds.triColor[3] );
+	if( clgame.ds.renderMode == kRenderTransAlpha )
+		pglColor4ub( r * 255.9f, g * 255.9f, b * 255.9f, a * 255.0f );
+	else pglColor4f( r * a, g * a, b * a, 1.0 );
+
+	clgame.ds.triRGBA[0] = r;
+	clgame.ds.triRGBA[1] = g;
+	clgame.ds.triRGBA[2] = b;
+	clgame.ds.triRGBA[3] = a;
 }
 
 /*
@@ -2987,11 +2978,12 @@ TriColor4ub
 */
 void TriColor4ub( byte r, byte g, byte b, byte a )
 {
-	clgame.ds.triColor[0] = r;
-	clgame.ds.triColor[1] = g;
-	clgame.ds.triColor[2] = b;
-	clgame.ds.triColor[3] = a;
-	pglColor4ub( r, g, b, a );
+	clgame.ds.triRGBA[0] = r * (1.0f / 255.0f);
+	clgame.ds.triRGBA[1] = g * (1.0f / 255.0f);
+	clgame.ds.triRGBA[2] = b * (1.0f / 255.0f);
+	clgame.ds.triRGBA[3] = a * (1.0f / 255.0f);
+
+	pglColor4f( clgame.ds.triRGBA[0], clgame.ds.triRGBA[1], clgame.ds.triRGBA[2], 1.0f );
 }
 
 /*
@@ -3035,14 +3027,13 @@ TriBrightness
 */
 void TriBrightness( float brightness )
 {
-	rgba_t	rgba;
+	float	r, g, b;
 
-	brightness = max( 0.0f, brightness );
-	rgba[0] = clgame.ds.triColor[0] * brightness;
-	rgba[1] = clgame.ds.triColor[1] * brightness;
-	rgba[2] = clgame.ds.triColor[2] * brightness;
+	r = clgame.ds.triRGBA[0] * clgame.ds.triRGBA[3] * brightness;
+	g = clgame.ds.triRGBA[1] * clgame.ds.triRGBA[3] * brightness;
+	b = clgame.ds.triRGBA[2] * clgame.ds.triRGBA[3] * brightness;
 
-	pglColor4ub( rgba[0], rgba[1], rgba[2], clgame.ds.triColor[3] );
+	pglColor4f( r, g, b, 1.0f );
 }
 
 /*
@@ -3051,7 +3042,7 @@ TriCullFace
 
 =============
 */
-void TriCullFace( TRICULLSTYLE mode )
+void TriCullFace( int mode )
 {
 	switch( mode )
 	{
@@ -3075,23 +3066,12 @@ bind current texture
 int TriSpriteTexture( model_t *pSpriteModel, int frame )
 {
 	int	gl_texturenum;
-	msprite_t	*psprite;
 
 	if(( gl_texturenum = R_GetSpriteTexture( pSpriteModel, frame )) == 0 )
 		return 0;
 
 	if( gl_texturenum <= 0 || gl_texturenum > MAX_TEXTURES )
-	{
-		MsgDev( D_ERROR, "TriSpriteTexture: bad index %i\n", gl_texturenum );
 		gl_texturenum = tr.defaultTexture;
-	}
-
-	psprite = pSpriteModel->cache.data;
-	if( psprite->texFormat == SPR_ALPHTEST )
-	{
-		pglEnable( GL_ALPHA_TEST );
-		pglAlphaFunc( GL_GEQUAL, 0.5f );
-	}
 
 	GL_Bind( GL_TEXTURE0, gl_texturenum );
 
@@ -3195,14 +3175,12 @@ void TriLightAtPoint( float *pos, float *value )
 {
 	color24	ambient;
 
-	if( !pos || !value )
-		return;
-
+	if( !pos || !value ) return;
 	R_LightForPoint( pos, &ambient, false, false, 0.0f );
 
-	value[0] = (float)ambient.r * 255.0f;
-	value[1] = (float)ambient.g * 255.0f;
-	value[2] = (float)ambient.b * 255.0f;
+	value[0] = ambient.r;
+	value[1] = ambient.g;
+	value[2] = ambient.b;
 }
 
 /*
@@ -3214,8 +3192,11 @@ Heavy legacy of Quake...
 */
 void TriColor4fRendermode( float r, float g, float b, float a, int rendermode )
 {
-	if( rendermode == kRenderTransAlpha )
+	if( clgame.ds.renderMode == kRenderTransAlpha )
+	{
+		clgame.ds.triRGBA[3] = a / 255.0f;
 		pglColor4f( r, g, b, a );
+	}
 	else pglColor4f( r * a, g * a, b * a, 1.0f );
 }
 
@@ -3298,6 +3279,23 @@ void NetAPI_InitNetworking( void )
 	NET_Config( true ); // allow remote
 }
 
+int Net_GetPacketLoss( void )
+{
+	int	packet_loss = 0;
+
+	if( cls.state == ca_active )
+	{
+		packet_loss = bound( 0, (int)cls.packet_loss, 100 );
+
+		if ( packet_loss < 0 )
+			packet_loss = 0;
+		if ( packet_loss > 100 )
+			packet_loss = 100;
+	}
+
+	return packet_loss;
+}
+
 /*
 =================
 NetAPI_InitNetworking
@@ -3306,15 +3304,24 @@ NetAPI_InitNetworking
 */
 void NetAPI_Status( net_status_t *status )
 {
+	qboolean	connected = false;
+	int	packet_loss = 0;
+
 	ASSERT( status != NULL );
 
-	status->connected = NET_IsLocalAddress( cls.netchan.remote_address ) ? false : true;
-	status->connection_time = host.realtime - cls.netchan.connect_time;
+	if( cls.state > ca_disconnected && cls.state != ca_cinematic )
+		connected = true;
+
+	if( cls.state == ca_active )
+		packet_loss = bound( 0, (int)cls.packet_loss, 100 );
+
+	status->connected = connected;
+	status->connection_time = (connected) ? (host.realtime - cls.netchan.connect_time) : 0.0;
+	status->latency = (connected) ? cl.frames[cl.parsecountmod].latency : 0.0;
 	status->remote_address = cls.netchan.remote_address;
-	status->packet_loss = cls.packet_loss / 100.0; // percent
-	status->latency = cl.frame.latency;
+	status->packet_loss = packet_loss;
 	status->local_address = net_local;
-	status->rate = cls.netchan.rate;
+	status->rate = rate->value;
 }
 
 /*
@@ -3615,7 +3622,7 @@ triangleapi_t gTriApi =
 
 static efx_api_t gEfxApi =
 {
-	CL_AllocParticle,
+	R_AllocParticle,
 	CL_BlobExplosion,
 	CL_Blood,
 	CL_BloodSprite,
@@ -3623,14 +3630,14 @@ static efx_api_t gEfxApi =
 	CL_BreakModel,
 	CL_Bubbles,
 	CL_BubbleTrail,
-	CL_BulletImpactParticles,
+	R_BulletImpactParticles,
 	CL_EntityParticles,
 	CL_Explosion,
 	CL_FizzEffect,
 	CL_FireField,
 	CL_FlickerParticles,
 	CL_FunnelSprite,
-	CL_Implosion,
+	R_Implosion,
 	CL_Large_Funnel,
 	CL_LavaSplash,
 	CL_MultiGunshot,
@@ -3646,21 +3653,21 @@ static efx_api_t gEfxApi =
 	CL_RicochetSprite,
 	CL_RocketFlare,
 	CL_RocketTrail,
-	CL_RunParticleEffect,
+	R_RunParticleEffect,
 	CL_ShowLine,
-	CL_SparkEffect,
-	CL_SparkShower,
-	CL_SparkStreaks,
+	R_SparkEffect,
+	R_SparkShower,
+	R_SparkStreaks,
 	CL_Spray,
 	CL_Sprite_Explode,
 	CL_Sprite_Smoke,
 	CL_Sprite_Spray,
 	CL_Sprite_Trail,
 	CL_Sprite_WallPuff,
-	CL_StreakSplash,
-	CL_TracerEffect,
-	CL_UserTracerParticle,
-	CL_TracerParticles,
+	R_StreakSplash,
+	R_TracerEffect,
+	R_UserTracerParticle,
+	R_TracerParticles,
 	CL_TeleportSplash,
 	CL_TempSphereModel,
 	CL_TempModel,
@@ -3671,14 +3678,14 @@ static efx_api_t gEfxApi =
 	CL_DecalShoot,
 	CL_AttachTentToPlayer,
 	CL_KillAttachedTents,
-	CL_BeamCirclePoints,
-	CL_BeamEntPoint,
-	CL_BeamEnts,
-	CL_BeamFollow,
-	CL_BeamKill,
-	CL_BeamLightning,
-	CL_BeamPoints,
-	CL_BeamRing,
+	R_BeamCirclePoints,
+	R_BeamEntPoint,
+	R_BeamEnts,
+	R_BeamFollow,
+	R_BeamKill,
+	R_BeamLightning,
+	R_BeamPoints,
+	R_BeamRing,
 	CL_AllocDlight,
 	CL_AllocElight,
 	CL_TempEntAlloc,
@@ -3824,8 +3831,8 @@ static cl_enginefunc_t gEngfuncs =
 	pfnPrecacheEvent,
 	CL_PlaybackEvent,
 	CL_WeaponAnim,
-	Com_RandomFloat,
-	Com_RandomLong,
+	COM_RandomFloat,
+	COM_RandomLong,
 	pfnHookEvent,
 	Con_Visible,
 	pfnGetGameDirectory,

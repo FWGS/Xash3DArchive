@@ -27,7 +27,7 @@ GNU General Public License for more details.
 // move misc functions at end of the interface
 // added new export for clearing studio decals
 
-#define CL_RENDER_INTERFACE_VERSION	35
+#define CL_RENDER_INTERFACE_VERSION	36
 #define MAX_STUDIO_DECALS		4096	// + unused space of BSP decals
 
 #define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
@@ -118,7 +118,7 @@ typedef enum
 {
 	CONTEXT_TYPE_GL = 0,
 	CONTEXT_TYPE_GLES_1_X,
-	CONTEXT_TYPE_GLES_2_x
+	CONTEXT_TYPE_GLES_2_X
 } gl_context_type_t;
 
 typedef enum
@@ -238,7 +238,7 @@ typedef struct render_interface_s
 {
 	int		version;
 	// passed through R_RenderFrame (0 - use engine renderer, 1 - use custom client renderer)
-	int		(*GL_RenderFrame)( const struct ref_params_s *pparams, qboolean drawWorld );
+	int		(*GL_RenderFrame)( const struct ref_viewpass_s *rvp );
 	// build all the lightmaps on new level or when gamma is changed
 	void		(*GL_BuildLightmaps)( void );
 	// setup map bounds for ortho-projection when we in dev_overview mode
@@ -251,8 +251,6 @@ typedef struct render_interface_s
 	void		(*R_ClearStudioDecals)( void );
 	// grab r_speeds message
 	qboolean		(*R_SpeedsMessage)( char *out, size_t size );
-	// replace with built-in R_DrawCubemapView for make skyshots or envshots
-	qboolean		(*R_DrawCubemapView)( const float *origin, const float *angles, int size );
 	// alloc or destroy model custom data
 	void		(*Mod_ProcessUserData)( struct model_s *mod, qboolean create, const byte *buffer );
 	// alloc or destroy entity custom data

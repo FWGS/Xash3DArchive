@@ -160,7 +160,7 @@ static const char *R_DetailTextureForName( const char *name )
 		if( Q_stristr( name, table->texname ))
 		{
 			if(( table->lMin + table->lMax ) > 0 )
-				return va( table->detail, Com_RandomLong( table->lMin, table->lMax )); 
+				return va( table->detail, COM_RandomLong( table->lMin, table->lMax )); 
 			return table->detail;
 		}
 	}

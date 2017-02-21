@@ -525,11 +525,11 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 	switch( shot_type )
 	{
 	case VID_SCREENSHOT:
-		if( !gl_overview->value )
+		if( !CL_IsDevOverviewMode( ))
 			VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // scrshot gamma
 		break;
 	case VID_SNAPSHOT:
-		if( !gl_overview->value )
+		if( !CL_IsDevOverviewMode( ))
 			VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // scrshot gamma
 		FS_AllowDirectPaths( true );
 		break;

@@ -795,7 +795,7 @@ static qboolean NET_LagPacket( qboolean newdata, netsrc_t sock, netadr_t *from, 
 				}
 				else
 				{
-					if( Com_RandomLong( 0, 100 ) <= net_fakeloss->value )
+					if( COM_RandomLong( 0, 100 ) <= net_fakeloss->value )
 						return false;
 				}
 			}

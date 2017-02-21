@@ -53,7 +53,7 @@ void CL_CalcPlayerVelocity( int idx, vec3_t velocity )
 
 	if( idx == cl.playernum + 1 )
 	{
-		pcd = &cl.frames[cl.parsecountmod].client;
+		pcd = &cl.frames[cl.parsecountmod].clientdata;
 		VectorCopy( pcd->velocity, velocity );
 	}
 	else
@@ -424,9 +424,11 @@ void CL_ParseEvent( sizebuf_t *msg )
 
 		if( packet_index != -1 )
 		{
-			if( packet_index < cl.frames[cl.parsecountmod].num_entities )
+			frame_t	*frame = &cl.frames[cl.parsecountmod];
+
+			if( packet_index < frame->num_entities )
 			{
-				state = &cls.packet_entities[(cl.frame.first_entity+packet_index)%cls.num_client_entities];
+				state = &cls.packet_entities[(frame->first_entity+packet_index)%cls.num_client_entities];
 				args.entindex = state->number;
 
 				if( VectorIsNull( args.origin ))

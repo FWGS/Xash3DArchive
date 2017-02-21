@@ -972,7 +972,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 		if( check->sfx == sfx && !check->pMixer.sample )
 		{
 			// skip up to 0.1 seconds of audio
-			int skip = Com_RandomLong( 0, (long)( 0.1f * check->sfx->cache->rate ));
+			int skip = COM_RandomLong( 0, (long)( 0.1f * check->sfx->cache->rate ));
                               
 			S_SetSampleStart( check, sfx->cache, skip );
 			break;

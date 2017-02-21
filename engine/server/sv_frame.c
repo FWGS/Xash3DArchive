@@ -22,6 +22,7 @@ typedef struct
 {
 	int		num_entities;
 	entity_state_t	entities[MAX_VISIBLE_PACKET];	
+	byte		sended[MAX_VISIBLE_PACKET_VIS_BYTES];
 } sv_ents_t;
 
 int	c_fullsend;	// just a debug counter
@@ -99,9 +100,8 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( !SV_IsValidEdict( ent ))
 			continue;
 
-		// don't double add an entity through portals (already added)
-		// HACHACK: use pushmsec to keep net_framenum
-		if( ent->v.pushmsec == sv.net_framenum )
+		// don't double add an entity through portals (in case this already added)
+		if( CHECKVISBIT( ents->sended, NUM_FOR_EDICT( ent )))
 			continue;
 
 		if( FBitSet( ent->v.effects, EF_REQUEST_PHS ))
@@ -115,7 +115,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, ( netclient != NULL ), pset ))
 		{
 			// to prevent adds it twice through portals
-			ent->v.pushmsec = sv.net_framenum;
+			SETVISBIT( ents->sended, NUM_FOR_EDICT( ent ));
 
 			if( netclient && netclient->modelindex )
 			{
@@ -179,41 +179,41 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 {
 	entity_state_t	*oldent, *newent;
 	int		oldindex, newindex;
-	int		from_num_entities;
 	int		oldnum, newnum;
+	int		oldmax;
 	client_frame_t	*from;
 
 	// this is the frame that we are going to delta update from
 	if( cl->delta_sequence != -1 )
 	{
 		from = &cl->frames[cl->delta_sequence & SV_UPDATE_MASK];
-		from_num_entities = from->num_entities;
+		oldmax = from->num_entities;
 
 		// the snapshot's entities may still have rolled off the buffer, though
 		if( from->first_entity <= ( svs.next_client_entities - svs.num_client_entities ))
 		{
 			MsgDev( D_WARN, "%s: delta request from out of date entities.\n", cl->name );
 
-			from = NULL;
-			from_num_entities = 0;
-
 			MSG_BeginServerCmd( msg, svc_packetentities );
-			MSG_WriteWord( msg, to->num_entities );
+			MSG_WriteUBitLong( msg, to->num_entities, MAX_VISIBLE_PACKET_BITS );
+
+			from = NULL;
+			oldmax = 0;
 		}
 		else
 		{
 			MSG_BeginServerCmd( msg, svc_deltapacketentities );
-			MSG_WriteWord( msg, to->num_entities );
+			MSG_WriteUBitLong( msg, to->num_entities, MAX_VISIBLE_PACKET_BITS );
 			MSG_WriteByte( msg, cl->delta_sequence );
 		}
 	}
 	else
 	{
 		from = NULL;
-		from_num_entities = 0;
+		oldmax = 0;
 
 		MSG_BeginServerCmd( msg, svc_packetentities );
-		MSG_WriteWord( msg, to->num_entities );
+		MSG_WriteUBitLong( msg, to->num_entities, MAX_VISIBLE_PACKET_BITS );
 	}
 
 	newent = NULL;
@@ -221,7 +221,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 	newindex = 0;
 	oldindex = 0;
 
-	while( newindex < to->num_entities || oldindex < from_num_entities )
+	while( newindex < to->num_entities || oldindex < oldmax )
 	{
 		if( newindex >= to->num_entities )
 		{
@@ -233,7 +233,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 			newnum = newent->number;
 		}
 
-		if( oldindex >= from_num_entities )
+		if( oldindex >= oldmax )
 		{
 			oldnum = MAX_ENTNUMBER;
 		}
@@ -264,11 +264,11 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 
 		if( newnum > oldnum )
 		{	
-			qboolean	force;
+			qboolean	force = false;
 
+			// check if entity completely removed from server
 			if( EDICT_NUM( oldent->number )->free )
-				force = true;	// entity completely removed from server
-			else force = false;		// just removed from delta-message 
+				force = true;
 
 			// remove from message
 			MSG_WriteDeltaEntity( oldent, NULL, msg, force, false, sv.time );
@@ -277,7 +277,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		}
 	}
 
-	MSG_WriteWord( msg, 0 ); // end of packetentities
+	MSG_WriteUBitLong( msg, 0, MAX_ENTITY_BITS ); // end of packetentities
 }
 
 /*
@@ -473,19 +473,17 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 		MSG_WriteBitAngle( msg, clent->v.angles[0], 16 );
 		MSG_WriteBitAngle( msg, clent->v.angles[1], 16 );
 		MSG_WriteBitAngle( msg, clent->v.angles[2], 16 );
-		clent->v.effects |= EF_NOINTERP;
 		break;
 	case 2:
 		MSG_BeginServerCmd( msg, svc_addangle );
-		MSG_WriteBitAngle( msg, clent->v.avelocity[1], 16 );
-		clent->v.avelocity[1] = 0.0f;
+		MSG_WriteBitAngle( msg, clent->v.avelocity[YAW], 16 );
+		clent->v.avelocity[YAW] = 0.0f;
 		break;
 	}
 
 	clent->v.fixangle = 0; // reset fixangle
 
 	memset( &frame->clientdata, 0, sizeof( frame->clientdata ));
-	clent->v.pushmsec = 0; // reset net framenum
 
 	// update clientdata_t
 	svgame.dllFuncs.pfnUpdateClientData( clent, FBitSet( cl->flags, FCL_LOCAL_WEAPONS ), &frame->clientdata );
@@ -550,6 +548,7 @@ void SV_WriteEntitiesToClient( sv_client_t *cl, sizebuf_t *msg )
 
 	send_pings = SV_ShouldUpdatePing( cl );
 
+	memset( frame_ents.sended, 0, sizeof( frame_ents.sended ));
 	ClearBits( sv.hostflags, SVF_MERGE_VISIBILITY );
 	sv.net_framenum++;	// now all portal-through entities are invalidate
 
@@ -576,15 +575,15 @@ void SV_WriteEntitiesToClient( sv_client_t *cl, sizebuf_t *msg )
 	// it will break all connected clients, but it takes more than one week to overflow it
 	if(( (uint)svs.next_client_entities ) + frame_ents.num_entities >= 0x7FFFFFFE )
 	{
-		// just reset counter
 		svs.next_client_entities = 0;
-		// delta is broken now, cannot keep connected clients
-		SV_FinalMessage( "Server is running to long, reconnecting!", true );
+
+		// delta is broken for now, cannot keep connected clients
+		SV_FinalMessage( "Server will restart due delta is outdated", true );
 	}
 
 	// copy the entity states out
-	frame->num_entities = 0;
 	frame->first_entity = svs.next_client_entities;
+	frame->num_entities = 0;
 
 	for( i = 0; i < frame_ents.num_entities; i++ )
 	{
@@ -699,7 +698,7 @@ void SV_UpdateToReliableMessages( void )
 	}
 
 	// 1% chanse for simulate random network bugs
-	if( sv.write_bad_message && Com_RandomLong( 0, 512 ) == 404 )
+	if( sv.write_bad_message && COM_RandomLong( 0, 512 ) == 404 )
 	{
 		// just for network debugging (send only for local client)
 		MSG_BeginServerCmd( &sv.reliable_datagram, svc_bad );

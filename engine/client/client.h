@@ -71,11 +71,11 @@ typedef struct frame_s
 	double		time;		// server timestamp
 	qboolean		valid;		// cleared if delta parsing was invalid
 
-	clientdata_t	client;		// local client private data
+	clientdata_t	clientdata;	// local client private data
 	entity_state_t	playerstate[MAX_CLIENTS];
 	weapon_data_t	weapondata[MAX_LOCAL_WEAPONS];
 	netbandwidthgraph_t graphdata;
-
+	byte		flags[MAX_VISIBLE_PACKET_VIS_BYTES];
 	int		num_entities;
 	int		first_entity;	// into the circular cl_packet_entities[]
 } frame_t;
@@ -157,7 +157,6 @@ typedef struct
 									
 	qboolean		video_prepped;		// false if on new level or new ref dll
 	qboolean		audio_prepped;		// false if on new level or new snd dll
-	qboolean		force_refdef;		// vid has changed, so we can't use a paused refdef
 	qboolean		paused;
 
 	int		delta_sequence;		// acknowledged sequence number
@@ -174,8 +173,6 @@ typedef struct
 
 	uint		checksum;			// for catching cheater maps
 
-	frame_t		frame;			// received from server
-	
 	frame_t		frames[MULTIPLAYER_BACKUP];		// alloced on svc_serverdata
 	runcmd_t		commands[MULTIPLAYER_BACKUP];		// each mesage will send several old cmds
 	local_state_t	predicted_frames[MULTIPLAYER_BACKUP];	// local client state
@@ -185,9 +182,6 @@ typedef struct
 						// a lerp point for other data
 	double		oldtime;			// previous cl.time, time-oldtime is used
 						// to decay light values and smooth step ups
-
-	float		lerpFrac;			// interpolation value
-	float		lerpBack;			// invert interpolation value
 	float		timedelta;		// floating delta between two updates
 
 	char		serverinfo[MAX_SERVERINFO_STRING];
@@ -307,12 +301,13 @@ typedef struct
 	qboolean		scissor_test;
 	qboolean		adjust_size;		// allow to adjust scale for fonts
 
+	int		renderMode;		// override kRenderMode from TriAPI
 	int		cullMode;			// override CULL FACE from TriAPI
 
 	// holds text color
 	rgba_t		textColor;
 	rgba_t		spriteColor;
-	rgba_t		triColor;
+	vec4_t		triRGBA;
 
 	// crosshair members
 	const model_t	*pCrosshair;
@@ -443,7 +438,7 @@ typedef struct
 	center_print_t	centerPrint;		// centerprint variables
 	SCREENINFO	scrInfo;			// actual screen info
 	ref_overview_t	overView;			// overView params
-	rgb_t		palette[256];		// palette used for particle colors
+	color24		palette[256];		// palette used for particle colors
 
 	client_textmessage_t *titles;			// title messages, not network messages
 	int		numTitles;
@@ -594,6 +589,7 @@ extern gameui_static_t	gameui;
 //
 // cvars
 //
+extern convar_t	mp_decals;
 extern convar_t	*cl_nopred;
 extern convar_t	*cl_showfps;
 extern convar_t	*cl_envshot_size;
@@ -612,6 +608,7 @@ extern convar_t	*cl_idealpitchscale;
 extern convar_t	*cl_allow_levelshots;
 extern convar_t	*cl_lightstyle_lerping;
 extern convar_t	*cl_draw_particles;
+extern convar_t	*cl_draw_tracers;
 extern convar_t	*cl_levelshot_name;
 extern convar_t	*cl_draw_beams;
 extern convar_t	*cl_clockreset;
@@ -625,13 +622,12 @@ extern convar_t	*scr_viewsize;
 extern convar_t	*scr_download;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_dark;	// start from dark
+extern convar_t	*rate;
 
 //=============================================================================
 
 void CL_SetLightstyle( int style, const char* s, float f );
 void CL_RunLightStyles( void );
-
-void CL_AddEntities( void );
 void CL_DecayLights( void );
 
 //=================================================
@@ -663,7 +659,7 @@ void CL_SendCommand( void );
 void CL_Disconnect_f( void );
 void CL_ProcessFile( qboolean successfully_received, const char *filename );
 void CL_WriteUsercmd( sizebuf_t *msg, int from, int to );
-void CL_GetChallengePacket( void );
+void CL_UpdateFrameLerp( void );
 int CL_IsDevOverviewMode( void );
 void CL_PingServers_f( void );
 void CL_SignonReply( void );
@@ -757,6 +753,7 @@ qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
 //
 void SCR_VidInit( void );
 void SCR_TileClear( void );
+void SCR_DirtyScreen( void );
 void SCR_AddDirtyPoint( int x, int y );
 void SCR_InstallParticlePalette( void );
 void SCR_EndLoadingPlaque( void );
@@ -800,6 +797,7 @@ int CL_WaterEntity( const float *rgflPos );
 cl_entity_t *CL_GetWaterEntity( const float *rgflPos );
 void CL_SetupPMove( playermove_t *pmove, local_state_t *from, usercmd_t *ucmd, qboolean runfuncs, double time );
 pmtrace_t CL_TraceLine( vec3_t start, vec3_t end, int flags );
+void CL_MoveSpectatorCamera( void );
 void CL_SetLastUpdate( void );
 void CL_RedoPrediction( void );
 void CL_ClearPhysEnts( void );
@@ -817,13 +815,14 @@ void CL_InitStudioAPI( void );
 //
 int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta );
 qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType );
-void CL_UpdateStudioVars( cl_entity_t *ent, entity_state_t *newstate, qboolean noInterp );
+void CL_ResetLatchedVars( cl_entity_t *ent, qboolean full_reset );
 qboolean CL_GetEntitySpatialization( struct channel_s *ch );
 qboolean CL_GetMovieSpatialization( struct rawchan_s *ch );
 void CL_ComputePlayerOrigin( cl_entity_t *clent );
 void CL_UpdateEntityFields( cl_entity_t *ent );
 qboolean CL_IsPlayerIndex( int idx );
 void CL_SetIdealPitch( void );
+void CL_EmitEntities( void );
 
 //
 // cl_remap.c
@@ -847,14 +846,17 @@ void CL_DrawParticlesExternal( const float *vieworg, const float *fwd, const flo
 void CL_FireCustomDecal( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags, float scale );
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos );
+void R_FreeDeadParticles( particle_t **ppparticles );
+int CL_FxBlend( cl_entity_t *e );
 void CL_InitParticles( void );
 void CL_ClearParticles( void );
 void CL_FreeParticles( void );
-void CL_DrawParticles( void );
+void CL_DrawParticles( double frametime );
+void CL_DrawTracers( double frametime );
 void CL_InitTempEnts( void );
 void CL_ClearTempEnts( void );
 void CL_FreeTempEnts( void );
-void CL_AddTempEnts( void );
+void CL_TempEntUpdate( void );
 void CL_InitViewBeams( void );
 void CL_ClearViewBeams( void );
 void CL_FreeViewBeams( void );

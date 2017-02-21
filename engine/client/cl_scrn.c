@@ -122,25 +122,30 @@ void SCR_NetSpeeds( void )
 	int		cur_clfps = 0;
 	rgba_t		color;
 
+	if( !host.developer )
+		return;
+
 	if( !net_speeds->value || cls.demoplayback || cls.state != ca_active )
 		return;
 
-	if( cl_serverframetime() != 0 )
+	// prevent to get too big values at max
+	if( cl_serverframetime() > 0.0001f )
 	{
 		cur_svfps = Q_rint( 1.0f / cl_serverframetime( ));
 		if( cur_svfps < min_svfps ) min_svfps = cur_svfps;
 		if( cur_svfps > max_svfps ) max_svfps = cur_svfps;
 	}
 
-	if( cl_clientframetime() != 0 )
+	// prevent to get too big values at max
+	if( cl_clientframetime() > 0.0001f )
 	{
 		cur_clfps = Q_rint( 1.0f / cl_clientframetime( ));
 		if( cur_clfps < min_clfps ) min_clfps = cur_clfps;
 		if( cur_clfps > max_clfps ) max_clfps = cur_clfps;
 	}
 
-	Q_snprintf( msg, sizeof( msg ), "sv fps: ^1%4i min, ^3%4i cur, ^2%4i max\ncl fps: ^1%4i min, ^3%4i cur, ^2%4i max\nGame Time: %02d:%02d\nTotal sended to server: %s\nTotal received from server: %s\n",
-	min_svfps, cur_svfps, max_svfps, min_clfps, cur_clfps, max_clfps, (int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_sended ), Q_memprint( cls.netchan.total_received ));
+	Q_snprintf( msg, sizeof( msg ), "sv fps: ^1%4i min, ^3%4i cur, ^2%4i max\ncl fps: ^1%4i min, ^3%4i cur, ^2%4i max\nGame Time: %02d:%02d\nTotal received from server: %s\nTotal sended to server: %s\n",
+	min_svfps, cur_svfps, max_svfps, min_clfps, cur_clfps, max_clfps, (int)(time / 60.0f ), (int)fmod( time, 60.0f ), Q_memprint( cls.netchan.total_received ), Q_memprint( cls.netchan.total_sended ));
 
 	x = glState.width - 320;
 	y = 384;
@@ -171,6 +176,9 @@ SCR_RSpeeds
 void SCR_RSpeeds( void )
 {
 	char	msg[MAX_SYSPATH];
+
+	if( !host.developer )
+		return;
 
 	if( R_SpeedsMessage( msg, sizeof( msg )))
 	{
@@ -516,9 +524,9 @@ void SCR_InstallParticlePalette( void )
 	{
 		for( i = 0; i < 256; i++ )
 		{
-			clgame.palette[i][0] = pic->palette[i*4+0];
-			clgame.palette[i][1] = pic->palette[i*4+1];
-			clgame.palette[i][2] = pic->palette[i*4+2];
+			clgame.palette[i].r = pic->palette[i*4+0];
+			clgame.palette[i].g = pic->palette[i*4+1];
+			clgame.palette[i].b = pic->palette[i*4+2];
 		}
 		FS_FreeImage( pic );
 	}
@@ -526,9 +534,9 @@ void SCR_InstallParticlePalette( void )
 	{
 		for( i = 0; i < 256; i++ )
 		{
-			clgame.palette[i][0] = i;
-			clgame.palette[i][1] = i;
-			clgame.palette[i][2] = i;
+			clgame.palette[i].r = i;
+			clgame.palette[i].g = i;
+			clgame.palette[i].b = i;
 		}
 		MsgDev( D_WARN, "CL_InstallParticlePalette: failed. Force to grayscale\n" );
 	}

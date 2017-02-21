@@ -408,10 +408,6 @@ SOURCE=.\common\pm_trace.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\random.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\client\s_backend.c
 # End Source File
 # Begin Source File

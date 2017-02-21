@@ -54,9 +54,6 @@ CVAR_DEFINE( sv_consistency, "mp_consistency", "1", FCVAR_SERVER, "enbale consis
 // game-related cvars
 CVAR_DEFINE_AUTO( mapcyclefile, "mapcycle.txt", 0, "name of multiplayer map cycle configuration file" );
 CVAR_DEFINE_AUTO( motdfile, "motd.txt", 0, "name of 'message of the day' file" );
-CVAR_DEFINE_AUTO( servercfgfile, "server.cfg", 0, "name of dedicated server configuration file" );
-CVAR_DEFINE_AUTO( lservercfgfile, "listenserver.cfg", 0, "name of listen server configuration file" );
-CVAR_DEFINE_AUTO( mapchangecfgfile, "", 0, "name of config file for map changing rules" );
 CVAR_DEFINE_AUTO( logsdir, "logs", 0, "place to store multiplayer logs" );
 CVAR_DEFINE_AUTO( bannedcfgfile, "banned.cfg", 0, "name of list of banned users" );
 CVAR_DEFINE_AUTO( deathmatch, "0", 0, "deathmatch mode in multiplayer game" );
@@ -324,7 +321,7 @@ void SV_ReadPackets( void )
 
 			if( Netchan_Process( &cl->netchan, &net_message ))
 			{	
-				if( svs.maxclients == 1 || cl->state != cs_spawned )
+				if(( svs.maxclients == 1 && !host_limitlocal->value ) || ( cl->state != cs_spawned ))
 					SetBits( cl->flags, FCL_SEND_NET_MESSAGE ); // reply at end of frame
 
 				// this is a valid, sequenced packet, so process it
@@ -714,7 +711,10 @@ void SV_Init( void )
 	Cvar_Get( "sv_alltalk", "1", 0, "allow to talking for all players (legacy, unused)" );
 	Cvar_Get( "sv_allow_PhysX", "1", FCVAR_ARCHIVE, "allow XashXT to usage PhysX engine" );			// XashXT cvar
 	Cvar_Get( "sv_precache_meshes", "1", FCVAR_ARCHIVE, "cache SOLID_CUSTOM meshes before level loading" );	// Paranoia 2 cvar
-		
+	Cvar_Get ("mapcyclefile", "mapcycle.txt", 0, "name of config file for map changing rules" );
+	Cvar_Get ("servercfgfile","server.cfg", 0, "name of dedicated server configuration file" );
+	Cvar_Get ("lservercfgfile","listenserver.cfg", 0, "name of listen server configuration file" );
+
 	Cvar_RegisterVariable (&sv_zmax);
 	Cvar_RegisterVariable (&sv_wateramp);
 	Cvar_RegisterVariable (&sv_skycolor_r);
@@ -736,9 +736,6 @@ void SV_Init( void )
 
 	Cvar_RegisterVariable (&showtriggers);
 	Cvar_RegisterVariable (&sv_aim);
-	Cvar_RegisterVariable (&mapcyclefile);
-	Cvar_RegisterVariable (&servercfgfile);
-	Cvar_RegisterVariable (&lservercfgfile);
 	Cvar_RegisterVariable (&motdfile);
 	Cvar_RegisterVariable (&deathmatch);
 	Cvar_RegisterVariable (&coop);
@@ -787,6 +784,11 @@ void SV_Init( void )
 	sv_quakehulls = Cvar_Get( "sv_quakehulls", "0", FCVAR_ARCHIVE, "using quake style hull select instead of half-life style hull select" );
 	Cvar_RegisterVariable (&sv_consistency);
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
+
+	Cvar_RegisterVariable (&violence_ablood);
+	Cvar_RegisterVariable (&violence_hblood);
+	Cvar_RegisterVariable (&violence_agibs);
+	Cvar_RegisterVariable (&violence_hgibs);
 
 	// when we in developer-mode automatically turn cheats on
 	if( host.developer > 1 ) Cvar_SetValue( "sv_cheats", 1.0f );

@@ -106,7 +106,7 @@ void Netchan_Init( void )
 	int	port;
 
 	// pick a port value that should be nice and random
-	port = Com_RandomLong( 1, 65535 );
+	port = COM_RandomLong( 1, 65535 );
 
 	net_showpackets = Cvar_Get ("net_showpackets", "0", 0, "show network packets" );
 	net_chokeloopback = Cvar_Get( "net_chokeloop", "0", 0, "apply bandwidth choke to loopback packets" );

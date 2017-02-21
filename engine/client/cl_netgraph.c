@@ -482,6 +482,12 @@ void SCR_DrawNetGraph( void )
 	int	maxmsgbytes;
 	int	w, x, y;
 
+	if( !host.developer )
+		return;
+
+	if( cls.state != ca_active )
+		return;
+
 	if( !net_graph->value )
 		return;
 

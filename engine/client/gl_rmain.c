@@ -196,6 +196,7 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 R_WorldToScreen
 
 Convert a given point from world into screen space
+Returns true if we behind to screen
 ===============
 */
 qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
@@ -205,7 +206,7 @@ qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 	float	w;
 
 	if( !point || !screen )
-		return false;
+		return true;
 
 	Matrix4x4_Copy( worldToScreen, RI.worldviewProjectionMatrix );
 	screen[0] = worldToScreen[0][0] * point[0] + worldToScreen[0][1] * point[1] + worldToScreen[0][2] * point[2] + worldToScreen[0][3];
@@ -215,17 +216,18 @@ qboolean R_WorldToScreen( const vec3_t point, vec3_t screen )
 
 	if( w < 0.001f )
 	{
-		behind = true;
 		screen[0] *= 100000;
 		screen[1] *= 100000;
+		behind = true;
 	}
 	else
 	{
 		float invw = 1.0f / w;
-		behind = false;
 		screen[0] *= invw;
 		screen[1] *= invw;
+		behind = false;
 	}
+
 	return behind;
 }
 
@@ -255,135 +257,6 @@ void R_ScreenToWorld( const vec3_t screen, vec3_t point )
 
 /*
 ===============
-R_ComputeFxBlend
-===============
-*/
-int R_ComputeFxBlend( cl_entity_t *e )
-{
-	int		blend = 0, renderAmt;
-	float		offset, dist;
-	vec3_t		tmp;
-
-	offset = ((int)e->index ) * 363.0f; // Use ent index to de-sync these fx
-	renderAmt = e->curstate.renderamt;
-
-	switch( e->curstate.renderfx ) 
-	{
-	case kRenderFxPulseSlowWide:
-		blend = renderAmt + 0x40 * sin( cl.time * 2 + offset );	
-		break;
-	case kRenderFxPulseFastWide:
-		blend = renderAmt + 0x40 * sin( cl.time * 8 + offset );
-		break;
-	case kRenderFxPulseSlow:
-		blend = renderAmt + 0x10 * sin( cl.time * 2 + offset );
-		break;
-	case kRenderFxPulseFast:
-		blend = renderAmt + 0x10 * sin( cl.time * 8 + offset );
-		break;
-	// JAY: HACK for now -- not time based
-	case kRenderFxFadeSlow:			
-		if( renderAmt > 0 ) 
-			renderAmt -= 1;
-		else renderAmt = 0;
-		blend = renderAmt;
-		break;
-	case kRenderFxFadeFast:
-		if( renderAmt > 3 ) 
-			renderAmt -= 4;
-		else renderAmt = 0;
-		blend = renderAmt;
-		break;
-	case kRenderFxSolidSlow:
-		if( renderAmt < 255 ) 
-			renderAmt += 1;
-		else renderAmt = 255;
-		blend = renderAmt;
-		break;
-	case kRenderFxSolidFast:
-		if( renderAmt < 252 ) 
-			renderAmt += 4;
-		else renderAmt = 255;
-		blend = renderAmt;
-		break;
-	case kRenderFxStrobeSlow:
-		blend = 20 * sin( cl.time * 4 + offset );
-		if( blend < 0 ) blend = 0;
-		else blend = renderAmt;
-		break;
-	case kRenderFxStrobeFast:
-		blend = 20 * sin( cl.time * 16 + offset );
-		if( blend < 0 ) blend = 0;
-		else blend = renderAmt;
-		break;
-	case kRenderFxStrobeFaster:
-		blend = 20 * sin( cl.time * 36 + offset );
-		if( blend < 0 ) blend = 0;
-		else blend = renderAmt;
-		break;
-	case kRenderFxFlickerSlow:
-		blend = 20 * (sin( cl.time * 2 ) + sin( cl.time * 17 + offset ));
-		if( blend < 0 ) blend = 0;
-		else blend = renderAmt;
-		break;
-	case kRenderFxFlickerFast:
-		blend = 20 * (sin( cl.time * 16 ) + sin( cl.time * 23 + offset ));
-		if( blend < 0 ) blend = 0;
-		else blend = renderAmt;
-		break;
-	case kRenderFxHologram:
-	case kRenderFxDistort:
-		VectorCopy( e->origin, tmp );
-		VectorSubtract( tmp, RI.vieworg, tmp );
-		dist = DotProduct( tmp, RI.vforward );
-			
-		// Turn off distance fade
-		if( e->curstate.renderfx == kRenderFxDistort )
-			dist = 1;
-
-		if( dist <= 0 )
-		{
-			blend = 0;
-		}
-		else 
-		{
-			renderAmt = 180;
-			if( dist <= 100 ) blend = renderAmt;
-			else blend = (int) ((1.0f - ( dist - 100 ) * ( 1.0f / 400.0f )) * renderAmt );
-			blend += Com_RandomLong( -32, 31 );
-		}
-		break;
-	case kRenderFxNone:
-	case kRenderFxClampMinScale:
-		if( e->curstate.rendermode == kRenderNormal )
-			blend = 255;
-		else blend = renderAmt;
-		break;	
-	case kRenderFxGlowShell:	// safe current renderamt because it's shell scale!
-	case kRenderFxDeadPlayer:	// safe current renderamt because it's player index!
-	default:
-		blend = renderAmt;
-		break;
-	}
-
-	if( e->model && e->model->type != mod_brush )
-	{
-		// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
-		if( !e->curstate.rendercolor.r && !e->curstate.rendercolor.g && !e->curstate.rendercolor.b )
-			e->curstate.rendercolor.r = e->curstate.rendercolor.g = e->curstate.rendercolor.b = 255;
-
-		// apply scale to studiomodels and sprites only
-		if( !e->curstate.scale )
-			e->curstate.scale = 1.0f;
-	}
-
-	blend = bound( 0, blend, 255 );
-
-	return blend;
-}
-
-/*
-===============
 R_ClearScene
 ===============
 */
@@ -391,7 +264,7 @@ void R_ClearScene( void )
 {
 	tr.num_solid_entities = tr.num_trans_entities = 0;
 	tr.num_static_entities = tr.num_mirror_entities = 0;
-	tr.num_child_entities = 0;
+	tr.num_child_entities = cl.num_custombeams = 0;
 }
 
 /*
@@ -399,7 +272,7 @@ void R_ClearScene( void )
 R_AddEntity
 ===============
 */
-qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
+qboolean R_AddEntity( struct cl_entity_s *clent, int type )
 {
 	if( !r_drawentities->value )
 		return false; // not allow to drawing
@@ -410,14 +283,12 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 	if( clent->curstate.effects & EF_NODRAW )
 		return false; // done
 
-	clent->curstate.renderamt = R_ComputeFxBlend( clent );
+	clent->curstate.renderamt = CL_FxBlend( clent );
 
 	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0.0f )
 		return true; // invisible
 
-	clent->curstate.entityType = entityType;
-
-	if( entityType == ET_FRAGMENTED )
+	if( type == ET_FRAGMENTED )
 		r_stats.c_client_ents++;
 
 	if( R_FollowEntity( clent ))
@@ -474,7 +345,7 @@ static void R_Clear( int bitMask )
 {
 	int	bits;
 
-	if( gl_overview->value )
+	if( CL_IsDevOverviewMode( ))
 		pglClearColor( 0.0f, 1.0f, 0.0f, 1.0f ); // green background (Valve rules)
 	else pglClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 
@@ -576,13 +447,6 @@ void R_SetupFrustum( void )
 {
 	vec3_t	farPoint;
 	int	i;
-
-	// first we need to compute FOV and other things that needs for frustum properly work
-	RI.fov_y = V_CalcFov( &RI.fov_x, RI.viewport[2], RI.viewport[3] );
-
-	// adjust FOV for widescreen
-	if( glState.wideScreen && RI.drawWorld && r_adjust_fov->value )
-		V_AdjustFov( &RI.fov_x, &RI.fov_y, RI.viewport[2], RI.viewport[3], false );
 
 	// build the transformation matrix for the given view angles
 	AngleVectors( RI.viewangles, RI.vforward, RI.vright, RI.vup );
@@ -759,7 +623,6 @@ R_FindViewLeaf
 */
 void R_FindViewLeaf( void )
 {
-	RI.oldviewleaf = RI.viewleaf;
 	RI.viewleaf = Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes );
 }
 
@@ -1134,7 +997,8 @@ void R_DrawEntitiesOnList( void )
 	if( !RI.onlyClientDraw )
 	{
 		CL_DrawBeams( true );
-		CL_DrawParticles();
+		CL_DrawParticles( tr.frametime );
+		CL_DrawTracers( tr.frametime );
 	}
 
 	// NOTE: some mods with custom renderer may generate glErrors
@@ -1159,8 +1023,18 @@ R_SetupRefParams must be called right before
 */
 void R_RenderScene( void )
 {
+	static int	framecount = -1;
+
 	if( !cl.worldmodel && RI.drawWorld )
 		Host_Error( "R_RenderView: NULL worldmodel\n" );
+
+	// frametime is valid only for normal pass
+	if( RP_NORMALPASS( ))
+	{
+		tr.frametime = cl.time - cl.oldtime;
+		framecount = tr.framecount;
+	}
+	else tr.frametime = 0.0;
 
 	R_PushDlights();
 
@@ -1191,7 +1065,7 @@ void R_BeginFrame( qboolean clearScene )
 {
 	glConfig.softwareGammaUpdate = false;	// in case of possible fails
 
-	if(( gl_clear->value || gl_overview->value ) && clearScene && cls.state != ca_cinematic )
+	if(( gl_clear->value || CL_IsDevOverviewMode( )) && clearScene && cls.state != ca_cinematic )
 	{
 		pglClear( GL_COLOR_BUFFER_BIT );
 	}
@@ -1236,28 +1110,34 @@ R_SetupRefParams
 set initial params for renderer
 ===============
 */
-void R_SetupRefParams( const ref_params_t *fd, qboolean drawWorld, float fov )
+void R_SetupRefParams( const ref_viewpass_t *rvp )
 {
 	RI.params = RP_NONE;
-	RI.drawWorld = drawWorld;
-	RI.thirdPerson = cl.local.thirdperson;
-	RI.drawOrtho = (drawWorld) ? (int)gl_overview->value : 0;
+	RI.drawWorld = FBitSet( rvp->flags, RF_DRAW_WORLD );
+	RI.onlyClientDraw = FBitSet( rvp->flags, RF_ONLY_CLIENTDRAW );
 	RI.clipFlags = 15;	// top, bottom, left, right
-	RI.onlyClientDraw = fd->onlyClientDraw;
 	RI.farClip = 0;
 
+	if( !FBitSet( rvp->flags, RF_DRAW_CUBEMAP ))
+	{
+		RI.drawOrtho = FBitSet( rvp->flags, RF_DRAW_OVERVIEW );
+		RI.thirdPerson = cl.local.thirdperson;
+	}
+	else RI.thirdPerson = RI.drawOrtho = false;
+
 	// setup viewport
-	RI.viewport[0] = fd->viewport[0];
-	RI.viewport[1] = fd->viewport[1];
-	RI.viewport[2] = fd->viewport[2];
-	RI.viewport[3] = fd->viewport[3];
+	RI.viewport[0] = rvp->viewport[0];
+	RI.viewport[1] = rvp->viewport[1];
+	RI.viewport[2] = rvp->viewport[2];
+	RI.viewport[3] = rvp->viewport[3];
 
 	// calc FOV
-	RI.fov_x = fov; // this is a final fov value
+	RI.fov_x = rvp->fov_x;
+	RI.fov_y = rvp->fov_y;
 
-	VectorCopy( fd->vieworg, RI.vieworg );
-	VectorCopy( fd->viewangles, RI.viewangles );
-	VectorCopy( fd->vieworg, RI.pvsorigin );
+	VectorCopy( rvp->vieworigin, RI.vieworg );
+	VectorCopy( rvp->viewangles, RI.viewangles );
+	VectorCopy( rvp->vieworigin, RI.pvsorigin );
 }
 
 /*
@@ -1265,31 +1145,26 @@ void R_SetupRefParams( const ref_params_t *fd, qboolean drawWorld, float fov )
 R_RenderFrame
 ===============
 */
-void R_RenderFrame( const ref_params_t *fd, qboolean drawWorld, float fov )
+void R_RenderFrame( const ref_viewpass_t *rvp )
 {
 	if( r_norefresh->value )
 		return;
 
-	tr.realframecount++;
+	// setup the initial render params
+	R_SetupRefParams( rvp );
 
-	if( RI.drawOrtho != gl_overview->value )
-		tr.fResetVis = true;
+	if( gl_finish->value && RI.drawWorld )
+		pglFinish();
 
 	// completely override rendering
 	if( clgame.drawFuncs.GL_RenderFrame != NULL )
 	{
-		if( clgame.drawFuncs.GL_RenderFrame( fd, drawWorld ))
+		if( clgame.drawFuncs.GL_RenderFrame( rvp ))
 		{
-			RI.drawWorld = drawWorld;
-			tr.fResetVis = true;
+			RI.viewleaf = NULL;	// force markleafs next frame
 			return;
 		}
 	}
-
-	R_SetupRefParams( fd, drawWorld, fov );
-
-	if( gl_finish->value && drawWorld )
-		pglFinish();
 
 	if( gl_allow_mirrors->value )
 	{
@@ -1325,35 +1200,24 @@ R_DrawCubemapView
 */
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 {
-	if( clgame.drawFuncs.R_DrawCubemapView != NULL )
-	{
-		if( clgame.drawFuncs.R_DrawCubemapView( origin, angles, size ))
-			return;
-	}
+	ref_viewpass_t rvp;
 
 	// basic params
-	RI.params = RP_NONE;
-	RI.drawWorld = true;
-	RI.thirdPerson = RI.drawOrtho = false;
-	RI.clipFlags = 15;	// top, bottom, left, right
-	RI.onlyClientDraw = false;
-	RI.farClip = 0;
+	rvp.flags = rvp.viewentity = 0;
+	SetBits( rvp.flags, RF_DRAW_WORLD );
+	SetBits( rvp.flags, RF_DRAW_CUBEMAP );
 
-	// setup viewport
-	RI.viewport[0] = RI.viewport[1] = 0;
-	RI.viewport[2] = RI.viewport[3] = size;
-
-	// calc FOV
-	RI.fov_x = 90.0f; // this is a final fov value
+	rvp.viewport[0] = rvp.viewport[1] = 0;
+	rvp.viewport[2] = rvp.viewport[3] = size;
+	rvp.fov_x = rvp.fov_y = 90.0f; // this is a final fov value
 
 	// setup origin & angles
-	VectorCopy( origin, RI.vieworg );
-	VectorCopy( angles, RI.viewangles );
-	VectorCopy( origin, RI.pvsorigin );
+	VectorCopy( origin, rvp.vieworigin );
+	VectorCopy( angles, rvp.viewangles );
 
-	R_RenderScene ();
+	R_RenderFrame( &rvp );
 
-	RI.oldviewleaf = RI.viewleaf = NULL;		// force markleafs next frame
+	RI.viewleaf = NULL;		// force markleafs next frame
 }
 
 static int GL_RenderGetParm( int parm, int arg )
@@ -1559,7 +1423,7 @@ static void CL_GetBeamChains( BEAM ***active_beams, BEAM ***free_beams, particle
 {
 	*active_beams = &cl_active_beams;
 	*free_beams = &cl_free_beams;
-	*free_trails = &cl_free_trails; 
+	*free_trails = &cl_free_particles; 
 }
 
 static void GL_SetWorldviewProjectionMatrix( const float *glmatrix )

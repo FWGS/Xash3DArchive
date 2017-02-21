@@ -385,7 +385,7 @@ void DLY_DoStereoDelay( int count )
 			// set up new crossfade, if not crossfading, not modulating, but going to
 			if( !dly->xfade && !dly->modcur && dly->mod )
 			{
-				dly->idelayoutputxf = dly->idelayoutput + ((Com_RandomLong( 0, 255 ) * dly->delaysamples ) >> 9 );
+				dly->idelayoutputxf = dly->idelayoutput + ((COM_RandomLong( 0, 255 ) * dly->delaysamples ) >> 9 );
 
 				dly->xfade = 128;
 			}
@@ -611,7 +611,7 @@ int RVB_DoReverbForOneDly( dly_t *dly, const int vlr, const portable_samplepair_
 		// modulate delay rate
 		if( !dly->mod )
 		{
-			dly->idelayoutputxf = dly->idelayoutput + ((Com_RandomLong( 0, 255 ) * delay) >> 9 );
+			dly->idelayoutputxf = dly->idelayoutput + ((COM_RandomLong( 0, 255 ) * delay) >> 9 );
 
 			if( dly->idelayoutputxf >= dly->cdelaysamplesmax )
 				dly->idelayoutputxf -= dly->cdelaysamplesmax;
@@ -738,13 +738,13 @@ void RVB_DoAMod( int count )
 				sxmod1cur = sxmod1;
 
 			if( !sxmod1 )
-				sxamodlt = Com_RandomLong( 32, 255 );
+				sxamodlt = COM_RandomLong( 32, 255 );
 
 			if( --sxmod2cur < 0 )
 				sxmod2cur = sxmod2;
 
 			if( !sxmod2 )
-				sxamodrt = Com_RandomLong( 32, 255 );
+				sxamodrt = COM_RandomLong( 32, 255 );
 
 			res.left = (sxamodl * res.left) >> 8;
 			res.right = (sxamodr * res.right) >> 8;
@@ -874,8 +874,8 @@ void SX_Profiling_f( void )
 
 	for( i = 0; i < 512; i++ )
 	{
-		testbuffer[i].left = Com_RandomLong( 0, 3000 );
-		testbuffer[i].right = Com_RandomLong( 0, 3000 );
+		testbuffer[i].left = COM_RandomLong( 0, 3000 );
+		testbuffer[i].right = COM_RandomLong( 0, 3000 );
 	}
 
 	if( Cmd_Argc() > 1 )

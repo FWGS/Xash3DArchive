@@ -188,7 +188,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 
 #ifdef RANDOM_HULL_NULLIZATION
 	// author: The FiEctro
-	hull = &model->hulls[Com_RandomLong( 0, 0 )];
+	hull = &model->hulls[COM_RandomLong( 0, 0 )];
 #endif
 	if( sv_quakehulls->value == 1 )
 	{
@@ -995,7 +995,7 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 
 	if( hullcount == 1 )
 	{
-		SV_RecursiveHullCheck( hull, hull->firstclipnode, 0.0f, 1.0f, start_l, end_l, trace );
+		PM_RecursiveHullCheck( hull, hull->firstclipnode, 0.0f, 1.0f, start_l, end_l, (pmtrace_t *)trace );
 	}
 	else
 	{
@@ -1008,7 +1008,7 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 			trace_hitbox.fraction = 1.0;
 			trace_hitbox.allsolid = 1;
 
-			SV_RecursiveHullCheck( &hull[i], hull[i].firstclipnode, 0.0f, 1.0f, start_l, end_l, &trace_hitbox );
+			PM_RecursiveHullCheck( &hull[i], hull[i].firstclipnode, 0.0f, 1.0f, start_l, end_l, (pmtrace_t *)&trace_hitbox );
 
 			if( i == 0 || trace_hitbox.allsolid || trace_hitbox.startsolid || trace_hitbox.fraction < trace->fraction )
 			{

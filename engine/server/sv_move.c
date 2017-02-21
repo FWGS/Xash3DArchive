@@ -145,7 +145,7 @@ void SV_WaterMove( edict_t *ent )
 		if( flags & FL_INWATER )
 		{
 			// leave the water.
-			switch( Com_RandomLong( 0, 3 ))
+			switch( COM_RandomLong( 0, 3 ))
 			{
 			case 0:
 				SV_StartSound( ent, CHAN_BODY, "player/pl_wade1.wav", 1.0f, ATTN_NORM, 0, 100 );
@@ -192,7 +192,7 @@ void SV_WaterMove( edict_t *ent )
 		if( watertype == CONTENTS_WATER )
 		{
 			// entering the water
-			switch( Com_RandomLong( 0, 3 ))
+			switch( COM_RandomLong( 0, 3 ))
 			{
 			case 0:
 				SV_StartSound( ent, CHAN_BODY, "player/pl_wade1.wav", 1.0f, ATTN_NORM, 0, 100 );
@@ -482,7 +482,7 @@ void SV_NewChaseDir( edict_t *actor, vec3_t destination, float dist )
 	}
 
 	// try other directions
-	if( Com_RandomLong( 0, 1 ) != 0 || fabs( deltay ) > fabs( deltax ))
+	if( COM_RandomLong( 0, 1 ) != 0 || fabs( deltay ) > fabs( deltax ))
 	{
 		tempdir = d[1];
 		d[1] = d[2];
@@ -500,7 +500,7 @@ void SV_NewChaseDir( edict_t *actor, vec3_t destination, float dist )
 		return;
 
 	// fine, just run somewhere.
-	if( Com_RandomLong( 0, 1 ) != 1 )
+	if( COM_RandomLong( 0, 1 ) != 1 )
 	{
 		for( tempdir = 0; tempdir <= 315.0f; tempdir += 45.0f )
 		{

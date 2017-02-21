@@ -258,10 +258,10 @@ void Host_Exec_f( void )
 		return;
 	}
 
-	// don't execute listenserver.cfg in singleplayer
-	if( !Q_stricmp( Cvar_VariableString( "lservercfgfile" ), Cmd_Argv( 1 )))
+	if( !Q_stricmp( "settings.rc", Cmd_Argv( 1 )))
 	{
-		if( Cvar_VariableInteger( "maxplayers" ) == 1 )
+		// don't execute settings.rc in singleplayer
+		if( SV_GetMaxClients() == 1 )
 			return;
 	}
 
@@ -605,6 +605,7 @@ void Host_Frame( float time )
 
 	Host_InputFrame ();  // input frame
 	Host_GetCommands (); // dedicated in
+	Host_ClientBegin (); // begin client
 	Host_ServerFrame (); // server frame
 	Host_ClientFrame (); // client frame
 

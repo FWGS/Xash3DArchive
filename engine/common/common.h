@@ -150,6 +150,7 @@ extern convar_t	*cl_allow_levelshots;
 extern convar_t	*vid_displayfrequency;
 extern convar_t	*mod_allow_materials;
 extern convar_t	*host_limitlocal;
+extern convar_t	*host_framerate;
 extern convar_t	*host_maxfps;
 
 /*
@@ -662,8 +663,8 @@ CLIENT / SERVER SYSTEMS
 */
 void CL_Init( void );
 void CL_Shutdown( void );
+void Host_ClientBegin( void );
 void Host_ClientFrame( void );
-void Host_RenderFrame( void );
 qboolean CL_Active( void );
 
 void SV_Init( void );
@@ -822,7 +823,6 @@ void R_ClearAllDecals( void );
 void R_ClearStaticEntities( void );
 qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *position );
 struct cl_entity_s *CL_GetEntityByIndex( int index );
-struct cl_entity_s *CL_GetLocalPlayer( void );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
 void CL_ServerCommand( qboolean reliable, char *fmt, ... );
 const char *CL_MsgInfo( int cmd );
@@ -880,8 +880,8 @@ qboolean Cmd_CheckMapsList( qboolean fRefresh );
 qboolean Cmd_AutocompleteName( const char *source, char *buffer, size_t bufsize );
 void Cmd_AutoComplete( char *complete_string );
 void COM_SetRandomSeed( long lSeed );
-long Com_RandomLong( long lMin, long lMax );
-float Com_RandomFloat( float fMin, float fMax );
+long COM_RandomLong( long lMin, long lMax );
+float COM_RandomFloat( float fMin, float fMax );
 void TrimSpace( const char *source, char *dest );
 const byte *GL_TextureData( unsigned int texnum );
 void GL_FreeImage( const char *name );

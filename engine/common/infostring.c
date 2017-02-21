@@ -412,7 +412,7 @@ char *Info_FindLargestKey( char *s )
 qboolean Info_SetValueForStarKey( char *s, const char *key, const char *value, int maxsize )
 {
 	char	new[1024], *v;
-	int	c, team, name;
+	int	c, team;
 
 	if( Q_strstr( key, "\\" ) || Q_strstr( value, "\\" ))
 	{
@@ -474,22 +474,12 @@ qboolean Info_SetValueForStarKey( char *s, const char *key, const char *value, i
 	s += Q_strlen( s );
 	v = new;
 
-	name = ( Q_stricmp( key, "name" ) == 0 ) ? true : false;
 	team = ( Q_stricmp( key, "team" ) == 0 ) ? true : false;
 
 	while( *v )
 	{
 		c = (byte)*v++;
-
-		// only clients allows highbits on name
-		if( !name )
-		{
-			c &= 127;	// strip high bits
-			if( c < 32 && c > 127 )
-				continue;
-			if( team ) c = Q_tolower( c );
-		}
-
+		if( team ) c = Q_tolower( c );
 		if( c > 13 ) *s++ = c;
 	}
 	*s = 0;

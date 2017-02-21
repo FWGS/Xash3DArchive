@@ -1668,7 +1668,7 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 		if( from == NULL ) return;
 
 		// a NULL to is a delta remove message
-		MSG_WriteWord( msg, from->number );
+		MSG_WriteUBitLong( msg, from->number, MAX_ENTITY_BITS );
 
 		// fRemoveType:
 		// 0 - keep alive, has delta-update
@@ -1686,7 +1686,7 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 	if( to->number < 0 || to->number >= GI->max_edicts )
 		Host_Error( "MSG_WriteDeltaEntity: Bad entity number: %i\n", to->number );
 
-	MSG_WriteWord( msg, to->number );
+	MSG_WriteUBitLong( msg, to->number, MAX_ENTITY_BITS );
 	MSG_WriteUBitLong( msg, 0, 2 ); // alive
 
 	if( force || ( to->entityType != from->entityType ))
@@ -1697,20 +1697,17 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 	}
 	else MSG_WriteOneBit( msg, 0 ); 
 
-	if( to->entityType == ENTITY_NORMAL )
-	{
-		if( player )
-		{
-			dt = Delta_FindStruct( "entity_state_player_t" );
-		}
-		else
-		{
-			dt = Delta_FindStruct( "entity_state_t" );
-		}
-	}
-	else if( to->entityType == ENTITY_BEAM )
+	if( FBitSet( to->entityType, ENTITY_BEAM ))
 	{
 		dt = Delta_FindStruct( "custom_entity_state_t" );
+	}
+	else if( player )
+	{
+		dt = Delta_FindStruct( "entity_state_player_t" );
+	}
+	else
+	{
+		dt = Delta_FindStruct( "entity_state_t" );
 	}
 
 	Assert( dt && dt->bInitialized );
@@ -1780,20 +1777,17 @@ qboolean MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state
 	if( MSG_ReadOneBit( msg ))
 		to->entityType = MSG_ReadUBitLong( msg, 2 );
 
-	if( to->entityType == ENTITY_NORMAL )
-	{
-		if( player )
-		{
-			dt = Delta_FindStruct( "entity_state_player_t" );
-		}
-		else
-		{
-			dt = Delta_FindStruct( "entity_state_t" );
-		}
-	}
-	else if( to->entityType == ENTITY_BEAM )
+	if( FBitSet( to->entityType, ENTITY_BEAM ))
 	{
 		dt = Delta_FindStruct( "custom_entity_state_t" );
+	}
+	else if( player )
+	{
+		dt = Delta_FindStruct( "entity_state_player_t" );
+	}
+	else
+	{
+		dt = Delta_FindStruct( "entity_state_t" );
 	}
 
 	Assert( dt && dt->bInitialized );

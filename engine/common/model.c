@@ -3231,6 +3231,29 @@ void Mod_GetFrames( int handle, int *numFrames )
 
 /*
 ===================
+Mod_FrameCount
+
+model_t as input
+===================
+*/
+int Mod_FrameCount( model_t *mod )
+{
+	if( !mod ) return 1;
+
+	switch( mod->type )
+	{
+	case mod_sprite:
+	case mod_studio:
+		return mod->numframes;
+	case mod_brush:
+		return 2; // regular and alternate animation
+	default:
+		return 1;
+	}
+}
+
+/*
+===================
 Mod_GetBounds
 ===================
 */

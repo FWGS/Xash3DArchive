@@ -1026,7 +1026,7 @@ void SV_BaselineForEntity( edict_t *pEdict )
 	svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
 
 	// set entity type
-	if( pEdict->v.flags & FL_CUSTOMENTITY )
+	if( FBitSet( pEdict->v.flags, FL_CUSTOMENTITY ))
 		baseline.entityType = ENTITY_BEAM;
 	else baseline.entityType = ENTITY_NORMAL;
 
@@ -3453,7 +3453,7 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 	cmd.impulse = impulse;
 	cmd.msec = msec;
 
-	seed = Com_RandomLong( 0, 0x7fffffff ); // full range
+	seed = COM_RandomLong( 0, 0x7fffffff ); // full range
 
 	SV_RunCmd( cl, &cmd, seed );
 
@@ -4045,8 +4045,9 @@ int pfnCreateInstancedBaseline( int classname, struct entity_state_s *baseline )
 	if( !baseline ) return -1;
 
 	i = sv.instanced.count;
-	if( i > 62 ) return 0;
+	if( i > 64 ) return 0;
 
+	Msg( "Added instanced baseline: %s [%i]\n", STRING( classname ), i );
 	sv.instanced.classnames[i] = classname;
 	sv.instanced.baselines[i] = *baseline;
 	sv.instanced.count++;
@@ -4444,8 +4445,8 @@ static enginefuncs_t gEngfuncs =
 	CRC32_ProcessBuffer,
 	CRC32_ProcessByte,
 	pfnCRC32_Final,
-	Com_RandomLong,
-	Com_RandomFloat,
+	COM_RandomLong,
+	COM_RandomFloat,
 	pfnSetView,
 	pfnTime,
 	pfnCrosshairAngle,

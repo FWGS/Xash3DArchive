@@ -554,25 +554,25 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 				// this can be happens when rendering switched between single and angled frames
 				// or change model on replace delta-entity
 				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-				ent->latched.prevanimtime = cl.time;
+				ent->latched.sequencetime = cl.time;
 				lerpFrac = 1.0f;
 			}
                               
-			if( ent->latched.prevanimtime < cl.time )
+			if( ent->latched.sequencetime < cl.time )
 			{
 				if( frame != ent->latched.prevblending[1] )
 				{
 					ent->latched.prevblending[0] = ent->latched.prevblending[1];
 					ent->latched.prevblending[1] = frame;
-					ent->latched.prevanimtime = cl.time;
+					ent->latched.sequencetime = cl.time;
 					lerpFrac = 0.0f;
 				}
-				else lerpFrac = (cl.time - ent->latched.prevanimtime) * 10;
+				else lerpFrac = (cl.time - ent->latched.sequencetime) * 10;
 			}
 			else
 			{
 				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-				ent->latched.prevanimtime = cl.time;
+				ent->latched.sequencetime = cl.time;
 				lerpFrac = 0.0f;
 			}
 		}
@@ -586,7 +586,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 		{
 			// reset interpolation on change model
 			ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-			ent->latched.prevanimtime = cl.time;
+			ent->latched.sequencetime = cl.time;
 			lerpFrac = 0.0f;
 		}
 
@@ -640,25 +640,25 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 				// this can be happens when rendering switched between single and angled frames
 				// or change model on replace delta-entity
 				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-				ent->latched.prevanimtime = cl.time;
+				ent->latched.sequencetime = cl.time;
 				lerpFrac = 1.0f;
 			}
 
-			if( ent->latched.prevanimtime < cl.time )
+			if( ent->latched.sequencetime < cl.time )
 			{
 				if( frame != ent->latched.prevblending[1] )
 				{
 					ent->latched.prevblending[0] = ent->latched.prevblending[1];
 					ent->latched.prevblending[1] = frame;
-					ent->latched.prevanimtime = cl.time;
+					ent->latched.sequencetime = cl.time;
 					lerpFrac = 0.0f;
 				}
-				else lerpFrac = (cl.time - ent->latched.prevanimtime) * ent->curstate.framerate;
+				else lerpFrac = (cl.time - ent->latched.sequencetime) * ent->curstate.framerate;
 			}
 			else
 			{
 				ent->latched.prevblending[0] = ent->latched.prevblending[1] = frame;
-				ent->latched.prevanimtime = cl.time;
+				ent->latched.sequencetime = cl.time;
 				lerpFrac = 0.0f;
 			}
 		}
@@ -832,6 +832,7 @@ qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, int *alpha, float *psc
 		if( R_CullSpriteModel( e, origin ))
 			return true;
 	}
+
 	return false;	
 }
 
@@ -936,6 +937,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	alpha = e->curstate.renderamt;
 	scale = e->curstate.scale;
+	if( !scale ) scale = 1.0f;
 
 	if( R_SpriteOccluded( e, origin, &alpha, &scale ))
 		return; // sprite culled
@@ -981,10 +983,19 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	// all sprites can have color
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
-	// add basecolor (any rendermode can colored sprite)
-	color[0] = (float)e->curstate.rendercolor.r * ( 1.0f / 255.0f );
-	color[1] = (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
-	color[2] = (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );
+	// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
+	if( e->curstate.rendercolor.r || e->curstate.rendercolor.g || e->curstate.rendercolor.b )
+	{
+		color[0] = (float)e->curstate.rendercolor.r * ( 1.0f / 255.0f );
+		color[1] = (float)e->curstate.rendercolor.g * ( 1.0f / 255.0f );
+		color[2] = (float)e->curstate.rendercolor.b * ( 1.0f / 255.0f );
+	}
+	else
+	{
+		color[0] = 1.0f;
+		color[1] = 1.0f;
+		color[2] = 1.0f;
+	}
           
 	if( R_SpriteHasLightmap( e, psprite->texFormat ))
 	{

@@ -29,18 +29,37 @@ calc frame rectangle (Quake1 style)
 */
 void V_CalcViewRect( void )
 {
-	int	size, sb_lines;
+	qboolean	full = false;
+	int	sb_lines;
+	float	size;
 
-	if( scr_viewsize->value >= 120.0f )
+	// intermission is always full screen	
+	if( cl.intermission ) size = 120.0f;
+	else size = scr_viewsize->value;
+
+	if( size >= 120.0f )
 		sb_lines = 0;		// no status bar at all
-	else if( scr_viewsize->value >= 110.0f )
+	else if( size >= 110.0f )
 		sb_lines = 24;		// no inventory
 	else sb_lines = 48;
 
-	size = Q_min( scr_viewsize->value, 100 );
+	if( scr_viewsize->value >= 100.0 )
+	{
+		full = true;
+		size = 100.0f;
+	}
+	else size = scr_viewsize->value;
 
-	clgame.viewport[2] = glState.width * size / 100;
-	clgame.viewport[3] = glState.height * size / 100;
+	if( cl.intermission )
+	{
+		size = 100.0f;
+		sb_lines = 0;
+		full = true;
+	}
+	size /= 100.0;
+
+	clgame.viewport[2] = glState.width * size;
+	clgame.viewport[3] = glState.height * size;
 
 	if( clgame.viewport[3] > glState.height - sb_lines )
 		clgame.viewport[3] = glState.height - sb_lines;
@@ -48,7 +67,8 @@ void V_CalcViewRect( void )
 		clgame.viewport[3] = glState.height;
 
 	clgame.viewport[0] = ( glState.width - clgame.viewport[2] ) / 2;
-	clgame.viewport[1] = ( glState.height - sb_lines - clgame.viewport[3] ) / 2;
+	if( full ) clgame.viewport[1] = 0;
+	else clgame.viewport[1] = ( glState.height - sb_lines - clgame.viewport[3] ) / 2;
 
 }
 
@@ -126,16 +146,6 @@ void V_SetRefParams( ref_params_t *fd )
 
 	fd->onlyClientDraw = 0;	// reset clientdraw
 	fd->nextView = 0;		// reset nextview
-
-	// Xash3D extension. FIXME: it's needs to be removed...
-
-	// calc FOV
-	fd->fov_x = bound( 1.0f, cl.local.scr_fov, 179.0f ); // this is a final fov value
-	fd->fov_y = V_CalcFov( &fd->fov_x, clgame.viewport[2], clgame.viewport[3] );
-
-	// adjust FOV for widescreen
-	if( glState.wideScreen && r_adjust_fov->value )
-		V_AdjustFov( &fd->fov_x, &fd->fov_y, clgame.viewport[2], clgame.viewport[3], false );
 }
 
 /*
@@ -145,7 +155,7 @@ V_MergeOverviewRefdef
 merge refdef with overview settings
 ===============
 */
-void V_RefParamsApplyOverview( ref_params_t *fd )
+void V_RefApplyOverview( ref_viewpass_t *rvp )
 {
 	ref_overview_t	*ov = &clgame.overView;
 	float		aspect;
@@ -167,25 +177,27 @@ void V_RefParamsApplyOverview( ref_params_t *fd )
 	ov->xTop = -(size_y / 2);
 	ov->xBottom = (size_y / 2);
 
-	if( gl_overview->value == 1 )
+	if( CL_IsDevOverviewMode() == 1 )
 	{
 		Con_NPrintf( 0, " Overview: Zoom %.2f, Map Origin (%.2f, %.2f, %.2f), Z Min %.2f, Z Max %.2f, Rotated %i\n",
 		ov->flZoom, ov->origin[0], ov->origin[1], ov->origin[2], ov->zNear, ov->zFar, ov->rotated );
 	}
 
-	VectorCopy( ov->origin, fd->vieworg );
-	fd->vieworg[2] = ov->zFar + ov->zNear;
-	Vector2Copy( fd->vieworg, mins );
-	Vector2Copy( fd->vieworg, maxs );
+	VectorCopy( ov->origin, rvp->vieworigin );
+	rvp->vieworigin[2] = ov->zFar + ov->zNear;
+	Vector2Copy( rvp->vieworigin, mins );
+	Vector2Copy( rvp->vieworigin, maxs );
 
 	mins[!ov->rotated] += ov->xLeft;
 	maxs[!ov->rotated] += ov->xRight;
 	mins[ov->rotated] += ov->xTop;
 	maxs[ov->rotated] += ov->xBottom;
 
-	fd->viewangles[0] = 90.0f;
-	fd->viewangles[1] = 90.0f;
-	fd->viewangles[2] = (ov->rotated) ? (ov->flZoom < 0.0f) ? 180.0f : 0.0f : (ov->flZoom < 0.0f) ? -90.0f : 90.0f;
+	rvp->viewangles[0] = 90.0f;
+	rvp->viewangles[1] = 90.0f;
+	rvp->viewangles[2] = (ov->rotated) ? (ov->flZoom < 0.0f) ? 180.0f : 0.0f : (ov->flZoom < 0.0f) ? -90.0f : 90.0f;
+
+	SetBits( rvp->flags, RF_DRAW_OVERVIEW );
 
 	Mod_SetOrthoBounds( mins, maxs );
 }
@@ -195,7 +207,7 @@ void V_RefParamsApplyOverview( ref_params_t *fd )
 V_GetRefParams
 =============
 */
-void V_GetRefParams( ref_params_t *fd )
+void V_GetRefParams( ref_params_t *fd, ref_viewpass_t *rvp )
 {
 	// part1: deniable updates
 	VectorCopy( fd->simvel, cl.simvel );
@@ -207,6 +219,33 @@ void V_GetRefParams( ref_params_t *fd )
 	VectorCopy( fd->crosshairangle, cl.crosshairangle );
 	VectorCopy( fd->cl_viewangles, cl.viewangles );
 	cl.intermission = fd->intermission;	// Quake Remake compatibility
+
+	// setup ref_viewpass
+	rvp->viewport[0] = fd->viewport[0];
+	rvp->viewport[1] = fd->viewport[1];
+	rvp->viewport[2] = fd->viewport[2];
+	rvp->viewport[3] = fd->viewport[3];
+
+	VectorCopy( fd->vieworg, rvp->vieworigin );
+	VectorCopy( fd->viewangles, rvp->viewangles );
+
+	rvp->viewentity = fd->viewentity;
+
+	// calc FOV
+	rvp->fov_x = bound( 10.0f, cl.local.scr_fov, 150.0f ); // this is a final fov value
+
+	// first we need to compute FOV and other things that needs for frustum properly work
+	rvp->fov_y = V_CalcFov( &rvp->fov_x, rvp->viewport[2], rvp->viewport[3] );
+
+	// adjust FOV for widescreen
+	if( glState.wideScreen && r_adjust_fov->value )
+		V_AdjustFov( &rvp->fov_x, &rvp->fov_y, rvp->viewport[2], rvp->viewport[3], false );
+
+	rvp->flags = 0;
+
+	if( fd->onlyClientDraw )
+		SetBits( rvp->flags, RF_ONLY_CLIENTDRAW );
+	SetBits( rvp->flags, RF_DRAW_WORLD );
 }
 
 /*
@@ -254,42 +293,33 @@ V_RenderView
 void V_RenderView( void )
 {
 	ref_params_t	rp;
+	ref_viewpass_t	rvp;
 	int		viewnum = 0;
 
 	if( !cl.video_prepped || ( UI_IsVisible() && !cl.background ))
 		return; // still loading
 
-	if( cl.frame.valid && ( cl.force_refdef || !cl.paused ))
-	{
-		cl.force_refdef = false;
-
-		R_ClearScene ();
-		CL_AddEntities ();
-	}
-
 	V_CalcViewRect ();	// compute viewport rectangle
 	V_SetRefParams( &rp );
 	V_SetupViewModel ();
 	R_Set2DMode( false );
-
-	SCR_AddDirtyPoint( 0, 0 );
-	SCR_AddDirtyPoint( clgame.viewport[2] - 1, clgame.viewport[3] - 1 );
+	SCR_DirtyScreen();
 	GL_BackendStartFrame ();
 	tr.framecount++;	// g-cont. keep actual frame for all viewpasses
 
 	do
 	{
 		clgame.dllFuncs.pfnCalcRefdef( &rp );
-		V_RefParamsApplyOverview( &rp );
-		V_GetRefParams( &rp );
+		V_GetRefParams( &rp, &rvp );
+		V_RefApplyOverview( &rvp );
 
-		if ( viewnum == 0 && rp.onlyClientDraw )
+		if( viewnum == 0 && FBitSet( rvp.flags, RF_ONLY_CLIENTDRAW ))
 		{
 			pglClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
 			pglClear( GL_COLOR_BUFFER_BIT );
 		}
 
-		R_RenderFrame( &rp, true, cl.local.scr_fov );
+		R_RenderFrame( &rvp );
 		viewnum++;
 
 	} while( rp.nextView );
