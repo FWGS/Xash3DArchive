@@ -191,16 +191,21 @@ float VectorNormalizeLength2( const vec3_t v, vec3_t out )
 
 void VectorVectors( const vec3_t forward, vec3_t right, vec3_t up )
 {
-	float	d;
+	vec3_t	tmp;
 
-	right[0] = forward[2];
-	right[1] = -forward[0];
-	right[2] = forward[1];
+	// fast case
+	if( forward[0] == 0.0f && forward[1] == 0.0f )
+	{
+		VectorSet( right, 1.0f, 0.0f, 0.0f );
+		VectorSet( up, -forward[2], 0.0f, 0.0f ); 
+		return;
+	}
 
-	d = DotProduct( forward, right );
-	VectorMA( right, -d, forward, right );
+	VectorSet( tmp, 0.0f, 0.0f, 1.0f );
+	CrossProduct( forward, tmp, right );
 	VectorNormalize( right );
 	CrossProduct( right, forward, up );
+	VectorNormalize( up );
 }
 
 /*

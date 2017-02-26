@@ -1482,7 +1482,7 @@ void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags )
 	float		flDist, life, vel;
 	int		i, j, colorIndex;
 
-	colorIndex = CL_LookupColor( 0, 255, 0 ); // green color
+	colorIndex = R_LookupColor( 0, 255, 0 ); // green color
 
 	for( i = -256; i <= 256; i += 32 )
 	{
@@ -1705,7 +1705,7 @@ void CL_Explosion( vec3_t pos, int model, float scale, float framerate, int flag
 	}
 
 	if(!( flags & TE_EXPLFLAG_NOPARTICLES ))
-		CL_FlickerParticles( pos );
+		R_FlickerParticles( pos );
 
 	if( flags & TE_EXPLFLAG_NOSOUND ) return;
 
@@ -2115,8 +2115,8 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		r = MSG_ReadByte( &buf );
 		g = MSG_ReadByte( &buf );
 		b = MSG_ReadByte( &buf );
-		if( type == TE_LINE ) CL_ParticleLine( pos, pos2, r, g, b, life );
-		else CL_ParticleBox( pos, pos2, r, g, b, life );
+		if( type == TE_LINE ) R_ParticleLine( pos, pos2, r, g, b, life );
+		else R_ParticleBox( pos, pos2, r, g, b, life );
 		break;
 	case TE_LARGEFUNNEL:
 		pos[0] = MSG_ReadCoord( &buf );
@@ -2146,7 +2146,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos2[0] = MSG_ReadCoord( &buf );
 		pos2[1] = MSG_ReadCoord( &buf );
 		pos2[2] = MSG_ReadCoord( &buf );
-		CL_ShowLine( pos, pos2 );
+		R_ShowLine( pos, pos2 );
 		break;
 	case TE_DECAL:
 	case TE_DECALHIGH:
@@ -2713,16 +2713,16 @@ void CL_AddStudioEffects( cl_entity_t *ent )
 		ent->angles[1] = anglemod( 100.0f * cl.time );
 
 	if( FBitSet( ent->model->flags, STUDIO_GIB ))
-		CL_RocketTrail( oldorigin, ent->curstate.origin, 2 );
+		R_RocketTrail( oldorigin, ent->curstate.origin, 2 );
 
 	if( FBitSet( ent->model->flags, STUDIO_ZOMGIB ))
-		CL_RocketTrail( oldorigin, ent->curstate.origin, 4 );
+		R_RocketTrail( oldorigin, ent->curstate.origin, 4 );
 
 	if( FBitSet( ent->model->flags, STUDIO_TRACER ))
-		CL_RocketTrail( oldorigin, ent->curstate.origin, 3 );
+		R_RocketTrail( oldorigin, ent->curstate.origin, 3 );
 
 	if( FBitSet( ent->model->flags, STUDIO_TRACER2 ))
-		CL_RocketTrail( oldorigin, ent->curstate.origin, 5 );
+		R_RocketTrail( oldorigin, ent->curstate.origin, 5 );
 
 	if( FBitSet( ent->model->flags, STUDIO_ROCKET ))
 	{
@@ -2738,14 +2738,14 @@ void CL_AddStudioEffects( cl_entity_t *ent )
 
 		dl->die = cl.time + 0.01f;
 
-		CL_RocketTrail( oldorigin, ent->curstate.origin, 0 );
+		R_RocketTrail( oldorigin, ent->curstate.origin, 0 );
 	}
 
 	if( FBitSet( ent->model->flags, STUDIO_GRENADE ))
-		CL_RocketTrail( oldorigin, ent->curstate.origin, 1 );
+		R_RocketTrail( oldorigin, ent->curstate.origin, 1 );
 
 	if( FBitSet( ent->model->flags, STUDIO_TRACER3 ))
-		CL_RocketTrail( oldorigin, ent->curstate.origin, 6 );
+		R_RocketTrail( oldorigin, ent->curstate.origin, 6 );
 }
 
 /*

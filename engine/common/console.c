@@ -95,8 +95,8 @@ typedef struct
 	int 		linewidth;	// characters across screen
 
 	// console animation
-	int		showlines;	// how many lines we should display
-	int		vislines;		// in scanlines
+	float		showlines;	// how many lines we should display
+	float		vislines;		// in scanlines
 
 	// console images
 	int		background;	// console background
@@ -1967,7 +1967,6 @@ void Con_DrawConsole( void )
 			else
 			{
 				con.showlines = 0;
-				Con_RunConsole();
 
 				if( host.developer >= 2 )
 					Con_DrawNotify(); // draw notify lines
@@ -2065,7 +2064,7 @@ Scroll it up or down
 */
 void Con_RunConsole( void )
 {
-	int	lines_per_frame;
+	float	lines_per_frame;
 
 	// decide on the destination height of the console
 	if( host.developer && cls.key_dest == key_console )
@@ -2076,10 +2075,10 @@ void Con_RunConsole( void )
 	}
 	else con.showlines = 0; // none visible
 
-	if( cls.state == ca_connecting || cls.state == ca_connected )
-		host.realframetime = ( MAX_FPS / host_maxfps->value ) * MIN_FRAMETIME;
+	if( cls.state == ca_connecting || cls.state == ca_connected || cl.first_frame )
+		host.realframetime = 0.0; // don't accumulate frametime
 
-	lines_per_frame = bound( 1, fabs( scr_conspeed->value ) * host.realframetime, glState.height );
+	lines_per_frame = fabs( scr_conspeed->value ) * host.realframetime;
 
 	if( con.showlines < con.vislines )
 	{

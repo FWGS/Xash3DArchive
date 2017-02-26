@@ -741,27 +741,6 @@ cl_entity_t *CL_GetWaterEntity( const float *rgflPos )
 	return CL_GetEntityByIndex( entnum );
 }
 
-static void pfnParticle( float *origin, int color, float life, int zpos, int zvel )
-{
-	particle_t	*p;
-		
-	if( !origin )
-	{
-		MsgDev( D_ERROR, "CL_StartParticle: NULL origin. Ignored\n" );
-		return;
-	}
-
-	p = R_AllocParticle( NULL );
-	if( !p ) return;
-
-	p->die += life;
-	p->color = color;
-	p->type = pt_static;
-
-	VectorCopy( origin, p->org );
-	VectorSet( p->vel, 0.0f, 0.0f, zvel );
-}
-
 static int pfnTestPlayerPosition( float *pos, pmtrace_t *ptrace )
 {
 	return PM_TestPlayerPosition( clgame.pmove, pos, ptrace, NULL );
@@ -991,7 +970,7 @@ void CL_InitClientMove( void )
 
 	// common utilities
 	clgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;
-	clgame.pmove->PM_Particle = pfnParticle;
+	clgame.pmove->PM_Particle = CL_Particle;
 	clgame.pmove->PM_TestPlayerPosition = pfnTestPlayerPosition;
 	clgame.pmove->Con_NPrintf = Con_NPrintf;
 	clgame.pmove->Con_DPrintf = Con_DPrintf;

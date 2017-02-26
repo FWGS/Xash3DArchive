@@ -305,7 +305,6 @@ void V_RenderView( void )
 	R_Set2DMode( false );
 	SCR_DirtyScreen();
 	GL_BackendStartFrame ();
-	tr.framecount++;	// g-cont. keep actual frame for all viewpasses
 
 	do
 	{

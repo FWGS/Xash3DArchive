@@ -774,7 +774,9 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	host.state = HOST_INIT; // initialzation started
 	host.developer = host.old_developer = 0;
 
-	Memory_Init(); // init memory subsystem
+	srand( time( NULL ));	// init random generator
+
+	Memory_Init();		// init memory subsystem
 
 	// some commands may turn engine into infinity loop,
 	// e.g. xash.exe +game xash -game xash

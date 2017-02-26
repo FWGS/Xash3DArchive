@@ -124,6 +124,7 @@ SV_CheckVelocity
 */
 void SV_CheckVelocity( edict_t *ent )
 {
+	float	wishspd;
 	int	i;
 
 	// bound velocity
@@ -140,17 +141,15 @@ void SV_CheckVelocity( edict_t *ent )
 			MsgDev( D_INFO, "Got a NaN origin on %s\n", STRING( ent->v.classname ));
 			ent->v.origin[i] = 0.0f;
 		}
+	}
 
-		if( ent->v.velocity[i] > sv_maxvelocity.value )
-		{
-			MsgDev( D_INFO, "Got a velocity too high on %s\n", STRING( ent->v.classname ));
-			ent->v.velocity[i] = sv_maxvelocity.value;
-		}
-		else if( ent->v.velocity[i] < -sv_maxvelocity.value )
-		{
-			MsgDev( D_INFO, "Got a velocity too low on %s\n", STRING( ent->v.classname ));
-			ent->v.velocity[i] = -sv_maxvelocity.value;
-		}
+	wishspd = DotProduct( ent->v.velocity, ent->v.velocity );
+
+	if( wishspd > ( sv_maxvelocity.value * sv_maxvelocity.value ))
+	{
+		MsgDev( D_INFO, "Got a velocity too high on %s\n", STRING( ent->v.classname ));
+		wishspd = sv_maxvelocity.value / sqrt( wishspd );
+		VectorScale( ent->v.velocity, wishspd, ent->v.velocity );
 	}
 }
 

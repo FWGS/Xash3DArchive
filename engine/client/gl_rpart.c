@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include "event_flags.h"
 #include "entity_types.h"
 #include "triangleapi.h"
+#include "pm_local.h"
 #include "cl_tent.h"
 #include "studio.h"
 
@@ -59,16 +60,6 @@ static color24 gTracerColors[] =
 { 255, 120, 70 },		// Darker red streaks (garg)
 };
 
-static int boxpnt[6][4] =
-{
-{ 0, 4, 6, 2 }, // +X
-{ 0, 1, 5, 4 }, // +Y
-{ 0, 2, 3, 1 }, // +Z
-{ 7, 5, 1, 3 }, // -X
-{ 7, 3, 2, 6 }, // -Y
-{ 7, 6, 4, 5 }, // -Z
-};
-
 convar_t		*tracerred;
 convar_t		*tracergreen;
 convar_t		*tracerblue;
@@ -85,12 +76,12 @@ static vec3_t	cl_avelocities[NUMVERTEXNORMALS];
 
 /*
 ================
-CL_LookupColor
+R_LookupColor
 
 find nearest color in particle palette
 ================
 */
-short CL_LookupColor( byte r, byte g, byte b )
+short R_LookupColor( byte r, byte g, byte b )
 {
 	int	i, best;
 	float	diff, bestdiff;
@@ -348,86 +339,6 @@ void R_FreeDeadParticles( particle_t **ppparticles )
 			break;
 		}
 	}
-}
-
-static void CL_BulletTracerDraw( particle_t *p, float frametime )
-{
-	vec3_t	lineDir, viewDir, cross;
-	vec3_t	vecEnd, vecStart, vecDir;
-	float	sDistance, eDistance, totalDist;
-	float	dDistance, dTotal, fOffset;
-	int	alpha = (int)(traceralpha->value * 255);
-	float	width = 3.0f, life, frac, length;
-	vec3_t	tmp;
-
-	// calculate distance
-	VectorCopy( p->vel, vecDir );
-	totalDist = VectorNormalizeLength( vecDir );
-
-	length = p->ramp; // ramp used as length
-
-	// calculate fraction
-	life = ( totalDist + length ) / ( max( 1.0f, tracerspeed->value ));
-	frac = life - ( p->die - cl.time ) + frametime;
-
-	// calculate our distance along our path
-	sDistance = tracerspeed->value * frac;
-	eDistance = sDistance - length;
-	
-	// clip to start
-	sDistance = max( 0.0f, sDistance );
-	eDistance = max( 0.0f, eDistance );
-
-	if(( sDistance == 0.0f ) && ( eDistance == 0.0f ))
-		return;
-
-	// clip it
-	if( totalDist != 0.0f )
-	{
-		sDistance = min( sDistance, totalDist );
-		eDistance = min( eDistance, totalDist );
-	}
-
-	// get our delta to calculate the tc offset
-	dDistance	= fabs( sDistance - eDistance );
-	dTotal = ( length != 0.0f ) ? length : 0.01f;
-	fOffset = ( dDistance / dTotal );
-
-	// find our points along our path
-	VectorMA( p->org, sDistance, vecDir, vecEnd );
-	VectorMA( p->org, eDistance, vecDir, vecStart );
-
-	// setup our info for drawing the line
-	VectorSubtract( vecEnd, vecStart, lineDir );
-	VectorSubtract( vecEnd, RI.vieworg, viewDir );
-	
-	CrossProduct( lineDir, viewDir, cross );
-	VectorNormalize( cross );
-
-	GL_SetRenderMode( kRenderTransTexture );
-
-	GL_Bind( GL_TEXTURE0, cls.particleImage );
-	pglBegin( GL_QUADS );
-
-	pglColor4ub( clgame.palette[p->color].r, clgame.palette[p->color].g, clgame.palette[p->color].b, alpha );
-
-	VectorMA( vecStart, -width, cross, tmp );	
-	pglTexCoord2f( 1.0f, 0.0f );
-	pglVertex3fv( tmp );
-
-	VectorMA( vecStart, width, cross, tmp );
-	pglTexCoord2f( 0.0f, 0.0f );
-	pglVertex3fv( tmp );
-
-	VectorMA( vecEnd, width, cross, tmp );
-	pglTexCoord2f( 0.0f, fOffset );
-	pglVertex3fv( tmp );
-
-	VectorMA( vecEnd, -width, cross, tmp );
-	pglTexCoord2f( 1.0f, fOffset );
-	pglVertex3fv( tmp );
-
-	pglEnd();
 }
 
 /*
@@ -1161,30 +1072,39 @@ void CL_TeleportSplash( const vec3_t org )
 
 /*
 ===============
-CL_RocketTrail
+R_RocketTrail
 
 ===============
 */
-void CL_RocketTrail( vec3_t start, vec3_t end, int type )
+void R_RocketTrail( vec3_t start, vec3_t end, int type )
 {
-	vec3_t		vec;
-	float		len;
-	particle_t	*p;
-	int		j, dec;
+	vec3_t		vec, right, up;
 	static int	tracercount;
+	float		s, c, x, y;
+	float		len, dec;
+	particle_t	*p;
 
 	VectorSubtract( end, start, vec );
 	len = VectorNormalizeLength( vec );
 
+	if( type == 7 )
+	{
+		VectorVectors( vec, right, up );
+	}
+
 	if( type < 128 )
 	{
-		dec = 3;
+		dec = 3.0f;
 	}
 	else
 	{
-		dec = 1;
+		dec = 1.0f;
 		type -= 128;
 	}
+
+	if( type == 6 ) Msg( "R_RocketTrail: type 6 is selected\n" );
+
+	VectorScale( vec, dec, vec );
 
 	while( len > 0 )
 	{
@@ -1193,166 +1113,156 @@ void CL_RocketTrail( vec3_t start, vec3_t end, int type )
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
 		
-		p->die += 2.0f;
+		p->die = cl.time + 2.0f;
 
 		switch( type )
 		{
 		case 0:	// rocket trail
-			p->ramp = (rand() & 3);
+			p->ramp = COM_RandomLong( 0, 3 );
 			p->color = ramp3[(int)p->ramp];
 			p->type = pt_fire;
-			for( j = 0; j < 3; j++ )
-				p->org[j] = start[j] + ((rand() % 6 ) - 3 );
+			VectorAddScalar( start, COM_RandomFloat( -3.0f, 3.0f ), p->org );
 			break;
 		case 1:	// smoke smoke
-			p->ramp = (rand() & 3) + 2;
+			p->ramp = COM_RandomLong( 2, 5 );
 			p->color = ramp3[(int)p->ramp];
 			p->type = pt_fire;
-			for( j = 0; j < 3; j++ )
-				p->org[j] = start[j] + ((rand() % 6 ) - 3 );
+			VectorAddScalar( start, COM_RandomFloat( -3.0f, 3.0f ), p->org );
 			break;
 		case 2:	// blood
 			p->type = pt_grav;
-			p->color = 67 + (rand() & 3);
-			for( j = 0; j < 3; j++ )
-				p->org[j] = start[j] + ((rand() % 6 ) - 3 );
+			p->color = COM_RandomLong( 67, 74 );
+			VectorAddScalar( start, COM_RandomFloat( -3.0f, 3.0f ), p->org );
 			break;
 		case 3:
 		case 5:	// tracer
-			p->die += 0.5f;
-			p->type = pt_static;
+			p->die = cl.time + 0.5f;
 
 			if( type == 3 ) p->color = 52 + (( tracercount & 4 )<<1 );
 			else p->color = 230 + (( tracercount & 4 )<<1 );
 
-			tracercount++;
 			VectorCopy( start, p->org );
+			tracercount++;
 
-			if( tracercount & 1 )
+			if( FBitSet( tracercount, 1 ))
 			{
-				p->vel[0] = 30 *  vec[1];
-				p->vel[1] = 30 * -vec[0];
+				p->vel[0] = 30.0f *  vec[1];
+				p->vel[1] = 30.0f * -vec[0];
 			}
 			else
 			{
-				p->vel[0] = 30 * -vec[1];
-				p->vel[1] = 30 *  vec[0];
+				p->vel[0] = 30.0f * -vec[1];
+				p->vel[1] = 30.0f *  vec[0];
 			}
 			break;
 		case 4:	// slight blood
 			p->type = pt_grav;
-			p->color = 67 + (rand() & 3);
-			for( j = 0; j < 3; j++ )
-				p->org[j] = start[j] + ((rand() % 6) - 3);
-			len -= 3;
+			p->color = COM_RandomLong( 67, 70 );
+			VectorAddScalar( start, COM_RandomFloat( -3.0f, 3.0f ), p->org );
+			len -= 3.0f;
 			break;
 		case 6:	// voor trail
-			p->color = 9 * 16 + 8 + (rand() & 3);
-			p->type = pt_static;
+#if 0
+			p->ramp = COM_RandomLong( 0, 3 );
+			p->color = ramp3[(int)p->ramp];
+			VectorCopy( start, p->org );
+			p->type = pt_fire;
+#else
+			p->color = COM_RandomLong( 152, 155 );
 			p->die += 0.3f;
-			for( j = 0; j < 3; j++ )
-				p->org[j] = start[j] + ((rand() & 15) - 8);
+			VectorAddScalar( start, COM_RandomFloat( -8.0f, 8.0f ), p->org );
+#endif
+			break;
+		case 7: // explosion tracer
+			x = COM_RandomLong( 0, 65535 );
+			y = COM_RandomLong( 8, 16 );
+			SinCos( x, &s, &c );
+			s *= y;
+			c *= y;
+
+			VectorMAMAM( 1.0f, start, s, right, c, up, p->org );
+			VectorSubtract( start, p->org, p->vel );
+			VectorScale( p->vel, 2.0f, p->vel );
+			VectorMA( p->vel, COM_RandomFloat( 96, 111 ), vec, p->vel );
+			p->ramp = COM_RandomLong( 0, 3 );
+			p->color = ramp3[(int)p->ramp];
+			p->type = pt_explode2;
+			break;
+		default:
+			// just build line to show error
+			VectorCopy( start, p->org );
 			break;
 		}
+
 		VectorAdd( start, vec, start );
 	}
 }
 
 /*
 ================
-CL_DrawLine
+R_ParticleLine
 
 ================
 */
-static void CL_DrawLine( const vec3_t start, const vec3_t end, int pcolor, float life, float gap )
+void R_ParticleLine( const vec3_t start, const vec3_t end, byte r, byte g, byte b, float life )
 {
+	int	pcolor;
+
+	pcolor = R_LookupColor( r, g, b );
+	PM_ParticleLine( start, end, pcolor, life, 0 );
+}
+
+/*
+================
+R_ParticleBox
+
+================
+*/
+void R_ParticleBox( const vec3_t absmin, const vec3_t absmax, byte r, byte g, byte b, float life )
+{
+	vec3_t	mins, maxs;
+	vec3_t	origin;
+	int	pcolor;
+
+	pcolor = R_LookupColor( r, g, b );
+
+	VectorAverage( absmax, absmin, origin );
+	VectorSubtract( absmax, origin, maxs );
+	VectorSubtract( absmin, origin, mins );
+
+	PM_DrawBBox( mins, maxs, origin, pcolor, life );
+}
+
+/*
+================
+R_ShowLine
+
+================
+*/
+void R_ShowLine( const vec3_t start, const vec3_t end )
+{
+	vec3_t		dir, org;
+	float		len;
 	particle_t	*p;
-	float		len, curdist;
-	vec3_t		diff;
-	int		i;
 
-	// Determine distance;
-	VectorSubtract( end, start, diff );
-	len = VectorNormalizeLength( diff );
-	curdist = 0;
-
-	while( curdist <= len )
+	VectorSubtract( end, start, dir );
+	len = VectorNormalizeLength( dir );
+	VectorScale( dir, 5.0f, dir );
+	VectorCopy( start, org );
+	
+	while( len > 0 )
 	{
+		len -= 5.0f;
+
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
 
-		for( i = 0; i < 3; i++ )
-			p->org[i] = start[i] + curdist * diff[i];
+		p->die = cl.time + 30;
+		p->color = 75;
 
-		p->color = pcolor;
-		p->type = pt_static;
-		p->die += life;
-		curdist += gap;
+		VectorCopy( org, p->org );
+		VectorAdd( org, dir, org );
 	}
-}
-
-/*
-================
-CL_DrawRectangle
-
-================
-*/
-void CL_DrawRectangle( const vec3_t tl, const vec3_t bl, const vec3_t tr, const vec3_t br, int pcolor, float life )
-{
-	CL_DrawLine( tl, bl, pcolor, life, 2.0f );
-	CL_DrawLine( bl, br, pcolor, life, 2.0f );
-	CL_DrawLine( br, tr, pcolor, life, 2.0f );
-	CL_DrawLine( tr, tl, pcolor, life, 2.0f );
-}
-
-void CL_ParticleLine( const vec3_t start, const vec3_t end, byte r, byte g, byte b, float life )
-{
-	int	pcolor;
-
-	pcolor = CL_LookupColor( r, g, b );
-	CL_DrawLine( start, end, pcolor, life, 2.0f );
-}
-
-/*
-================
-CL_ParticleBox
-
-================
-*/
-void CL_ParticleBox( const vec3_t mins, const vec3_t maxs, byte r, byte g, byte b, float life )
-{
-	vec3_t	tmp, p[8];
-	int	i, col;
-
-	col = CL_LookupColor( r, g, b );
-
-	for( i = 0; i < 8; i++ )
-	{
-		tmp[0] = (i & 1) ? mins[0] : maxs[0];
-		tmp[1] = (i & 2) ? mins[1] : maxs[1];
-		tmp[2] = (i & 4) ? mins[2] : maxs[2];
-		VectorCopy( tmp, p[i] );
-	}
-
-	for( i = 0; i < 6; i++ )
-	{
-		CL_DrawRectangle( p[boxpnt[i][1]], p[boxpnt[i][0]], p[boxpnt[i][2]], p[boxpnt[i][3]], col, life );
-	}
-
-}
-
-/*
-================
-CL_ShowLine
-
-================
-*/
-void CL_ShowLine( const vec3_t start, const vec3_t end )
-{
-	int	pcolor;
-
-	pcolor = CL_LookupColor( 192, 0, 0 );
-	CL_DrawLine( start, end, pcolor, 30.0f, 5.0f );
 }
 
 /*
@@ -1393,33 +1303,34 @@ void R_BulletImpactParticles( const vec3_t pos )
 
 		p->die = cl.time + 0.5;
 		p->color = 3 - color;
-		p->packedColor = 0;
 		p->type = pt_grav;
 	}
 }
 
 /*
 ===============
-CL_FlickerParticles
+R_FlickerParticles
 
 ===============
 */
-void CL_FlickerParticles( const vec3_t org )
+void R_FlickerParticles( const vec3_t org )
 {
 	particle_t	*p;
-	int		i, j;
+	int		i;
 
-	for( i = 0; i < 16; i++ )
+	for( i = 0; i < 15; i++ )
 	{
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
 
-		p->die += COM_RandomFloat( 0.5f, 2.0f );
-		p->type = pt_blob;
+		VectorCopy( org, p->org );
+		p->vel[0] = COM_RandomFloat( -32.0f, 32.0f );
+		p->vel[1] = COM_RandomFloat( -32.0f, 32.0f );
+		p->vel[2] = COM_RandomFloat( 80.0f, 143.0f );
 
-		for( j = 0; j < 3; j++ )
-			p->org[j] = org[j] + COM_RandomFloat( -32.0f, 32.0f );
-		p->vel[2] = COM_RandomFloat( 64.0f, 100.0f );
+		p->die = cl.time + 2.0f;
+		p->type = pt_blob2;
+		p->color = 254;
 	}
 }
 
@@ -1447,21 +1358,20 @@ void R_StreakSplash( const vec3_t pos, const vec3_t dir, int color, int count, f
 		p = R_AllocTracer( pos, vel, COM_RandomFloat( 0.1f, 0.5f ));
 		if( !p ) return;
 
-		p->packedColor = 255;
 		p->type = pt_grav;
 		p->color = color;
-		p->ramp = 1;
+		p->ramp = 1.0f;
 	}
 }
 
 /*
 ===============
-CL_DebugParticle
+R_DebugParticle
 
 just for debug purposes
 ===============
 */
-void CL_DebugParticle( const vec3_t pos, byte r, byte g, byte b )
+void R_DebugParticle( const vec3_t pos, byte r, byte g, byte b )
 {
 	particle_t	*p;
 
@@ -1469,8 +1379,28 @@ void CL_DebugParticle( const vec3_t pos, byte r, byte g, byte b )
 	if( !p ) return;
 
 	VectorCopy( pos, p->org );
-	p->die += 10.0f;
-	p->color = CL_LookupColor( r, g, b );
+	p->color = R_LookupColor( r, g, b );
+	p->die = cl.time + 10.0f;
+}
+
+/*
+===============
+CL_Particle
+
+pmove debugging particle
+===============
+*/
+void CL_Particle( const vec3_t org, int color, float life, int zpos, int zvel )
+{
+	particle_t	*p;
+
+	p = R_AllocParticle( NULL );
+	if( !p ) return;
+
+	if( org ) VectorCopy( org, p->org );
+	p->die = cl.time + life;
+	p->vel[2] += zvel;	// ???
+	p->color = color;
 }
 
 /*
@@ -1524,6 +1454,8 @@ void R_UserTracerParticle( float *org, float *vel, float life, int colorIndex, f
 	{
 		p->context = deathcontext;
 		p->deathfunc = deathfunc;
+		p->color = colorIndex;
+		p->ramp = length;
 	}
 }
 
@@ -1562,9 +1494,8 @@ void R_SparkStreaks( const vec3_t pos, int count, int velocityMin, int velocityM
 		if( !p ) return;
 
 		p->color = 5;
-		p->packedColor = 255;
 		p->type = pt_grav;
-		p->ramp = 0.5;
+		p->ramp = 0.5f;
 	}
 }
 
@@ -1593,7 +1524,8 @@ void R_Implosion( const vec3_t end, float radius, int count, float life )
 		VectorScale( temp, factor, vel );
 		VectorAdd( temp, end, start );
 
-		R_AllocTracer( start, vel, life );
+		if( !R_AllocTracer( start, vel, life ))
+			return;
 	}
 }
 
@@ -1648,18 +1580,19 @@ void CL_ReadPointFile_f( void )
 			break;
 		}
 
-		// NOTE: can't use CL_AllocateParticles because running from the console
+		// NOTE: can't use R_AllocParticle because this command
+		// may be executed from the console, while frametime is 0
 		p = cl_free_particles;
 		cl_free_particles = p->next;
 		p->next = cl_active_particles;
 		cl_active_particles = p;
 
 		p->ramp = 0;		
-		p->die = 99999;
-		p->color = (-count) & 15;
 		p->type = pt_static;
-		VectorClear( p->vel );
+		p->die = cl.time + 99999;
+		p->color = (-count) & 15;
 		VectorCopy( org, p->org );
+		VectorClear( p->vel );
 	}
 
 	Mem_Free( afile );

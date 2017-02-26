@@ -400,6 +400,10 @@ SOURCE=.\common\net_ws.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\pm_debug.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\pm_surface.c
 # End Source File
 # Begin Source File

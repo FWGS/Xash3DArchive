@@ -209,6 +209,7 @@ typedef struct sv_client_s
 	double		next_sendinfotime;		// time to send info about all players
 	double		cl_updaterate;		// client requested updaterate
 	double		timebase;			// client timebase
+	double		lastservertime;		// check if server time was not changed so no resaon to send update
 
 	customization_t	customdata;		// player customization linked list
 	resource_t	resourcesonhand;

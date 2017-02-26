@@ -502,17 +502,17 @@ SV_RunGameFrame
 SV_RunGameFrame
 =================
 */
-qboolean SV_RunGameFrame( void )
+void SV_RunGameFrame( void )
 {
-	int	numFrames = 0;
+	int	numFrames = 0; // debug
 
-	sv.simulating = SV_IsSimulating( );
-
-	if( sv.simulating == false )
-		return true;
+	if(!( sv.simulating = SV_IsSimulating( )))
+		return;
 
 	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
 	{
+		sv.time_residual += host.frametime;
+
 		while( sv.time_residual >= sv.frametime )
 		{
 			SV_Physics();
@@ -529,8 +529,6 @@ qboolean SV_RunGameFrame( void )
 		sv.time += sv.frametime;
 		numFrames++;
 	}
-
-	return (numFrames != 0);
 }
 
 /*
@@ -545,11 +543,8 @@ void Host_ServerFrame( void )
 	if( !svs.initialized ) return;
 
 	if( FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
-		sv.frametime = ( 1.0 / (double)( GAME_FPS - 0.01 )); // FP issues
+		sv.frametime = ( 1.0 / (double)GAME_FPS );
 	else sv.frametime = host.frametime; // GoldSrc style
-
-	if( sv.simulating || sv.state != ss_active )
-		sv.time_residual += host.frametime;
 
 	svgame.globals->frametime = sv.frametime;
 
@@ -566,7 +561,7 @@ void Host_ServerFrame( void )
 	SV_CheckTimeouts ();
 
 	// let everything in the world think and move
-	if( !SV_RunGameFrame ()) return;
+	SV_RunGameFrame ();
 		
 	// send messages back to the clients that had packets read this frame
 	SV_SendClientMessages ();

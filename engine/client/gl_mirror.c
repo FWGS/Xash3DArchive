@@ -304,7 +304,6 @@ void R_DrawMirrors( void )
 				RI.viewport[3] = bound( 64, RI.viewport[3], 512 );
 			}
 
-			tr.framecount++;
 			R_RenderScene();
 			r_stats.c_mirror_passes++;
 

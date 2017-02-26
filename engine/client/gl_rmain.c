@@ -1023,18 +1023,16 @@ R_SetupRefParams must be called right before
 */
 void R_RenderScene( void )
 {
-	static int	framecount = -1;
-
 	if( !cl.worldmodel && RI.drawWorld )
 		Host_Error( "R_RenderView: NULL worldmodel\n" );
 
 	// frametime is valid only for normal pass
 	if( RP_NORMALPASS( ))
-	{
 		tr.frametime = cl.time - cl.oldtime;
-		framecount = tr.framecount;
-	}
 	else tr.frametime = 0.0;
+
+	// begin a new frame
+	tr.framecount++;
 
 	R_PushDlights();
 

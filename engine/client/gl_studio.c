@@ -2562,14 +2562,14 @@ static void R_StudioClientEvents( void )
 	if( pseqdesc->numevents == 0 )
 		return;
 
-	end = R_StudioEstimateFrame( e, pseqdesc );
+	end = R_StudioEstimateFrame( e, pseqdesc ) + 0.01f;
 	start = end - e->curstate.framerate * host.frametime * pseqdesc->fps;
 	pevent = (mstudioevent_t *)((byte *)m_pStudioHeader + pseqdesc->eventindex);
 
 	if( e->latched.sequencetime == e->curstate.animtime )
 	{
 		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ))
-			start = -0.01f;
+			start -= 0.01f;
 	}
 
 	for( i = 0; i < pseqdesc->numevents; i++ )
@@ -2578,7 +2578,7 @@ static void R_StudioClientEvents( void )
 		if( pevent[i].event < EVENT_CLIENT )
 			continue;
 
-		if( (float)pevent[i].frame > start && pevent[i].frame <= end )
+		if( (float)pevent[i].frame > start && end >= pevent[i].frame )
 			clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
 	}
 }
