@@ -577,11 +577,11 @@ formatted message
 */
 void Msg( const char *pMsg, ... )
 {
-	va_list	argptr;
-	char	text[MAX_PRINT_MSG];
-	
+	static char	text[MAX_PRINT_MSG];
+	va_list		argptr;	
+
 	va_start( argptr, pMsg );
-	Q_vsnprintf( text, sizeof( text ), pMsg, argptr );
+	Q_vsnprintf( text, sizeof( text ) - 1, pMsg, argptr );
 	va_end( argptr );
 
 	Sys_Print( text );
@@ -596,13 +596,13 @@ formatted developer message
 */
 void MsgDev( int level, const char *pMsg, ... )
 {
-	va_list	argptr;
-	char	text[MAX_PRINT_MSG];
+	static char	text[MAX_PRINT_MSG];
+	va_list		argptr;
 
 	if( host.developer < level ) return;
 
 	va_start( argptr, pMsg );
-	Q_vsnprintf( text, sizeof( text ), pMsg, argptr );
+	Q_vsnprintf( text, sizeof( text ) - 1, pMsg, argptr );
 	va_end( argptr );
 
 	switch( level )

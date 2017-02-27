@@ -24,6 +24,8 @@ GNU General Public License for more details.
 #include "cl_tent.h"
 #include "studio.h"
 
+#define PART_SIZE	0.5f	// because original particle of Quake1 was smaller than this
+
 // particle velocities
 static const float cl_avertexnormals[NUMVERTEXNORMALS][3] =
 {
@@ -356,9 +358,9 @@ void CL_DrawParticles( double frametime )
 	float		time1 = 5.0f * frametime;
 	float		dvel = 4.0f * frametime;
 	float		grav = frametime * clgame.movevars.gravity * 0.05f;
-	float		size;
 	vec3_t		right, up;
 	color24		*pColor;
+	float		size;
 
 	if( !cl_draw_particles->value )
 		return;
@@ -376,19 +378,19 @@ void CL_DrawParticles( double frametime )
 	{
 		if( p->type != pt_blob )
 		{
-			size = 1.5f; // get initial size of particle
+			size = PART_SIZE; // get initial size of particle
 
 			// HACKHACK a scale up to keep particles from disappearing
-			size += (p->org[0] - RI.vieworg[0]) * RI.vforward[0];
-			size += (p->org[1] - RI.vieworg[1]) * RI.vforward[1];
-			size += (p->org[2] - RI.vieworg[2]) * RI.vforward[2];
+			size += (p->org[0] - RI.vieworg[0]) * RI.cull_vforward[0];
+			size += (p->org[1] - RI.vieworg[1]) * RI.cull_vforward[1];
+			size += (p->org[2] - RI.vieworg[2]) * RI.cull_vforward[2];
 
-			if( size < 20.0f ) size = 1.0f;
-			else size = 1.0f + size * 0.004f;
+			if( size < 20.0f ) size = PART_SIZE;
+			else size = PART_SIZE + size * 0.004f;
 
 			// scale the axes by radius
-			VectorScale( RI.vright, size, right );
-			VectorScale( RI.vup, size, up );
+			VectorScale( RI.cull_vright, size, right );
+			VectorScale( RI.cull_vup, size, up );
 
 			p->color = bound( 0, p->color, 255 );
 			pColor = &clgame.palette[p->color];
@@ -419,45 +421,44 @@ void CL_DrawParticles( double frametime )
 			break;
 		case pt_fire:
 			p->ramp += time1;
-			if( p->ramp >= 6 ) p->die = -1;
+			if( p->ramp >= 6.0f ) p->die = -1.0f;
 			else p->color = ramp3[(int)p->ramp];
 			p->vel[2] += grav;
 			break;
 		case pt_explode:
 			p->ramp += time2;
-			if( p->ramp >= 8 ) p->die = -1;
+			if( p->ramp >= 8.0f ) p->die = -1.0f;
 			else p->color = ramp1[(int)p->ramp];
 			VectorMA( p->vel, dvel, p->vel, p->vel );
 			p->vel[2] -= grav;
 			break;
 		case pt_explode2:
 			p->ramp += time3;
-			if( p->ramp >= 8 ) p->die = -1;
+			if( p->ramp >= 8.0f ) p->die = -1.0f;
 			else p->color = ramp2[(int)p->ramp];
-			VectorMA( p->vel, -frametime, p->vel, p->vel );
+			VectorMA( p->vel,-dvel, p->vel, p->vel );
 			p->vel[2] -= grav;
 			break;
 		case pt_blob:
 		case pt_blob2:
 			p->ramp += time2;
-			if( p->ramp >= 9 )
-				p->ramp = 0;
+			if( p->ramp >= 9.0f ) p->ramp = 0.0f;
 			p->color = gSparkRamp[(int)p->ramp];
 			VectorMA( p->vel, -frametime * 0.5f, p->vel, p->vel );
 			p->type = COM_RandomLong( 0, 3 ) ? pt_blob : pt_blob2;
 			p->vel[2] -= grav * 5.0f;
 			break;
 		case pt_grav:
-			p->vel[2] -= grav * 20;
+			p->vel[2] -= grav * 20.0f;
 			break;
 		case pt_slowgrav:
 			p->vel[2] -= grav;
 			break;
 		case pt_vox_grav:
-			p->vel[2] -= grav * 8;
+			p->vel[2] -= grav * 8.0f;
 			break;
 		case pt_vox_slowgrav:
-			p->vel[2] -= grav * 4;
+			p->vel[2] -= grav * 4.0f;
 			break;
 		case pt_clientcustom:
 			if( p->callback )
@@ -574,8 +575,8 @@ void CL_DrawTracers( double frametime )
 			VectorNormalize( tmp );
 
 			// build point along noraml line (normal is -y, x)
-			VectorScale( RI.vup, tmp[0], normal );
-			VectorScale( RI.vright, -tmp[1], tmp2 );
+			VectorScale( RI.cull_vup, tmp[0], normal );
+			VectorScale( RI.cull_vright, -tmp[1], tmp2 );
 			VectorSubtract( normal, tmp2, normal );
 
 			// compute four vertexes
@@ -634,12 +635,12 @@ void CL_DrawParticlesExternal( const float *vieworg, const float *forward, const
 
 /*
 ===============
-CL_EntityParticles
+R_EntityParticles
 
 set EF_BRIGHTFIELD effect
 ===============
 */
-void CL_EntityParticles( cl_entity_t *ent )
+void R_EntityParticles( cl_entity_t *ent )
 {
 	float		angle;
 	float		sr, sp, sy, cr, cp, cy;
@@ -661,13 +662,11 @@ void CL_EntityParticles( cl_entity_t *ent )
 	
 		VectorSet( forward, cp * cy, cp * sy, -sp ); 
 
-		p->die += 0.01f;
-		p->color = 111;		// yellow
+		p->die = cl.time + 0.001f;
 		p->type = pt_explode;
+		p->color = 111; // yellow
 
-		p->org[0] = ent->origin[0] + cl_avertexnormals[i][0] * 64.0f + forward[0] * 16.0f;
-		p->org[1] = ent->origin[1] + cl_avertexnormals[i][1] * 64.0f + forward[1] * 16.0f;		
-		p->org[2] = ent->origin[2] + cl_avertexnormals[i][2] * 64.0f + forward[2] * 16.0f;
+		VectorMAMAM( 1.0f, ent->origin, 64.0f, cl_avertexnormals[i], 16.0f, forward, p->org );
 	}
 }
 
@@ -681,13 +680,7 @@ void CL_ParticleExplosion( const vec3_t org )
 {
 	particle_t	*p;
 	int		i, j;
-	int		hSound;
 
-	if( !org ) return;
-
-	hSound = S_RegisterSound( "weapons/explode3.wav" );
-	S_StartSound( org, 0, CHAN_AUTO, hSound, VOL_NORM, ATTN_NORM, PITCH_NORM, 0 );
-	
 	for( i = 0; i < 1024; i++ )
 	{
 		p = R_AllocParticle( NULL );
@@ -729,12 +722,6 @@ void CL_ParticleExplosion2( const vec3_t org, int colorStart, int colorLength )
 	int		i, j;
 	int		colorMod = 0;
 	particle_t	*p;
-	int		hSound;
-
-	if( !org ) return;
-
-	hSound = S_RegisterSound( "weapons/explode3.wav" );
-	S_StartSound( org, 0, CHAN_AUTO, hSound, VOL_NORM, ATTN_NORM, PITCH_NORM, 0 );
 
 	for( i = 0; i < 512; i++ )
 	{
@@ -765,13 +752,7 @@ void CL_BlobExplosion( const vec3_t org )
 {
 	particle_t	*p;
 	int		i, j;
-	int		hSound;
 
-	if( !org ) return;
-
-	hSound = S_RegisterSound( "weapons/explode3.wav" );
-	S_StartSound( org, 0, CHAN_AUTO, hSound, VOL_NORM, ATTN_NORM, PITCH_NORM, 0 );
-	
 	for( i = 0; i < 1024; i++ )
 	{
 		p = R_AllocParticle( NULL );
@@ -814,11 +795,11 @@ PARTICLE_EFFECT on server
 void R_RunParticleEffect( const vec3_t org, const vec3_t dir, int color, int count )
 {
 	particle_t	*p;
-	int		i, j;
+	int		i;
 
 	if( count == 1024 )
 	{
-		// Quake hack: count == 255 it's a RocketExplode
+		// rocket explosion
 		CL_ParticleExplosion( org );
 		return;
 	}
@@ -828,55 +809,59 @@ void R_RunParticleEffect( const vec3_t org, const vec3_t dir, int color, int cou
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
 
-		p->die += 0.1f * (rand() % 5);
-		p->color = (color & ~7) + (rand() & 7);
+		p->color = (color & ~7) + COM_RandomLong( 0, 7 );
+		p->die = cl.time + COM_RandomFloat( 0.1f, 0.4f );
 		p->type = pt_slowgrav;
 
-		for( j = 0; j < 3; j++ )
-		{
-			p->org[j] = org[j] + ((rand() & 15) - 8);
-			p->vel[j] = dir[j] * 15;
-		}
+		VectorAddScalar( org, COM_RandomFloat( -8.0f, 8.0f ), p->org );
+		VectorScale( dir, 15.0f, p->vel );
 	}
 }
 
 /*
 ===============
-CL_Blood
+R_Blood
 
 particle spray
 ===============
 */
-void CL_Blood( const vec3_t org, const vec3_t dir, int pcolor, int speed )
+void R_Blood( const vec3_t org, const vec3_t ndir, int pcolor, int speed )
 {
-	particle_t	*p;
+	vec3_t		pos, dir, vec;
+	int		pspeed = speed * 3;
 	int		i, j;
+	particle_t	*p;
 
-	for( i = 0; i < speed * 20; i++ )
+	VectorNormalize2( ndir, dir );
+
+	for( i = 0; i < (speed / 2); i++ )
 	{
-		p = R_AllocParticle( NULL );
-		if( !p ) return;
+		VectorAddScalar( org, COM_RandomFloat( -3.0f, 3.0f ), pos );
+		VectorAddScalar( dir, COM_RandomFloat( -0.06f, 0.06f ), vec );
 
-		p->die += COM_RandomFloat( 0.1f, 0.5f );
-		p->type = pt_slowgrav;
-		p->color = pcolor;
-
-		for( j = 0; j < 3; j++ )
+		for( j = 0; j < 7; j++ )
 		{
-			p->org[j] = org[j] + COM_RandomFloat( -8.0f, 8.0f );
-			p->vel[j] = dir[j] * speed;
+			p = R_AllocParticle( NULL );
+			if( !p ) return;
+
+			p->die = cl.time + 1.5f;
+			p->color = pcolor + COM_RandomLong( 0, 9 );
+			p->type = pt_vox_grav;
+
+			VectorAddScalar( pos, COM_RandomFloat( -1.0f, 1.0f ), p->org );
+			VectorScale( vec, pspeed, p->vel );
 		}
 	}
 }
 
 /*
 ===============
-CL_BloodStream
+R_BloodStream
 
 particle spray 2
 ===============
 */
-void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
+void R_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 {
 	particle_t	*p;
 	int		i, j;
@@ -885,10 +870,9 @@ void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 	for( arc = 0.05f, i = 0; i < 100; i++, arc -= 0.005f )
 	{
 		p = R_AllocParticle( NULL );
-
 		if( !p ) return;
 
-		p->die += 2.0f;
+		p->die = cl.time + 2.0f;
 		p->type = pt_vox_grav;
 		p->color = pcolor + COM_RandomLong( 0, 9 );
 
@@ -896,8 +880,6 @@ void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 		VectorCopy( dir, p->vel );
 
 		p->vel[2] -= arc;
-		arc -= 0.005f;
-
 		VectorScale( p->vel, speed, p->vel );
 	}
 
@@ -908,7 +890,7 @@ void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
 
-		p->die += 3.0f;
+		p->die = cl.time + 3.0f;
 		p->color = pcolor + COM_RandomLong( 0, 9 );
 		p->type = pt_vox_slowgrav;
 
@@ -929,7 +911,7 @@ void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 			p = R_AllocParticle( NULL );
 			if( !p ) return;
 
-			p->die += 3.0f;
+			p->die = cl.time + 3.0f;
 			p->color = pcolor + COM_RandomLong( 0, 9 );
 			p->type = pt_vox_slowgrav;
 
@@ -948,11 +930,11 @@ void CL_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 
 /*
 ===============
-CL_LavaSplash
+R_LavaSplash
 
 ===============
 */
-void CL_LavaSplash( const vec3_t org )
+void R_LavaSplash( const vec3_t org )
 {
 	particle_t	*p;
 	float		vel;
@@ -968,20 +950,20 @@ void CL_LavaSplash( const vec3_t org )
 				p = R_AllocParticle( NULL );
 				if( !p ) return;
 
-				p->die += 2.0f + (rand() & 31) * 0.02f;
-				p->color = 224 + (rand() & 7);
+				p->die = cl.time + COM_RandomFloat( 2.0f, 2.62f );
+				p->color = COM_RandomLong( 224, 231 );
 				p->type = pt_slowgrav;
 				
-				dir[0] = j * 8.0f + (rand() & 7);
-				dir[1] = i * 8.0f + (rand() & 7);
-				dir[2] = 256;
+				dir[0] = j * 8.0f + COM_RandomFloat( 0.0f, 7.0f );
+				dir[1] = i * 8.0f + COM_RandomFloat( 0.0f, 7.0f );
+				dir[2] = 256.0f;
 
 				p->org[0] = org[0] + dir[0];
 				p->org[1] = org[1] + dir[1];
-				p->org[2] = org[2] + (rand() & 63);
+				p->org[2] = org[2] + COM_RandomFloat( 0.0f, 63.0f );
 
 				VectorNormalize( dir );
-				vel = 50 + (rand() & 63);
+				vel = COM_RandomFloat( 50.0f, 113.0f );
 				VectorScale( dir, vel, p->vel );
 			}
 		}
@@ -990,56 +972,95 @@ void CL_LavaSplash( const vec3_t org )
 
 /*
 ===============
-CL_ParticleBurst
+R_ParticleBurst
 
 ===============
 */
-void CL_ParticleBurst( const vec3_t org, int size, int color, float life )
+void R_ParticleBurst( const vec3_t org, int size, int color, float life )
 {
 	particle_t	*p;
-	float		vel;
-	vec3_t		dir;
-	int		i, j, k;
+	vec3_t		dir, dest;
+	int		i, j;
+	float		dist;
 
-	for( i = -size; i < size; i++ )
+	for( i = 0; i < 32; i++ )
 	{
-		for( j = -size; j < size; j++ )
+		for( j = 0; j < 32; j++ )
 		{
-			for( k = 0; k < 1; k++ )
-			{
-				p = R_AllocParticle( NULL );
-				if( !p ) return;
+			p = R_AllocParticle( NULL );
+			if( !p ) return;
 
-				p->die += life + (rand() & 31) * 0.02f;
-				p->color = color;
-				p->type = pt_slowgrav;
-				
-				dir[0] = j * 8.0f + (rand() & 7);
-				dir[1] = i * 8.0f + (rand() & 7);
-				dir[2] = 256;
+			p->die = cl.time + life + COM_RandomFloat( -0.5f, 0.5f );
+			p->color = color + COM_RandomLong( 0, 10 );
+			p->ramp = 1.0f;
 
-				p->org[0] = org[0] + dir[0];
-				p->org[1] = org[1] + dir[1];
-				p->org[2] = org[2] + (rand() & 63);
-
-				VectorNormalize( dir );
-				vel = 50 + (rand() & 63);
-				VectorScale( dir, vel, p->vel );
-			}
+			VectorCopy( org, p->org );
+			VectorAddScalar( org, COM_RandomFloat( -size, size ), dest );
+			VectorSubtract( dest, p->org, dir );
+			dist = VectorNormalizeLength( dir );
+			VectorScale( dir, ( dist / life ), p->vel );
 		}
 	}
 }
 
 /*
 ===============
-CL_TeleportSplash
+R_LargeFunnel
 
 ===============
 */
-void CL_TeleportSplash( const vec3_t org )
+void R_LargeFunnel( const vec3_t org, int reverse )
+{
+	particle_t	*p;
+	float		vel, dist;
+	vec3_t		dir, dest;
+	int		i, j;
+
+	for( i = -8; i < 8; i++ )
+	{
+		for( j = -8; j < 8; j++ )
+		{
+			p = R_AllocParticle( NULL );
+			if( !p ) return;
+
+			dest[0] = (i * 32.0f) + org[0];
+			dest[1] = (j * 32.0f) + org[1];
+			dest[2] = org[2] + COM_RandomFloat( 100.0f, 800.0f );
+
+			if( reverse )
+			{
+				VectorCopy( org, p->org );
+				VectorSubtract( dest, p->org, dir );
+			}
+			else
+			{
+				VectorCopy( dest, p->org );
+				VectorSubtract( org, p->org, dir );
+			}
+
+			vel = dest[2] / 8.0f;
+			if( vel < 64.0f ) vel = 64.0f;
+
+			dist = VectorNormalizeLength( dir );
+			vel += COM_RandomFloat( 64.0f, 128.0f );
+			VectorScale( dir, vel, p->vel );
+			p->die = cl.time + (dist / vel );
+			p->color = 244; // green color
+		}
+	}
+}
+
+/*
+===============
+R_TeleportSplash
+
+===============
+*/
+void R_TeleportSplash( const vec3_t org )
 {
 	particle_t	*p;
 	vec3_t		dir;
+	float		vel;
 	int		i, j, k;
 
 	for( i = -16; i < 16; i += 4 )
@@ -1051,20 +1072,21 @@ void CL_TeleportSplash( const vec3_t org )
 				p = R_AllocParticle( NULL );
 				if( !p ) return;
 		
-				p->die += 0.2f + (rand() & 7) * 0.02f;
-				p->color = 7 + (rand() & 7);
+				p->die = cl.time + COM_RandomFloat( 0.2f, 0.34f );
+				p->color = COM_RandomLong( 7, 14 );
 				p->type = pt_slowgrav;
 				
 				dir[0] = j * 8.0f;
 				dir[1] = i * 8.0f;
 				dir[2] = k * 8.0f;
 	
-				p->org[0] = org[0] + i + (rand() & 3);
-				p->org[1] = org[1] + j + (rand() & 3);
-				p->org[2] = org[2] + k + (rand() & 3);
+				p->org[0] = org[0] + i + COM_RandomFloat( 0.0f, 3.0f );
+				p->org[1] = org[1] + j + COM_RandomFloat( 0.0f, 3.0f );
+				p->org[2] = org[2] + k + COM_RandomFloat( 0.0f, 3.0f );
 	
 				VectorNormalize( dir );
-				VectorScale( dir, (50 + (rand() & 63)), p->vel );
+				vel = COM_RandomFloat( 50.0f, 113.0f );
+				VectorScale( dir, vel, p->vel );
 			}
 		}
 	}
@@ -1101,8 +1123,6 @@ void R_RocketTrail( vec3_t start, vec3_t end, int type )
 		dec = 1.0f;
 		type -= 128;
 	}
-
-	if( type == 6 ) Msg( "R_RocketTrail: type 6 is selected\n" );
 
 	VectorScale( vec, dec, vec );
 
@@ -1162,18 +1182,11 @@ void R_RocketTrail( vec3_t start, vec3_t end, int type )
 			len -= 3.0f;
 			break;
 		case 6:	// voor trail
-#if 0
-			p->ramp = COM_RandomLong( 0, 3 );
-			p->color = ramp3[(int)p->ramp];
-			VectorCopy( start, p->org );
-			p->type = pt_fire;
-#else
 			p->color = COM_RandomLong( 152, 155 );
 			p->die += 0.3f;
 			VectorAddScalar( start, COM_RandomFloat( -8.0f, 8.0f ), p->org );
-#endif
 			break;
-		case 7: // explosion tracer
+		case 7:	// explosion tracer
 			x = COM_RandomLong( 0, 65535 );
 			y = COM_RandomLong( 8, 16 );
 			SinCos( x, &s, &c );
@@ -1351,11 +1364,8 @@ void R_StreakSplash( const vec3_t pos, const vec3_t dir, int color, int count, f
 
 	for( i = 0; i < count; i++ )
 	{
-		vel2[0] = vel[0] + COM_RandomFloat( velocityMin, velocityMax );
-		vel2[1] = vel[1] + COM_RandomFloat( velocityMin, velocityMax );
-		vel2[2] = vel[2] + COM_RandomFloat( velocityMin, velocityMax );
-
-		p = R_AllocTracer( pos, vel, COM_RandomFloat( 0.1f, 0.5f ));
+		VectorAddScalar( vel, COM_RandomFloat( velocityMin, velocityMax ), vel2 );
+		p = R_AllocTracer( pos, vel2, COM_RandomFloat( 0.1f, 0.5f ));
 		if( !p ) return;
 
 		p->type = pt_grav;

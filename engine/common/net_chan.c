@@ -368,11 +368,11 @@ Sends a text message in an out-of-band datagram
 */
 void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... )
 {
-	va_list	argptr;
-	char	string[MAX_PRINT_MSG];
+	static char	string[MAX_PRINT_MSG];
+	va_list		argptr;
 
 	va_start( argptr, format );
-	Q_vsprintf( string, format, argptr );
+	Q_vsnprintf( string, sizeof( string ) - 1, format, argptr );
 	va_end( argptr );
 
 	Netchan_OutOfBand( net_socket, adr, Q_strlen( string ), string );

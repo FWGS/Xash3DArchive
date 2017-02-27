@@ -711,8 +711,8 @@ void SV_UpdateToReliableMessages( void )
 	{
 		// just for network debugging (send only for local client)
 		MSG_BeginServerCmd( &sv.reliable_datagram, svc_bad );
-		MSG_WriteLong( &sv.reliable_datagram, rand( ));		// send some random data
-		MSG_WriteString( &sv.reliable_datagram, host.finalmsg );	// send final message
+		MSG_WriteLong( &sv.reliable_datagram, COM_RandomLong( 1, 65536 ));	// send some random data
+		MSG_WriteString( &sv.reliable_datagram, host.finalmsg );		// send final message
 		sv.write_bad_message = false;
 	}
 

@@ -2076,7 +2076,7 @@ void Con_RunConsole( void )
 	else con.showlines = 0; // none visible
 
 	if( cls.state == ca_connecting || cls.state == ca_connected || cl.first_frame )
-		host.realframetime = 0.0; // don't accumulate frametime
+		host.realframetime = 0.000001f; // don't accumulate frametime
 
 	lines_per_frame = fabs( scr_conspeed->value ) * host.realframetime;
 

@@ -1717,7 +1717,7 @@ void R_RenderInfo_f( void )
 	}
 
 	Msg( "\n" );
-	Msg( "MODE: %i, %i x %i %s\n", vid_mode->value, glState.width, glState.height, vidmode[(int)vid_mode->value].desc );
+	Msg( "%s [%i x %i]\n", vidmode[(int)vid_mode->value].desc, glState.width, glState.height );
 	Msg( "GAMMA: %s\n", (glConfig.deviceSupportsGamma) ? "hardware" : "software" );
 	Msg( "\n" );
 	Msg( "PICMIP: %i\n", gl_picmip->value );

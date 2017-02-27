@@ -377,8 +377,6 @@ void Host_InputFrame( void )
 {
 	qboolean	shutdownMouse = false;
 
-	rand (); // keep the random time dependent
-
 	Sys_SendKeyEvents ();
 
 	Cbuf_Execute ();

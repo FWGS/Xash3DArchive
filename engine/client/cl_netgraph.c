@@ -265,7 +265,7 @@ void NetGraph_DrawTextFields( int x, int y, int count, float avg, int packet_los
 	rgba_t		colors = { 0.9 * 255, 0.9 * 255, 0.7 * 255, 255 };
 	int		i = ( cls.netchan.outgoing_sequence - 1 ) & NET_TIMINGS_MASK;
 	float		latency = count > 0 ? Q_max( 0,  avg / count - 0.5 * host.frametime - 1000.0 / cl_updaterate->value ) : 0;
-	float		framerate = 1.0 / host.realframetime;
+	float		framerate = 1.0 / host.frametime;
 
 	Con_DrawString( x, y - net_graphheight->value, va( "%.1f fps" , framerate ), colors );
 	Con_DrawString( x + 75, y - net_graphheight->value, va( "%i ms" , (int)latency ), colors );

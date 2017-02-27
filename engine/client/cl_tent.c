@@ -1456,107 +1456,72 @@ void CL_Sprite_Trail( int type, const vec3_t vecStart, const vec3_t vecEnd, int 
 
 /*
 ===============
-CL_Large_Funnel
-
-Create a funnel effect (particles only)
-===============
-*/
-void CL_Large_Funnel( const vec3_t pos, int flags )
-{
-	CL_FunnelSprite( pos, 0, flags );
-}
-
-/*
-===============
-CL_FunnelSprite
+R_FunnelSprite
 
 Create a funnel effect with custom sprite
 ===============
 */
-void CL_FunnelSprite( const vec3_t pos, int spriteIndex, int flags )
+void R_FunnelSprite( const vec3_t org, int modelIndex, int reverse )
 {
-	TEMPENTITY	*pTemp = NULL;
-	particle_t	*pPart = NULL;
+	TEMPENTITY	*pTemp;
+	model_t		*model;
 	vec3_t		dir, dest;
-	vec3_t		m_vecPos;
-	float		flDist, life, vel;
-	int		i, j, colorIndex;
+	float		dist, vel;
+	int		i, j, frameCount;
 
-	colorIndex = R_LookupColor( 0, 255, 0 ); // green color
-
-	for( i = -256; i <= 256; i += 32 )
+	if( !modelIndex )
 	{
-		for( j = -256; j <= 256; j += 32 )
+		MsgDev( D_ERROR, "no modelindex for funnel!\n" );
+		return;
+	}
+
+	model = Mod_Handle( modelIndex );
+	if( !model )
+	{
+		MsgDev( D_ERROR, "No model %d!\n", modelIndex );
+		return;
+	}
+
+	frameCount = Mod_FrameCount( model );
+
+	for( i = -8; i < 8; i++ )
+	{
+		for( j = -8; j < 8; j++ )
 		{
-			if( flags & SF_FUNNEL_REVERSE )
+			pTemp = CL_TempEntAlloc( org, model );
+			if( !pTemp ) return;
+
+			dest[0] = (i * 32.0f) + org[0];
+			dest[1] = (j * 32.0f) + org[1];
+			dest[2] = org[2] + COM_RandomFloat( 100.0f, 800.0f );
+
+			if( reverse )
 			{
-				VectorCopy( pos, m_vecPos );
-
-				dest[0] = pos[0] + i;
-				dest[1] = pos[1] + j;
-				dest[2] = pos[2] + COM_RandomFloat( 100, 800 );
-
-				// send particle heading to dest at a random speed
-				VectorSubtract( dest, m_vecPos, dir );
-
-				// velocity based on how far particle has to travel away from org
-				vel = dest[2] / 8;
+				VectorCopy( org, pTemp->entity.origin );
+				VectorSubtract( dest, pTemp->entity.origin, dir );
 			}
 			else
 			{
-				m_vecPos[0] = pos[0] + i;
-				m_vecPos[1] = pos[1] + j;
-				m_vecPos[2] = pos[2] + COM_RandomFloat( 100, 800 );
-
-				// send particle heading to org at a random speed
-				VectorSubtract( pos, m_vecPos, dir );
-
-				// velocity based on how far particle starts from org
-				vel = m_vecPos[2] / 8;
+				VectorCopy( dest, pTemp->entity.origin );
+				VectorSubtract( org, pTemp->entity.origin, dir );
 			}
 
-			if( pPart && spriteIndex && CL_PointContents( m_vecPos ) == CONTENTS_EMPTY )
-			{
-				pTemp = CL_TempEntAlloc( pos, Mod_Handle( spriteIndex ));
-				pPart = NULL;
-			}
-			else
-			{
-				pPart = R_AllocParticle( NULL );
-				pTemp = NULL;
-			}
+			pTemp->entity.curstate.rendermode = kRenderGlow;
+			pTemp->entity.curstate.renderfx = kRenderFxNoDissipation;
+			pTemp->entity.baseline.renderamt = pTemp->entity.curstate.renderamt = 200;
+			pTemp->entity.baseline.angles[2] = COM_RandomFloat( -100.0f, 100.0f );
+			pTemp->entity.curstate.framerate = COM_RandomFloat( 0.1f, 0.4f );
+			pTemp->flags = FTENT_ROTATE|FTENT_FADEOUT;
+			pTemp->entity.curstate.framerate = 10;
+			pTemp->frameMax = frameCount;
 
-			if( pTemp || pPart )
-			{
-				flDist = VectorNormalizeLength( dir );	// save the distance
-				if( vel < 64 ) vel = 64;
-				
-				vel += COM_RandomFloat( 64, 128  );
-				life = ( flDist / vel );
-
-				if( pTemp )
-				{
-					VectorCopy( m_vecPos, pTemp->entity.origin );
-					VectorScale( dir, vel, pTemp->entity.baseline.origin );
-					pTemp->entity.curstate.rendermode = kRenderTransAdd;
-					pTemp->flags |= FTENT_FADEOUT;
-					pTemp->fadeSpeed = 3.0f;
-					pTemp->die = cl.time + life - COM_RandomFloat( 0.5f, 0.6f );
-					pTemp->entity.curstate.renderamt = pTemp->entity.baseline.renderamt = 255;
-					pTemp->entity.curstate.scale = 0.75f;
-				}
-				
-				if( pPart )
-				{
-					VectorCopy( m_vecPos, pPart->org );
-					pPart->color = colorIndex;
-					pPart->type = pt_static;
-
-					VectorScale( dir, vel, pPart->vel );
-					// die right when you get there
-					pPart->die += life;
-				}
-			}
+			vel = dest[2] / 8.0f;
+			if( vel < 64.0f ) vel = 64.0f;
+			dist = VectorNormalizeLength( dir );
+			vel += COM_RandomFloat( 64.0f, 128.0f );
+			VectorScale( dir, vel, pTemp->entity.baseline.origin );
+			pTemp->die = cl.time + (dist / vel) - 0.5f;
+			pTemp->fadeSpeed = 2.0f;
 		}
 	}
 }
@@ -1822,7 +1787,7 @@ void CL_MultiGunshot( const vec3_t org, const vec3_t dir, const vec3_t noise, in
 	VectorVectors( dir, right, up );
 	VectorCopy( org, vecSrc );
 
-	for( i = 1; i <= count; i++ )
+	for( i = 0; i < count; i++ )
 	{
 		// get circular gaussian spread
 		float x, y, z;
@@ -1834,16 +1799,19 @@ void CL_MultiGunshot( const vec3_t org, const vec3_t dir, const vec3_t noise, in
 
 		for( j = 0; j < 3; j++ )
 		{
-			vecDir[j] = dir[i] + x * noise[0] * right[j] + y * noise[1] * up[j];
-			vecEnd[j] = vecSrc[j] + 2048.0f * vecDir[j];
+			vecDir[j] = dir[j] + x * noise[0] * right[j] + y * noise[1] * up[j];
+			vecEnd[j] = vecSrc[j] + 4096.0f * vecDir[j];
 		}
 
-		trace = CL_TraceLine( vecSrc, vecEnd, PM_STUDIO_BOX );
+		trace = CL_TraceLine( vecSrc, vecEnd, PM_STUDIO_IGNORE );
 
 		// paint decals
 		if( trace.fraction != 1.0f )
 		{
 			physent_t	*pe = NULL;
+
+			if( i & 2 ) CL_RicochetSound( trace.endpos );
+			R_BulletImpactParticles( trace.endpos );
 
 			if( trace.ent >= 0 && trace.ent < clgame.pmove->numphysent )
 				pe = &clgame.pmove->physents[trace.ent];
@@ -1977,13 +1945,13 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos[0] = MSG_ReadCoord( &buf );
 		pos[1] = MSG_ReadCoord( &buf );
 		pos[2] = MSG_ReadCoord( &buf );
-		CL_LavaSplash( pos );
+		R_LavaSplash( pos );
 		break;
 	case TE_TELEPORT:
 		pos[0] = MSG_ReadCoord( &buf );
 		pos[1] = MSG_ReadCoord( &buf );
 		pos[2] = MSG_ReadCoord( &buf );
-		CL_TeleportSplash( pos );
+		R_TeleportSplash( pos );
 		break;
 	case TE_EXPLOSION2:
 		pos[0] = MSG_ReadCoord( &buf );
@@ -2124,7 +2092,8 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos[2] = MSG_ReadCoord( &buf );
 		modelIndex = MSG_ReadShort( &buf );
 		flags = MSG_ReadShort( &buf );
-		CL_FunnelSprite( pos, modelIndex, flags );
+		R_LargeFunnel( pos, flags );
+		R_FunnelSprite( pos, modelIndex, flags );
 		break;
 	case TE_BLOODSTREAM:
 	case TE_BLOOD:
@@ -2136,8 +2105,8 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos2[2] = MSG_ReadCoord( &buf );
 		color = MSG_ReadByte( &buf );
 		vel = (float)MSG_ReadByte( &buf );
-		if( type == TE_BLOOD ) CL_Blood( pos, pos2, color, vel );
-		else CL_BloodStream( pos, pos2, color, vel );
+		if( type == TE_BLOOD ) R_Blood( pos, pos2, color, vel );
+		else R_BloodStream( pos, pos2, color, vel );
 		break;
 	case TE_SHOWLINE:
 		pos[0] = MSG_ReadCoord( &buf );
@@ -2311,7 +2280,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		scale = (float)MSG_ReadShort( &buf );
 		color = MSG_ReadByte( &buf );
 		life = (float)(MSG_ReadByte( &buf ) * 0.1f);
-		CL_ParticleBurst( pos, scale, color, life );
+		R_ParticleBurst( pos, scale, color, life );
 		break;
 	case TE_FIREFIELD:
 		pos[0] = MSG_ReadCoord( &buf );
@@ -2339,9 +2308,9 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos[0] = MSG_ReadCoord( &buf );
 		pos[1] = MSG_ReadCoord( &buf );
 		pos[2] = MSG_ReadCoord( &buf );
-		pos2[0] = MSG_ReadCoord( &buf );
-		pos2[1] = MSG_ReadCoord( &buf );
-		pos2[2] = MSG_ReadCoord( &buf );
+		pos2[0] = MSG_ReadCoord( &buf ) * 0.1f;
+		pos2[1] = MSG_ReadCoord( &buf ) * 0.1f;
+		pos2[2] = MSG_ReadCoord( &buf ) * 0.1f;
 		ang[0] = MSG_ReadCoord( &buf ) * 0.01f;
 		ang[1] = MSG_ReadCoord( &buf ) * 0.01f;
 		ang[2] = 0.0f;
@@ -2651,7 +2620,7 @@ void CL_AddEntityEffects( cl_entity_t *ent )
 {
 	// yellow flies effect 'monster stuck in the wall'
 	if( FBitSet( ent->curstate.effects, EF_BRIGHTFIELD ))
-		CL_EntityParticles( ent );
+		R_EntityParticles( ent );
 
 	if( FBitSet( ent->curstate.effects, EF_DIMLIGHT ))
 	{

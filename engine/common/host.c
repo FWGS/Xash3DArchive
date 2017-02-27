@@ -774,8 +774,6 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	host.state = HOST_INIT; // initialzation started
 	host.developer = host.old_developer = 0;
 
-	srand( time( NULL ));	// init random generator
-
 	Memory_Init();		// init memory subsystem
 
 	// some commands may turn engine into infinity loop,
