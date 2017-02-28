@@ -2039,7 +2039,7 @@ void Con_DrawVersion( void )
 
 	if( !host.force_draw_version )
 	{
-		if(( cls.key_dest != key_menu && !draw_version ) || CL_IsDevOverviewMode() == 2 )
+		if(( cls.key_dest != key_menu && !draw_version ) || CL_IsDevOverviewMode() == 2 || net_graph->value )
 			return;
 	}
 

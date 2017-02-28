@@ -113,12 +113,12 @@ short R_LookupColor( byte r, byte g, byte b )
 
 /*
 ================
-CL_GetPackedColor
+R_GetPackedColor
 
 in hardware mode does nothing
 ================
 */
-void CL_GetPackedColor( short *packed, short color )
+void R_GetPackedColor( short *packed, short color )
 {
 	if( packed ) *packed = 0;
 }
@@ -139,9 +139,9 @@ void CL_InitParticles( void )
 	// this is used for EF_BRIGHTFIELD
 	for( i = 0; i < NUMVERTEXNORMALS; i++ )
 	{
-		cl_avelocities[i][0] = COM_RandomLong( 0, 255 ) * 0.01f;
-		cl_avelocities[i][1] = COM_RandomLong( 0, 255 ) * 0.01f;
-		cl_avelocities[i][2] = COM_RandomLong( 0, 255 ) * 0.01f;
+		cl_avelocities[i][0] = COM_RandomFloat( 0.0f, 2.55f );
+		cl_avelocities[i][1] = COM_RandomFloat( 0.0f, 2.55f );
+		cl_avelocities[i][2] = COM_RandomFloat( 0.0f, 2.55f );
 	}
 
 	tracerred = Cvar_Get( "tracerred", "0.8", 0, "tracer red component weight ( 0 - 1.0 )" );
@@ -360,6 +360,7 @@ void CL_DrawParticles( double frametime )
 	float		grav = frametime * clgame.movevars.gravity * 0.05f;
 	vec3_t		right, up;
 	color24		*pColor;
+	int		alpha;
 	float		size;
 
 	if( !cl_draw_particles->value )
@@ -370,13 +371,15 @@ void CL_DrawParticles( double frametime )
 	if( !cl_active_particles )
 		return;	// nothing to draw?
 
-	GL_SetRenderMode( kRenderTransTexture );
-	GL_Bind( GL_TEXTURE0, cls.particleImage );
+	if( !TriSpriteTexture( cl_particleTex, 0 ))
+		return;
+
+	R_SetSpriteRendermode( cl_particleTex );
 	pglBegin( GL_QUADS );
 
 	for( p = cl_active_particles; p; p = p->next )
 	{
-		if( p->type != pt_blob )
+		if(( p->type != pt_blob ) || ( p->packedColor == 255 ))
 		{
 			size = PART_SIZE; // get initial size of particle
 
@@ -386,7 +389,7 @@ void CL_DrawParticles( double frametime )
 			size += (p->org[2] - RI.vieworg[2]) * RI.cull_vforward[2];
 
 			if( size < 20.0f ) size = PART_SIZE;
-			else size = PART_SIZE + size * 0.004f;
+			else size = PART_SIZE + size * 0.002f;
 
 			// scale the axes by radius
 			VectorScale( RI.cull_vright, size, right );
@@ -396,7 +399,11 @@ void CL_DrawParticles( double frametime )
 			pColor = &clgame.palette[p->color];
 			// FIXME: should we pass color through lightgamma table?
 
-			pglColor4ub( pColor->r, pColor->g, pColor->b, 255 );
+			alpha = 255 * (p->die - cl.time) * 2;
+			if( alpha > 255 || cl_draw_particles->value < 2.0f || p->type == pt_static )
+				alpha = 255;
+
+			pglColor4ub( pColor->r, pColor->g, pColor->b, alpha );
 
 			pglTexCoord2f( 0.0f, 1.0f );
 			pglVertex3f( p->org[0] - right[0] + up[0], p->org[1] - right[1] + up[1], p->org[2] - right[2] + up[2] );
@@ -436,17 +443,34 @@ void CL_DrawParticles( double frametime )
 			p->ramp += time3;
 			if( p->ramp >= 8.0f ) p->die = -1.0f;
 			else p->color = ramp2[(int)p->ramp];
-			VectorMA( p->vel,-dvel, p->vel, p->vel );
+			VectorMA( p->vel,-frametime, p->vel, p->vel );
 			p->vel[2] -= grav;
 			break;
 		case pt_blob:
+			if( p->packedColor == 255 )
+			{
+				// normal blob explosion
+				VectorMA( p->vel, dvel, p->vel, p->vel );
+				p->vel[2] -= grav;
+				break;
+			}
 		case pt_blob2:
-			p->ramp += time2;
-			if( p->ramp >= 9.0f ) p->ramp = 0.0f;
-			p->color = gSparkRamp[(int)p->ramp];
-			VectorMA( p->vel, -frametime * 0.5f, p->vel, p->vel );
-			p->type = COM_RandomLong( 0, 3 ) ? pt_blob : pt_blob2;
-			p->vel[2] -= grav * 5.0f;
+			if( p->packedColor == 255 )
+			{
+				// normal blob explosion
+				p->vel[0] -= p->vel[0] * dvel;
+				p->vel[1] -= p->vel[1] * dvel;
+				p->vel[2] -= grav;
+			}
+			else
+			{
+				p->ramp += time2;
+				if( p->ramp >= 9.0f ) p->ramp = 0.0f;
+				p->color = gSparkRamp[(int)p->ramp];
+				VectorMA( p->vel, -frametime * 0.5f, p->vel, p->vel );
+				p->type = COM_RandomLong( 0, 3 ) ? pt_blob : pt_blob2;
+				p->vel[2] -= grav * 5.0f;
+			}
 			break;
 		case pt_grav:
 			p->vel[2] -= grav * 20.0f;
@@ -519,6 +543,7 @@ void CL_DrawTracers( double frametime )
 	float		scale, atten, gravity;
 	vec3_t		screenLast, screen;
 	vec3_t		start, end, delta;
+	int		texWidth = 32;
 	particle_t	*p;
 
 	if( !cl_draw_tracers->value )
@@ -541,12 +566,15 @@ void CL_DrawTracers( double frametime )
 	if( !cl_active_tracers )
 		return;	// nothing to draw?
 
+	if( !TriSpriteTexture( cl_particleTex, 0 ))
+		return;
+
+	R_SetSpriteRendermode( cl_particleTex );
+	R_GetSpriteParms( &texWidth, NULL, NULL, 0, cl_particleTex );
+
 	gravity = frametime * clgame.movevars.gravity;
 	scale = 1.0 - (frametime * 0.9);
 	if( scale < 0.0f ) scale = 0.0f;
-
-	GL_Bind( GL_TEXTURE0, cls.particleImage );	// FIXME: load a sprites/dot.spr instead
-	GL_SetRenderMode( kRenderTransAdd );
 
 	for( p = cl_active_tracers; p; p = p->next )
 	{
@@ -580,7 +608,7 @@ void CL_DrawTracers( double frametime )
 			VectorSubtract( normal, tmp2, normal );
 
 			// compute four vertexes
-			VectorScale( normal, gTracerSize[p->type] * 2.0f, tmp );
+			VectorScale( normal, gTracerSize[p->type] * (texWidth / 16), tmp );
 			VectorSubtract( start, tmp, verts[0] ); 
 			VectorAdd( start, tmp, verts[1] ); 
 			VectorAdd( verts[0], delta, verts[2] ); 
@@ -663,7 +691,6 @@ void R_EntityParticles( cl_entity_t *ent )
 		VectorSet( forward, cp * cy, cp * sy, -sp ); 
 
 		p->die = cl.time + 0.001f;
-		p->type = pt_explode;
 		p->color = 111; // yellow
 
 		VectorMAMAM( 1.0f, ent->origin, 64.0f, cl_avertexnormals[i], 16.0f, forward, p->org );
@@ -672,11 +699,11 @@ void R_EntityParticles( cl_entity_t *ent )
 
 /*
 ===============
-CL_ParticleExplosion
+R_ParticleExplosion
 
 ===============
 */
-void CL_ParticleExplosion( const vec3_t org )
+void R_ParticleExplosion( const vec3_t org )
 {
 	particle_t	*p;
 	int		i, j;
@@ -686,38 +713,28 @@ void CL_ParticleExplosion( const vec3_t org )
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
 
-		p->die += 5.0f;
+		p->die = cl.time + 5.0f;
+		p->ramp = COM_RandomLong( 0, 3 );
 		p->color = ramp1[0];
-		p->ramp = rand() & 3;
 
-		if( i & 1 )
+		for( j = 0; j < 3; j++ )
 		{
-			p->type = pt_explode;
-			for( j = 0; j < 3; j++ )
-			{
-				p->org[j] = org[j] + ((rand() % 32) - 16);
-				p->vel[j] = (rand() % 512) - 256;
-			}
+			p->org[j] = org[j] + COM_RandomFloat( -16.0f, 16.0f );
+			p->vel[j] = COM_RandomFloat( -256.0f, 256.0f );
 		}
-		else
-		{
-			p->type = pt_explode2;
-			for( j = 0; j < 3; j++ )
-			{
-				p->org[j] = org[j] + ((rand() % 32) - 16);
-				p->vel[j] = (rand() % 512) - 256;
-			}
-		}
+
+		if( i & 1 ) p->type = pt_explode;
+		else p->type = pt_explode2;
 	}
 }
 
 /*
 ===============
-CL_ParticleExplosion2
+R_ParticleExplosion2
 
 ===============
 */
-void CL_ParticleExplosion2( const vec3_t org, int colorStart, int colorLength )
+void R_ParticleExplosion2( const vec3_t org, int colorStart, int colorLength )
 {
 	int		i, j;
 	int		colorMod = 0;
@@ -728,27 +745,28 @@ void CL_ParticleExplosion2( const vec3_t org, int colorStart, int colorLength )
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
 
-		p->die += 0.3f;
+		p->die = cl.time + 0.3f;
 		p->color = colorStart + ( colorMod % colorLength );
+		p->packedColor = 255; // use old code for blob particles
 		colorMod++;
 
 		p->type = pt_blob;
 
 		for( j = 0; j < 3; j++ )
 		{
-			p->org[j] = org[j] + ((rand() % 32) - 16);
-			p->vel[j] = (rand() % 512) - 256;
+			p->org[j] = org[j] + COM_RandomFloat( -16.0f, 16.0f );
+			p->vel[j] = COM_RandomFloat( -256.0f, 256.0f );
 		}
 	}
 }
 
 /*
 ===============
-CL_BlobExplosion
+R_BlobExplosion
 
 ===============
 */
-void CL_BlobExplosion( const vec3_t org )
+void R_BlobExplosion( const vec3_t org )
 {
 	particle_t	*p;
 	int		i, j;
@@ -758,29 +776,24 @@ void CL_BlobExplosion( const vec3_t org )
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
 
-		p->die += 1.0f + (rand() & 8) * 0.05f;
+		p->die = cl.time + COM_RandomFloat( 2.0f, 2.4f );
+		p->packedColor = 255; // use old code for blob particles
 
 		if( i & 1 )
 		{
-			p->type = pt_explode;
-			p->color = 66 + rand() % 6;
-
-			for( j = 0; j < 3; j++ )
-			{
-				p->org[j] = org[j] + ((rand() % 32) - 16);
-				p->vel[j] = (rand() % 512) - 256;
-			}
+			p->type = pt_blob;
+			p->color = COM_RandomLong( 66, 71 );
 		}
 		else
 		{
-			p->type = pt_explode2;
-			p->color = 150 + rand() % 6;
+			p->type = pt_blob2;
+			p->color = COM_RandomLong( 150, 155 );
+		}
 
-			for( j = 0; j < 3; j++ )
-			{
-				p->org[j] = org[j] + ((rand() % 32) - 16);
-				p->vel[j] = (rand() % 512) - 256;
-			}
+		for( j = 0; j < 3; j++ )
+		{
+			p->org[j] = org[j] + COM_RandomFloat( -16.0f, 16.0f );
+			p->vel[j] = COM_RandomFloat( -256.0f, 256.0f );
 		}
 	}
 }
@@ -800,7 +813,7 @@ void R_RunParticleEffect( const vec3_t org, const vec3_t dir, int color, int cou
 	if( count == 1024 )
 	{
 		// rocket explosion
-		CL_ParticleExplosion( org );
+		R_ParticleExplosion( org );
 		return;
 	}
 	

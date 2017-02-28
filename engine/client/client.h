@@ -622,6 +622,7 @@ extern convar_t	*scr_viewsize;
 extern convar_t	*scr_download;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_dark;	// start from dark
+extern convar_t	*net_graph;
 extern convar_t	*rate;
 
 //=============================================================================

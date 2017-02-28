@@ -19,12 +19,12 @@ GNU General Public License for more details.
 // EfxAPI
 struct particle_s *R_AllocParticle( void (*callback)( struct particle_s*, float ));
 void CL_Explosion( vec3_t pos, int model, float scale, float framerate, int flags );
-void CL_ParticleExplosion( const vec3_t org );
-void CL_ParticleExplosion2( const vec3_t org, int colorStart, int colorLength );
+void R_ParticleExplosion( const vec3_t org );
+void R_ParticleExplosion2( const vec3_t org, int colorStart, int colorLength );
 void R_Implosion( const vec3_t end, float radius, int count, float life );
 void R_Blood( const vec3_t org, const vec3_t dir, int pcolor, int speed );
 void R_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed );
-void CL_BlobExplosion( const vec3_t org );
+void R_BlobExplosion( const vec3_t org );
 void R_EntityParticles( cl_entity_t *ent );
 void R_FlickerParticles( const vec3_t org );
 void R_RunParticleEffect( const vec3_t org, const vec3_t dir, int color, int count );
@@ -33,7 +33,7 @@ void R_LavaSplash( const vec3_t org );
 void R_TeleportSplash( const vec3_t org );
 void R_RocketTrail( vec3_t start, vec3_t end, int type );
 short R_LookupColor( byte r, byte g, byte b );
-void CL_GetPackedColor( short *packed, short color );
+void R_GetPackedColor( short *packed, short color );
 void R_TracerEffect( const vec3_t start, const vec3_t end );
 void R_UserTracerParticle( float *org, float *vel, float life, int colorIndex, float length, byte deathcontext, void (*deathfunc)( struct particle_s* ));
 struct particle_s *R_TracerParticles( float *org, float *vel, float life );
@@ -113,5 +113,7 @@ void TriBrightness( float brightness );
 void TriRenderMode( int mode );
 void TriCullFace( int mode );
 void TriEnd( void );
+
+extern model_t	*cl_particleTex;
 
 #endif//CL_TENT_H

@@ -3623,7 +3623,7 @@ triangleapi_t gTriApi =
 static efx_api_t gEfxApi =
 {
 	R_AllocParticle,
-	CL_BlobExplosion,
+	R_BlobExplosion,
 	R_Blood,
 	CL_BloodSprite,
 	R_BloodStream,
@@ -3644,8 +3644,8 @@ static efx_api_t gEfxApi =
 	CL_MuzzleFlash,
 	R_ParticleBox,
 	R_ParticleBurst,
-	CL_ParticleExplosion,
-	CL_ParticleExplosion2,
+	R_ParticleExplosion,
+	R_ParticleExplosion2,
 	R_ParticleLine,
 	CL_PlayerSprites,
 	CL_Projectile,
@@ -3692,7 +3692,7 @@ static efx_api_t gEfxApi =
 	CL_TempEntAllocNoModel,
 	CL_TempEntAllocHigh,
 	CL_TempEntAllocCustom,
-	CL_GetPackedColor,
+	R_GetPackedColor,
 	R_LookupColor,
 	CL_DecalRemoveAll,
 	CL_FireCustomDecal,

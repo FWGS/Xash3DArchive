@@ -314,6 +314,9 @@ void SV_ActivateServer( void )
 	// ricochet sprite
 	pfnPrecacheModel( "sprites/richo1.spr" );
 
+	// particle & tracer texture
+	pfnPrecacheModel( "sprites/dot.spr" );
+
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
 

@@ -41,6 +41,7 @@ TEMPENTITY	*cl_active_tents;
 TEMPENTITY	*cl_free_tents;
 TEMPENTITY	*cl_tempents = NULL;		// entities pool
 int		cl_muzzleflash[MAX_MUZZLEFLASH];	// muzzle flashes
+model_t		*cl_particleTex = NULL;
 
 /*
 ================
@@ -57,6 +58,7 @@ void CL_RegisterMuzzleFlashes( void )
 
 	// update registration for shellchrome
 	cls.hChromeSprite = pfnSPR_Load( "sprites/shellchrome.spr" );
+	cl_particleTex = Mod_Handle( CL_FindModelIndex( "sprites/dot.spr" ));
 }
 
 /*
@@ -1914,7 +1916,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos[0] = MSG_ReadCoord( &buf );
 		pos[1] = MSG_ReadCoord( &buf );
 		pos[2] = MSG_ReadCoord( &buf );
-		CL_BlobExplosion( pos );
+		R_BlobExplosion( pos );
 		break;
 	case TE_SMOKE:
 		pos[0] = MSG_ReadCoord( &buf );
@@ -1959,7 +1961,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos[2] = MSG_ReadCoord( &buf );
 		color = MSG_ReadByte( &buf );
 		count = MSG_ReadByte( &buf );
-		CL_ParticleExplosion2( pos, color, count );
+		R_ParticleExplosion2( pos, color, count );
 		break;
 	case TE_BSPDECAL:
 		pos[0] = MSG_ReadCoord( &buf );

@@ -761,6 +761,7 @@ void CL_WritePacket( void )
 
 		// update size counter for netgraph
 		cl.commands[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].sendsize = MSG_GetNumBytesWritten( &buf );
+		cl.commands[cls.netchan.outgoing_sequence & CL_UPDATE_MASK].heldback = false;
 
 		// composite the rest of the datagram..
 		if( MSG_GetNumBitsWritten( &cls.datagram ) <= MSG_GetNumBitsLeft( &buf ))

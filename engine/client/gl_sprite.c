@@ -453,6 +453,38 @@ R_GetSpriteFrame
 assume pModel is valid
 ================
 */
+void R_SetSpriteRendermode( const model_t *pModel )
+{
+	msprite_t		*psprite;
+
+	if( !pModel ) return;
+	psprite = (msprite_t *)pModel->cache.data;
+	if( !psprite ) return;
+
+	switch( psprite->texFormat )
+	{
+	case SPR_NORMAL:
+		GL_SetRenderMode( kRenderNormal );
+		break;
+	case SPR_ADDITIVE:
+		GL_SetRenderMode( kRenderTransAdd );
+		break;
+	case SPR_INDEXALPHA:
+		GL_SetRenderMode( kRenderTransTexture );
+		break;
+	case SPR_ALPHTEST:
+		GL_SetRenderMode( kRenderTransAlpha );
+		break;
+	}
+}
+
+/*
+================
+R_GetSpriteFrame
+
+assume pModel is valid
+================
+*/
 mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw )
 {
 	msprite_t		*psprite;

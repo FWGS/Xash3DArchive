@@ -1865,7 +1865,8 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 		}
 	}
 
-	cls_message_debug.parsing = false;	// done
+	cl.frames[cl.parsecountmod].graphdata.msgbytes += MSG_GetNumBytesRead( msg ) - starting_count;
+	cls_message_debug.parsing = false; // done
 
 	// we don't know if it is ok to save a demo message until
 	// after we have parsed the frame

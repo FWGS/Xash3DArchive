@@ -407,6 +407,7 @@ void GL_ResetFogColor( void );
 void R_SpriteInit( void );
 void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, uint texFlags );
 mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw );
+void R_SetSpriteRendermode( const model_t *pModel );
 void R_DrawSpriteModel( cl_entity_t *e );
 
 //
