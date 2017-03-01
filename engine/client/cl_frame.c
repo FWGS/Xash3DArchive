@@ -895,11 +895,16 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		return false;
 	}
 
-	// apply client-side effects
-	CL_AddEntityEffects( ent );
+	// because pTemp->entity.curstate.effects
+	// is already occupied by FTENT_FLICKER
+	if( entityType != ET_TEMPENTITY )
+	{
+		// apply client-side effects
+		CL_AddEntityEffects( ent );
 
-	// studiomodel efefcts only
-	CL_AddStudioEffects( ent );
+		// studiomodel efefcts only
+		CL_AddStudioEffects( ent );
+	}
 
 	return true;
 }

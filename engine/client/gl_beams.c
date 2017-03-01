@@ -1794,7 +1794,7 @@ Valve legacy
 void R_BeamSprite( vec3_t start, vec3_t end, int beamIndex, int spriteIndex )
 {
 	R_BeamPoints( start, end, beamIndex, 0.01f, 0.4f, 0, COM_RandomFloat( 0.5f, 0.655f ), 5.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f );
-	CL_TempSprite( end, vec3_origin, 0.1f, spriteIndex, kRenderTransAdd, kRenderFxNone, 0.35f, 0.01f, 0.0f );
+	R_TempSprite( end, vec3_origin, 0.1f, spriteIndex, kRenderTransAdd, kRenderFxNone, 0.35f, 0.01f, 0.0f );
 }
 
 /*

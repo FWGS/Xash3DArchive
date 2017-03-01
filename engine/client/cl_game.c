@@ -2327,9 +2327,6 @@ int CL_AddEntity( int entityType, cl_entity_t *pEnt )
 {
 	if( !pEnt ) return false;
 
-	// clear effects for all temp entities
-	if( !pEnt->index ) pEnt->curstate.effects = 0;
-
 	// let the render reject entity without model
 	return CL_AddVisibleEntity( pEnt, entityType );
 }
@@ -3627,13 +3624,13 @@ static efx_api_t gEfxApi =
 	R_Blood,
 	CL_BloodSprite,
 	R_BloodStream,
-	CL_BreakModel,
-	CL_Bubbles,
-	CL_BubbleTrail,
+	R_BreakModel,
+	R_Bubbles,
+	R_BubbleTrail,
 	R_BulletImpactParticles,
 	R_EntityParticles,
-	CL_Explosion,
-	CL_FizzEffect,
+	R_Explosion,
+	R_FizzEffect,
 	CL_FireField,
 	R_FlickerParticles,
 	R_FunnelSprite,
@@ -3648,8 +3645,8 @@ static efx_api_t gEfxApi =
 	R_ParticleExplosion2,
 	R_ParticleLine,
 	CL_PlayerSprites,
-	CL_Projectile,
-	CL_RicochetSound,
+	R_Projectile,
+	R_RicochetSound,
 	CL_RicochetSprite,
 	CL_RocketFlare,
 	R_RocketTrail,
@@ -3658,21 +3655,21 @@ static efx_api_t gEfxApi =
 	R_SparkEffect,
 	R_SparkShower,
 	R_SparkStreaks,
-	CL_Spray,
+	R_Spray,
 	CL_Sprite_Explode,
 	CL_Sprite_Smoke,
-	CL_Sprite_Spray,
-	CL_Sprite_Trail,
+	R_Sprite_Spray,
+	R_Sprite_Trail,
 	CL_Sprite_WallPuff,
 	R_StreakSplash,
 	R_TracerEffect,
 	R_UserTracerParticle,
 	R_TracerParticles,
 	R_TeleportSplash,
-	CL_TempSphereModel,
-	CL_TempModel,
+	R_TempSphereModel,
+	R_TempModel,
 	CL_DefaultSprite,
-	CL_TempSprite,
+	R_TempSprite,
 	CL_DecalIndex,
 	CL_DecalIndexFromName,
 	CL_DecalShoot,
