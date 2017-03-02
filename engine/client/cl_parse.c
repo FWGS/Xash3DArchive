@@ -71,7 +71,7 @@ const char *svc_strings[256] =
 	"svc_usermessage",
 	"svc_packetentities",
 	"svc_deltapacketentities",
-	"svc_chokecount",
+	"svc_choke",
 	"svc_resourcelist",
 	"svc_deltamovevars",
 	"svc_resourcerequest",
@@ -600,7 +600,7 @@ void CL_WeaponAnim( int iAnim, int body )
 	view->curstate.rendermode = kRenderNormal;
 	view->curstate.renderamt = 255;
 
-#if 0	// g-cont. for GlowShell testing
+#if 1	// g-cont. for GlowShell testing
 	view->curstate.renderfx = kRenderFxGlowShell;
 	view->curstate.rendercolor.r = 255;
 	view->curstate.rendercolor.g = 128;
@@ -848,6 +848,8 @@ void CL_ParseClientData( sizebuf_t *msg )
 
 	frame->time = cl.mtime[0];				// mark network received time
 	frame->receivedtime = host.realtime;			// time now that we are parsing.  
+
+	memset( &frame->graphdata, 0, sizeof( netbandwidthgraph_t ));
 
 	// send time for that frame.
 	parsecounttime = cl.commands[command_ack & CL_UPDATE_MASK].senttime;
@@ -1608,6 +1610,21 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 }
 
 /*
+=====================
+CL_ResetFrame
+=====================
+*/
+void CL_ResetFrame( frame_t *frame )
+{
+	memset( &frame->graphdata, 0, sizeof( netbandwidthgraph_t ));
+	frame->receivedtime = host.realtime;
+	frame->valid = true;
+	frame->choked = false;
+	frame->latency = 0.0;
+	frame->time = cl.mtime[0];
+}
+
+/*
 =====================================================================
 
 ACTION MESSAGES
@@ -1619,15 +1636,28 @@ ACTION MESSAGES
 CL_ParseServerMessage
 =====================
 */
-void CL_ParseServerMessage( sizebuf_t *msg )
+void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 {
 	char	*s;
-	int	i, j, cmd;
-	int	param1, param2;
+	int	i, cmd, param1, param2;
 	size_t	bufStart, playerbytes;
 
 	cls_message_debug.parsing = true;		// begin parsing
 	starting_count = MSG_GetNumBytesRead( msg );	// updates each frame
+
+	if( normal_message )
+	{
+		// assume no entity/player update this packet
+		if( cls.state == ca_active )
+		{
+			cl.frames[cls.netchan.incoming_sequence & CL_UPDATE_MASK].valid = false;   
+			cl.frames[cls.netchan.incoming_sequence & CL_UPDATE_MASK].choked = false;
+		}
+		else
+		{
+			CL_ResetFrame( &cl.frames[cls.netchan.incoming_sequence & CL_UPDATE_MASK] );
+		}
+	}
 	
 	// parse the message
 	while( 1 )
@@ -1824,21 +1854,9 @@ void CL_ParseServerMessage( sizebuf_t *msg )
 			param1 = MSG_ReadShort( msg );
 			Cvar_SetValue( "room_type", param1 );
 			break;
-		case svc_chokecount:
-#if 0
+		case svc_choke:
+			cl.frames[cls.netchan.incoming_sequence & CL_UPDATE_MASK].choked = true;
 			cl.frames[cls.netchan.incoming_sequence & CL_UPDATE_MASK].receivedtime = -2.0;
-#else
-			i = MSG_ReadByte( msg );
-			j = cls.netchan.incoming_acknowledged - 1;
-			for( ; i > 0 && j > cls.netchan.outgoing_sequence - CL_UPDATE_BACKUP; j-- )
-			{
-				if( cl.frames[j & CL_UPDATE_MASK].receivedtime != -3.0 )
-				{
-					cl.frames[j & CL_UPDATE_MASK].receivedtime = -2.0;
-					i--;
-				}
-			}
-#endif
 			break;
 		case svc_resourcelist:
 			CL_ParseResourceList( msg );

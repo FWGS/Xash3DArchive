@@ -2038,6 +2038,7 @@ qboolean R_Init( void )
 	Cbuf_AddText( "exec opengl.cfg\n" );
 
 	GL_InitCommands();
+	GL_InitRandomTable();
 	GL_SetDefaultState();
 
 	// create the window and set up the context

@@ -63,7 +63,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	pinframe = (dspriteframe_t *)pin;
 
 	// build uinque frame name
-	if( mod->flags & 256 ) // it's a HUD sprite
+	if( FBitSet( mod->flags, MODEL_CLIENT )) // it's a HUD sprite
 	{
 		Q_snprintf( texname, sizeof( texname ), "#HUD/%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
 		gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags, NULL );

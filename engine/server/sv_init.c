@@ -303,20 +303,6 @@ void SV_ActivateServer( void )
 	if( !svs.initialized )
 		return;
 
-	// custom muzzleflashes
-	pfnPrecacheModel( "sprites/muzzleflash1.spr" );
-	pfnPrecacheModel( "sprites/muzzleflash2.spr" );
-	pfnPrecacheModel( "sprites/muzzleflash3.spr" );
-
-	// rocket flare
-	pfnPrecacheModel( "sprites/animglow01.spr" );
-
-	// ricochet sprite
-	pfnPrecacheModel( "sprites/richo1.spr" );
-
-	// particle & tracer texture
-	pfnPrecacheModel( "sprites/dot.spr" );
-
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
 

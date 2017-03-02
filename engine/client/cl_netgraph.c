@@ -49,8 +49,8 @@ static struct cmdinfo_t
 
 static byte netcolors[NETGRAPH_NET_COLORS+NETGRAPH_LERP_HEIGHT][4] =
 {
-	{ 0,   0,   255, 255 },
 	{ 255, 0,   0,   255 },
+	{ 0,   0,   255, 255 },
 	{ 240, 127, 63,  255 },
 	{ 255, 255, 0,   255 },
 	{ 63,  255, 63,  150 }
@@ -185,7 +185,7 @@ void NetGraph_GetFrameData( float *latency, int *latency_count )
 		struct packet_latency_t *p = netstat_packet_latency + ( i & NET_TIMINGS_MASK );
 		netbandwidthgraph_t *g = netstat_graph + ( i & NET_TIMINGS_MASK );
 
-		p->choked = f->receivedtime == -2.0f ? true : false;
+		p->choked = f->choked;
 		if( p->choked ) choke_count++;
 
 		if( !f->valid )
@@ -197,9 +197,9 @@ void NetGraph_GetFrameData( float *latency, int *latency_count )
 			p->latency = 9999; // dropped
 			loss_count++;
 		}
-		else if( f->receivedtime == -2.0 )
+		else if( f->receivedtime == -3.0 )
 		{
-			p->latency = 9997; // choked
+			p->latency = 9997; // skipped
 		}
 		else
 		{

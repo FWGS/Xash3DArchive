@@ -61,7 +61,7 @@ GNU General Public License for more details.
 #define svc_usermessage		39	// [byte][byte][string] REG_USER_MSG stuff
 #define svc_packetentities		40	// [short][...]
 #define svc_deltapacketentities	41	// [short][byte][...] 
-#define svc_chokecount		42	// [byte]
+#define svc_choke			42	// just event
 #define svc_resourcelist		43	// [short][...]
 #define svc_deltamovevars		44	// [movevars_t]
 #define svc_resourcerequest		45	// <see code>

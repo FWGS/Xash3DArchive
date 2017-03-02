@@ -1136,6 +1136,9 @@ void SV_PutClientInServer( sv_client_t *cl )
 		sv_client_t	*cur;
 		int		i, viewEnt;
 
+		// NOTE: it's will be fragmented automatically in right ordering
+		MSG_WriteBits( &cl->netchan.message, MSG_GetData( &sv.signon ), MSG_GetNumBitsWritten( &sv.signon ));
+
 		if( cl->pViewEntity )
 			viewEnt = NUM_FOR_EDICT( cl->pViewEntity );
 		else viewEnt = NUM_FOR_EDICT( cl->edict );
@@ -1151,10 +1154,6 @@ void SV_PutClientInServer( sv_client_t *cl )
 
 			SV_FullClientUpdate( cur, &cl->netchan.message );
 		}
-
-		// time to send signon buffer
-		Netchan_CreateFragments( &cl->netchan, &sv.signon );
-		Netchan_FragSend( &cl->netchan );
 	}
 
 	// clear any temp states

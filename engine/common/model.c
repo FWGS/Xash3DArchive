@@ -1022,12 +1022,12 @@ static void Mod_LoadTextures( const dlump_t *l )
 		}
 	}
 
-	// sequence the animations
+	// sequence the animations and detail textures
 	for( i = 0; i < loadmodel->numtextures; i++ )
 	{
 		tx = loadmodel->textures[i];
 
-		if( tx->name[0] != '+' || tx->name[1] == 0 || tx->name[2] == 0 )
+		if( !tx || ( tx->name[0] != '-' && tx->name[0] != '+' ))
 			continue;
 
 		if( tx->anim_next )
@@ -1060,7 +1060,10 @@ static void Mod_LoadTextures( const dlump_t *l )
 		{
 			tx2 = loadmodel->textures[j];
 
-			if( tx2->name[0] != '+' || Q_strcmp( tx2->name + 2, tx->name + 2 ))
+			if( !tx2 || ( tx2->name[0] != '-' && tx2->name[0] != '+' ))
+				continue;
+
+			if( Q_strcmp( tx2->name + 2, tx->name + 2 ))
 				continue;
 
 			num = tx2->name[1];
@@ -1118,68 +1121,6 @@ static void Mod_LoadTextures( const dlump_t *l )
 			tx2->anim_next = altanims[(j + 1) % altmax];
 			if( max ) tx2->alternate_anims = anims[0];
 		}
-	}
-
-	// sequence the detail textures
-	for( i = 0; i < loadmodel->numtextures; i++ )
-	{
-		tx = loadmodel->textures[i];
-
-		if( tx->name[0] != '-' || tx->name[1] == 0 || tx->name[2] == 0 )
-			continue;
-
-		if( tx->anim_next )
-			continue;	// already sequenced
-
-		// find the number of frames in the sequence
-		memset( anims, 0, sizeof( anims ));
-
-		max = tx->name[1];
-
-		if( max >= '0' && max <= '9' )
-		{
-			max -= '0';
-			anims[max] = tx;
-			max++;
-		}
-		else MsgDev( D_ERROR, "Mod_LoadTextures: bad detail texture %s\n", tx->name );
-
-		for( j = i + 1; j < loadmodel->numtextures; j++ )
-		{
-			tx2 = loadmodel->textures[j];
-
-			if( tx2->name[0] != '-' || Q_strcmp( tx2->name + 2, tx->name + 2 ))
-				continue;
-
-			num = tx2->name[1];
-
-			if( num >= '0' && num <= '9' )
-			{
-				num -= '0';
-				anims[num] = tx2;
-				if( num + 1 > max )
-					max = num + 1;
-			}
-			else MsgDev( D_ERROR, "Mod_LoadTextures: bad detail texture %s\n", tx->name );
-		}
-
-		// link them all together
-		for( j = 0; j < max; j++ )
-		{
-			tx2 = anims[j];
-
-			if( !tx2 )
-			{
-				MsgDev( D_ERROR, "Mod_LoadTextures: missing frame %i of %s\n", j, tx->name );
-				tx->anim_total = 0;
-				break;
-			}
-
-			tx2->anim_total = -( max * ANIM_CYCLE ); // to differentiate from animations
-			tx2->anim_min = j * ANIM_CYCLE;
-			tx2->anim_max = (j + 1) * ANIM_CYCLE;
-			tx2->anim_next = anims[(j + 1) % max];
-		}	
 	}
 }
 

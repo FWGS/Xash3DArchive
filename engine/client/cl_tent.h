@@ -49,18 +49,18 @@ struct tempent_s *CL_TempEntAllocCustom( const vec3_t org, model_t *model, int h
 void R_FizzEffect( cl_entity_t *pent, int modelIndex, int density );
 void R_Bubbles( const vec3_t mins, const vec3_t maxs, float height, int modelIndex, int count, float speed );
 void R_BubbleTrail( const vec3_t start, const vec3_t end, float flWaterZ, int modelIndex, int count, float speed );
-void CL_AttachTentToPlayer( int client, int modelIndex, float zoffset, float life );
-void CL_KillAttachedTents( int client );
-void CL_RicochetSprite( const vec3_t pos, model_t *pmodel, float duration, float scale );
-void CL_RocketFlare( const vec3_t pos );
-void CL_MuzzleFlash( const vec3_t pos, int type );
-void CL_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int modelIndex2, float size );
+void R_AttachTentToPlayer( int client, int modelIndex, float zoffset, float life );
+void R_KillAttachedTents( int client );
+void R_RicochetSprite( const vec3_t pos, model_t *pmodel, float duration, float scale );
+void R_RocketFlare( const vec3_t pos );
+void R_MuzzleFlash( const vec3_t pos, int type );
+void R_BloodSprite( const vec3_t org, int colorIndex, int modelIndex, int modelIndex2, float size );
 void R_BreakModel( const vec3_t pos, const vec3_t size, const vec3_t dir, float random, float life, int count, int modelIndex, char flags );
 struct tempent_s *R_TempModel( const vec3_t pos, const vec3_t dir, const vec3_t angles, float life, int modelIndex, int soundtype );
 struct tempent_s *R_TempSprite( vec3_t pos, const vec3_t dir, float scale, int modelIndex, int rendermode, int renderfx, float a, float life, int flags );
-struct tempent_s *CL_DefaultSprite( const vec3_t pos, int spriteIndex, float framerate );
-void CL_Sprite_Explode( struct tempent_s *pTemp, float scale, int flags );
-void CL_Sprite_Smoke( struct tempent_s *pTemp, float scale );
+struct tempent_s *R_DefaultSprite( const vec3_t pos, int spriteIndex, float framerate );
+void R_Sprite_Explode( struct tempent_s *pTemp, float scale, int flags );
+void R_Sprite_Smoke( struct tempent_s *pTemp, float scale );
 void R_Spray( const vec3_t pos, const vec3_t dir, int modelIndex, int count, int speed, int iRand, int renderMode );
 void R_Sprite_Spray( const vec3_t pos, const vec3_t dir, int modelIndex, int count, int speed, int iRand );
 void R_Sprite_Trail( int type, vec3_t vecStart, vec3_t vecEnd, int modelIndex, int nCount, float flLife, float flSize, float flAmplitude, int nRenderamt, float flSpeed );
@@ -71,10 +71,10 @@ void R_StreakSplash( const vec3_t pos, const vec3_t dir, int color, int count, f
 void R_SparkStreaks( const vec3_t pos, int count, int velocityMin, int velocityMax );
 void R_Projectile( const vec3_t origin, const vec3_t velocity, int modelIndex, int life, int owner, void (*hitcallback)( struct tempent_s*, struct pmtrace_s* ));
 void R_TempSphereModel( const vec3_t pos, float speed, float life, int count, int modelIndex );
-void CL_MultiGunshot( const vec3_t org, const vec3_t dir, const vec3_t noise, int count, int decalCount, int *decalIndices );
-void CL_FireField( float *org, int radius, int modelIndex, int count, int flags, float life );
-void CL_PlayerSprites( int client, int modelIndex, int count, int size );
-void CL_Sprite_WallPuff( struct tempent_s *pTemp, float scale );
+void R_MultiGunshot( const vec3_t org, const vec3_t dir, const vec3_t noise, int count, int decalCount, int *decalIndices );
+void R_FireField( float *org, int radius, int modelIndex, int count, int flags, float life );
+void R_PlayerSprites( int client, int modelIndex, int count, int size );
+void R_Sprite_WallPuff( struct tempent_s *pTemp, float scale );
 void R_DebugParticle( const vec3_t pos, byte r, byte g, byte b );
 void R_RicochetSound( const vec3_t pos );
 struct dlight_s *CL_AllocDlight( int key );
@@ -114,6 +114,7 @@ void TriRenderMode( int mode );
 void TriCullFace( int mode );
 void TriEnd( void );
 
-extern model_t	*cl_particleTex;
+extern model_t	*cl_sprite_dot;
+extern model_t	*cl_sprite_shell;
 
 #endif//CL_TENT_H

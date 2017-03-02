@@ -403,9 +403,7 @@ R_GetChromeSprite
 */
 static model_t *R_GetChromeSprite( void )
 {
-	if( cls.hChromeSprite <= 0 || cls.hChromeSprite > ( MAX_IMAGES - 1 ))
-		return NULL; // bad sprite
-	return &clgame.sprites[cls.hChromeSprite];
+	return cl_sprite_shell;
 }
 
 /*
@@ -3321,14 +3319,14 @@ void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 	if( !RI.drawWorld && !r_customdraw_playermodel->value )
 	{
 		if( e->player )
-			result = R_StudioDrawPlayer( flags, &e->curstate );
+			result = R_StudioDrawPlayer( flags, R_StudioGetPlayerState( e->index - 1 ));
 		else result = R_StudioDrawModel( flags );
 	}
 	else
 	{
 		// select the properly method
 		if( e->player )
-			result = pStudioDraw->StudioDrawPlayer( flags, &e->curstate );
+			result = pStudioDraw->StudioDrawPlayer( flags, R_StudioGetPlayerState( e->index - 1 ));
 		else result = pStudioDraw->StudioDrawModel( flags );
 	}
 

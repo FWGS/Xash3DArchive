@@ -460,8 +460,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 
 	if( cl->chokecount != 0 )
 	{
-		MSG_BeginServerCmd( msg, svc_chokecount );
-		MSG_WriteByte( msg, cl->chokecount );
+		MSG_BeginServerCmd( msg, svc_choke );
 		cl->chokecount = 0;
 	}
 

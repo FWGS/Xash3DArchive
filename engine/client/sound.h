@@ -279,7 +279,7 @@ void S_FreeChannel( channel_t *ch );
 //
 // s_mix.c
 //
-int S_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset );
+int S_MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset, int timeCompress );
 void MIX_ClearAllPaintBuffers( int SampleCount, qboolean clearFilters );
 void MIX_InitAllPaintbuffers( void );
 void MIX_FreeAllPaintbuffers( void );

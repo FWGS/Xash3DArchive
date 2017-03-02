@@ -205,7 +205,6 @@ typedef struct gameinfo_s
 	float		client_maxs[MAX_MAP_HULLS][3];	// 4 hulls allowed
 
 	char		ambientsound[NUM_AMBIENTS][64];	// quake ambient sounds
-	int		soundclip_dist;			// custom distance to clip sound
 
 	int		max_edicts;	// min edicts is 600, max edicts is 4096
 	int		max_tents;	// min temp ents is 300, max is 2048

@@ -35,6 +35,7 @@ static uint		r_blocklights[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*3];
 static glpoly_t		*fullbright_polys[MAX_TEXTURES];
 static qboolean		draw_fullbrights = false;
 static mextrasurf_t		*detail_surfaces[MAX_TEXTURES];
+static int		rtable[MOD_FRAMES][MOD_FRAMES];
 static qboolean		draw_details = false;
 static msurface_t		*skychain = NULL;
 static gllightmapstate_t	gl_lms;
@@ -413,25 +414,10 @@ R_TextureAnimation
 Returns the proper texture for a given time and base texture
 ===============
 */
-texture_t *R_TextureAnimation( texture_t *base, int surfacenum )
+texture_t *R_TextureAnimation( msurface_t *s )
 {
-	int	reletive;
-	int	count, speed;
-
-	// random tiling textures
-	if( base->anim_total < 0 )
-	{
-		reletive = abs( surfacenum ) % abs( base->anim_total );
-		count = 0;
-
-		while( base->anim_min > reletive || base->anim_max <= reletive )
-		{
-			base = base->anim_next;
-			if( !base ) Host_Error( "R_TextureRandomTiling: broken loop\n" );
-			if( ++count > 100 ) Host_Error( "R_TextureRandomTiling: infinite loop\n" );
-		}
-		return base;
-	}
+	texture_t	*base = s->texinfo->texture;
+	int	count, reletive;
 
 	if( RI.currententity->curstate.frame )
 	{
@@ -442,20 +428,44 @@ texture_t *R_TextureAnimation( texture_t *base, int surfacenum )
 	if( !base->anim_total )
 		return base;
 
-	// GoldSrc and Quake1 has different animating speed
-	if( world.sky_sphere || world.version == Q1BSP_VERSION )
-		speed = 10;
-	else speed = 20;
+	if( base->name[0] == '-' )
+	{
+		int tx = (int)((s->texturemins[0] + (base->width << 16)) / base->width) % MOD_FRAMES;
+		int ty = (int)((s->texturemins[1] + (base->height << 16)) / base->height) % MOD_FRAMES;
 
-	reletive = (int)(cl.time * speed) % base->anim_total;
+		reletive = rtable[tx][ty] % base->anim_total;
+	}
+	else
+	{
+		int	speed;
+
+		// GoldSrc and Quake1 has different animating speed
+		if( world.sky_sphere || world.version == Q1BSP_VERSION )
+			speed = 10;
+		else speed = 20;
+
+		reletive = (int)(cl.time * speed) % base->anim_total;
+	}
+
 	count = 0;	
 
 	while( base->anim_min > reletive || base->anim_max <= reletive )
 	{
 		base = base->anim_next;
-		if( !base ) Host_Error( "R_TextureAnimation: broken loop\n" );
-		if( ++count > 100 ) Host_Error( "R_TextureAnimation: infinite loop\n" );
+
+		if( !base )
+		{
+			MsgDev( D_ERROR, "R_TextureAnimation: broken loop\n" );
+			return s->texinfo->texture;
+		}
+
+		if( ++count > MOD_FRAMES )
+		{
+			MsgDev( D_ERROR, "R_TextureAnimation: infinite loop\n" );
+			return s->texinfo->texture;
+		}
 	}
+
 	return base;
 }
 
@@ -1098,7 +1108,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	if( fa->flags & SURF_DRAWSKY )
 		return; // already handled
 
-	t = R_TextureAnimation( fa->texinfo->texture, fa - RI.currententity->model->surfaces );
+	t = R_TextureAnimation( fa );
 
 	if( RP_NORMALPASS() && fa->flags & SURF_REFLECT )
 	{
@@ -1441,7 +1451,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( rotated ) R_RotateForEntity( e );
 	else R_TranslateForEntity( e );
 
-	e->visframe = tr.framecount; // visible
+	e->visframe = tr.realframecount; // visible
 
 	if( rotated ) Matrix4x4_VectorITransform( RI.objectMatrix, RI.cullorigin, tr.modelorg );
 	else VectorSubtract( RI.cullorigin, e->origin, tr.modelorg );
@@ -1673,7 +1683,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 
 		// deal with model fragments in this leaf
 		if( pleaf->efrags )
-			R_StoreEfrags( &pleaf->efrags, tr.framecount );
+			R_StoreEfrags( &pleaf->efrags, tr.realframecount );
 
 		r_stats.c_world_leafs++;
 		return;
@@ -1766,7 +1776,7 @@ static void R_DrawTopViewLeaf( mleaf_t *pleaf, uint clipflags )
 
 	// deal with model fragments in this leaf
 	if( pleaf->efrags )
-		R_StoreEfrags( &pleaf->efrags, tr.framecount );
+		R_StoreEfrags( &pleaf->efrags, tr.realframecount );
 
 	r_stats.c_world_leafs++;
 }
@@ -2133,6 +2143,7 @@ void GL_BuildLightmaps( void )
 	gl_lms.current_lightmap_texture = 0;
 	tr.num_mirror_entities = 0;
 	tr.num_mirrors_used = 0;
+	tr.realframecount = 1;
 	nColinElim = 0;
 
 	// setup all the lightstyles
@@ -2180,4 +2191,22 @@ void GL_BuildLightmaps( void )
 
 	if( !gl_keeptjunctions->value )
 		MsgDev( D_INFO, "Eliminate %i vertexes\n", nColinElim );
+}
+
+void GL_InitRandomTable( void )
+{
+	int	tu, tv;
+
+	// make random predictable
+	COM_SetRandomSeed( 255 );
+
+	for( tu = 0; tu < MOD_FRAMES; tu++ )
+	{
+		for( tv = 0; tv < MOD_FRAMES; tv++ )
+		{
+			rtable[tu][tv] = COM_RandomLong( 0, 0x7FFF );
+		}
+	}
+
+	COM_SetRandomSeed( 0 );
 }

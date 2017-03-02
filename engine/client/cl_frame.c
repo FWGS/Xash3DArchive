@@ -672,7 +672,6 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	newframe = &cl.frames[cl.parsecountmod];
 
 	// allocate parse entities
-	memset( &newframe->graphdata, 0, sizeof( netbandwidthgraph_t ));
 	memset( newframe->flags, 0, sizeof( newframe->flags ));
 	newframe->first_entity = cls.next_client_entities;
 	newframe->num_entities = 0;

@@ -206,6 +206,7 @@ typedef struct
 
 	int		visframecount;	// PVS frame
 	int		dlightframecount;	// dynamic light frame
+	int		realframecount;	// not including viewpasses
 	int		framecount;
 
 	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
@@ -398,6 +399,7 @@ void GL_SubdivideSurface( msurface_t *fa );
 void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa );
 void GL_SetupFogColorForSurfaces( void );
 void GL_RebuildLightmaps( void );
+void GL_InitRandomTable( void );
 void GL_BuildLightmaps( void );
 void GL_ResetFogColor( void );
 

@@ -371,10 +371,10 @@ void CL_DrawParticles( double frametime )
 	if( !cl_active_particles )
 		return;	// nothing to draw?
 
-	if( !TriSpriteTexture( cl_particleTex, 0 ))
+	if( !TriSpriteTexture( cl_sprite_dot, 0 ))
 		return;
 
-	R_SetSpriteRendermode( cl_particleTex );
+	R_SetSpriteRendermode( cl_sprite_dot );
 	pglBegin( GL_QUADS );
 
 	for( p = cl_active_particles; p; p = p->next )
@@ -566,11 +566,11 @@ void CL_DrawTracers( double frametime )
 	if( !cl_active_tracers )
 		return;	// nothing to draw?
 
-	if( !TriSpriteTexture( cl_particleTex, 0 ))
+	if( !TriSpriteTexture( cl_sprite_dot, 0 ))
 		return;
 
-	R_SetSpriteRendermode( cl_particleTex );
-	R_GetSpriteParms( &texWidth, NULL, NULL, 0, cl_particleTex );
+	R_SetSpriteRendermode( cl_sprite_dot );
+	R_GetSpriteParms( &texWidth, NULL, NULL, 0, cl_sprite_dot );
 
 	gravity = frametime * clgame.movevars.gravity;
 	scale = 1.0 - (frametime * 0.9);

@@ -30,6 +30,7 @@ GNU General Public License for more details.
 #define DVIS_PVS			0
 #define DVIS_PHS			1
 #define ANIM_CYCLE			2
+#define MOD_FRAMES			20
 
 // remapping info
 #define SUIT_HUE_START		192
@@ -54,6 +55,8 @@ GNU General Public License for more details.
 #define MODEL_CONVEYOR		BIT( 0 )
 #define MODEL_HAS_ORIGIN		BIT( 1 )
 #define MODEL_LIQUID		BIT( 2 )	// model has only point hull
+
+#define MODEL_CLIENT		BIT( 30 )	// client sprite
 
 typedef struct wadlist_s
 {

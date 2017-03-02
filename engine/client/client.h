@@ -47,6 +47,11 @@ GNU General Public License for more details.
 #define VID_MAPSHOT		3	// special case for overview layer
 #define VID_SNAPSHOT	4	// save screenshot into root dir and no gamma correction
 
+// client sprite types
+#define SPR_CLIENT		0	// client sprite for temp-entities or user-textures
+#define SPR_HUDSPRITE	1	// hud sprite
+#define SPR_MAPSPRITE	2	// contain overview subdivided into frames 128x128
+
 typedef int		sound_t;
 
 //=============================================================================
@@ -70,6 +75,7 @@ typedef struct frame_s
 	double		latency;
 	double		time;		// server timestamp
 	qboolean		valid;		// cleared if delta parsing was invalid
+	qboolean		choked;
 
 	clientdata_t	clientdata;	// local client private data
 	entity_state_t	playerstate[MAX_CLIENTS];
@@ -529,7 +535,6 @@ typedef struct
 	int		loadingBar;		// 'loading' progress bar
 	int		glowShell;		// for renderFxGlowShell
 	int		tileImage;		// for draw any areas not covered by the refresh
-	HSPRITE		hChromeSprite;		// this is a really HudSprite handle, not texnum!
 	cl_font_t		creditsFont;		// shared creditsfont
 
 	float		latency;			// rolling average of frame latencey (receivedtime - senttime) values.
@@ -724,6 +729,7 @@ int pfnDecalIndexFromName( const char *szDecalName );
 int pfnIndexFromTrace( struct pmtrace_s *pTrace );
 void NetAPI_CancelAllRequests( void );
 int CL_FindModelIndex( const char *m );
+model_t *CL_LoadClientSprite( const char *filename );
 HSPRITE pfnSPR_Load( const char *szPicName );
 HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags );
 void PicAdjustSize( float *x, float *y, float *w, float *h );
@@ -745,7 +751,7 @@ _inline cl_entity_t *CL_EDICT_NUM( int n )
 //
 // cl_parse.c
 //
-void CL_ParseServerMessage( sizebuf_t *msg );
+void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message );
 void CL_ParseTempEntity( sizebuf_t *msg );
 qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
 
@@ -865,7 +871,7 @@ void CL_DrawBeams( int fTrans );
 void CL_AddCustomBeam( cl_entity_t *pEnvBeam );
 void CL_KillDeadBeams( cl_entity_t *pDeadEntity );
 void CL_ParseViewBeam( sizebuf_t *msg, int beamType );
-void CL_RegisterMuzzleFlashes( void );
+void CL_LoadClientSprites( void );
 void CL_ReadPointFile_f( void );
 void CL_ReadLineFile_f( void );
 void CL_RunLightStyles( void );

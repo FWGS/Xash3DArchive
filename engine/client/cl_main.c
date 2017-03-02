@@ -1554,8 +1554,8 @@ void CL_PrepVideo( void )
 			SCR_UpdateScreen();
 	}
 
-	// update right muzzleflash indexes
-	CL_RegisterMuzzleFlashes ();
+	// load tempent sprites (glowshell, muzzleflashes etc)
+	CL_LoadClientSprites ();
 
 	// invalidate all decal indexes
 	memset( cl.decal_index, 0, sizeof( cl.decal_index ));
@@ -1825,7 +1825,7 @@ void CL_ReadNetMessage( void )
 		if( !cls.demoplayback && !Netchan_Process( &cls.netchan, &net_message ))
 			continue;	// wasn't accepted for some reason
 
-		CL_ParseServerMessage( &net_message );
+		CL_ParseServerMessage( &net_message, true );
 		cl.send_reply = true;
 	}
 
@@ -1839,7 +1839,7 @@ void CL_ReadNetMessage( void )
 		if( Netchan_CopyNormalFragments( &cls.netchan, &net_message, &curSize ))
 		{
 			MSG_Init( &net_message, "ServerData", net_message_buffer, curSize );
-			CL_ParseServerMessage( &net_message );
+			CL_ParseServerMessage( &net_message, false );
 		}
 		
 		if( Netchan_CopyFileFragments( &cls.netchan, &net_message ))

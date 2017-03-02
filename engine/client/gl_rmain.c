@@ -665,10 +665,8 @@ static void R_SetupGL( void )
 {
 	if( RP_NORMALPASS() && ( cl.local.waterlevel >= 3 ))
 	{
-		float	f;
-		f = sin( cl.time * 0.4f * ( M_PI * 2.7f ));
-		RI.fov_x += f;
-		RI.fov_y -= f;
+		RI.fov_x = atan( tan( DEG2RAD( RI.fov_x ) / 2 ) * ( 0.97 + sin( cl.time * 1.5 ) * 0.03 )) * 2 / (M_PI / 180.0);
+		RI.fov_y = atan( tan( DEG2RAD( RI.fov_y ) / 2 ) * ( 1.03 - sin( cl.time * 1.5 ) * 0.03 )) * 2 / (M_PI / 180.0);
 	}
 
 	R_SetupModelviewMatrix( RI.worldviewMatrix );

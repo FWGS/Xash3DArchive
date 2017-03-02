@@ -1104,12 +1104,13 @@ void CL_ClearEdicts( void )
 }
 
 /*
-===============================================================================
-	CGame Builtin Functions
+=============
+CL_LoadHudSprite
 
-===============================================================================
+upload sprite frames
+=============
 */
-static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, qboolean mapSprite, uint texFlags )
+static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, uint type, uint texFlags )
 {
 	byte	*buf;
 	size_t	size;
@@ -1121,9 +1122,13 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	if( !buf ) return false;
 
 	Q_strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
-	m_pSprite->flags = 256; // it's hud sprite, make difference names to prevent free shared textures
 
-	if( mapSprite ) Mod_LoadMapSprite( m_pSprite, buf, size, &loaded );
+	// it's hud sprite, make difference names to prevent free shared textures
+	if( type == SPR_CLIENT || type == SPR_HUDSPRITE )
+		SetBits( m_pSprite->flags, MODEL_CLIENT );
+
+	if( type == SPR_MAPSPRITE )
+		Mod_LoadMapSprite( m_pSprite, buf, size, &loaded );
 	else Mod_LoadSpriteModel( m_pSprite, buf, &loaded, texFlags );		
 
 	Mem_Free( buf );
@@ -1133,27 +1138,30 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 		Mod_UnloadSpriteModel( m_pSprite );
 		return false;
 	}
+
 	return true;
 }
 
 /*
-=========
-pfnSPR_LoadExt
+=============
+CL_LoadSpriteModel
 
-=========
+some sprite models is exist only at client: HUD sprites,
+tent sprites or overview images
+=============
 */
-HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags )
+static model_t *CL_LoadSpriteModel( const char *filename, uint type, uint texFlags )
 {
 	char	name[64];
 	int	i;
 
-	if( !szPicName || !*szPicName )
+	if( !filename || !*filename )
 	{
-		MsgDev( D_ERROR, "CL_LoadSprite: bad name!\n" );
-		return 0;
+		MsgDev( D_ERROR, "CL_LoadSpriteModel: bad name!\n" );
+		return NULL;
 	}
 
-	Q_strncpy( name, szPicName, sizeof( name ));
+	Q_strncpy( name, filename, sizeof( name ));
 	COM_FixSlashes( name );
 
 	// slot 0 isn't used
@@ -1163,7 +1171,7 @@ HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags )
 		{
 			// prolonge registration
 			clgame.sprites[i].needload = clgame.load_sequence;
-			return i;
+			return &clgame.sprites[i];
 		}
 	}
 
@@ -1176,18 +1184,52 @@ HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags )
 
 	if( i == MAX_IMAGES ) 
 	{
-		MsgDev( D_ERROR, "SPR_Load: can't load %s, MAX_HSPRITES limit exceeded\n", szPicName );
-		return 0;
+		MsgDev( D_ERROR, "CL_LoadSpriteModel: can't load %s, MAX_SPRITES limit exceeded\n", filename );
+		return NULL;
 	}
 
-	// load new model
-	if( CL_LoadHudSprite( name, &clgame.sprites[i], false, texFlags ))
+	// load new map sprite
+	if( CL_LoadHudSprite( name, &clgame.sprites[i], true, 0 ))
 	{
 		if( i < ( MAX_IMAGES - 1 ))
 			clgame.sprites[i].needload = clgame.load_sequence;
-		return i;
+		return &clgame.sprites[i];
 	}
-	return 0;
+
+	return NULL;
+}
+
+/*
+=============
+CL_LoadClientSprite
+
+load sprites for temp ents
+=============
+*/
+model_t *CL_LoadClientSprite( const char *filename )
+{
+	return CL_LoadSpriteModel( filename, SPR_CLIENT, 0 );
+}
+
+/*
+===============================================================================
+	CGame Builtin Functions
+
+===============================================================================
+*/
+/*
+=========
+pfnSPR_LoadExt
+
+=========
+*/
+HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags )
+{
+	model_t	*spr;
+
+	spr = CL_LoadSpriteModel( szPicName, SPR_CLIENT, texFlags );
+
+	return (spr - clgame.sprites); // return index
 }
 
 /*
@@ -1198,7 +1240,11 @@ pfnSPR_Load
 */
 HSPRITE pfnSPR_Load( const char *szPicName )
 {
-	return pfnSPR_LoadExt( szPicName, 0 );
+	model_t	*spr;
+
+	spr = CL_LoadSpriteModel( szPicName, SPR_HUDSPRITE, 0 );
+
+	return (spr - clgame.sprites); // return index
 }
 
 /*
@@ -2327,6 +2373,9 @@ int CL_AddEntity( int entityType, cl_entity_t *pEnt )
 {
 	if( !pEnt ) return false;
 
+	// clear effects for all temp entities
+	if( !pEnt->index ) pEnt->curstate.effects = 0;
+
 	// let the render reject entity without model
 	return CL_AddVisibleEntity( pEnt, entityType );
 }
@@ -2403,49 +2452,7 @@ pfnLoadMapSprite
 */
 model_t *pfnLoadMapSprite( const char *filename )
 {
-	char	name[64];
-	int	i;
-
-	if( !filename || !*filename )
-	{
-		MsgDev( D_ERROR, "CL_LoadMapSprite: bad name!\n" );
-		return NULL;
-	}
-
-	Q_strncpy( name, filename, sizeof( name ));
-	COM_FixSlashes( name );
-
-	// slot 0 isn't used
-	for( i = 1; i < MAX_IMAGES; i++ )
-	{
-		if( !Q_stricmp( clgame.sprites[i].name, name ))
-		{
-			// prolonge registration
-			clgame.sprites[i].needload = clgame.load_sequence;
-			return &clgame.sprites[i];
-		}
-	}
-
-	// find a free model slot spot
-	for( i = 1; i < MAX_IMAGES; i++ )
-	{
-		if( !clgame.sprites[i].name[0] )
-			break; // this is a valid spot
-	}
-
-	if( i == MAX_IMAGES ) 
-	{
-		MsgDev( D_ERROR, "LoadMapSprite: can't load %s, MAX_HSPRITES limit exceeded\n", filename );
-		return NULL;
-	}
-
-	// load new map sprite
-	if( CL_LoadHudSprite( name, &clgame.sprites[i], true, 0 ))
-	{
-		clgame.sprites[i].needload = clgame.load_sequence;
-		return &clgame.sprites[i];
-	}
-	return NULL;
+	return CL_LoadSpriteModel( filename, SPR_MAPSPRITE, 0 );
 }
 
 /*
@@ -3622,7 +3629,7 @@ static efx_api_t gEfxApi =
 	R_AllocParticle,
 	R_BlobExplosion,
 	R_Blood,
-	CL_BloodSprite,
+	R_BloodSprite,
 	R_BloodStream,
 	R_BreakModel,
 	R_Bubbles,
@@ -3631,24 +3638,24 @@ static efx_api_t gEfxApi =
 	R_EntityParticles,
 	R_Explosion,
 	R_FizzEffect,
-	CL_FireField,
+	R_FireField,
 	R_FlickerParticles,
 	R_FunnelSprite,
 	R_Implosion,
 	R_LargeFunnel,
 	R_LavaSplash,
-	CL_MultiGunshot,
-	CL_MuzzleFlash,
+	R_MultiGunshot,
+	R_MuzzleFlash,
 	R_ParticleBox,
 	R_ParticleBurst,
 	R_ParticleExplosion,
 	R_ParticleExplosion2,
 	R_ParticleLine,
-	CL_PlayerSprites,
+	R_PlayerSprites,
 	R_Projectile,
 	R_RicochetSound,
-	CL_RicochetSprite,
-	CL_RocketFlare,
+	R_RicochetSprite,
+	R_RocketFlare,
 	R_RocketTrail,
 	R_RunParticleEffect,
 	R_ShowLine,
@@ -3656,11 +3663,11 @@ static efx_api_t gEfxApi =
 	R_SparkShower,
 	R_SparkStreaks,
 	R_Spray,
-	CL_Sprite_Explode,
-	CL_Sprite_Smoke,
+	R_Sprite_Explode,
+	R_Sprite_Smoke,
 	R_Sprite_Spray,
 	R_Sprite_Trail,
-	CL_Sprite_WallPuff,
+	R_Sprite_WallPuff,
 	R_StreakSplash,
 	R_TracerEffect,
 	R_UserTracerParticle,
@@ -3668,13 +3675,13 @@ static efx_api_t gEfxApi =
 	R_TeleportSplash,
 	R_TempSphereModel,
 	R_TempModel,
-	CL_DefaultSprite,
+	R_DefaultSprite,
 	R_TempSprite,
 	CL_DecalIndex,
 	CL_DecalIndexFromName,
 	CL_DecalShoot,
-	CL_AttachTentToPlayer,
-	CL_KillAttachedTents,
+	R_AttachTentToPlayer,
+	R_KillAttachedTents,
 	R_BeamCirclePoints,
 	R_BeamEntPoint,
 	R_BeamEnts,

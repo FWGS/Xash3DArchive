@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "pm_local.h"
 
-#define SND_CLIP_DISTANCE		(float)(GI->soundclip_dist)
+#define SND_CLIP_DISTANCE		1000.0f
 
 dma_t		dma;
 byte		*sndpool;
