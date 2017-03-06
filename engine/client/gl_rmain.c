@@ -283,8 +283,6 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int type )
 	if( clent->curstate.effects & EF_NODRAW )
 		return false; // done
 
-	clent->curstate.renderamt = CL_FxBlend( clent );
-
 	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0.0f )
 		return true; // invisible
 
@@ -451,7 +449,7 @@ void R_SetupFrustum( void )
 	// build the transformation matrix for the given view angles
 	AngleVectors( RI.viewangles, RI.vforward, RI.vright, RI.vup );
 
-	if( !r_lockcull->value )
+	if( !r_lockfrustum->value )
 	{
 		VectorCopy( RI.vieworg, RI.cullorigin );
 		VectorCopy( RI.vforward, RI.cull_vforward );
@@ -914,6 +912,7 @@ void R_DrawEntitiesOnList( void )
 	int	i;
 
 	glState.drawTrans = false;
+	tr.blend = 1.0f;
 
 	// draw the solid submodels fog
 	R_DrawFog ();
@@ -966,6 +965,8 @@ void R_DrawEntitiesOnList( void )
 	{
 		RI.currententity = tr.trans_entities[i];
 		RI.currentmodel = RI.currententity->model;
+		tr.blend = CL_FxBlend( RI.currententity ) / 255.0f;
+		if( tr.blend <= 0.0f ) continue;
 	
 		ASSERT( RI.currententity != NULL );
 		ASSERT( RI.currententity->model != NULL );

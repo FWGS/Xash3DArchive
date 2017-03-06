@@ -18,27 +18,16 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "studio.h"
 
-#define TEXTURES_HASH_SIZE		(MAX_TEXTURES >> 2)
+#define TEXTURES_HASH_SIZE	(MAX_TEXTURES >> 2)
 
 static gltexture_t		r_textures[MAX_TEXTURES];
 static gltexture_t		*r_texturesHashTable[TEXTURES_HASH_SIZE];
-static int		r_numTextures;
 static byte		data2D[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*4];	// intermediate texbuffer
+static int		r_numTextures;
 static rgbdata_t		r_image;					// generic pixelbuffer used for internal textures
 
 // internal tables
-static vec3_t	r_luminanceTable[256];	// RGB to luminance
-static byte	r_particleTexture[8][8] =
-{
-{0,0,0,0,0,0,0,0},
-{0,0,0,1,1,0,0,0},
-{0,0,0,1,1,0,0,0},
-{0,1,1,1,1,1,1,0},
-{0,1,1,1,1,1,1,0},
-{0,0,0,1,1,0,0,0},
-{0,0,0,1,1,0,0,0},
-{0,0,0,0,0,0,0,0},
-};
+static vec3_t		r_luminanceTable[256];			// RGB to luminance
 
 /*
 =================
@@ -1898,71 +1887,6 @@ static rgbdata_t *R_InitDefaultTexture( texFlags_t *flags )
 
 /*
 ==================
-R_InitParticleTexture
-==================
-*/
-static rgbdata_t *R_InitParticleTexture( texFlags_t *flags )
-{
-	int	x, y;
-	int	dx2, dy, d;
-
-	// particle texture
-	r_image.width = r_image.height = 16;
-	r_image.buffer = data2D;
-	r_image.flags = (IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA);
-	r_image.type = PF_RGBA_32;
-	r_image.size = r_image.width * r_image.height * 4;
-
-	*flags = TF_NOPICMIP|TF_NOMIPMAP;
-
-	for( x = 0; x < 16; x++ )
-	{
-		dx2 = x - 8;
-		dx2 = dx2 * dx2;
-
-		for( y = 0; y < 16; y++ )
-		{
-			dy = y - 8;
-			d = 255 - 35 * sqrt( dx2 + dy * dy );
-			data2D[( y*16 + x ) * 4 + 3] = bound( 0, d, 255 );
-		}
-	}
-	return &r_image;
-}
-
-/*
-==================
-R_InitParticleTexture2
-==================
-*/
-static rgbdata_t *R_InitParticleTexture2( texFlags_t *flags )
-{
-	int	x, y;
-
-	// particle texture
-	r_image.width = r_image.height = 8;
-	r_image.buffer = data2D;
-	r_image.flags = (IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA);
-	r_image.type = PF_RGBA_32;
-	r_image.size = r_image.width * r_image.height * 4;
-
-	*flags = TF_NOPICMIP|TF_NOMIPMAP;
-
-	for( x = 0; x < 8; x++ )
-	{
-		for( y = 0; y < 8; y++ )
-		{
-			data2D[(y * 8 + x) * 4 + 0] = 255;
-			data2D[(y * 8 + x) * 4 + 1] = 255;
-			data2D[(y * 8 + x) * 4 + 2] = 255;
-			data2D[(y * 8 + x) * 4 + 3] = r_particleTexture[x][y] * 255;
-		}
-	}
-	return &r_image;
-}
-
-/*
-==================
 R_InitSkyTexture
 ==================
 */
@@ -2477,8 +2401,6 @@ static void R_InitBuiltinTextures( void )
 	{ "*white", &tr.whiteTexture, R_InitWhiteTexture },
 	{ "*gray", &tr.grayTexture, R_InitGrayTexture },
 	{ "*black", &tr.blackTexture, R_InitBlackTexture },
-	{ "*particle", &tr.particleTexture, R_InitParticleTexture },
-	{ "*particle2", &tr.particleTexture2, R_InitParticleTexture2 },
 	{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture },	// force linear filter
 	{ "*dlight", &tr.dlightTexture, R_InitDlightTexture },
 	{ "*dlight2", &tr.dlightTexture2, R_InitDlightTexture2 },

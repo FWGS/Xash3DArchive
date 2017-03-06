@@ -20,16 +20,6 @@ GNU General Public License for more details.
 // expand debugging BBOX particle hulls by this many units.
 #define BOX_GAP	0.0f    
 
-static int boxpnt[6][4] =
-{
-{ 0, 4, 6, 2 }, // +X
-{ 0, 1, 5, 4 }, // +Y
-{ 0, 2, 3, 1 }, // +Z
-{ 7, 5, 1, 3 }, // -X
-{ 7, 3, 2, 6 }, // -Y
-{ 7, 6, 4, 5 }, // -Z
-};	
-
 /*
 ===============
 PM_ParticleLine

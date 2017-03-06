@@ -1485,7 +1485,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	case kRenderTransTexture:
 		need_sort = true;
 	case kRenderGlow:
-		pglColor4ub( 255, 255, 255, e->curstate.renderamt );
+		pglColor4f( 1.0f, 1.0f, 1.0f, tr.blend );
 		break;
 	case kRenderTransColor:
 		pglDisable( GL_TEXTURE_2D );
@@ -1929,6 +1929,7 @@ void R_DrawWorld( void )
 
 	GL_SetRenderMode( kRenderNormal );
 	gl_lms.dynamic_surfaces = NULL;
+	tr.blend = 1.0f;
 
 	R_ClearSkyBox ();
 

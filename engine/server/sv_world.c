@@ -108,6 +108,48 @@ void SV_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitc
 }
 
 /*
+====================
+SV_CheckSphereIntersection
+
+check clients only
+====================
+*/
+qboolean SV_CheckSphereIntersection( edict_t *ent, const vec3_t start, const vec3_t end )
+{
+	int		i, sequence;
+	float		radiusSquared;
+	vec3_t		traceOrg, traceDir;
+	studiohdr_t	*pstudiohdr;
+	mstudioseqdesc_t	*pseqdesc;
+	model_t		*mod;
+
+	if( !FBitSet( ent->v.flags, FL_CLIENT|FL_FAKECLIENT ))
+		return true;
+
+	if(( mod = Mod_Handle( ent->v.modelindex )) == NULL )
+		return true;
+
+	if(( pstudiohdr = (studiohdr_t *)Mod_Extradata( mod )) == NULL )
+		return true;
+
+	sequence = ent->v.sequence;
+	if( sequence < 0 || sequence >= pstudiohdr->numseq )
+		sequence = 0;
+
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + sequence;
+
+	VectorCopy( start, traceOrg );
+	VectorSubtract( end, start, traceDir );
+	radiusSquared = 0.0f;
+
+	for ( i = 0; i < 3; i++ )
+		radiusSquared += Q_max( fabs( pseqdesc->bbmin[i] ), fabs( pseqdesc->bbmax[i] ));
+
+	return SphereIntersect( ent->v.origin, radiusSquared, traceOrg, traceDir );
+}
+
+
+/*
 ===================
 SV_HullForBox
 
@@ -1139,6 +1181,10 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		}
 
 		if( !BoundsIntersect( clip->boxmins, clip->boxmaxs, touch->v.absmin, touch->v.absmax ))
+			continue;
+
+		// aditional check to intersects clients with sphere
+		if( touch->v.solid != SOLID_SLIDEBOX && !SV_CheckSphereIntersection( touch, clip->start, clip->end ))
 			continue;
 
 		// Xash3D extension

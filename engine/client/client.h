@@ -528,13 +528,10 @@ typedef struct
 	int		lastoutgoingcommand;	// sequence number of last outgoing command
 	int		lastupdate_sequence;	// prediction stuff
 
-	// internal images
-	int		fillImage;		// used for emulate FillRGBA to avoid wrong draw-sort
-	int		particleImage;		// built-in particle and sparks image
+	// game images
 	int		pauseIcon;		// draw 'paused' when game in-pause
-	int		loadingBar;		// 'loading' progress bar
-	int		glowShell;		// for renderFxGlowShell
 	int		tileImage;		// for draw any areas not covered by the refresh
+	int		loadingBar;		// 'loading' progress bar
 	cl_font_t		creditsFont;		// shared creditsfont
 
 	float		latency;			// rolling average of frame latencey (receivedtime - senttime) values.
@@ -620,6 +617,7 @@ extern convar_t	*cl_clockreset;
 extern convar_t	*cl_fixtimerate;
 extern convar_t	*gl_showtextures;
 extern convar_t	*cl_bmodelinterp;
+extern convar_t	*cl_righthand;
 extern convar_t	*cl_lw;		// local weapons
 extern convar_t	*cl_showevents;
 extern convar_t	*scr_centertime;
@@ -803,6 +801,7 @@ int CL_PointContents( const vec3_t p );
 int CL_WaterEntity( const float *rgflPos );
 cl_entity_t *CL_GetWaterEntity( const float *rgflPos );
 void CL_SetupPMove( playermove_t *pmove, local_state_t *from, usercmd_t *ucmd, qboolean runfuncs, double time );
+pmtrace_t CL_VisTraceLine( vec3_t start, vec3_t end, int flags );
 pmtrace_t CL_TraceLine( vec3_t start, vec3_t end, int flags );
 void CL_MoveSpectatorCamera( void );
 void CL_SetLastUpdate( void );

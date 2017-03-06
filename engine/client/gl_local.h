@@ -162,8 +162,6 @@ typedef struct
 	int		grayTexture;
 	int		blackTexture;
 	int		defaultTexture;   	// use for bad textures
-	int		particleTexture;	// particle texture
-	int		particleTexture2;	// unsmoothed particle texture
 	int		solidskyTexture;	// quake1 solid-sky layer
 	int		alphaskyTexture;	// quake1 alpha-sky layer
 	int		lightmapTextures[MAX_LIGHTMAPS];
@@ -213,6 +211,7 @@ typedef struct
 	float		lightcache[MAX_LIGHTSTYLES];
 
 	double		frametime;	// special frametime for multipass rendering (will set to 0 on a nextview)
+	float		blend;		// global blend value
 
 	// cull info
 	vec3_t		modelorg;		// relative to viewpoint
@@ -279,7 +278,7 @@ void R_ShowTextures( void );
 //
 // gl_cull.c
 //
-int R_CullModel( cl_entity_t *e, vec3_t origin, vec3_t mins, vec3_t maxs, float radius );
+int R_CullModel( cl_entity_t *e, const vec3_t absmin, const vec3_t absmax );
 qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
 qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipflags );
 qboolean R_CullSurface( msurface_t *surf, uint clipflags );
@@ -342,8 +341,8 @@ void R_PushDlights( void );
 void R_AnimateLight( void );
 void R_GetLightSpot( vec3_t lightspot );
 void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
-void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius );
 void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, qboolean useAmbient, float radius );
+colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lightspot );
 int R_CountSurfaceDlights( msurface_t *surf );
 int R_CountDlights( void );
 
@@ -417,6 +416,7 @@ void R_DrawSpriteModel( cl_entity_t *e );
 //
 void R_StudioInit( void );
 void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded );
+void R_StudioLerpStepMovement( cl_entity_t *e, double time, vec3_t origin, vec3_t angles );
 struct mstudiotex_s *R_StudioGetTexture( cl_entity_t *e );
 float CL_GetStudioEstimatedFrame( cl_entity_t *ent );
 void R_DrawStudioModel( cl_entity_t *e );
@@ -666,13 +666,12 @@ extern convar_t	*r_detailtextures;
 extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;
-extern convar_t	*r_lefthand;
 extern convar_t	*r_flaresize;
 extern convar_t	*r_decals;
 extern convar_t	*r_novis;
 extern convar_t	*r_nocull;
 extern convar_t	*r_lockpvs;
-extern convar_t	*r_lockcull;
+extern convar_t	*r_lockfrustum;
 extern convar_t	*r_dynamic;
 extern convar_t	*r_lightmap;
 extern convar_t	*r_fastsky;

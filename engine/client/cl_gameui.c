@@ -522,7 +522,7 @@ static void pfnFillRGBA( int x, int y, int width, int height, int r, int g, int 
 	a = bound( 0, a, 255 );
 	pglColor4ub( r, g, b, a );
 	GL_SetRenderMode( kRenderTransTexture );
-	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
+	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, tr.whiteTexture );
 	pglColor4ub( 255, 255, 255, 255 );
 }
 

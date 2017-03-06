@@ -339,7 +339,7 @@ void CL_ClipPMoveToEntity( physent_t *pe, const vec3_t start, vec3_t mins, vec3_
 	}
 }
 
-static void CL_CopyEntityToPhysEnt( physent_t *pe, entity_state_t *state )
+static void CL_CopyEntityToPhysEnt( physent_t *pe, entity_state_t *state, qboolean visent )
 {
 	model_t	*mod = Mod_Handle( state->modelindex );
 
@@ -361,31 +361,26 @@ static void CL_CopyEntityToPhysEnt( physent_t *pe, entity_state_t *state )
 
 	pe->model = pe->studiomodel = NULL;
 
-	switch( state->solid )
+	VectorCopy( state->mins, pe->mins );
+	VectorCopy( state->maxs, pe->maxs );
+
+	if( state->solid == SOLID_BBOX )
 	{
-	case SOLID_NOT:
-	case SOLID_BSP:
-		pe->model = mod;
-		VectorClear( pe->mins );
-		VectorClear( pe->maxs );
-		break;
-	case SOLID_BBOX:
-		if( mod && mod->type == mod_studio && mod->flags & STUDIO_TRACE_HITBOX )
+		if( FBitSet( mod->flags, STUDIO_TRACE_HITBOX ))
 			pe->studiomodel = mod;
-		VectorCopy( state->mins, pe->mins );
-		VectorCopy( state->maxs, pe->maxs );
-		break;
-	case SOLID_CUSTOM:
-		pe->model = (mod->type == mod_brush) ? mod : NULL;
-		pe->studiomodel = (mod->type == mod_studio) ? mod : NULL;
-		VectorCopy( state->mins, pe->mins );
-		VectorCopy( state->maxs, pe->maxs );
-		break;
-	default:
-		pe->studiomodel = (mod->type == mod_studio) ? mod : NULL;
-		VectorCopy( state->mins, pe->mins );
-		VectorCopy( state->maxs, pe->maxs );
-		break;
+	}
+	else
+	{
+		if( pe->solid != SOLID_BSP && mod->type == mod_studio )
+			pe->studiomodel = mod;
+		else pe->model = mod;
+	}
+
+	// rare case: not solid entities in vistrace
+	if( visent && VectorIsNull( pe->mins ))
+	{
+		VectorCopy( mod->mins, pe->mins );
+		VectorCopy( mod->maxs, pe->maxs );
 	}
 
 	pe->info = state->number;
@@ -458,7 +453,7 @@ void CL_AddLinksToPmove( frame_t *frame )
 		if(( model->hulls[1].firstclipnode || model->type == mod_studio ) && clgame.pmove->numvisent < MAX_PHYSENTS )
 		{
 			pe = &clgame.pmove->visents[clgame.pmove->numvisent];
-			CL_CopyEntityToPhysEnt( pe, state );
+			CL_CopyEntityToPhysEnt( pe, state, true );
 			clgame.pmove->numvisent++;
 		}
 
@@ -482,7 +477,7 @@ void CL_AddLinksToPmove( frame_t *frame )
 				continue;
 
 			pe = &clgame.pmove->moveents[clgame.pmove->nummoveent];
-			CL_CopyEntityToPhysEnt( pe, state );
+			CL_CopyEntityToPhysEnt( pe, state, false );
 			clgame.pmove->nummoveent++;
 		}
 		else
@@ -492,7 +487,7 @@ void CL_AddLinksToPmove( frame_t *frame )
 				continue;
 
 			pe = &clgame.pmove->physents[clgame.pmove->numphysent];
-			CL_CopyEntityToPhysEnt( pe, state );
+			CL_CopyEntityToPhysEnt( pe, state, false );
 			clgame.pmove->numphysent++;
 		}
 	}
@@ -576,7 +571,7 @@ void CL_SetSolidPlayers( int playernum )
 			break;
 
 		pe = &clgame.pmove->physents[clgame.pmove->numphysent];
-		CL_CopyEntityToPhysEnt( pe, state );
+		CL_CopyEntityToPhysEnt( pe, state, false );
 		clgame.pmove->numphysent++;
 
 		// some fields needs to be override from cls.predicted_players
@@ -715,10 +710,30 @@ pmtrace_t CL_TraceLine( vec3_t start, vec3_t end, int flags )
 {
 	int	old_usehull;
 	pmtrace_t	tr;
-	
+
 	old_usehull = clgame.pmove->usehull;
-	clgame.pmove->usehull = 2;
+	clgame.pmove->usehull = 2;	
 	tr = PM_PlayerTraceExt( clgame.pmove, start, end, flags, clgame.pmove->numphysent, clgame.pmove->physents, -1, NULL );
+	clgame.pmove->usehull = old_usehull;
+
+	return tr;
+}
+
+/*
+=============
+CL_VisTraceLine
+
+trace by visible objects (thats can be non-solid)
+=============
+*/
+pmtrace_t CL_VisTraceLine( vec3_t start, vec3_t end, int flags )
+{
+	int	old_usehull;
+	pmtrace_t	tr;
+
+	old_usehull = clgame.pmove->usehull;
+	clgame.pmove->usehull = 2;	
+	tr = PM_PlayerTraceExt( clgame.pmove, start, end, flags, clgame.pmove->numvisent, clgame.pmove->visents, -1, NULL );
 	clgame.pmove->usehull = old_usehull;
 
 	return tr;

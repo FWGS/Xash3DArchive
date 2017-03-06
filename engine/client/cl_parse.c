@@ -600,12 +600,12 @@ void CL_WeaponAnim( int iAnim, int body )
 	view->curstate.rendermode = kRenderNormal;
 	view->curstate.renderamt = 255;
 
-#if 1	// g-cont. for GlowShell testing
+#if 0	// g-cont. for GlowShell testing
 	view->curstate.renderfx = kRenderFxGlowShell;
 	view->curstate.rendercolor.r = 255;
 	view->curstate.rendercolor.g = 128;
 	view->curstate.rendercolor.b = 0;
-	view->curstate.renderamt = 100;
+	view->curstate.renderamt = 150;
 #endif
 }
 

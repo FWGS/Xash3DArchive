@@ -57,8 +57,9 @@ Studio models are position independent, so the cache manager can move them.
 #define STUDIO_ZOMGIB		0x0020	// small blood trail
 #define STUDIO_TRACER2		0x0040	// orange split trail + rotate
 #define STUDIO_TRACER3		0x0080	// purple trail
-#define STUDIO_DYNAMIC_LIGHT		0x0100	// dynamically get lighting from floor or ceil (flying monsters)
+#define STUDIO_AMBIENT_LIGHT		0x0100	// force to use ambient shading 
 #define STUDIO_TRACE_HITBOX		0x0200	// always use hitbox trace instead of bbox
+#define STUDIO_FORCE_SKYLIGHT		0x0400	// always grab lightvalues from the sky settings (even if sky is invisible)
 
 // lighting & rendermode options
 #define STUDIO_NF_FLATSHADE		0x0001
@@ -97,7 +98,6 @@ Studio models are position independent, so the cache manager can move them.
 
 // sequence flags
 #define STUDIO_LOOPING		0x0001
-#define STUDIO_STATIC		0x8000	// studiomodel is static
 
 // bone flags
 #define STUDIO_HAS_NORMALS		0x0001

@@ -166,6 +166,9 @@ qboolean Mod_GetStudioBounds( const char *name, vec3_t mins, vec3_t maxs );
 void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *org, float *ang );
 void Mod_GetBonePosition( const edict_t *e, int iBone, float *org, float *ang );
 hull_t *Mod_HullForStudio( model_t *m, float frame, int seq, vec3_t ang, vec3_t org, vec3_t size, byte *pcnt, byte *pbl, int *hitboxes, edict_t *ed );
+void R_StudioCalcBoneQuaternion( int frame, float s, void *pbone, void *panim, float *adj, vec4_t q );
+void R_StudioCalcBonePosition( int frame, float s, void *pbone, void *panim, vec3_t adj, vec3_t pos );
+void Mod_StudioComputeBounds( void *buffer, vec3_t mins, vec3_t maxs );
 int Mod_HitgroupForStudioHull( int index );
 
 #endif//MOD_LOCAL_H

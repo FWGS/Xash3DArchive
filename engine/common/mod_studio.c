@@ -332,162 +332,6 @@ static void Mod_StudioCalcBoneAdj( float *adj, const byte *pcontroller )
 
 /*
 ====================
-StudioCalcBoneQuaterion
-
-====================
-*/
-static void Mod_StudioCalcBoneQuaterion( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *q )
-{
-	int		j, k;
-	vec4_t		q1, q2;
-	vec3_t		angle1, angle2;
-	mstudioanimvalue_t	*panimvalue;
-
-	for( j = 0; j < 3; j++ )
-	{
-		if( panim->offset[j+3] == 0 )
-		{
-			angle2[j] = angle1[j] = pbone->value[j+3]; // default;
-		}
-		else
-		{
-			panimvalue = (mstudioanimvalue_t *)((byte *)panim + panim->offset[j+3]);
-			k = frame;
-			
-			// debug
-			if( panimvalue->num.total < panimvalue->num.valid )
-				k = 0;
-			
-			while( panimvalue->num.total <= k )
-			{
-				k -= panimvalue->num.total;
-				panimvalue += panimvalue->num.valid + 1;
-				// DEBUG
-				if( panimvalue->num.total < panimvalue->num.valid )
-					k = 0;
-			}
-			// Bah, missing blend!
-			if( panimvalue->num.valid > k )
-			{
-				angle1[j] = panimvalue[k+1].value;
-
-				if( panimvalue->num.valid > k + 1 )
-				{
-					angle2[j] = panimvalue[k+2].value;
-				}
-				else
-				{
-					if( panimvalue->num.total > k + 1 )
-						angle2[j] = angle1[j];
-					else angle2[j] = panimvalue[panimvalue->num.valid+2].value;
-				}
-			}
-			else
-			{
-				angle1[j] = panimvalue[panimvalue->num.valid].value;
-				if( panimvalue->num.total > k + 1 )
-				{
-					angle2[j] = angle1[j];
-				}
-				else
-				{
-					angle2[j] = panimvalue[panimvalue->num.valid + 2].value;
-				}
-			}
-			angle1[j] = pbone->value[j+3] + angle1[j] * pbone->scale[j+3];
-			angle2[j] = pbone->value[j+3] + angle2[j] * pbone->scale[j+3];
-		}
-
-		if( pbone->bonecontroller[j+3] != -1 )
-		{
-			angle1[j] += adj[pbone->bonecontroller[j+3]];
-			angle2[j] += adj[pbone->bonecontroller[j+3]];
-		}
-	}
-
-	if( !VectorCompare( angle1, angle2 ))
-	{
-		AngleQuaternion( angle1, q1, true );
-		AngleQuaternion( angle2, q2, true );
-		QuaternionSlerp( q1, q2, s, q );
-	}
-	else
-	{
-		AngleQuaternion( angle1, q, true );
-	}
-}
-
-/*
-====================
-StudioCalcBonePosition
-
-====================
-*/
-static void Mod_StudioCalcBonePosition( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *pos )
-{
-	int		j, k;
-	mstudioanimvalue_t	*panimvalue;
-
-	for( j = 0; j < 3; j++ )
-	{
-		pos[j] = pbone->value[j]; // default;
-		if( panim->offset[j] != 0.0f )
-		{
-			panimvalue = (mstudioanimvalue_t *)((byte *)panim + panim->offset[j]);
-			
-			k = frame;
-
-			// debug
-			if( panimvalue->num.total < panimvalue->num.valid )
-				k = 0;
-
-			// find span of values that includes the frame we want
-			while( panimvalue->num.total <= k )
-			{
-				k -= panimvalue->num.total;
-				panimvalue += panimvalue->num.valid + 1;
-
-  				// DEBUG
-				if( panimvalue->num.total < panimvalue->num.valid )
-					k = 0;
-			}
-
-			// if we're inside the span
-			if( panimvalue->num.valid > k )
-			{
-				// and there's more data in the span
-				if( panimvalue->num.valid > k + 1 )
-				{
-					pos[j] += (panimvalue[k+1].value * (1.0f - s) + s * panimvalue[k+2].value) * pbone->scale[j];
-				}
-				else
-				{
-					pos[j] += panimvalue[k+1].value * pbone->scale[j];
-				}
-			}
-			else
-			{
-				// are we at the end of the repeating values section and there's another section with data?
-				if( panimvalue->num.total <= k + 1 )
-				{
-					pos[j] += (panimvalue[panimvalue->num.valid].value * (1.0f - s) + s * panimvalue[panimvalue->num.valid + 2].value) * pbone->scale[j];
-				}
-				else
-				{
-					pos[j] += panimvalue[panimvalue->num.valid].value * pbone->scale[j];
-				}
-			}
-		}
-
-		if( pbone->bonecontroller[j] != -1 && adj )
-		{
-			pos[j] += adj[pbone->bonecontroller[j]];
-		}
-	}
-}
-
-/*
-====================
 StudioCalcRotations
 
 ====================
@@ -515,8 +359,8 @@ static void Mod_StudioCalcRotations( int boneused[], int numbones, const byte *p
 	for( j = numbones - 1; j >= 0; j-- )
 	{
 		i = boneused[j];
-		Mod_StudioCalcBoneQuaterion( frame, s, &pbone[i], &panim[i], adj, q[i] );
-		Mod_StudioCalcBonePosition( frame, s, &pbone[i], &panim[i], adj, pos[i] );
+		R_StudioCalcBoneQuaternion( frame, s, &pbone[i], &panim[i], adj, q[i] );
+		R_StudioCalcBonePosition( frame, s, &pbone[i], &panim[i], adj, pos[i] );
 	}
 
 	if( pseqdesc->motiontype & STUDIO_X ) pos[pseqdesc->motionbone][0] = 0.0f;
@@ -869,8 +713,10 @@ void Mod_StudioComputeBounds( void *buffer, vec3_t mins, vec3_t maxs )
 	studiohdr_t	*pstudiohdr;
 	mstudiobodyparts_t	*pbodypart;
 	mstudiomodel_t	*m_pSubModel;
+	mstudioseqgroup_t	*pseqgroup;
 	mstudioseqdesc_t	*pseqdesc;
 	mstudiobone_t	*pbones;
+	mstudioanim_t	*panim;
 	vec3_t		vecmins1, vecmaxs1;
 	vec3_t		vecmins2, vecmaxs2;
 	int		counter1, counter2;
@@ -905,17 +751,21 @@ void Mod_StudioComputeBounds( void *buffer, vec3_t mins, vec3_t maxs )
 	}
 
 	pbones = (mstudiobone_t *)((byte *)pstudiohdr + pstudiohdr->boneindex);
-	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
 
 	for( i = 0; i < pstudiohdr->numseq; i++ )
 	{
-		mstudioanim_t *panim = (mstudioanim_t *) (((byte *)buffer) + pseqdesc[i].animindex);
+		pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + i;
+		pseqgroup = (mstudioseqgroup_t *)((byte *)pstudiohdr + pstudiohdr->seqgroupindex) + pseqdesc->seqgroup;
+
+		if( pseqdesc->seqgroup == 0 )
+			panim = (mstudioanim_t *)((byte *)pstudiohdr + pseqgroup->data + pseqdesc->animindex);
+		else continue;
 
 		for( j = 0; j < pstudiohdr->numbones; j++ )
 		{
-			for( k = 0; k < pseqdesc[i].numframes; k++ )
+			for( k = 0; k < pseqdesc->numframes; k++ )
 			{
-				Mod_StudioCalcBonePosition( k, 0, &pbones[j], panim, NULL, pos );
+				R_StudioCalcBonePosition( k, 0, &pbones[j], panim, NULL, pos );
 				Mod_StudioBoundVertex( vecmins2, vecmaxs2, &counter2, pos );
 			}
 		}

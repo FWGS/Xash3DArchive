@@ -633,7 +633,7 @@ void CL_DrawScreenFade( void )
 	if( sf->fadeFlags & FFADE_MODULATE )
 		GL_SetRenderMode( kRenderTransAdd );
 	else GL_SetRenderMode( kRenderTransTexture );
-	R_DrawStretchPic( 0, 0, glState.width, glState.height, 0, 0, 1, 1, cls.fillImage );
+	R_DrawStretchPic( 0, 0, glState.width, glState.height, 0, 0, 1, 1, tr.whiteTexture );
 	pglColor4ub( 255, 255, 255, 255 );
 }
 
@@ -1189,7 +1189,7 @@ static model_t *CL_LoadSpriteModel( const char *filename, uint type, uint texFla
 	}
 
 	// load new map sprite
-	if( CL_LoadHudSprite( name, &clgame.sprites[i], true, 0 ))
+	if( CL_LoadHudSprite( name, &clgame.sprites[i], type, 0 ))
 	{
 		if( i < ( MAX_IMAGES - 1 ))
 			clgame.sprites[i].needload = clgame.load_sequence;
@@ -1451,7 +1451,7 @@ void CL_FillRGBA( int x, int y, int width, int height, int r, int g, int b, int 
 	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&width, (float *)&height );
 
 	GL_SetRenderMode( kRenderTransAdd );
-	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
+	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, tr.whiteTexture );
 	pglColor4ub( 255, 255, 255, 255 );
 }
 
@@ -2835,7 +2835,7 @@ void CL_FillRGBABlend( int x, int y, int width, int height, int r, int g, int b,
 	pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_ONE );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
-	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, cls.fillImage );
+	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, tr.whiteTexture );
 	pglColor4ub( 255, 255, 255, 255 );
 }
 
@@ -4047,6 +4047,9 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.dllFuncs.pfnInit();
 
 	CL_InitStudioAPI( );
+
+	// grab them from client.dll
+	cl_righthand = Cvar_Get( "cl_righthand", "0", FCVAR_ARCHIVE, "flip viewmodel (left to right)" );
 
 	return true;
 }

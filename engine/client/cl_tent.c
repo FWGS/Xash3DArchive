@@ -94,27 +94,39 @@ int CL_FxBlend( cl_entity_t *e )
 		break;
 	// JAY: HACK for now -- not time based
 	case kRenderFxFadeSlow:			
-		if( e->curstate.renderamt > 0 ) 
-			e->curstate.renderamt -= 1;
-		else e->curstate.renderamt = 0;
+		if( tr.frametime )
+		{
+			if( e->curstate.renderamt > 0 ) 
+				e->curstate.renderamt -= 1;
+			else e->curstate.renderamt = 0;
+		}
 		blend = e->curstate.renderamt;
 		break;
 	case kRenderFxFadeFast:
-		if( e->curstate.renderamt > 3 ) 
-			e->curstate.renderamt -= 4;
-		else e->curstate.renderamt = 0;
+		if( tr.frametime )
+		{
+			if( e->curstate.renderamt > 3 ) 
+				e->curstate.renderamt -= 4;
+			else e->curstate.renderamt = 0;
+		}
 		blend = e->curstate.renderamt;
 		break;
 	case kRenderFxSolidSlow:
-		if( e->curstate.renderamt < 255 ) 
-			e->curstate.renderamt += 1;
-		else e->curstate.renderamt = 255;
+		if( tr.frametime )
+		{
+			if( e->curstate.renderamt < 255 ) 
+				e->curstate.renderamt += 1;
+			else e->curstate.renderamt = 255;
+		}
 		blend = e->curstate.renderamt;
 		break;
 	case kRenderFxSolidFast:
-		if( e->curstate.renderamt < 252 ) 
-			e->curstate.renderamt += 4;
-		else e->curstate.renderamt = 255;
+		if( tr.frametime )
+		{
+			if( e->curstate.renderamt < 252 ) 
+				e->curstate.renderamt += 4;
+			else e->curstate.renderamt = 255;
+		}
 		blend = e->curstate.renderamt;
 		break;
 	case kRenderFxStrobeSlow:
@@ -184,6 +196,9 @@ void CL_InitTempEnts( void )
 {
 	cl_tempents = Mem_Alloc( cls.mempool, sizeof( TEMPENTITY ) * GI->max_tents );
 	CL_ClearTempEnts();
+
+	// load tempent sprites (glowshell, muzzleflashes etc)
+	CL_LoadClientSprites ();
 }
 
 /*
@@ -2636,15 +2651,18 @@ void CL_UpdateFlashlight( cl_entity_t *ent )
 	VectorAdd( ent->origin, view_ofs, vecSrc );
 	VectorMA( vecSrc, FLASHLIGHT_DISTANCE, forward, vecEnd );
 
-	trace = CL_TraceLine( vecSrc, vecEnd, PM_STUDIO_BOX );
+	trace = CL_VisTraceLine( vecSrc, vecEnd, PM_STUDIO_BOX );
 
 	// update flashlight endpos
 	dl = CL_AllocDlight( ent->index );
-
-	if( trace.ent > 0 && clgame.pmove->physents[trace.ent].studiomodel )
-		VectorCopy( clgame.pmove->physents[trace.ent].origin, dl->origin );
+#if 0
+	// g-cont. disabled until studio lighting will be finished
+	if( trace.ent > 0 && clgame.pmove->visents[trace.ent].studiomodel )
+		VectorCopy( clgame.pmove->visents[trace.ent].origin, dl->origin );
 	else VectorCopy( trace.endpos, dl->origin );
-
+#else
+	VectorCopy( trace.endpos, dl->origin );
+#endif
 	// compute falloff
 	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
 	if( falloff < 500.0f ) falloff = 1.0f;

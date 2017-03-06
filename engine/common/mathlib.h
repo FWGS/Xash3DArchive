@@ -119,6 +119,7 @@ float rsqrt( float number );
 float anglemod( const float a );
 word FloatToHalf( float v );
 float HalfToFloat( word h );
+void RoundUpHullSize( vec3_t size );
 int SignbitsForPlane( const vec3_t normal );
 int NearestPOW( int value, qboolean roundDown );
 void SinCos( float radians, float *sine, float *cosine );
@@ -133,11 +134,12 @@ void ClearBounds( vec3_t mins, vec3_t maxs );
 void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs );
 qboolean BoundsIntersect( const vec3_t mins1, const vec3_t maxs1, const vec3_t mins2, const vec3_t maxs2 );
 qboolean BoundsAndSphereIntersect( const vec3_t mins, const vec3_t maxs, const vec3_t origin, float radius );
+qboolean SphereIntersect( const vec3_t vSphereCenter, float fSphereRadiusSquared, const vec3_t vLinePt, const vec3_t vLineDir );
 float RadiusFromBounds( const vec3_t mins, const vec3_t maxs );
 
 void AngleQuaternion( const vec3_t angles, vec4_t q, qboolean studio );
 void QuaternionAngle( const vec4_t q, vec3_t angles );
-void QuaternionSlerp( const vec4_t p, vec4_t q, float t, vec4_t qt );
+void QuaternionSlerp( const vec4_t p, const vec4_t q, float t, vec4_t qt );
 float RemapVal( float val, float A, float B, float C, float D );
 float ApproachVal( float target, float value, float speed );
 
@@ -180,6 +182,7 @@ void Matrix4x4_Transpose( matrix4x4 out, const matrix4x4 in1 );
 qboolean Matrix4x4_Invert_Full( matrix4x4 out, const matrix4x4 in1 );
 
 extern vec3_t		vec3_origin;
+extern int		boxpnt[6][4];
 extern const matrix3x4	matrix3x4_identity;
 extern const matrix4x4	matrix4x4_identity;
 

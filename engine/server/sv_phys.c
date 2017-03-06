@@ -125,6 +125,7 @@ SV_CheckVelocity
 void SV_CheckVelocity( edict_t *ent )
 {
 	float	wishspd;
+	float	maxspd;
 	int	i;
 
 	// bound velocity
@@ -144,10 +145,11 @@ void SV_CheckVelocity( edict_t *ent )
 	}
 
 	wishspd = DotProduct( ent->v.velocity, ent->v.velocity );
+	maxspd = sv_maxvelocity.value * sv_maxvelocity.value * 1.73f; // half-diagonal
 
-	if( wishspd > ( sv_maxvelocity.value * sv_maxvelocity.value ))
+	if( wishspd > maxspd )
 	{
-		MsgDev( D_INFO, "Got a velocity too high on %s\n", STRING( ent->v.classname ));
+		MsgDev( D_INFO, "Got a velocity too high on %s ( %.2f > %.2f )\n", STRING( ent->v.classname ), sqrt( wishspd ), sqrt( maxspd ));
 		wishspd = sv_maxvelocity.value / sqrt( wishspd );
 		VectorScale( ent->v.velocity, wishspd, ent->v.velocity );
 	}

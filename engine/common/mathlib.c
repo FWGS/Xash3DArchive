@@ -15,8 +15,24 @@ GNU General Public License for more details.
 
 #include "common.h"
 #include "mathlib.h"
+#include "eiface.h"
 
-vec3_t	vec3_origin = { 0, 0, 0 };
+#define NUM_HULL_ROUNDS	ARRAYSIZE( hull_table )
+#define HULL_PRECISION	4
+
+vec3_t vec3_origin = { 0, 0, 0 };
+
+static word hull_table[] = { 2, 4, 6, 8, 12, 16, 18, 24, 28, 32, 36, 40, 48, 54, 56, 60, 64, 72, 80, 112, 120, 128, 140, 176 };
+
+int boxpnt[6][4] =
+{
+{ 0, 4, 6, 2 }, // +X
+{ 0, 1, 5, 4 }, // +Y
+{ 0, 2, 3, 1 }, // +Z
+{ 7, 5, 1, 3 }, // -X
+{ 7, 3, 2, 6 }, // -Y
+{ 7, 6, 4, 5 }, // -Z
+};	
 
 /*
 =================
@@ -73,6 +89,56 @@ float HalfToFloat( word h )
 	}
 
 	return *((float *)&f);
+}
+
+/*
+=================
+RoundUpHullSize
+
+round the hullsize to nearest 'right' value
+=================
+*/
+void RoundUpHullSize( vec3_t size )
+{
+	int	i, j;
+	
+	for( i = 0; i < 3; i++)
+	{
+		qboolean	negative = false;
+                    float	result, value;
+
+		value = size[i];
+		if( value < 0.0f ) negative = true;
+		value = Q_ceil( fabs( value ));
+
+		// lookup hull table to find nearest supposed value
+		for( j = 0; j < NUM_HULL_ROUNDS; j++ )
+          	{
+			if( value > hull_table[j] )
+				continue;	// ceil only
+
+			if( negative )
+			{
+				result = ( value - hull_table[j] );
+				if( result <= HULL_PRECISION )
+				{ 
+					result = -hull_table[j];
+					break;
+				}
+			}
+			else
+			{
+				result = ( value - hull_table[j] );
+				if( result <= HULL_PRECISION )
+				{ 
+					result = hull_table[j];
+					break;
+				}
+			}
+		}
+
+		size[i] = result;
+	}
 }
 
 /*
@@ -372,6 +438,29 @@ qboolean BoundsAndSphereIntersect( const vec3_t mins, const vec3_t maxs, const v
 
 /*
 =================
+SphereIntersect
+=================
+*/
+qboolean SphereIntersect( const vec3_t vSphereCenter, float fSphereRadiusSquared, const vec3_t vLinePt, const vec3_t vLineDir )
+{
+	float	a, b, c, insideSqr;
+	vec3_t	p;
+
+	// translate sphere to origin.
+	VectorSubtract( vLinePt, vSphereCenter, p );
+
+	a = DotProduct( vLineDir, vLineDir );
+	b = 2.0f * DotProduct( p, vLineDir );
+	c = DotProduct( p, p ) - fSphereRadiusSquared;
+
+	insideSqr = b * b - 4.0f * a * c;
+	if( insideSqr <= 0.000001f )
+		return false;
+	return true;
+}
+
+/*
+=================
 RadiusFromBounds
 =================
 */
@@ -469,52 +558,70 @@ void QuaternionAngle( const vec4_t q, vec3_t angles )
 
 /*
 ====================
-QuaternionSlerp
+QuaternionAlign
 
+make sure quaternions are within 180 degrees of one another,
+if not, reverse q
 ====================
 */
-void QuaternionSlerp( const vec4_t p, vec4_t q, float t, vec4_t qt )
+void QuaternionAlign( const vec4_t p, const vec4_t q, vec4_t qt )
 {
-	float	omega, sclp, sclq;
-	float	cosom, sinom;
+	// decide if one of the quaternions is backwards
 	float	a = 0.0f;
 	float	b = 0.0f;
 	int	i;
 
-	// decide if one of the quaternions is backwards
-	for( i = 0; i < 4; i++ )
+	for( i = 0; i < 4; i++ ) 
 	{
 		a += (p[i] - q[i]) * (p[i] - q[i]);
 		b += (p[i] + q[i]) * (p[i] + q[i]);
 	}
 
-	if( a > b )
+	if( a > b ) 
 	{
-		for( i = 0; i < 4; i++ )
-		{
-			q[i] = -q[i];
-		}
+		for( i = 0; i < 4; i++ ) 
+			qt[i] = -q[i];
 	}
+	else
+	{
+		for( i = 0; i < 4; i++ ) 
+			qt[i] = q[i];
+	}
+}
 
+/*
+====================
+QuaternionSlerpNoAlign
+====================
+*/
+void QuaternionSlerpNoAlign( const vec4_t p, const vec4_t q, float t, vec4_t qt )
+{
+	float	omega, cosom, sinom, sclp, sclq;
+	int	i;
+
+	// 0.0 returns p, 1.0 return q.
 	cosom = p[0] * q[0] + p[1] * q[1] + p[2] * q[2] + p[3] * q[3];
 
-	if(( 1.0 + cosom ) > 0.000001f )
+	if(( 1.0f + cosom ) > 0.000001f )
 	{
 		if(( 1.0f - cosom ) > 0.000001f )
 		{
 			omega = acos( cosom );
 			sinom = sin( omega );
-			sclp = sin(( 1.0f - t ) * omega ) / sinom;
+			sclp = sin( (1.0f - t) * omega) / sinom;
 			sclq = sin( t * omega ) / sinom;
 		}
 		else
 		{
+			// TODO: add short circuit for cosom == 1.0f?
 			sclp = 1.0f - t;
 			sclq = t;
 		}
 
 		for( i = 0; i < 4; i++ )
+		{
 			qt[i] = sclp * p[i] + sclq * q[i];
+		}
 	}
 	else
 	{
@@ -526,6 +633,26 @@ void QuaternionSlerp( const vec4_t p, vec4_t q, float t, vec4_t qt )
 		sclq = sin( t * ( 0.5f * M_PI ));
 
 		for( i = 0; i < 3; i++ )
+		{
 			qt[i] = sclp * p[i] + sclq * qt[i];
+		}
 	}
+}
+
+/*
+====================
+QuaternionSlerp
+
+Quaternion sphereical linear interpolation
+====================
+*/
+void QuaternionSlerp( const vec4_t p, const vec4_t q, float t, vec4_t qt )
+{
+	vec4_t	q2;
+
+	// 0.0 returns p, 1.0 return q.
+	// decide if one of the quaternions is backwards
+	QuaternionAlign( p, q, q2 );
+
+	QuaternionSlerpNoAlign( p, q2, t, qt );
 }

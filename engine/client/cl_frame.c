@@ -1059,6 +1059,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 #ifdef STUDIO_INTERPOLATION_FIX
 					if( ent->lastmove >= cl.time )
 						VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
+					ent->curstate.movetype = MOVETYPE_STEP;
 #else
 					if( ent->lastmove >= cl.time )
 					{
@@ -1107,6 +1108,12 @@ void CL_LinkPacketEntities( frame_t *frame )
 				// no interpolation right now
 				VectorCopy( ent->curstate.origin, ent->origin );
 				VectorCopy( ent->curstate.angles, ent->angles );
+			}
+
+			if( ent->model->type == mod_studio )
+			{
+				if( ent->curstate.movetype == MOVETYPE_STEP && FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
+					R_StudioLerpStepMovement( ent, cl.time, ent->origin, ent->angles );
 			}
 		}
 

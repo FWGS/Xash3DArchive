@@ -226,17 +226,17 @@ int R_CountSurfaceDlights( msurface_t *surf )
 
 =======================================================================
 */
-static uint	r_pointColor[3];
-static vec3_t	r_lightSpot;
+static float	g_trace_fraction;
+static vec3_t	g_trace_lightspot;
 
 /*
 =================
 R_RecursiveLightPoint
 =================
 */
-static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3_t start, const vec3_t end )
+static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f, float p2f, colorVec *cv, const vec3_t start, const vec3_t end )
 {
-	float		front, back, frac;
+	float		front, back, frac, midf;
 	int		i, map, side, size, s, t;
 	int		sample_size;
 	msurface_t	*surf;
@@ -246,7 +246,10 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 
 	// didn't hit anything
 	if( !node || node->contents < 0 )
+	{
+		cv->r = cv->g = cv->b = cv->a = 0;
 		return false;
+	}
 
 	// calculate mid point
 	front = PlaneDiff( start, node->plane );
@@ -254,24 +257,27 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 
 	side = front < 0;
 	if(( back < 0 ) == side )
-		return R_RecursiveLightPoint( model, node->children[side], start, end );
+		return R_RecursiveLightPoint( model, node->children[side], p1f, p2f, cv, start, end );
 
 	frac = front / ( front - back );
 
 	VectorLerp( start, frac, end, mid );
+	midf = p1f + ( p2f - p1f ) * frac;
 
 	// co down front side	
-	if( R_RecursiveLightPoint( model, node->children[side], start, mid ))
+	if( R_RecursiveLightPoint( model, node->children[side], p1f, midf, cv, start, mid ))
 		return true; // hit something
 
 	if(( back < 0 ) == side )
-		return false;// didn't hit anything
-
-	VectorCopy( mid, r_lightSpot );
+	{
+		cv->r = cv->g = cv->b = cv->a = 0;
+		return false; // didn't hit anything
+	}
 
 	// check for impact on this node
 	surf = model->surfaces + node->firstsurface;
 	sample_size = Mod_SampleSizeForFace( surf );
+	VectorCopy( mid, g_trace_lightspot );
 
 	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
@@ -289,29 +295,31 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3
 		s /= sample_size;
 		t /= sample_size;
 
+		cv->r = cv->g = cv->b = cv->a = 0;
+
 		if( !surf->samples )
 			return true;
 
-		VectorClear( r_pointColor );
-
 		lm = surf->samples + (t * ((surf->extents[0]  / sample_size) + 1) + s);
-		size = ((surf->extents[0]  / sample_size) + 1) * ((surf->extents[1]  / sample_size) + 1);
+		size = ((surf->extents[0] / sample_size) + 1) * ((surf->extents[1] / sample_size) + 1);
+		g_trace_fraction = midf;
 
 		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{
 			uint	scale = tr.lightstylevalue[surf->styles[map]];
 
-			r_pointColor[0] += TextureToTexGamma( lm->r ) * scale;
-			r_pointColor[1] += TextureToTexGamma( lm->g ) * scale;
-			r_pointColor[2] += TextureToTexGamma( lm->b ) * scale;
+			cv->r += TextureToTexGamma( lm->r ) * scale;
+			cv->g += TextureToTexGamma( lm->g ) * scale;
+			cv->b += TextureToTexGamma( lm->b ) * scale;
 
 			lm += size; // skip to next lightmap
 		}
+
 		return true;
 	}
 
 	// go down back side
-	return R_RecursiveLightPoint( model, node->children[!side], mid, end );
+	return R_RecursiveLightPoint( model, node->children[!side], midf, p2f, cv, mid, end );
 }
 
 int R_LightTraceFilter( physent_t *pe )
@@ -331,6 +339,7 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 {
 	dlight_t		*dl;
 	pmtrace_t		trace;
+	colorVec		light;
 	cl_entity_t	*m_pGround;
 	vec3_t		start, end, dir;
 	qboolean		secondpass = false;
@@ -405,13 +414,11 @@ get_light:
 		VectorCopy( end_l, end );
 	}
 
-	VectorClear( r_pointColor );
-
-	if( R_RecursiveLightPoint( pmodel, pnodes, start, end ))
+	if( R_RecursiveLightPoint( pmodel, pnodes, 0.0f, 1.0f, &light, start, end ))
 	{
-		ambientLight->r = min((r_pointColor[0] >> 7), 255 );
-		ambientLight->g = min((r_pointColor[1] >> 7), 255 );
-		ambientLight->b = min((r_pointColor[2] >> 7), 255 );
+		ambientLight->r = Q_min(( light.r >> 7 ), 255 );
+		ambientLight->g = Q_min(( light.g >> 7 ), 255 );
+		ambientLight->b = Q_min(( light.b >> 7 ), 255 );
 	}
 	else
 	{
@@ -439,7 +446,7 @@ get_light:
 		int	lnum, total; 
 		float	f;
 
-		VectorClear( r_pointColor );
+		light.r = light.g = light.b = light.a = 0;
 
 		for( total = lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
 		{
@@ -453,87 +460,101 @@ get_light:
 				continue;
 
 			add = 1.0f - (dist / ( dl->radius + radius ));
-			r_pointColor[0] += TextureToTexGamma( dl->color.r ) * add;
-			r_pointColor[1] += TextureToTexGamma( dl->color.g ) * add;
-			r_pointColor[2] += TextureToTexGamma( dl->color.b ) * add;
+			light.r += TextureToTexGamma( dl->color.r ) * add;
+			light.g += TextureToTexGamma( dl->color.g ) * add;
+			light.b += TextureToTexGamma( dl->color.b ) * add;
 			total++;
 		}
 
 		if( total != 0 )
 		{
-			r_pointColor[0] += ambientLight->r;
-			r_pointColor[1] += ambientLight->g;
-			r_pointColor[2] += ambientLight->b;
+			light.r += ambientLight->r;
+			light.g += ambientLight->g;
+			light.b += ambientLight->b;
 
-			f = max( max( r_pointColor[0], r_pointColor[1] ), r_pointColor[2] );
-			if( f > 1.0f ) VectorScale( r_pointColor, ( 255.0f / f ), r_pointColor );
+			f = max( max( light.r, light.g ), light.b );
+			if( f > 1.0f )
+			{
+				light.r *= (255.0f / f);
+				light.r *= (255.0f / f);
+				light.r *= ( 255.0f / f);
+			}
 
-			ambientLight->r = r_pointColor[0];
-			ambientLight->g = r_pointColor[1];
-			ambientLight->b = r_pointColor[2];
+			ambientLight->r = light.r;
+			ambientLight->g = light.g;
+			ambientLight->b = light.b;
 		}
 	}
 }
 
 /*
 =================
-R_GetLightSpot
+R_LightVec
 
-NOTE: must call R_LightForPoint first
+check bspmodels to get light from
 =================
 */
-void R_GetLightSpot( vec3_t lightspot )
+colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot )
 {
-	if( lightspot ) VectorCopy( r_lightSpot, lightspot );
-}
+	float	last_fraction;
+	int	i, maxEnts = 1;
+	colorVec	light, cv;
 
-/*
-=================
-R_LightDir
-=================
-*/
-void R_LightDir( const vec3_t origin, vec3_t lightDir, float radius )
-{
-	dlight_t	*dl;
-	vec3_t	dir, local;
-	float	dist;
-	int	lnum;
-
-	VectorClear( local );
-
-	// add dynamic lights
-	if( radius > 0.0f && r_dynamic->value )
+	if( cl.worldmodel->lightdata )
 	{
-		for( lnum = 0, dl = cl_dlights; lnum < MAX_DLIGHTS; lnum++, dl++ )
+		light.r = light.b = light.b = light.a = 0;
+		last_fraction = 1.0f;
+
+		// get light from bmodels too
+		if( r_lighting_extended->value )
+			maxEnts = clgame.pmove->numphysent;
+
+		// check al the bsp-models
+		for( i = 0; i < maxEnts; i++ )
 		{
-			if( dl->die < cl.time || !dl->radius )
-				continue;
+			physent_t	*pe = &clgame.pmove->physents[i];
+			vec3_t	offset, start_l, end_l;
+			mnode_t	*pnodes;
+			matrix4x4	matrix;
 
-			VectorSubtract( dl->origin, origin, dir );
-			dist = VectorLength( dir );
+			if( !pe->model || pe->model->type != mod_brush )
+				continue; // skip non-bsp models
 
-			if( !dist || dist > dl->radius + radius )
-				continue;
-			VectorAdd( local, dir, local );
-		}
+			pnodes = &pe->model->nodes[pe->model->hulls[0].firstclipnode];
+			VectorSubtract( pe->model->hulls[0].clip_mins, vec3_origin, offset );
+			VectorAdd( offset, pe->origin, offset );
+			VectorSubtract( start, offset, start_l );
+			VectorSubtract( end, offset, end_l );
 
-		for( lnum = 0, dl = cl_elights; lnum < MAX_ELIGHTS; lnum++, dl++ )
-		{
-			if( dl->die < cl.time || !dl->radius )
-				continue;
+			// rotate start and end into the models frame of reference
+			if( !VectorIsNull( pe->angles ))
+			{
+				Matrix4x4_CreateFromEntity( matrix, pe->angles, offset, 1.0f );
+				Matrix4x4_VectorITransform( matrix, start, start_l );
+				Matrix4x4_VectorITransform( matrix, end, end_l );
+			}
 
-			VectorSubtract( dl->origin, origin, dir );
-			dist = VectorLength( dir );
+			VectorClear( g_trace_lightspot );
+			g_trace_fraction = 1.0f;
 
-			if( !dist || dist > dl->radius + radius )
-				continue;
-			VectorAdd( local, dir, local );
-		}
+			if( !R_RecursiveLightPoint( pe->model, pnodes, 0.0f, 1.0f, &cv, start_l, end_l ))
+				continue;	// didn't hit anything
 
-		if( !VectorIsNull( local ))
-		{
-			VectorNormalize( local );
-			VectorCopy( local, lightDir );
+			if( g_trace_fraction < last_fraction )
+			{
+				if( lspot ) VectorCopy( g_trace_lightspot, lspot );
+				light.r = Q_min(( cv.r >> 7 ), 255 );
+				light.g = Q_min(( cv.g >> 7 ), 255 );
+				light.b = Q_min(( cv.b >> 7 ), 255 );
+				last_fraction = g_trace_fraction;
+			}
 		}
 	}
+	else
+	{
+		light.r = light.g = light.b = 255;
+		light.a = 0;
+	}
+
+	return light;
 }

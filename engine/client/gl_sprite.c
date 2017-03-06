@@ -29,9 +29,8 @@ GNU General Public License for more details.
 convar_t		*r_sprite_lerping;
 convar_t		*r_sprite_lighting;
 char		group_suffix[8];
-static vec3_t	sprite_mins, sprite_maxs;
-static float	sprite_radius;
 static uint	r_texFlags = 0;
+float		sprite_radius;
 
 /*
 ====================
@@ -712,41 +711,6 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 
 /*
 ================
-R_StudioComputeBBox
-
-Compute a full bounding box for current sequence
-================
-*/
-qboolean R_SpriteComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
-{
-	float	scale = 1.0f;
-	vec3_t	p1;
-	int	i;
-
-	// copy original bbox (no rotation for sprites)
-	VectorCopy( e->model->mins, sprite_mins );
-	VectorCopy( e->model->maxs, sprite_maxs );
-
-	// compute a full bounding box
-	for( i = 0; bbox && i < 8; i++ )
-	{
-  		p1[0] = ( i & 1 ) ? sprite_mins[0] : sprite_maxs[0];
-  		p1[1] = ( i & 2 ) ? sprite_mins[1] : sprite_maxs[1];
-  		p1[2] = ( i & 4 ) ? sprite_mins[2] : sprite_maxs[2];
-
-		VectorCopy( p1, bbox[i] );
-	}
-
-	if( e->curstate.scale > 0.0f )
-		scale = e->curstate.scale;
-
-	sprite_radius = RadiusFromBounds( sprite_mins, sprite_maxs ) * scale;
-
-	return true;
-}
-
-/*
-================
 R_CullSpriteModel
 
 Cull sprite model by bbox
@@ -754,16 +718,25 @@ Cull sprite model by bbox
 */
 qboolean R_CullSpriteModel( cl_entity_t *e, vec3_t origin )
 {
+	vec3_t	sprite_mins, sprite_maxs;
+	float	scale = 1.0f;
+
 	if( !e->model->cache.data )
 		return true;
 
-	if( e == &clgame.viewent && r_lefthand->value >= 2 )
-		return true;
+	if( e->curstate.scale > 0.0f )
+		scale = e->curstate.scale;
 
-	if( !R_SpriteComputeBBox( e, NULL ))
-		return true; // invalid frame
+	// scale original bbox (no rotation for sprites)
+	VectorScale( e->model->mins, scale, sprite_mins );
+	VectorScale( e->model->maxs, scale, sprite_maxs );
 
-	return R_CullModel( e, origin, sprite_mins, sprite_maxs, sprite_radius );
+	sprite_radius = RadiusFromBounds( sprite_mins, sprite_maxs );
+
+	VectorAdd( sprite_mins, origin, sprite_mins );
+	VectorAdd( sprite_maxs, origin, sprite_maxs );
+
+	return R_CullModel( e, sprite_mins, sprite_maxs );
 }
 
 /*
