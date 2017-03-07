@@ -1068,7 +1068,7 @@ void R_BeginFrame( qboolean clearScene )
 	}
 
 	// update gamma
-	if( FBitSet( vid_gamma->flags, FCVAR_CHANGED ))
+	if( FBitSet( vid_gamma->flags, FCVAR_CHANGED ) || FBitSet( vid_brightness->flags, FCVAR_CHANGED ))
 	{
 		if( glConfig.deviceSupportsGamma )
 		{
@@ -1078,8 +1078,8 @@ void R_BeginFrame( qboolean clearScene )
 		}
 		else
 		{
+			BuildGammaTable( vid_gamma->value, vid_brightness->value );
 			glConfig.softwareGammaUpdate = true;
-			BuildGammaTable( vid_gamma->value, GAMMA );
 			GL_RebuildLightmaps();
 			glConfig.softwareGammaUpdate = false;
 		}
@@ -1502,7 +1502,7 @@ static render_api_t gRenderAPI =
 	CL_GetLightStyle,
 	CL_GetDynamicLight,
 	CL_GetEntityLight,
-	TextureToTexGamma,
+	LightToTexGamma,
 	CL_GetBeamChains,
 	R_SetCurrentEntity,
 	R_SetCurrentModel,

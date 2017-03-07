@@ -2654,7 +2654,7 @@ void CL_UpdateFlashlight( cl_entity_t *ent )
 	trace = CL_VisTraceLine( vecSrc, vecEnd, PM_STUDIO_BOX );
 
 	// update flashlight endpos
-	dl = CL_AllocDlight( ent->index );
+	dl = CL_AllocElight( ent->index );
 #if 0
 	// g-cont. disabled until studio lighting will be finished
 	if( trace.ent > 0 && clgame.pmove->visents[trace.ent].studiomodel )
@@ -2796,11 +2796,14 @@ void CL_TestLights( void )
 {
 	int	i, j;
 	float	f, r;
+	int	numLights;
 	dlight_t	*dl;
 
 	if( !cl_testlights->value ) return;
+
+	numLights = bound( 1, cl_testlights->value, MAX_DLIGHTS );
 	
-	for( i = 0; i < bound( 1, cl_testlights->value, MAX_DLIGHTS ); i++ )
+	for( i = 0; i < numLights; i++ )
 	{
 		dl = &cl_dlights[i];
 
@@ -2813,8 +2816,8 @@ void CL_TestLights( void )
 		dl->color.r = ((((i % 6) + 1) & 1)>>0) * 255;
 		dl->color.g = ((((i % 6) + 1) & 2)>>1) * 255;
 		dl->color.b = ((((i % 6) + 1) & 4)>>2) * 255;
+		dl->radius = Q_max( 64, 200 - 5 * numLights );
 		dl->die = cl.time + host.frametime;
-		dl->radius = 200;
 	}
 }
 

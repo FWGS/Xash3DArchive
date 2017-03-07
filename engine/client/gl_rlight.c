@@ -308,9 +308,9 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 		{
 			uint	scale = tr.lightstylevalue[surf->styles[map]];
 
-			cv->r += TextureToTexGamma( lm->r ) * scale;
-			cv->g += TextureToTexGamma( lm->g ) * scale;
-			cv->b += TextureToTexGamma( lm->b ) * scale;
+			cv->r += LightToTexGamma( lm->r ) * scale;
+			cv->g += LightToTexGamma( lm->g ) * scale;
+			cv->b += LightToTexGamma( lm->b ) * scale;
 
 			lm += size; // skip to next lightmap
 		}
@@ -350,9 +350,9 @@ void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLig
 	// set to full bright if no light data
 	if( !cl.worldmodel || !cl.worldmodel->lightdata )
 	{
-		ambientLight->r = TextureToTexGamma( clgame.movevars.skycolor_r );
-		ambientLight->g = TextureToTexGamma( clgame.movevars.skycolor_g );
-		ambientLight->b = TextureToTexGamma( clgame.movevars.skycolor_b );
+		ambientLight->r = LightToTexGamma( clgame.movevars.skycolor_r );
+		ambientLight->g = LightToTexGamma( clgame.movevars.skycolor_g );
+		ambientLight->b = LightToTexGamma( clgame.movevars.skycolor_b );
 		return;
 	}
 
@@ -460,9 +460,9 @@ get_light:
 				continue;
 
 			add = 1.0f - (dist / ( dl->radius + radius ));
-			light.r += TextureToTexGamma( dl->color.r ) * add;
-			light.g += TextureToTexGamma( dl->color.g ) * add;
-			light.b += TextureToTexGamma( dl->color.b ) * add;
+			light.r += LightToTexGamma( dl->color.r ) * add;
+			light.g += LightToTexGamma( dl->color.g ) * add;
+			light.b += LightToTexGamma( dl->color.b ) * add;
 			total++;
 		}
 
@@ -557,4 +557,20 @@ colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot )
 	}
 
 	return light;
+}
+
+/*
+=================
+R_LightPoint
+
+light from floor
+=================
+*/
+colorVec R_LightPoint( const vec3_t p0 )
+{
+	vec3_t	p1;
+
+	VectorSet( p1, p0[0], p0[1], p0[2] - 2048.0f );
+
+	return R_LightVec( p0, p1, NULL );
 }

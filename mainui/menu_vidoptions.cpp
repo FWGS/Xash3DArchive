@@ -66,12 +66,12 @@ UI_VidOptions_GetConfig
 static void UI_VidOptions_GetConfig( void )
 {
 	uiVidOptions.screenSize.curValue = RemapVal( CVAR_GET_FLOAT( "viewsize" ), 30.0f, 120.0f, 0.0f, 1.0f );
-	uiVidOptions.glareReduction.curValue = (CVAR_GET_FLOAT( "r_flaresize" ) - 100.0f ) / 200.0f;
+	uiVidOptions.glareReduction.curValue = CVAR_GET_FLOAT( "brightness" );
 
 	if( CVAR_GET_FLOAT( "gl_ignorehwgamma" ))
 	{
 		uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 1.8f, 3.0f, 0.0f, 1.0f );
-		PIC_SetGamma( uiVidOptions.hTestImage, CVAR_GET_FLOAT( "gamma" ));
+		PIC_SetGamma( uiVidOptions.hTestImage, 1.0f );
 	}
 	else uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 0.5f, 2.3f, 0.0f, 1.0f );
 
@@ -93,19 +93,22 @@ UI_VidOptions_UpdateConfig
 static void UI_VidOptions_UpdateConfig( void )
 {
 	CVAR_SET_FLOAT( "viewsize", RemapVal( uiVidOptions.screenSize.curValue, 0.0f, 1.0f, 30.0f, 120.0f ));
-	CVAR_SET_FLOAT( "r_flaresize", (uiVidOptions.glareReduction.curValue * 200.0f ) + 100.0f );
+	CVAR_SET_FLOAT( "brightness", uiVidOptions.glareReduction.curValue );
 	CVAR_SET_FLOAT( "r_fastsky", uiVidOptions.fastSky.enabled );
 	CVAR_SET_FLOAT( "host_allow_materials", uiVidOptions.hiTextures.enabled );
 
 	if( CVAR_GET_FLOAT( "gl_ignorehwgamma" ))
-		PIC_SetGamma( uiVidOptions.hTestImage, RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 1.8f, 3.0f ));
+	{
+		CVAR_SET_FLOAT( "gamma", RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 1.8f, 3.0f ));
+		PIC_SetGamma( uiVidOptions.hTestImage, 1.0f );
+	}
 	else CVAR_SET_FLOAT( "gamma", RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 0.5f, 2.3f ));
 }
 
 static void UI_VidOptions_SetConfig( void )
 {
 	CVAR_SET_FLOAT( "viewsize", RemapVal( uiVidOptions.screenSize.curValue, 0.0f, 1.0f, 30.0f, 120.0f ));
-	CVAR_SET_FLOAT( "r_flaresize", (uiVidOptions.glareReduction.curValue * 200.0f ) + 100.0f );
+	CVAR_SET_FLOAT( "brightness", uiVidOptions.glareReduction.curValue );
 	CVAR_SET_FLOAT( "r_fastsky", uiVidOptions.fastSky.enabled );
 	CVAR_SET_FLOAT( "host_allow_materials", uiVidOptions.hiTextures.enabled );
 

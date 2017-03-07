@@ -77,6 +77,7 @@ convar_t	*r_fastsky;
 
 convar_t	*vid_displayfrequency;
 convar_t	*vid_fullscreen;
+convar_t	*vid_brightness;
 convar_t	*vid_gamma;
 convar_t	*vid_mode;
 
@@ -973,7 +974,7 @@ void VID_StartupGamma( void )
 	if( gl_ignorehwgamma->value )
 	{
 		glConfig.deviceSupportsGamma = false;	// even if supported!
-		BuildGammaTable( vid_gamma->value, GAMMA );
+		BuildGammaTable( vid_gamma->value, vid_brightness->value );
 		MsgDev( D_NOTE, "VID_StartupGamma: software gamma initialized\n" );
 		return;
 	}
@@ -1041,6 +1042,7 @@ void VID_StartupGamma( void )
 		Mem_Free( savedGamma );
 	}
 
+	SetBits( vid_brightness->flags, FCVAR_CHANGED );
 	SetBits( vid_gamma->flags, FCVAR_CHANGED );
 }
 
@@ -1791,6 +1793,7 @@ void GL_InitCommands( void )
 	SetBits( gl_vsync->flags, FCVAR_CHANGED );
 
 	vid_gamma = Cvar_Get( "gamma", "1.0", FCVAR_ARCHIVE, "gamma amount" );
+	vid_brightness = Cvar_Get( "brightness", "1.0", FCVAR_ARCHIVE, "brighntess factor" );
 	vid_mode = Cvar_Get( "vid_mode", VID_AUTOMODE, FCVAR_RENDERINFO, "display resolution mode" );
 	vid_fullscreen = Cvar_Get( "fullscreen", "0", FCVAR_RENDERINFO, "set in 1 to enable fullscreen mode" );
 	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", FCVAR_RENDERINFO, "fullscreen refresh rate" );

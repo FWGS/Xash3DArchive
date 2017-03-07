@@ -551,7 +551,7 @@ qboolean FS_SaveImage( const char *filename, rgbdata_t *pix );
 rgbdata_t *FS_CopyImage( rgbdata_t *in );
 void FS_FreeImage( rgbdata_t *pack );
 extern const bpc_desc_t PFDesc[];	// image get pixelformat
-qboolean Image_Process( rgbdata_t **pix, int width, int height, float gamma, uint flags, imgfilter_t *filter );
+qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags, imgfilter_t *filter );
 void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end );
 void Image_SetForceFlags( uint flags );	// set image force flags on loading
 size_t Image_DXTGetLinearSize( int type, int width, int height, int depth );
@@ -906,8 +906,8 @@ void S_StopBackgroundTrack( void );
 void S_StopAllSounds( void );
 
 // gamma routines
-void BuildGammaTable( float gamma, float texGamma );
-byte TextureToTexGamma( byte b );
+void BuildGammaTable( float gamma, float brightness );
+byte LightToTexGamma( byte b );
 byte TextureToGamma( byte b );
 
 #ifdef __cplusplus

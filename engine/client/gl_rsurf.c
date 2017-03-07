@@ -495,7 +495,7 @@ void R_AddDynamicLights( msurface_t *surf )
 
 	for( lnum = 0; lnum < MAX_DLIGHTS; lnum++ )
 	{
-		if(!( surf->dlightbits & BIT( lnum )))
+		if( !FBitSet( surf->dlightbits, BIT( lnum )))
 			continue;	// not lit by this light
 
 		dl = &cl_dlights[lnum];
@@ -542,9 +542,9 @@ void R_AddDynamicLights( msurface_t *surf )
 
 				if( dist < minlight )
 				{
-					bl[0] += ( rad - dist ) * TextureToTexGamma( dl->color.r );
-					bl[1] += ( rad - dist ) * TextureToTexGamma( dl->color.g );
-					bl[2] += ( rad - dist ) * TextureToTexGamma( dl->color.b );
+					bl[0] += ((int)((rad - dist) * 256) * dl->color.r) / 256;
+					bl[1] += ((int)((rad - dist) * 256) * dl->color.g) / 256;
+					bl[2] += ((int)((rad - dist) * 256) * dl->color.b) / 256;
 				}
 			}
 		}
@@ -690,9 +690,9 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 
 		for( i = 0, bl = r_blocklights; i < size; i++, bl += 3, lm++ )
 		{
-			bl[0] += TextureToTexGamma( lm->r ) * scale;
-			bl[1] += TextureToTexGamma( lm->g ) * scale;
-			bl[2] += TextureToTexGamma( lm->b ) * scale;
+			bl[0] += LightToTexGamma( lm->r ) * scale;
+			bl[1] += LightToTexGamma( lm->g ) * scale;
+			bl[2] += LightToTexGamma( lm->b ) * scale;
 		}
 	}
 
@@ -2067,6 +2067,8 @@ void GL_RebuildLightmaps( void )
 	model_t	*m;
 
 	if( !cl.world ) return;	// wait for worldmodel
+
+	ClearBits( vid_brightness->flags, FCVAR_CHANGED );
 	ClearBits( vid_gamma->flags, FCVAR_CHANGED );
 
 	// release old lightmaps

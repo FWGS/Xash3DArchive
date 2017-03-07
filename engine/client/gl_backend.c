@@ -559,7 +559,7 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 		break;
 	}
 
-	Image_Process( &r_shot, width, height, 0.0f, flags, NULL );
+	Image_Process( &r_shot, width, height, flags, NULL );
 
 	// write image
 	result = FS_SaveImage( filename, r_shot );
@@ -628,7 +628,7 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 		r_side->size = r_side->width * r_side->height * 3;
 		r_side->buffer = temp;
 
-		if( flags ) Image_Process( &r_side, 0, 0, 0.0f, flags, NULL );
+		if( flags ) Image_Process( &r_side, 0, 0, flags, NULL );
 		memcpy( buffer + (size * size * 3 * i), r_side->buffer, size * size * 3 );
 	}
 

@@ -469,7 +469,7 @@ void Con_CheckResize( void )
 		charWidth = con.curFont->charWidths['M'] - 1;
 
 	width = ( glState.width / charWidth ) - 2;
-	if( !glw_state.initialized ) width = 78;
+	if( !glw_state.initialized ) width = (640 / 5);
 
 	if( width == con.linewidth )
 		return;

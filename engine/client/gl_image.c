@@ -1213,7 +1213,7 @@ static void GL_ProcessImage( gltexture_t *tex, rgbdata_t *pic, imgfilter_t *filt
 			img_flags |= IMAGE_FORCE_RGBA;
 
 		// processing image before uploading (force to rgba, make luma etc)
-		if( pic->buffer ) Image_Process( &pic, 0, 0, 0.0f, img_flags, filter );
+		if( pic->buffer ) Image_Process( &pic, 0, 0, img_flags, filter );
 
 		if( tex->flags & TF_LUMINANCE )
 		{
@@ -1407,7 +1407,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 
 			// but allow to rescale raw images
 			if( ImageRAW( pic->type ) && ImageRAW( src->type ) && ( pic->width != src->width || pic->height != src->height ))
-				Image_Process( &src, pic->width, pic->height, 0.0f, IMAGE_RESAMPLE, NULL );
+				Image_Process( &src, pic->width, pic->height, IMAGE_RESAMPLE, NULL );
 
 			if( pic->size != src->size )
 			{
@@ -1710,7 +1710,7 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 
 	// all the operations makes over the image copy not an original
 	pic = FS_CopyImage( image->original );
-	Image_Process( &pic, topColor, bottomColor, gamma, flags, NULL );
+	Image_Process( &pic, topColor, bottomColor, flags, NULL );
 
 	GL_UploadTexture( image, pic );
 	GL_ApplyTextureParams( image ); // update texture filter, wrap etc

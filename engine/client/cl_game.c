@@ -3177,14 +3177,15 @@ NOTE: dlights are ignored
 */
 void TriLightAtPoint( float *pos, float *value )
 {
-	color24	ambient;
+	colorVec	vLightColor;
 
 	if( !pos || !value ) return;
-	R_LightForPoint( pos, &ambient, false, false, 0.0f );
 
-	value[0] = ambient.r;
-	value[1] = ambient.g;
-	value[2] = ambient.b;
+	vLightColor = R_LightPoint( pos );
+
+	value[0] = vLightColor.r;
+	value[1] = vLightColor.g;
+	value[2] = vLightColor.b;
 }
 
 /*

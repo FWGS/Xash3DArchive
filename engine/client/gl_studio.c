@@ -1608,9 +1608,9 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		{
 			VectorSet( lightDir, mv->skyvec_x, mv->skyvec_y, mv->skyvec_z );
 
-			light.r = mv->skycolor_r;
-			light.g = mv->skycolor_g;
-			light.b = mv->skycolor_b;
+			light.r = LightToTexGamma( mv->skycolor_r );
+			light.g = LightToTexGamma( mv->skycolor_g );
+			light.b = LightToTexGamma( mv->skycolor_b );
 		}
 	}
 
@@ -1690,9 +1690,9 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 
 			VectorAdd( lightDir, dist, lightDir );
 
-			finalLight[0] += dl->color.r * ( add / 256.0f );
-			finalLight[1] += dl->color.g * ( add / 256.0f );
-			finalLight[2] += dl->color.b * ( add / 256.0f );
+			finalLight[0] += LightToTexGamma( dl->color.r ) * ( add / 256.0f );
+			finalLight[1] += LightToTexGamma( dl->color.g ) * ( add / 256.0f );
+			finalLight[2] += LightToTexGamma( dl->color.b ) * ( add / 256.0f );
 		}
 	}
 
@@ -1841,6 +1841,7 @@ R_StudioLighting
 void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 {
 	float 	illum;
+	int	light;
 
 	if( FBitSet( flags, STUDIO_NF_FULLBRIGHT ))
 	{
@@ -1885,7 +1886,8 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 	}
 
 	illum = Q_min( illum, 255.0f );
-	*lv = illum * (1.0f / 255.0f);
+	light = LightToTexGamma( illum );
+	*lv = light * (1.0f / 255.0f);
 }
 
 /*

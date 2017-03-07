@@ -344,6 +344,7 @@ void R_MarkLights( dlight_t *light, int bit, mnode_t *node );
 void R_LightForPoint( const vec3_t point, color24 *ambientLight, qboolean invLight, qboolean useAmbient, float radius );
 colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lightspot );
 int R_CountSurfaceDlights( msurface_t *surf );
+colorVec R_LightPoint( const vec3_t p0 );
 int R_CountDlights( void );
 
 //
@@ -678,6 +679,7 @@ extern convar_t	*r_fastsky;
 
 extern convar_t	*vid_displayfrequency;
 extern convar_t	*vid_fullscreen;
+extern convar_t	*vid_brightness;
 extern convar_t	*vid_gamma;
 extern convar_t	*vid_mode;
 
