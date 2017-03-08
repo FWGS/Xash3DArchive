@@ -743,56 +743,34 @@ qboolean R_CullSpriteModel( cl_entity_t *e, vec3_t origin )
 ================
 R_GlowSightDistance
 
-Calc sight distance for glow-sprites
-================
-*/
-static float R_GlowSightDistance( vec3_t glowOrigin )
-{
-	float	dist;
-	vec3_t	glowDist;
-	pmtrace_t	tr;
-
-	VectorSubtract( glowOrigin, RI.vieworg, glowDist );
-	dist = VectorLength( glowDist );
-
-	if( RP_NORMALPASS( ))
-	{
-		tr = CL_TraceLine( RI.vieworg, glowOrigin, PM_GLASS_IGNORE|PM_STUDIO_IGNORE );
-
-		if(( 1.0f - tr.fraction ) * dist > 8.0f )
-			return -1;
-	}
-	return dist;
-}
-
-/*
-================
-R_GlowSightDistance
-
 Set sprite brightness factor
 ================
 */
 static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, int alpha, float *pscale )
 {
-	float	dist = R_GlowSightDistance( origin );
-	float	brightness;
+	float	dist, brightness;
+	vec3_t	glowDist;
+	pmtrace_t	tr;
 
-	if( dist <= 0.0f ) return 0.0f; // occluded
+	VectorSubtract( origin, RI.vieworg, glowDist );
+	dist = VectorLength( glowDist );
+
+	if( RP_NORMALPASS( ))
+	{
+		tr = CL_VisTraceLine( RI.vieworg, origin, r_traceglow->value ? PM_GLASS_IGNORE : (PM_GLASS_IGNORE|PM_STUDIO_IGNORE));
+
+		if(( 1.0f - tr.fraction ) * dist > 8.0f )
+			return 0.0f;
+	}
 
 	if( renderfx == kRenderFxNoDissipation )
 		return (float)alpha * (1.0f / 255.0f);
 
-	*pscale = 0.0f; // variable sized glow
-
 	brightness = GLARE_FALLOFF / ( dist * dist );
-	brightness = bound( 0.01f, brightness, 1.0f );
+	brightness = bound( 0.05f, brightness, 1.0f );
 
 	if( rendermode != kRenderWorldGlow )
-	{
-		// make the glow fixed size in screen space, taking into consideration the scale setting.
-		if( *pscale == 0.0f ) *pscale = 1.0f;
-		*pscale *= dist * ( 1.0f / bound( 100.0f, r_flaresize->value, 300.0f ));
-	}
+		*pscale *= dist * ( 1.0f / 200.0f );
 
 	return brightness;
 }

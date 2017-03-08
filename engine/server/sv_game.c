@@ -1001,8 +1001,8 @@ void SV_BaselineForEntity( edict_t *pEdict )
 	{
 		usehull = ( pEdict->v.flags & FL_DUCKING ) ? true : false;
 		modelindex = cl->modelindex ? cl->modelindex : pEdict->v.modelindex;
-		mins = svgame.player_mins[usehull]; 
-		maxs = svgame.player_maxs[usehull]; 
+		mins = host.player_mins[usehull]; 
+		maxs = host.player_maxs[usehull]; 
 		player = true;
 	}
 	else

@@ -28,9 +28,31 @@ static mplane_t	pm_boxplanes[6];
 static dclipnode_t	pm_boxclipnodes[6];
 static hull_t	pm_boxhull;
 
+// default hullmins
+static const vec3_t pm_hullmins[MAX_MAP_HULLS] =
+{
+{ -16, -16, -36 },
+{ -16, -16, -18 },
+{   0,   0,   0 },
+{ -32, -32, -32 },
+};
+
+// defualt hullmaxs
+static const vec3_t pm_hullmaxs[MAX_MAP_HULLS] =
+{
+{  16,  16,  36 },
+{  16,  16,  18 },
+{   0,   0,   0 },
+{  32,  32,  32 },
+};
+
 void Pmove_Init( void )
 {
 	PM_InitBoxHull ();
+
+	// init default hull sizes
+	memcpy( host.player_mins, pm_hullmins, sizeof( pm_hullmins ));
+	memcpy( host.player_maxs, pm_hullmaxs, sizeof( pm_hullmaxs ));
 }
 
 /*

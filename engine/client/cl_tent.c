@@ -2119,8 +2119,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		dl->decay = (float)(MSG_ReadByte( &buf ) * 10.0f);
 		break;
 	case TE_ELIGHT:
-		dl = CL_AllocElight( 0 );
-		entityIndex = MSG_ReadShort( &buf );
+		dl = CL_AllocElight( MSG_ReadShort( &buf ));
 		dl->origin[0] = MSG_ReadCoord( &buf );
 		dl->origin[1] = MSG_ReadCoord( &buf );
 		dl->origin[2] = MSG_ReadCoord( &buf );
@@ -2128,8 +2127,10 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		dl->color.r = MSG_ReadByte( &buf );
 		dl->color.g = MSG_ReadByte( &buf );
 		dl->color.b = MSG_ReadByte( &buf );
-		dl->die = cl.time + (float)(MSG_ReadByte( &buf ) * 0.1f);
+		life = (float)MSG_ReadByte( &buf ) * 0.1f;
+		dl->die = cl.time + life;
 		dl->decay = MSG_ReadCoord( &buf );
+		if( life != 0 ) dl->decay /= life;
 		break;
 	case TE_TEXTMESSAGE:
 		CL_ParseTextMessage( &buf );
@@ -2663,6 +2664,9 @@ void CL_UpdateFlashlight( cl_entity_t *ent )
 #else
 	VectorCopy( trace.endpos, dl->origin );
 #endif
+
+	R_DebugParticle( dl->origin, 255, 160, 0 );
+
 	// compute falloff
 	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
 	if( falloff < 500.0f ) falloff = 1.0f;

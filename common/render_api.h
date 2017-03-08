@@ -167,7 +167,7 @@ typedef struct render_api_s
 	lightstyle_t*	(*GetLightStyle)( int number ); 
 	dlight_t*		(*GetDynamicLight)( int number );
 	dlight_t*		(*GetEntityLight)( int number );
-	byte		(*TextureToTexGamma)( byte color );	// software gamma support
+	byte		(*LightToTexGamma)( byte color );	// software gamma support
 	void		(*GetBeamChains)( BEAM ***active_beams, BEAM ***free_beams, particle_t ***free_trails );
 
 	// Set renderer info (tell engine about changes)
@@ -192,7 +192,7 @@ typedef struct render_api_s
 	void		(*R_EntityRemoveDecals)( struct model_s *mod ); // remove all the decals from specified entity (BSP only)
 
 	// AVIkit support
-	void		*(*AVI_LoadVideo)( const char *filename, int ignore_hwgamma );
+	void		*(*AVI_LoadVideo)( const char *filename );
 	int		(*AVI_GetVideoInfo)( void *Avi, long *xres, long *yres, float *duration );
 	long		(*AVI_GetVideoFrameNumber)( void *Avi, float time );
 	byte		*(*AVI_GetVideoFrame)( void *Avi, long frame );

@@ -319,7 +319,6 @@ typedef struct
 	const model_t	*pCrosshair;
 	wrect_t		rcCrosshair;
 	rgba_t		rgbaCrosshair;
-	byte		gammaTable[256];
 } client_draw_t;
 
 typedef struct cl_predicted_player_s
@@ -424,9 +423,6 @@ typedef struct
 	qboolean		pushed;			// used by PM_Push\Pop state
 	int		oldviscount;		// used by PM_Push\Pop state
 	int		oldphyscount;		// used by PM_Push\Pop state
-
-	vec3_t		player_mins[MAX_MAP_HULLS];	// 4 hulls allowed
-	vec3_t		player_maxs[MAX_MAP_HULLS];	// 4 hulls allowed
 
 	cl_user_message_t	msg[MAX_USER_MESSAGES];	// keep static to avoid fragment memory
 	cl_user_event_t	*events[MAX_EVENTS];
@@ -762,7 +758,6 @@ void SCR_DirtyScreen( void );
 void SCR_AddDirtyPoint( int x, int y );
 void SCR_InstallParticlePalette( void );
 void SCR_EndLoadingPlaque( void );
-void SCR_RebuildGammaTable( void );
 void SCR_RegisterTextures( void );
 void SCR_LoadCreditsFont( void );
 void SCR_MakeScreenShot( void );

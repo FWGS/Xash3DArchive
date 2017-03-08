@@ -945,7 +945,6 @@ assume GameInfo is valid
 static qboolean FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 {
 	file_t	*f;
-	int	i;
 
 	if( !GameInfo ) return false;
 	f = FS_Open( filepath, "w", false );	// we in binary-mode
@@ -1014,18 +1013,6 @@ static qboolean FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 	if( GameInfo->nomodels )
 		FS_Printf( f, "nomodels\t\t\"%i\"\n", GameInfo->nomodels );
 
-	for( i = 0; i < 4; i++ )
-	{
-		float	*min, *max;
-
-		if( i && ( VectorIsNull( GameInfo->client_mins[i] ) || VectorIsNull( GameInfo->client_maxs[i] )))
-			continue;
-
-		min = GameInfo->client_mins[i];
-		max = GameInfo->client_maxs[i];
-		FS_Printf( f, "hull%i\t\t( %g %g %g ) ( %g %g %g )\n", i, min[0], min[1], min[2], max[0], max[1], max[2] );
-	}
-
 	if( GameInfo->max_edicts > 0 )
 		FS_Printf( f, "max_edicts\t%i\n", GameInfo->max_edicts );
 	if( GameInfo->max_tents > 0 )
@@ -1070,15 +1057,6 @@ void FS_CreateDefaultGameInfo( const char *filename )
 	Q_strncpy( defGI.startmap, "newmap", sizeof( defGI.startmap ));
 	Q_strncpy( defGI.iconpath, "game.ico", sizeof( defGI.iconpath ));
 
-	VectorSet( defGI.client_mins[0],   0,   0,  0  );
-	VectorSet( defGI.client_maxs[0],   0,   0,  0  );
-	VectorSet( defGI.client_mins[1], -16, -16, -36 );
-	VectorSet( defGI.client_maxs[1],  16,  16,  36 );
-	VectorSet( defGI.client_mins[2], -32, -32, -32 );
-	VectorSet( defGI.client_maxs[2],  32,  32,  32 );
-	VectorSet( defGI.client_mins[3], -16, -16, -18 );
-	VectorSet( defGI.client_maxs[3],  16,  16,  18 );
-
 	// make simple gameinfo.txt
 	FS_WriteGameInfo( filename, &defGI );
 } 
@@ -1114,15 +1092,6 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	Q_strncpy( GameInfo->startmap, "newmap", sizeof( GameInfo->startmap ));
 	Q_strncpy( GameInfo->dll_path, "cl_dlls", sizeof( GameInfo->dll_path ));
 	Q_strncpy( GameInfo->iconpath, "game.ico", sizeof( GameInfo->iconpath ));
-
-	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
-	VectorSet( GameInfo->client_maxs[0],   0,   0,  0  );
-	VectorSet( GameInfo->client_mins[1], -16, -16, -36 );
-	VectorSet( GameInfo->client_maxs[1],  16,  16,  36 );
-	VectorSet( GameInfo->client_mins[2], -32, -32, -32 );
-	VectorSet( GameInfo->client_maxs[2],  32,  32,  32 );
-	VectorSet( GameInfo->client_mins[3], -16, -16, -18 );
-	VectorSet( GameInfo->client_maxs[3],  16,  16,  18 );
 
 	pfile = afile;
 
@@ -1289,15 +1258,6 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 	Q_strncpy( GameInfo->startmap, "", sizeof( GameInfo->startmap ));
 	Q_strncpy( GameInfo->iconpath, "game.ico", sizeof( GameInfo->iconpath ));
 
-	VectorSet( GameInfo->client_mins[0],   0,   0,  0  );
-	VectorSet( GameInfo->client_maxs[0],   0,   0,  0  );
-	VectorSet( GameInfo->client_mins[1], -16, -16, -36 );
-	VectorSet( GameInfo->client_maxs[1],  16,  16,  36 );
-	VectorSet( GameInfo->client_mins[2], -32, -32, -32 );
-	VectorSet( GameInfo->client_maxs[2],  32,  32,  32 );
-	VectorSet( GameInfo->client_mins[3], -16, -16, -18 );
-	VectorSet( GameInfo->client_maxs[3],  16,  16,  18 );
-
 	pfile = afile;
 
 	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
@@ -1418,20 +1378,6 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		{
 			pfile = COM_ParseFile( pfile, token );
 			GameInfo->nomodels = Q_atoi( token );
-		}
-		else if( !Q_strnicmp( token, "hull", 4 ))
-		{
-			int	hullNum = Q_atoi( token + 4 );
-
-			if( hullNum < 0 || hullNum > 3 )
-			{
-				MsgDev( D_ERROR, "FS_ParseGameInfo: Invalid hull number %i. Ignored.\n", hullNum );
-			}
-			else
-			{
-				COM_ParseVector( &pfile, GameInfo->client_mins[hullNum], 3 );
-				COM_ParseVector( &pfile, GameInfo->client_maxs[hullNum], 3 );
-			}
 		}
 		else if( !Q_strnicmp( token, "ambient", 7 ))
 		{

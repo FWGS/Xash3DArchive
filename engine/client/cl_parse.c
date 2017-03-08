@@ -713,6 +713,13 @@ void CL_ParseServerData( sizebuf_t *msg )
 	Q_strncpy( gamefolder, MSG_ReadString( msg ), MAX_STRING );
 	host.features = (uint)MSG_ReadLong( msg );
 
+	// receive the player hulls
+	for( i = 0; i < MAX_MAP_HULLS * 3; i++ )
+	{
+		host.player_mins[i/3][i%3] = MSG_ReadChar( msg );
+		host.player_maxs[i/3][i%3] = MSG_ReadChar( msg );
+	}
+
 	if( cl.maxclients > 1 && host.developer < 1 )
 		host.developer++;
 

@@ -2895,7 +2895,7 @@ void TriRenderMode( int mode )
 		break;
 	case kRenderGlow:
 	case kRenderTransAdd:
-		pglBlendFunc( GL_ONE, GL_ONE );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		pglEnable( GL_BLEND );
 		pglDepthMask( GL_FALSE );
 		break;

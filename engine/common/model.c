@@ -44,27 +44,6 @@ static wadlist_t	wadlist;
 model_t		*loadmodel;
 model_t		*worldmodel;
 
-// cvars
-
-
-// default hullmins
-static vec3_t cm_hullmins[MAX_MAP_HULLS] =
-{
-{ -16, -16, -36 },
-{ -16, -16, -18 },
-{   0,   0,   0 },
-{ -32, -32, -32 },
-};
-
-// defualt hullmaxs
-static vec3_t cm_hullmaxs[MAX_MAP_HULLS] =
-{
-{  16,  16,  36 },
-{  16,  16,  18 },
-{   0,   0,   0 },
-{  32,  32,  32 },
-};
-
 /*
 ===============================================================================
 
@@ -191,17 +170,6 @@ void Mod_Modellist_f( void )
 	Msg( "-----------------------------------\n" );
 	Msg( "%i total models\n", nummodels );
 	Msg( "\n" );
-}
-
-/*
-================
-Mod_SetupHulls
-================
-*/
-void Mod_SetupHulls( vec3_t mins[MAX_MAP_HULLS], vec3_t maxs[MAX_MAP_HULLS] )
-{
-	memcpy( mins, cm_hullmins, sizeof( cm_hullmins ));
-	memcpy( maxs, cm_hullmaxs, sizeof( cm_hullmaxs ));
 }
 
 /*
@@ -2465,27 +2433,24 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 	hull->firstclipnode = 0;
 	hull->lastclipnode = count - 1;
 	hull->planes = loadmodel->planes;
-	VectorCopy( GI->client_mins[1], hull->clip_mins ); // copy human hull
-	VectorCopy( GI->client_maxs[1], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, world.hull_sizes[1] );
+	VectorCopy( host.player_mins[0], hull->clip_mins ); // copy human hull
+	VectorCopy( host.player_maxs[0], hull->clip_maxs );
 
 	hull = &loadmodel->hulls[2];
 	hull->clipnodes = out;
 	hull->firstclipnode = 0;
 	hull->lastclipnode = count - 1;
 	hull->planes = loadmodel->planes;
-	VectorCopy( GI->client_mins[2], hull->clip_mins ); // copy large hull
-	VectorCopy( GI->client_maxs[2], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, world.hull_sizes[2] );
+	VectorCopy( host.player_mins[3], hull->clip_mins ); // copy large hull
+	VectorCopy( host.player_maxs[3], hull->clip_maxs );
 
 	hull = &loadmodel->hulls[3];
 	hull->clipnodes = out;
 	hull->firstclipnode = 0;
 	hull->lastclipnode = count - 1;
 	hull->planes = loadmodel->planes;
-	VectorCopy( GI->client_mins[3], hull->clip_mins ); // copy head hull
-	VectorCopy( GI->client_maxs[3], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, world.hull_sizes[3] );
+	VectorCopy( host.player_mins[1], hull->clip_mins ); // copy head hull
+	VectorCopy( host.player_maxs[1], hull->clip_maxs );
 
 	for( i = 0; i < count; i++, out++, in++ )
 	{
@@ -2531,27 +2496,24 @@ static void Mod_LoadClipnodes31( const dlump_t *l, const dlump_t *l2, const dlum
 	hull->firstclipnode = 0;
 	hull->lastclipnode = count - 1;
 	hull->planes = loadmodel->planes;
-	VectorCopy( GI->client_mins[1], hull->clip_mins ); // copy human hull
-	VectorCopy( GI->client_maxs[1], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, world.hull_sizes[1] );
+	VectorCopy( host.player_mins[0], hull->clip_mins ); // copy human hull
+	VectorCopy( host.player_maxs[0], hull->clip_maxs );
 
 	hull = &loadmodel->hulls[2];
 	hull->clipnodes = out2;
 	hull->firstclipnode = 0;
 	hull->lastclipnode = count2 - 1;
 	hull->planes = loadmodel->planes;
-	VectorCopy( GI->client_mins[2], hull->clip_mins ); // copy large hull
-	VectorCopy( GI->client_maxs[2], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, world.hull_sizes[2] );
+	VectorCopy( host.player_mins[3], hull->clip_mins ); // copy large hull
+	VectorCopy( host.player_maxs[3], hull->clip_maxs );
 
 	hull = &loadmodel->hulls[3];
 	hull->clipnodes = out3;
 	hull->firstclipnode = 0;
 	hull->lastclipnode = count3 - 1;
 	hull->planes = loadmodel->planes;
-	VectorCopy( GI->client_mins[3], hull->clip_mins ); // copy head hull
-	VectorCopy( GI->client_maxs[3], hull->clip_maxs );
-	VectorSubtract( hull->clip_maxs, hull->clip_mins, world.hull_sizes[3] );
+	VectorCopy( host.player_mins[1], hull->clip_mins ); // copy head hull
+	VectorCopy( host.player_maxs[1], hull->clip_maxs );
 
 	for( i = 0; i < count; i++, out++, in++ )
 	{

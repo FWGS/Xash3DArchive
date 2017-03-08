@@ -150,7 +150,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 			return;
 		}
 
-		AVI_OpenVideo( cin_state, fullpath, false, false, true );
+		AVI_OpenVideo( cin_state, fullpath, false, true );
 		if( !( AVI_GetVideoInfo( cin_state, &gameui.logo_xres, &gameui.logo_yres, &gameui.logo_length )))
 		{
 			AVI_CloseVideo( cin_state );

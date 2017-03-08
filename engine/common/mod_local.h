@@ -80,7 +80,6 @@ typedef struct
 	int		mapversion;	// map version (an key-value in worldspawn settings)
 	uint		checksum;		// current map checksum
 	int		load_sequence;	// increace each map change
-	vec3_t		hull_sizes[MAX_MAP_HULLS];	// actual hull sizes
 	msurface_t	**draw_surfaces;	// used for sorting translucent surfaces
 	int		max_surfaces;	// max surfaces per submodel (for all models)
 
@@ -126,7 +125,6 @@ void Mod_ClearAll( qboolean keep_playermodel );
 void Mod_Shutdown( void );
 void Mod_ClearUserData( void );
 void Mod_PrintBSPFileSizes( void );
-void Mod_SetupHulls( vec3_t mins[MAX_MAP_HULLS], vec3_t maxs[MAX_MAP_HULLS] );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );
 void Mod_LoadWorld( const char *name, uint *checksum, qboolean multiplayer );
@@ -166,9 +164,11 @@ qboolean Mod_GetStudioBounds( const char *name, vec3_t mins, vec3_t maxs );
 void Mod_StudioGetAttachment( const edict_t *e, int iAttachment, float *org, float *ang );
 void Mod_GetBonePosition( const edict_t *e, int iBone, float *org, float *ang );
 hull_t *Mod_HullForStudio( model_t *m, float frame, int seq, vec3_t ang, vec3_t org, vec3_t size, byte *pcnt, byte *pbl, int *hitboxes, edict_t *ed );
+void R_StudioSlerpBones( int numbones, vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s );
 void R_StudioCalcBoneQuaternion( int frame, float s, void *pbone, void *panim, float *adj, vec4_t q );
 void R_StudioCalcBonePosition( int frame, float s, void *pbone, void *panim, vec3_t adj, vec3_t pos );
-void Mod_StudioComputeBounds( void *buffer, vec3_t mins, vec3_t maxs );
+void *R_StudioGetAnim( void *m_pStudioHeader, void *m_pSubModel, void *pseqdesc );
+void Mod_StudioComputeBounds( void *buffer, vec3_t mins, vec3_t maxs, qboolean ignore_sequences );
 int Mod_HitgroupForStudioHull( int index );
 
 #endif//MOD_LOCAL_H

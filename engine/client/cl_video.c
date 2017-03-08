@@ -32,21 +32,6 @@ static int		cin_frame;
 static wavdata_t		cin_audio;
 static movie_state_t	*cin_state;
 
-void SCR_RebuildGammaTable( void )
-{
-	float	g;
-	int	i;
-
-	g = bound( 0.5f, vid_gamma->value, 2.3f );
-
-	// movie gamma	
-	for( i = 0; i < 256; i++ )
-	{
-		if( g == 1 ) clgame.ds.gammaTable[i] = i;
-		else clgame.ds.gammaTable[i] = bound( 0, pow( i * ( 1.0f / 255.0f ), g ) * 255.0f, 255 );
-	}
-}
-
 /*
 ==================
 SCR_NextMovie
@@ -228,7 +213,7 @@ qboolean SCR_PlayCinematic( const char *arg )
 		return false;
 	}
 
-	AVI_OpenVideo( cin_state, fullpath, true, true, false );
+	AVI_OpenVideo( cin_state, fullpath, true, false );
 	if( !AVI_IsActive( cin_state ))
 	{
 		AVI_CloseVideo( cin_state );
@@ -249,8 +234,6 @@ qboolean SCR_PlayCinematic( const char *arg )
 	}
 
 	UI_SetActiveMenu( false );
-	SCR_RebuildGammaTable();
-
 	cls.state = ca_cinematic;
 	cin_time = 0.0f;
 	cls.signon = 0;
@@ -304,8 +287,6 @@ void SCR_InitCinematic( void )
 {
 	AVI_Initailize ();
 	cin_state = AVI_GetState( CIN_MAIN );
-
-	SCR_RebuildGammaTable();
 }
 
 /*

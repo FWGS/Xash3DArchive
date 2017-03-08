@@ -1403,7 +1403,7 @@ void R_DebugParticle( const vec3_t pos, byte r, byte g, byte b )
 
 	VectorCopy( pos, p->org );
 	p->color = R_LookupColor( r, g, b );
-	p->die = cl.time + 10.0f;
+	p->die = cl.time + 0.01f;
 }
 
 /*

@@ -1132,11 +1132,8 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 				data = GL_ResampleTexture( buf, pic->width, pic->height, tex->width, tex->height, normalMap );
 			else data = buf;
 
-			if( !glConfig.deviceSupportsGamma )
-			{
-				if( !ImageDXT( pic->type ) && !( tex->flags & TF_NOMIPMAP ) && !( tex->flags & TF_SKYSIDE ))
-					data = GL_ApplyGamma( data, tex->width * tex->height * tex->depth, ( tex->flags & TF_NORMALMAP ));
-			}
+			if( !ImageDXT( pic->type ) && !FBitSet( tex->flags, TF_NOMIPMAP|TF_SKYSIDE ))
+				data = GL_ApplyGamma( data, tex->width * tex->height * tex->depth, FBitSet( tex->flags, TF_NORMALMAP ));
 
 			// mips will be auto-generated if desired
 			for( j = 0; j < mipCount; j++ )

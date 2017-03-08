@@ -1118,10 +1118,6 @@ void CL_Crashed( void )
 
 	Host_WriteOpenGLConfig();
 	Host_WriteConfig();	// write config
-
-	// never write video.cfg here because reason to crash may be provoked
-	// with some renderer variables
-	VID_RestoreGamma();
 }
 
 /*

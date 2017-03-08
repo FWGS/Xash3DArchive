@@ -1219,7 +1219,7 @@ This will be sent on the initial connection and upon each server load.
 */
 void SV_New_f( sv_client_t *cl )
 {
-	int	playernum;
+	int	i, playernum;
 
 	if( cl->state != cs_connected )
 	{
@@ -1242,6 +1242,13 @@ void SV_New_f( sv_client_t *cl )
 	MSG_WriteOneBit( &cl->netchan.message, sv.background ); // tell client about background map
 	MSG_WriteString( &cl->netchan.message, GI->gamefolder );
 	MSG_WriteLong( &cl->netchan.message, host.features );
+
+	// send the player hulls
+	for( i = 0; i < MAX_MAP_HULLS * 3; i++ )
+	{
+		MSG_WriteChar( &cl->netchan.message, host.player_mins[i/3][i%3] );
+		MSG_WriteChar( &cl->netchan.message, host.player_maxs[i/3][i%3] );
+	}
 
 	MSG_BeginServerCmd( &cl->netchan.message, svc_stufftext );
 	MSG_WriteString( &cl->netchan.message, va( "fullserverinfo \"%s\"\n", SV_Serverinfo( )));

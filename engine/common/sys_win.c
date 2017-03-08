@@ -470,7 +470,6 @@ void Sys_Error( const char *error, ... )
 	if( host.type == HOST_NORMAL )
 	{
 		if( host.hWnd ) ShowWindow( host.hWnd, SW_HIDE );
-		VID_RestoreGamma();
 	}
 
 	if( host.developer > 0 )

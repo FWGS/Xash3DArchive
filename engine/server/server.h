@@ -338,8 +338,6 @@ typedef struct
 
 	sv_pushed_t	pushed[MAX_PUSHED_ENTS];	// no reason to keep array for all edicts
 						// 256 it should be enough for any game situation
-	vec3_t		player_mins[MAX_MAP_HULLS];	// 4 hulls allowed
-	vec3_t		player_maxs[MAX_MAP_HULLS];	// 4 hulls allowed
 
 	globalvars_t	*globals;			// server globals
 	DLL_FUNCTIONS	dllFuncs;			// dll exported funcs

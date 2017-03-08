@@ -592,7 +592,6 @@ void SCR_VidInit( void )
 	gameui.globals->scrWidth = glState.width;
 	gameui.globals->scrHeight = glState.height;
 
-	SCR_RebuildGammaTable();
 	VGui_Startup ();
 
 	clgame.load_sequence++; // now all hud sprites are invalid

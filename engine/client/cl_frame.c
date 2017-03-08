@@ -267,8 +267,18 @@ void CL_ProcessEntityUpdate( cl_entity_t *ent )
 		CL_UpdatePositions( ent );
 	}
 
-	// g-cont. it should be done for all the players?
-	if( ent->player ) ent->curstate.angles[PITCH] /= -3.0f;
+	if( !FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
+	{
+		// g-cont. it should be done for all the players?
+		// FIXME: probably this cause problems with flahslight and mirror reflection
+		// but it's used to reduce player body pitch...
+		if( ent->player )
+		{
+			if( RP_LOCALCLIENT( ent ) && !cl.local.thirdperson )
+				ent->curstate.angles[PITCH] /= 3.0f;
+			else ent->curstate.angles[PITCH] /= -3.0f;
+		}
+	}
 
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
@@ -1113,7 +1123,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 			if( ent->model->type == mod_studio )
 			{
 				if( ent->curstate.movetype == MOVETYPE_STEP && FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
-					R_StudioLerpStepMovement( ent, cl.time, ent->origin, ent->angles );
+					R_StudioLerpMovement( ent, cl.time, ent->origin, ent->angles );
 			}
 		}
 

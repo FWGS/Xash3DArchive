@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "mathlib.h"
 #include "const.h"
 #include "r_studioint.h"
+#include "triangleapi.h"
 #include "studio.h"
 #include "pm_local.h"
 #include "gl_local.h"
@@ -53,6 +54,17 @@ typedef struct
 	int		rendermode;
 	float		blend;			// blend value
 
+	// bones
+	matrix3x4		rotationmatrix;
+	matrix3x4		bonestransform[MAXSTUDIOBONES];
+	matrix3x4		lighttransform[MAXSTUDIOBONES];
+
+	// cached bones
+	matrix3x4		cached_bonestransform[MAXSTUDIOBONES];
+	matrix3x4		cached_lighttransform[MAXSTUDIOBONES];
+	char		cached_bonenames[MAXSTUDIOBONES][32];
+	int		cached_numbones;		// number of bones in cache
+
 	sortedmesh_t	meshes[MAXSTUDIOMESHES];	// sorted meshes
 	vec3_t		verts[MAXSTUDIOVERTS];
 	vec3_t		norms[MAXSTUDIOVERTS];
@@ -64,6 +76,17 @@ typedef struct
 	vec3_t		lightspot;		// shadow spot
 	vec3_t		lightcolor;		// averaging lightcolor
 	vec3_t		blightvec[MAXSTUDIOBONES];	// bone light vecs
+	vec3_t		lightvalues[MAXSTUDIOVERTS];	// precomputed lightvalues per each shared vertex of submodel
+
+	// chrome stuff
+	vec3_t		chrome_origin;
+	vec2_t		chrome[MAXSTUDIOVERTS];	// texture coords for surface normals
+	vec3_t		chromeright[MAXSTUDIOBONES];	// chrome vector "right" in bone reference frames
+	vec3_t		chromeup[MAXSTUDIOBONES];	// chrome vector "up" in bone reference frames
+	int		chromeage[MAXSTUDIOBONES];	// last time chrome vectors were updated
+
+	// glowshell stuff
+	int		normaltable[MAXSTUDIOVERTS];	// glowshell uses this
 
 	// elights cache
 	int		numlocallights;
@@ -76,31 +99,16 @@ typedef struct
 } studio_draw_state_t;
 
 CVAR_DEFINE_AUTO( r_shadows, "0", 0, "enable shadows from studiomodels" );
- 
+
+// studio-related cvars 
 convar_t			*r_studio_lambert;
-convar_t			*r_studio_lighting;
 convar_t			*r_studio_sort_textures;
 convar_t			*r_drawviewmodel;
 convar_t			*cl_righthand = NULL;
 convar_t			*cl_himodels;
+
 static r_studio_interface_t	*pStudioDraw;
-static matrix3x4		g_rotationmatrix;
-static vec3_t		g_chrome_origin;
-static vec2_t		g_chrome[MAXSTUDIOVERTS];	// texture coords for surface normals
-static matrix3x4		g_bonestransform[MAXSTUDIOBONES];
-static matrix3x4		g_lighttransform[MAXSTUDIOBONES];
-static matrix3x4		g_rgCachedBonesTransform[MAXSTUDIOBONES];
-static matrix3x4		g_rgCachedLightTransform[MAXSTUDIOBONES];
-static vec3_t		g_chromeright[MAXSTUDIOBONES];// chrome vector "right" in bone reference frames
-static vec3_t		g_chromeup[MAXSTUDIOBONES];	// chrome vector "up" in bone reference frames
-static int		g_chromeage[MAXSTUDIOBONES];	// last time chrome vectors were updated
-static int		g_normaltable[MAXSTUDIOVERTS];// glowshell uses this
-static vec3_t		g_lightvalues[MAXSTUDIOVERTS];
-static studio_draw_state_t	g_studio;			// used for draw studiomodels
-char			g_nCachedBoneNames[MAXSTUDIOBONES][32];
-int			g_nCachedBones;		// number of bones in cache
-int			g_iBackFaceCull;
-float			studio_radius;
+static studio_draw_state_t	g_studio;		// global studio state
 
 // global variables
 qboolean			m_fDoRemap;
@@ -109,6 +117,7 @@ mstudiobodyparts_t		*m_pBodyPart;
 player_info_t		*m_pPlayerInfo;
 studiohdr_t		*m_pStudioHeader;
 float			m_flGaitMovement;
+int			g_iBackFaceCull;
 int			g_nTopColor, g_nBottomColor;	// remap colors
 int			g_nFaceFlags, g_nForceFaceFlags;
 
@@ -122,11 +131,10 @@ void R_StudioInit( void )
 {
 	r_studio_lambert = Cvar_Get( "r_studio_lambert", "2", FCVAR_ARCHIVE, "bonelighting lambert value" );
 	cl_himodels = Cvar_Get( "cl_himodels", "1", FCVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
-	r_studio_lighting = Cvar_Get( "r_studio_lighting", "1", FCVAR_ARCHIVE, "studio lighting models ( 0 - normal, 1 - extended, 2 - experimental )" );
 	r_studio_sort_textures = Cvar_Get( "r_studio_sort_textures", "0", FCVAR_ARCHIVE, "sort additive and normal textures for right drawing" );
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
 
-	Matrix3x4_LoadIdentity( g_rotationmatrix );
+	Matrix3x4_LoadIdentity( g_studio.rotationmatrix );
 
 	g_studio.interpolate = true;
 	g_studio.framecount = 0;
@@ -162,12 +170,11 @@ static int R_StudioBodyVariations( model_t *mod )
 {
 	studiohdr_t	*pstudiohdr;
 	mstudiobodyparts_t	*pbodypart;
-	int		i, count;
+	int		i, count = 1;
 
 	pstudiohdr = (studiohdr_t *)Mod_Extradata( mod );
 	if( !pstudiohdr ) return 0;
 
-	count = 1;
 	pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
 
 	// each body part has nummodels variations so there are as many total variations as there
@@ -230,7 +237,7 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
 {
 	studiohdr_t	*pstudiohdr = (studiohdr_t *)Mod_Extradata( e->model );
 	vec3_t		studio_mins, studio_maxs;
-	vec3_t		mins, maxs, size, p1, p2;
+	vec3_t		mins, maxs, p1, p2;
 	mstudioseqdesc_t	*pseqdesc;
 	int		i;
 
@@ -267,15 +274,10 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
   		p1[1] = ( i & 2 ) ? mins[1] : maxs[1];
   		p1[2] = ( i & 4 ) ? mins[2] : maxs[2];
 
-		Matrix3x4_VectorTransform( g_rotationmatrix, p1, p2 );
+		Matrix3x4_VectorTransform( g_studio.rotationmatrix, p1, p2 );
 		AddPointToBounds( p2, studio_mins, studio_maxs );
 		if( bbox ) VectorCopy( p2, bbox[i] );
 	}
-
-	// calc radius from local bbox
-	VectorSubtract( studio_maxs, studio_mins, size );
-	VectorScale( size, 0.5f, size );
-	studio_radius = RadiusFromBounds( size, size );
 
 	if( !bbox && R_CullModel( e, studio_mins, studio_maxs ))
 		return false; // model culled
@@ -407,7 +409,7 @@ pfnStudioGetBoneTransform
 */
 static float ****pfnStudioGetBoneTransform( void )
 {
-	return (float ****)g_bonestransform;
+	return (float ****)g_studio.bonestransform;
 }
 
 /*
@@ -418,7 +420,7 @@ pfnStudioGetLightTransform
 */
 static float ****pfnStudioGetLightTransform( void )
 {
-	return (float ****)g_lighttransform;
+	return (float ****)g_studio.lighttransform;
 }
 
 /*
@@ -440,7 +442,7 @@ pfnStudioGetRotationMatrix
 */
 static float ***pfnStudioGetRotationMatrix( void )
 {
-	return (float ***)g_rotationmatrix;
+	return (float ***)g_studio.rotationmatrix;
 }
 
 /*
@@ -452,9 +454,7 @@ StudioPlayerBlend
 void R_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitch )
 {
 	// calc up/down pointing
-	if( RI.params & RP_MIRRORVIEW )
-		*pBlend = (*pPitch * -3.0f);
-	else *pBlend = (*pPitch * 3.0f);
+	*pBlend = (*pPitch * 3.0f);
 
 	if( *pBlend < pseqdesc->blendstart[0] )
 	{
@@ -477,11 +477,11 @@ void R_StudioPlayerBlend( mstudioseqdesc_t *pseqdesc, int *pBlend, float *pPitch
 
 /*
 ====================
-R_StudioLerpStepMovement
+R_StudioLerpMovement
 
 ====================
 */
-void R_StudioLerpStepMovement( cl_entity_t *e, double time, vec3_t origin, vec3_t angles )
+void R_StudioLerpMovement( cl_entity_t *e, double time, vec3_t origin, vec3_t angles )
 {
 	float	f = 1.0f;
 
@@ -522,7 +522,7 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 	// interpolate monsters position (moved into UpdateEntityFields by user request)
 	if( e->curstate.movetype == MOVETYPE_STEP && !FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
 	{
-		R_StudioLerpStepMovement( e, g_studio.time, origin, angles );
+		R_StudioLerpMovement( e, g_studio.time, origin, angles );
 	}
 
 	if( !FBitSet( host.features, ENGINE_COMPENSATE_QUAKE_BUG ))
@@ -531,13 +531,13 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 	// don't rotate clients, only aim
 	if( e->player ) angles[PITCH] = 0.0f;
 
-	Matrix3x4_CreateFromEntity( g_rotationmatrix, angles, origin, 1.0f );
+	Matrix3x4_CreateFromEntity( g_studio.rotationmatrix, angles, origin, 1.0f );
 
 	if( R_StudioFlipViewModel( e ))
 	{
-		g_rotationmatrix[0][1] = -g_rotationmatrix[0][1];
-		g_rotationmatrix[1][1] = -g_rotationmatrix[1][1];
-		g_rotationmatrix[2][1] = -g_rotationmatrix[2][1];
+		g_studio.rotationmatrix[0][1] = -g_studio.rotationmatrix[0][1];
+		g_studio.rotationmatrix[1][1] = -g_studio.rotationmatrix[1][1];
+		g_studio.rotationmatrix[2][1] = -g_studio.rotationmatrix[2][1];
 	}
 }
 
@@ -630,18 +630,16 @@ StudioGetAnim
 
 ====================
 */
-mstudioanim_t *R_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc )
+void *R_StudioGetAnim( studiohdr_t *m_pStudioHeader, model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc )
 {
 	mstudioseqgroup_t	*pseqgroup;
 	cache_user_t	*paSequences;
 	size_t		filesize;
           byte		*buf;
 
-	ASSERT( m_pSubModel );	
-
 	pseqgroup = (mstudioseqgroup_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqgroupindex) + pseqdesc->seqgroup;
 	if( pseqdesc->seqgroup == 0 )
-		return (mstudioanim_t *)((byte *)m_pStudioHeader + pseqgroup->data + pseqdesc->animindex);
+		return ((byte *)m_pStudioHeader + pseqgroup->data + pseqdesc->animindex);
 
 	paSequences = (cache_user_t *)m_pSubModel->submodels;
 
@@ -673,7 +671,7 @@ mstudioanim_t *R_StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc
 		Mem_Free( buf );
 	}
 
-	return (mstudioanim_t *)((byte *)paSequences[pseqdesc->seqgroup].data + pseqdesc->animindex);
+	return ((byte *)paSequences[pseqdesc->seqgroup].data + pseqdesc->animindex);
 }
 
 /*
@@ -963,13 +961,13 @@ StudioSlerpBones
 
 ====================
 */
-void R_StudioSlerpBones( vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s )
+void R_StudioSlerpBones( int numbones, vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s )
 {
 	int	i;
 
 	s = bound( 0.0f, s, 1.0f );
 
-	for( i = 0; i < m_pStudioHeader->numbones; i++ )
+	for( i = 0; i < numbones; i++ )
 	{
 		QuaternionSlerp( q1[i], q2[i], s, q1[i] );
 		VectorLerp( pos1[i], s, pos2[i], pos1[i] );
@@ -1047,37 +1045,37 @@ void R_StudioMergeBones( cl_entity_t *e, model_t *m_pSubModel )
 
 	f = R_StudioEstimateFrame( e, pseqdesc );
 
-	panim = R_StudioGetAnim( m_pSubModel, pseqdesc );
+	panim = R_StudioGetAnim( m_pStudioHeader, m_pSubModel, pseqdesc );
 	R_StudioCalcRotations( e, pos, q, pseqdesc, panim, f );
 	pbones = (mstudiobone_t *)((byte *)m_pStudioHeader + m_pStudioHeader->boneindex);
 
 	for( i = 0; i < m_pStudioHeader->numbones; i++ ) 
 	{
-		for( j = 0; j < g_nCachedBones; j++ )
+		for( j = 0; j < g_studio.cached_numbones; j++ )
 		{
-			if( !Q_stricmp( pbones[i].name, g_nCachedBoneNames[j] ))
+			if( !Q_stricmp( pbones[i].name, g_studio.cached_bonenames[j] ))
 			{
-				Matrix3x4_Copy( g_bonestransform[i], g_rgCachedBonesTransform[j] );
-				Matrix3x4_Copy( g_lighttransform[i], g_rgCachedLightTransform[j] );
+				Matrix3x4_Copy( g_studio.bonestransform[i], g_studio.cached_bonestransform[j] );
+				Matrix3x4_Copy( g_studio.lighttransform[i], g_studio.cached_lighttransform[j] );
 				break;
 			}
 		}
 
-		if( j >= g_nCachedBones )
+		if( j >= g_studio.cached_numbones )
 		{
 			Matrix3x4_FromOriginQuat( bonematrix, q[i], pos[i] );
 			if( pbones[i].parent == -1 ) 
 			{
-				Matrix3x4_ConcatTransforms( g_bonestransform[i], g_rotationmatrix, bonematrix );
-				Matrix3x4_Copy( g_lighttransform[i], g_bonestransform[i] );
+				Matrix3x4_ConcatTransforms( g_studio.bonestransform[i], g_studio.rotationmatrix, bonematrix );
+				Matrix3x4_Copy( g_studio.lighttransform[i], g_studio.bonestransform[i] );
 
 				// apply client-side effects to the transformation matrix
-				R_StudioFxTransform( e, g_bonestransform[i] );
+				R_StudioFxTransform( e, g_studio.bonestransform[i] );
 			} 
 			else 
 			{
-				Matrix3x4_ConcatTransforms( g_bonestransform[i], g_bonestransform[pbones[i].parent], bonematrix );
-				Matrix3x4_ConcatTransforms( g_lighttransform[i], g_lighttransform[pbones[i].parent], bonematrix );
+				Matrix3x4_ConcatTransforms( g_studio.bonestransform[i], g_studio.bonestransform[pbones[i].parent], bonematrix );
+				Matrix3x4_ConcatTransforms( g_studio.lighttransform[i], g_studio.lighttransform[pbones[i].parent], bonematrix );
 			}
 		}
 	}
@@ -1113,7 +1111,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 
 	f = R_StudioEstimateFrame( e, pseqdesc );
 
-	panim = R_StudioGetAnim( e->model, pseqdesc );
+	panim = R_StudioGetAnim( m_pStudioHeader, e->model, pseqdesc );
 	R_StudioCalcRotations( e, pos, q, pseqdesc, panim, f );
 
 	if( pseqdesc->numblends > 1 )
@@ -1127,7 +1125,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 		dadt = R_StudioEstimateInterpolant( e );
 		s = (e->curstate.blending[0] * dadt + e->latched.prevblending[0] * (1.0f - dadt)) / 255.0f;
 
-		R_StudioSlerpBones( q, pos, q2, pos2, s );
+		R_StudioSlerpBones( m_pStudioHeader->numbones, q, pos, q2, pos2, s );
 
 		if( pseqdesc->numblends == 4 )
 		{
@@ -1138,10 +1136,10 @@ void R_StudioSetupBones( cl_entity_t *e )
 			R_StudioCalcRotations( e, pos4, q4, pseqdesc, panim, f );
 
 			s = (e->curstate.blending[0] * dadt + e->latched.prevblending[0] * (1.0f - dadt)) / 255.0f;
-			R_StudioSlerpBones( q3, pos3, q4, pos4, s );
+			R_StudioSlerpBones( m_pStudioHeader->numbones, q3, pos3, q4, pos4, s );
 
 			s = (e->curstate.blending[1] * dadt + e->latched.prevblending[1] * (1.0f - dadt)) / 255.0f;
-			R_StudioSlerpBones( q, pos, q3, pos3, s );
+			R_StudioSlerpBones( m_pStudioHeader->numbones, q, pos, q3, pos3, s );
 		}
 	}
 
@@ -1153,7 +1151,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 		float		s;
 
 		pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->latched.prevsequence;
-		panim = R_StudioGetAnim( e->model, pseqdesc );
+		panim = R_StudioGetAnim( m_pStudioHeader, e->model, pseqdesc );
 
 		// clip prevframe
 		R_StudioCalcRotations( e, pos1b, q1b, pseqdesc, panim, e->latched.prevframe );
@@ -1164,7 +1162,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 			R_StudioCalcRotations( e, pos2, q2, pseqdesc, panim, e->latched.prevframe );
 
 			s = (e->latched.prevseqblending[0]) / 255.0f;
-			R_StudioSlerpBones( q1b, pos1b, q2, pos2, s );
+			R_StudioSlerpBones( m_pStudioHeader->numbones, q1b, pos1b, q2, pos2, s );
 
 			if( pseqdesc->numblends == 4 )
 			{
@@ -1175,15 +1173,15 @@ void R_StudioSetupBones( cl_entity_t *e )
 				R_StudioCalcRotations( e, pos4, q4, pseqdesc, panim, e->latched.prevframe );
 
 				s = (e->latched.prevseqblending[0]) / 255.0f;
-				R_StudioSlerpBones( q3, pos3, q4, pos4, s );
+				R_StudioSlerpBones( m_pStudioHeader->numbones, q3, pos3, q4, pos4, s );
 
 				s = (e->latched.prevseqblending[1]) / 255.0f;
-				R_StudioSlerpBones( q1b, pos1b, q3, pos3, s );
+				R_StudioSlerpBones( m_pStudioHeader->numbones, q1b, pos1b, q3, pos3, s );
 			}
 		}
 
 		s = 1.0f - ( g_studio.time - e->latched.sequencetime ) / 0.2f;
-		R_StudioSlerpBones( q, pos, q1b, pos1b, s );
+		R_StudioSlerpBones( m_pStudioHeader->numbones, q, pos, q1b, pos1b, s );
 	}
 	else
 	{
@@ -1203,7 +1201,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 
 		pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + m_pPlayerInfo->gaitsequence;
 
-		panim = R_StudioGetAnim( e->model, pseqdesc );
+		panim = R_StudioGetAnim( m_pStudioHeader, e->model, pseqdesc );
 		R_StudioCalcRotations( e, pos2, q2, pseqdesc, panim, m_pPlayerInfo->gaitframe );
 
 		for( i = 0; i < m_pStudioHeader->numbones; i++ )
@@ -1226,16 +1224,16 @@ void R_StudioSetupBones( cl_entity_t *e )
 
 		if( pbones[i].parent == -1 ) 
 		{
-			Matrix3x4_ConcatTransforms( g_bonestransform[i], g_rotationmatrix, bonematrix );
-			Matrix3x4_Copy( g_lighttransform[i], g_bonestransform[i] );
+			Matrix3x4_ConcatTransforms( g_studio.bonestransform[i], g_studio.rotationmatrix, bonematrix );
+			Matrix3x4_Copy( g_studio.lighttransform[i], g_studio.bonestransform[i] );
 
 			// apply client-side effects to the transformation matrix
-			R_StudioFxTransform( e, g_bonestransform[i] );
+			R_StudioFxTransform( e, g_studio.bonestransform[i] );
 		} 
 		else
 		{
-			Matrix3x4_ConcatTransforms( g_bonestransform[i], g_bonestransform[pbones[i].parent], bonematrix );
-			Matrix3x4_ConcatTransforms( g_lighttransform[i], g_lighttransform[pbones[i].parent], bonematrix );
+			Matrix3x4_ConcatTransforms( g_studio.bonestransform[i], g_studio.bonestransform[pbones[i].parent], bonematrix );
+			Matrix3x4_ConcatTransforms( g_studio.lighttransform[i], g_studio.lighttransform[pbones[i].parent], bonematrix );
 		}
 	}
 }
@@ -1252,14 +1250,13 @@ static void R_StudioSaveBones( void )
 	int		i;
 
 	pbones = (mstudiobone_t *)((byte *)m_pStudioHeader + m_pStudioHeader->boneindex);
-
-	g_nCachedBones = m_pStudioHeader->numbones;
+	g_studio.cached_numbones = m_pStudioHeader->numbones;
 
 	for( i = 0; i < m_pStudioHeader->numbones; i++ ) 
 	{
-		Q_strcpy( g_nCachedBoneNames[i], pbones[i].name );
-		Matrix3x4_Copy( g_rgCachedBonesTransform[i], g_bonestransform[i] );
-		Matrix3x4_Copy( g_rgCachedLightTransform[i], g_lighttransform[i] );
+		Matrix3x4_Copy( g_studio.cached_bonestransform[i], g_studio.bonestransform[i] );
+		Matrix3x4_Copy( g_studio.cached_lighttransform[i], g_studio.lighttransform[i] );
+		Q_strncpy( g_studio.cached_bonenames[i], pbones[i].name, 32 );
 	}
 }
 
@@ -1279,10 +1276,10 @@ void R_StudioBuildNormalTable( void )
 
 	// reset chrome cache
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )
-		g_chromeage[i] = 0;
+		g_studio.chromeage[i] = 0;
 
 	for( i = 0; i < m_pSubModel->numverts; i++ )
-		g_normaltable[i] = -1;
+		g_studio.normaltable[i] = -1;
 
 	for( j = 0; j < m_pSubModel->nummesh; j++ ) 
 	{
@@ -1297,8 +1294,8 @@ void R_StudioBuildNormalTable( void )
 
 			for( ; i > 0; i--, ptricmds += 4 )
 			{
-				if( g_normaltable[ptricmds[0]] < 0 )
-					g_normaltable[ptricmds[0]] = ptricmds[1];
+				if( g_studio.normaltable[ptricmds[0]] < 0 )
+					g_studio.normaltable[ptricmds[0]] = ptricmds[1];
 			}
 		}
 	}
@@ -1411,17 +1408,17 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 {
 	float	n;
 
-	if( g_chromeage[bone] != g_studio.framecount )
+	if( g_studio.chromeage[bone] != g_studio.framecount )
 	{
 		// calculate vectors from the viewer to the bone. This roughly adjusts for position
-		vec3_t	chromeupvec;	// g_chrome t vector in world reference frame
-		vec3_t	chromerightvec;	// g_chrome s vector in world reference frame
+		vec3_t	chromeupvec;	// g_studio.chrome t vector in world reference frame
+		vec3_t	chromerightvec;	// g_studio.chrome s vector in world reference frame
 		vec3_t	tmp;		// vector pointing at bone in world reference frame
 
-		VectorNegate( g_chrome_origin, tmp );
-		tmp[0] += g_bonestransform[bone][0][3];
-		tmp[1] += g_bonestransform[bone][1][3];
-		tmp[2] += g_bonestransform[bone][2][3];
+		VectorNegate( g_studio.chrome_origin, tmp );
+		tmp[0] += g_studio.bonestransform[bone][0][3];
+		tmp[1] += g_studio.bonestransform[bone][1][3];
+		tmp[2] += g_studio.bonestransform[bone][2][3];
 
 		VectorNormalize( tmp );
 
@@ -1442,18 +1439,18 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 			VectorNormalize( chromerightvec );
 		}
 
-		Matrix3x4_VectorIRotate( g_bonestransform[bone], chromeupvec, g_chromeup[bone] );
-		Matrix3x4_VectorIRotate( g_bonestransform[bone], chromerightvec, g_chromeright[bone] );
+		Matrix3x4_VectorIRotate( g_studio.bonestransform[bone], chromeupvec, g_studio.chromeup[bone] );
+		Matrix3x4_VectorIRotate( g_studio.bonestransform[bone], chromerightvec, g_studio.chromeright[bone] );
 
-		g_chromeage[bone] = g_studio.framecount;
+		g_studio.chromeage[bone] = g_studio.framecount;
 	}
 
 	// calc s coord
-	n = DotProduct( normal, g_chromeright[bone] );
+	n = DotProduct( normal, g_studio.chromeright[bone] );
 	pchrome[0] = (n + 1.0f) * 32.0f;
 
 	// calc t coord
-	n = DotProduct( normal, g_chromeup[bone] );
+	n = DotProduct( normal, g_studio.chromeup[bone] );
 	pchrome[1] = (n + 1.0f) * 32.0f;
 }
 
@@ -1488,9 +1485,9 @@ static void R_StudioCalcAttachments( void )
 
 	for( i = 0; i < m_pStudioHeader->numattachments; i++ )
 	{
-		Matrix3x4_VectorTransform( g_lighttransform[pAtt[i].bone], pAtt[i].org, RI.currententity->attachment[i] );
+		Matrix3x4_VectorTransform( g_studio.lighttransform[pAtt[i].bone], pAtt[i].org, RI.currententity->attachment[i] );
 		VectorSubtract( RI.currententity->attachment[i], RI.currententity->origin, localOrg );
-		Matrix3x4_OriginFromMatrix( g_lighttransform[pAtt[i].bone], bonepos );
+		Matrix3x4_OriginFromMatrix( g_studio.lighttransform[pAtt[i].bone], bonepos );
 		VectorSubtract( localOrg, bonepos, forward );	// make forward
 		VectorNormalizeFast( forward );
 		VectorAngles( forward, localAng );
@@ -1572,14 +1569,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 	else VectorSet( lightDir, 0.0f, 0.0f, -1.0f );
 
 	if( ent == RI.currententity )
-	{
-		Matrix3x4_OriginFromMatrix( g_lighttransform[0], origin );
-
-		// NOTE: in some cases rootbone origin may be stuck in the geometry
-		// and produced completely black model. Run additional check for this case
-		if( CL_PointContents( origin ) == CONTENTS_SOLID )
-			Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
-	}
+		Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, origin );
 	else VectorCopy( ent->origin, origin );
 
 	VectorSet( vecSrc, origin[0], origin[1], origin[2] - lightDir[2] * 8.0f );
@@ -1626,7 +1616,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 
 		// NOTE: we can't compute fake direction with using root bone origin
 		// because bone may some fluctuating and this looks ugly
-		Matrix3x4_OriginFromMatrix( g_rotationmatrix, vecSrc );
+		Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, vecSrc );
 		VectorScale( lightDir, 2048.0f, vecEnd );
 		VectorAdd( vecEnd, vecSrc, vecEnd );
 
@@ -1747,7 +1737,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 	for( i = 0; i < MAX_LOCALLIGHTS; i++ )
 		lstrength[i] = 0;
 
-	Matrix3x4_OriginFromMatrix( g_rotationmatrix, origin );
+	Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, origin );
 	dist2 = 1000000.0f;
 	k = 0;
 
@@ -1827,7 +1817,7 @@ void R_StudioSetupLighting( alight_t *plight )
 	VectorCopy( plight->plightvec, g_studio.lightvec );
 
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )
-		Matrix3x4_VectorIRotate( g_lighttransform[i], plight->plightvec, g_studio.blightvec[i] );
+		Matrix3x4_VectorIRotate( g_studio.lighttransform[i], plight->plightvec, g_studio.blightvec[i] );
 
 	VectorCopy( plight->color, g_studio.lightcolor );
 }
@@ -1886,8 +1876,8 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 	}
 
 	illum = Q_min( illum, 255.0f );
-	light = LightToTexGamma( illum );
-	*lv = light * (1.0f / 255.0f);
+//	light = LightToTexGamma( illum );
+	*lv = illum * (1.0f / 255.0f);
 }
 
 /*
@@ -1911,7 +1901,7 @@ void R_LightLambert( vec4_t light[MAX_LOCALLIGHTS], vec3_t normal, vec3_t color 
 
 			r = -DotProduct( normal, light[i] );
 
-			if( r > 0 )
+			if( r > 0.0f )
 			{
 				if( light[i][3] == 0.0f )
 				{
@@ -1921,9 +1911,10 @@ void R_LightLambert( vec4_t light[MAX_LOCALLIGHTS], vec3_t normal, vec3_t color 
 						light[i][3] = g_studio.locallightR2[i] / ( r2 * sqrt( r2 ));
 					else light[i][3] = 1.0f;
 				}
-				finalLight[0] += g_studio.locallinearlight[i][0] * (r * light[i][3]) * 1024.0f;
-				finalLight[1] += g_studio.locallinearlight[i][1] * (r * light[i][3]) * 1024.0f;
-				finalLight[2] += g_studio.locallinearlight[i][2] * (r * light[i][3]) * 1024.0f;
+
+				finalLight[0] += g_studio.locallinearlight[i][0] * (r * light[i][3]);
+				finalLight[1] += g_studio.locallinearlight[i][1] * (r * light[i][3]);
+				finalLight[2] += g_studio.locallinearlight[i][2] * (r * light[i][3]);
 			}
 		}
 
@@ -1946,10 +1937,10 @@ void R_LightStrength( int bone, float *vert, vec4_t light[MAX_LOCALLIGHTS] )
 	{
 		for( i = 0; i < g_studio.numlocallights; i++ )
 		{
-			lpos[0] = g_studio.locallight[i]->origin[0] - g_lighttransform[bone][0][3];
-			lpos[1] = g_studio.locallight[i]->origin[1] - g_lighttransform[bone][1][3];
-			lpos[2] = g_studio.locallight[i]->origin[2] - g_lighttransform[bone][2][3];
-			Matrix3x4_VectorIRotate( g_lighttransform[bone], lpos, g_studio.lightbonepos[bone][i] );
+			lpos[0] = g_studio.locallight[i]->origin[0] - g_studio.lighttransform[bone][0][3];
+			lpos[1] = g_studio.locallight[i]->origin[1] - g_studio.lighttransform[bone][1][3];
+			lpos[2] = g_studio.locallight[i]->origin[2] - g_studio.lighttransform[bone][2][3];
+			Matrix3x4_VectorIRotate( g_studio.lighttransform[bone], lpos, g_studio.lightbonepos[bone][i] );
 		}
 		g_studio.lightage[bone] = g_studio.framecount;
 	}
@@ -2107,7 +2098,7 @@ static _inline void R_StudioDrawNormalMesh( short *ptricmds, vec3_t *pstudionorm
 
 		for( ; i > 0; i--, ptricmds += 4 )
 		{
-			lv = (float *)g_lightvalues[ptricmds[1]];
+			lv = (float *)g_studio.lightvalues[ptricmds[1]];
 
 			if( g_studio.numlocallights )
 				R_LightLambert( g_studio.lightpos[ptricmds[0]], pstudionorms[ptricmds[1]], lv );
@@ -2143,7 +2134,7 @@ static _inline void R_StudioDrawFloatMesh( short *ptricmds, vec3_t *pstudionorms
 
 		for( ; i > 0; i--, ptricmds += 4 )
 		{
-			lv = (float *)g_lightvalues[ptricmds[1]];
+			lv = (float *)g_studio.lightvalues[ptricmds[1]];
 			if( g_studio.numlocallights )
 				R_LightLambert( g_studio.lightpos[ptricmds[0]], pstudionorms[ptricmds[1]], lv );
 			else pglColor4f( lv[0], lv[1], lv[2], tr.blend );
@@ -2182,21 +2173,21 @@ static _inline void R_StudioDrawChromeMesh( short *ptricmds, vec3_t *pstudionorm
 		{
 			if( glowShell )
 			{
-				idx = g_normaltable[ptricmds[0]];
+				idx = g_studio.normaltable[ptricmds[0]];
 				av = g_studio.verts[ptricmds[0]];
 				lv = g_studio.norms[ptricmds[0]];
 				VectorMA( av, scale, lv, vert );
-				pglTexCoord2f( g_chrome[idx][0] * s, g_chrome[idx][1] * t );
+				pglTexCoord2f( g_studio.chrome[idx][0] * s, g_studio.chrome[idx][1] * t );
 				pglVertex3fv( vert );
 			}
 			else
 			{
 				idx = ptricmds[1];
-				lv = (float *)g_lightvalues[ptricmds[1]];
+				lv = (float *)g_studio.lightvalues[ptricmds[1]];
 				if( g_studio.numlocallights )
 					R_LightLambert( g_studio.lightpos[ptricmds[0]], pstudionorms[ptricmds[1]], lv );
 				else pglColor4f( lv[0], lv[1], lv[2], tr.blend );
-				pglTexCoord2f( g_chrome[idx][0] * s, g_chrome[idx][1] * t );
+				pglTexCoord2f( g_studio.chrome[idx][0] * s, g_studio.chrome[idx][1] * t );
 				pglVertex3fv( g_studio.verts[ptricmds[0]] );
 			}
 		}
@@ -2241,7 +2232,7 @@ static void R_StudioDrawPoints( void )
 
 	for( i = 0; i < m_pSubModel->numverts; i++ )
 	{
-		Matrix3x4_VectorTransform( g_bonestransform[pvertbone[i]], pstudioverts[i], g_studio.verts[i] );
+		Matrix3x4_VectorTransform( g_studio.bonestransform[pvertbone[i]], pstudioverts[i], g_studio.verts[i] );
 		R_LightStrength( pvertbone[i], pstudioverts[i], g_studio.lightpos[i] );
 	}
 
@@ -2253,7 +2244,7 @@ static void R_StudioDrawPoints( void )
 		R_StudioGenerateNormals();
 	}
 
-	lv = (float *)g_lightvalues;
+	lv = (float *)g_studio.lightvalues;
 	for( j = 0; j < m_pSubModel->nummesh; j++ ) 
 	{
 		g_nFaceFlags = ptexture[pskinref[pmesh[j].skinref]].flags | g_nForceFaceFlags;
@@ -2267,7 +2258,7 @@ static void R_StudioDrawPoints( void )
 			R_StudioLighting( &lv_tmp, *pnormbone, g_nFaceFlags, (float *)pstudionorms );
 
 			if( FBitSet( g_nFaceFlags, STUDIO_NF_CHROME ))
-				R_StudioSetupChrome( g_chrome[(float (*)[3])lv - g_lightvalues], *pnormbone, (float *)pstudionorms );
+				R_StudioSetupChrome( g_studio.chrome[(float (*)[3])lv - g_studio.lightvalues], *pnormbone, (float *)pstudionorms );
 
 			VectorScale( g_studio.lightcolor, lv_tmp, lv );
 		}
@@ -2364,11 +2355,11 @@ static void R_StudioDrawPoints( void )
 			{
 				if( g_nForceFaceFlags & STUDIO_NF_CHROME )
 				{
-					int idx = g_normaltable[ptricmds[0]];
-					pglTexCoord2f( g_chrome[idx][0] * s, g_chrome[idx][1] * t );
+					int idx = g_studio.normaltable[ptricmds[0]];
+					pglTexCoord2f( g_studio.chrome[idx][0] * s, g_studio.chrome[idx][1] * t );
 				}
 				else if( g_nFaceFlags & STUDIO_NF_CHROME )
-					pglTexCoord2f( g_chrome[ptricmds[1]][0] * s, g_chrome[ptricmds[1]][1] * t );
+					pglTexCoord2f( g_studio.chrome[ptricmds[1]][0] * s, g_studio.chrome[ptricmds[1]][1] * t );
 				else if( g_nFaceFlags & STUDIO_NF_UV_COORDS )
 					pglTexCoord2f( HalfToFloat( ptricmds[2] ), HalfToFloat( ptricmds[3] ));
 				else pglTexCoord2f( ptricmds[2] * s, ptricmds[3] * t );
@@ -2391,7 +2382,7 @@ static void R_StudioDrawPoints( void )
 					}
 					else
 					{
-						lv = (float *)g_lightvalues[ptricmds[1]];
+						lv = (float *)g_studio.lightvalues[ptricmds[1]];
 						pglColor4f( lv[0], lv[1], lv[2], alpha );
 					}
 				}
@@ -2424,8 +2415,8 @@ R_StudioDrawHulls
 */
 static void R_StudioDrawHulls( void )
 {
+	float	alpha, lv;
 	int	i, j;
-	float	alpha;
 
 	if( r_drawentities->value == 4 )
 		alpha = 0.5f;
@@ -2435,76 +2426,36 @@ static void R_StudioDrawHulls( void )
 
 	for( i = 0; i < m_pStudioHeader->numhitboxes; i++ )
 	{
-		mstudiobbox_t	*pbboxes = (mstudiobbox_t *)((byte *)m_pStudioHeader + m_pStudioHeader->hitboxindex);
-		vec3_t		v[8], v2[8], bbmin, bbmax;
+		mstudiobbox_t	*pbbox = (mstudiobbox_t *)((byte *)m_pStudioHeader + m_pStudioHeader->hitboxindex);
+		vec3_t		tmp, p[8];
 
-		VectorCopy( pbboxes[i].bbmin, bbmin );
-		VectorCopy( pbboxes[i].bbmax, bbmax );
+		for( j = 0; j < 8; j++ )
+		{
+			tmp[0] = (j & 1) ? pbbox[i].bbmin[0] : pbbox[i].bbmax[0];
+			tmp[1] = (j & 2) ? pbbox[i].bbmin[1] : pbbox[i].bbmax[1];
+			tmp[2] = (j & 4) ? pbbox[i].bbmin[2] : pbbox[i].bbmax[2];
 
-		v[0][0] = bbmin[0];
-		v[0][1] = bbmax[1];
-		v[0][2] = bbmin[2];
+			Matrix3x4_VectorTransform( g_studio.bonestransform[pbbox[i].bone], tmp, p[j] );
+		}
 
-		v[1][0] = bbmin[0];
-		v[1][1] = bbmin[1];
-		v[1][2] = bbmin[2];
+		j = (pbbox[i].group % 8);
 
-		v[2][0] = bbmax[0];
-		v[2][1] = bbmax[1];
-		v[2][2] = bbmin[2];
+		TriBegin( TRI_QUADS );
+		TriColor4f( hullcolor[j][0], hullcolor[j][1], hullcolor[j][2], alpha );
 
-		v[3][0] = bbmax[0];
-		v[3][1] = bbmin[1];
-		v[3][2] = bbmin[2];
+		for( j = 0; j < 6; j++ )
+		{
+			VectorClear( tmp );
+			tmp[j % 3] = (j < 3) ? 1.0f : -1.0f;
+			R_StudioLighting( &lv, pbbox[i].bone, 0, tmp );
 
-		v[4][0] = bbmax[0];
-		v[4][1] = bbmax[1];
-		v[4][2] = bbmax[2];
-
-		v[5][0] = bbmax[0];
-		v[5][1] = bbmin[1];
-		v[5][2] = bbmax[2];
-
-		v[6][0] = bbmin[0];
-		v[6][1] = bbmax[1];
-		v[6][2] = bbmax[2];
-
-		v[7][0] = bbmin[0];
-		v[7][1] = bbmin[1];
-		v[7][2] = bbmax[2];
-
-		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[0], v2[0] );
-		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[1], v2[1] );
-		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[2], v2[2] );
-		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[3], v2[3] );
-		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[4], v2[4] );
-		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[5], v2[5] );
-		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[6], v2[6] );
-		Matrix3x4_VectorTransform( g_bonestransform[pbboxes[i].bone], v[7], v2[7] );
-
-		j = (pbboxes[i].group % 8);
-
-		// set properly color for hull
-		pglColor4f( hullcolor[j][0], hullcolor[j][1], hullcolor[j][2], alpha );
-
-		pglBegin( GL_QUAD_STRIP );
-		for( j = 0; j < 10; j++ )
-			pglVertex3fv( v2[j & 7] );
-		pglEnd( );
-	
-		pglBegin( GL_QUAD_STRIP );
-		pglVertex3fv( v2[6] );
-		pglVertex3fv( v2[0] );
-		pglVertex3fv( v2[4] );
-		pglVertex3fv( v2[2] );
-		pglEnd( );
-
-		pglBegin( GL_QUAD_STRIP );
-		pglVertex3fv( v2[1] );
-		pglVertex3fv( v2[7] );
-		pglVertex3fv( v2[3] );
-		pglVertex3fv( v2[5] );
-		pglEnd( );			
+			TriBrightness( lv );
+			TriVertex3fv( p[boxpnt[j][0]] );
+			TriVertex3fv( p[boxpnt[j][1]] );
+			TriVertex3fv( p[boxpnt[j][2]] );
+			TriVertex3fv( p[boxpnt[j][3]] );
+		}
+		TriEnd();
 	}
 
 	pglEnable( GL_TEXTURE_2D );
@@ -2518,41 +2469,37 @@ R_StudioDrawAbsBBox
 */
 static void R_StudioDrawAbsBBox( void )
 {
-	vec3_t	bbox[8];
+	vec3_t	p[8], tmp;
+	float	lv;
 	int	i;
 
 	// looks ugly, skip
 	if( RI.currententity == &clgame.viewent )
 		return;
 
-	if( !R_StudioComputeBBox( RI.currententity, bbox ))
+	if( !R_StudioComputeBBox( RI.currententity, p ))
 		return;
 
 	pglDisable( GL_TEXTURE_2D );
-	pglDisable( GL_DEPTH_TEST );
+	TriColor4f( 0.5f, 0.5f, 1.0f, 0.5f );
+	TriRenderMode( kRenderTransAdd );
 
-	pglColor4f( 1.0f, 0.0f, 0.0f, 1.0f );	// red bboxes for studiomodels
-	pglBegin( GL_LINES );
-
-	for( i = 0; i < 2; i += 1 )
+	TriBegin( TRI_QUADS );
+	for( i = 0; i < 6; i++ )
 	{
-		pglVertex3fv( bbox[i+0] );
-		pglVertex3fv( bbox[i+2] );
-		pglVertex3fv( bbox[i+4] );
-		pglVertex3fv( bbox[i+6] );
-		pglVertex3fv( bbox[i+0] );
-		pglVertex3fv( bbox[i+4] );
-		pglVertex3fv( bbox[i+2] );
-		pglVertex3fv( bbox[i+6] );
-		pglVertex3fv( bbox[i*2+0] );
-		pglVertex3fv( bbox[i*2+1] );
-		pglVertex3fv( bbox[i*2+4] );
-		pglVertex3fv( bbox[i*2+5] );
-	}
+		VectorClear( tmp );
+		tmp[i % 3] = (i < 3) ? 1.0f : -1.0f;
+		R_StudioLighting( &lv, -1, 0, tmp );
 
-	pglEnd();
+		TriBrightness( lv );
+		TriVertex3fv( p[boxpnt[i][0]] );
+		TriVertex3fv( p[boxpnt[i][1]] );
+		TriVertex3fv( p[boxpnt[i][2]] );
+		TriVertex3fv( p[boxpnt[i][3]] );
+	}
+	TriEnd();
+
 	pglEnable( GL_TEXTURE_2D );
-	pglEnable( GL_DEPTH_TEST );
 }
 
 /*
@@ -2577,9 +2524,9 @@ static void R_StudioDrawBones( void )
 			pglColor3f( 1, 0.7f, 0 );
 			pglBegin( GL_LINES );
 			
-			Matrix3x4_OriginFromMatrix( g_bonestransform[pbones[i].parent], point );
+			Matrix3x4_OriginFromMatrix( g_studio.bonestransform[pbones[i].parent], point );
 			pglVertex3fv( point );
-			Matrix3x4_OriginFromMatrix( g_bonestransform[i], point );
+			Matrix3x4_OriginFromMatrix( g_studio.bonestransform[i], point );
 			pglVertex3fv( point );
 			
 			pglEnd();
@@ -2588,10 +2535,10 @@ static void R_StudioDrawBones( void )
 			pglBegin( GL_POINTS );
 			if( pbones[pbones[i].parent].parent != -1 )
 			{
-				Matrix3x4_OriginFromMatrix( g_bonestransform[pbones[i].parent], point );
+				Matrix3x4_OriginFromMatrix( g_studio.bonestransform[pbones[i].parent], point );
 				pglVertex3fv( point );
 			}
-			Matrix3x4_OriginFromMatrix( g_bonestransform[i], point );
+			Matrix3x4_OriginFromMatrix( g_studio.bonestransform[i], point );
 			pglVertex3fv( point );
 			pglEnd();
 		}
@@ -2601,7 +2548,7 @@ static void R_StudioDrawBones( void )
 			pglPointSize( 5.0f );
 			pglColor3f( 0.8f, 0, 0 );
 			pglBegin( GL_POINTS );
-			Matrix3x4_OriginFromMatrix( g_bonestransform[i], point );
+			Matrix3x4_OriginFromMatrix( g_studio.bonestransform[i], point );
 			pglVertex3fv( point );
 			pglEnd();
 		}
@@ -2624,10 +2571,10 @@ static void R_StudioDrawAttachments( void )
 		vec3_t		v[4];
 
 		pattachments = (mstudioattachment_t *)((byte *)m_pStudioHeader + m_pStudioHeader->attachmentindex);		
-		Matrix3x4_VectorTransform( g_bonestransform[pattachments[i].bone], pattachments[i].org, v[0] );
-		Matrix3x4_VectorTransform( g_bonestransform[pattachments[i].bone], pattachments[i].vectors[0], v[1] );
-		Matrix3x4_VectorTransform( g_bonestransform[pattachments[i].bone], pattachments[i].vectors[1], v[2] );
-		Matrix3x4_VectorTransform( g_bonestransform[pattachments[i].bone], pattachments[i].vectors[2], v[3] );
+		Matrix3x4_VectorTransform( g_studio.bonestransform[pattachments[i].bone], pattachments[i].org, v[0] );
+		Matrix3x4_VectorTransform( g_studio.bonestransform[pattachments[i].bone], pattachments[i].vectors[0], v[1] );
+		Matrix3x4_VectorTransform( g_studio.bonestransform[pattachments[i].bone], pattachments[i].vectors[1], v[2] );
+		Matrix3x4_VectorTransform( g_studio.bonestransform[pattachments[i].bone], pattachments[i].vectors[2], v[3] );
 		
 		pglBegin( GL_LINES );
 		pglColor3f( 1, 0, 0 );
@@ -2888,7 +2835,7 @@ R_StudioSetChromeOrigin
 */
 void R_StudioSetChromeOrigin( void )
 {
-	VectorCopy( RI.vieworg, g_chrome_origin );
+	VectorCopy( RI.vieworg, g_studio.chrome_origin );
 }
 
 /*
@@ -3054,9 +3001,9 @@ void R_StudioRenderFinal( void )
 
 	if( r_drawentities->value == 4 )
 	{
-		GL_SetRenderMode( kRenderTransAdd );
+		TriRenderMode( kRenderTransAdd );
 		R_StudioDrawHulls( );
-		GL_SetRenderMode( kRenderNormal );
+		TriRenderMode( kRenderNormal );
 	}
 
 	if( r_drawentities->value == 5 )
@@ -3173,7 +3120,6 @@ void R_StudioProcessGait( entity_state_t *pplayer )
 		RI.currententity->curstate.sequence = 0;
 
 	dt = bound( 0.0f, g_studio.frametime, 1.0f );
-	if( dt == 0.0f ) return;
 
 	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + RI.currententity->curstate.sequence;
 
@@ -3860,7 +3806,7 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 	else
 	{
 		// well compute bounds from vertices and round to nearest even values
-		Mod_StudioComputeBounds( phdr, loadmodel->mins, loadmodel->maxs );
+		Mod_StudioComputeBounds( phdr, loadmodel->mins, loadmodel->maxs, true );
 		RoundUpHullSize( loadmodel->mins );
 		RoundUpHullSize( loadmodel->maxs );
 	}

@@ -201,9 +201,6 @@ typedef struct gameinfo_s
 	char		sp_entity[32];	// e.g. info_player_start
 	char		mp_entity[32];	// e.g. info_player_deathmatch
 
-	float		client_mins[MAX_MAP_HULLS][3];	// 4 hulls allowed
-	float		client_maxs[MAX_MAP_HULLS][3];	// 4 hulls allowed
-
 	char		ambientsound[NUM_AMBIENTS][64];	// quake ambient sounds
 
 	int		max_edicts;	// min edicts is 600, max edicts is 4096
@@ -315,6 +312,9 @@ typedef struct host_parm_s
 
 	// list of unique decal indexes
 	char		draw_decals[MAX_DECALS][CS_SIZE];
+
+	vec3_t		player_mins[MAX_MAP_HULLS];	// 4 hulls allowed
+	vec3_t		player_maxs[MAX_MAP_HULLS];	// 4 hulls allowed
 
 	HWND		hWnd;		// main window
 	int		developer;	// show all developer's message
@@ -778,9 +778,9 @@ byte *AVI_GetVideoFrame( movie_state_t *Avi, long frame );
 qboolean AVI_GetVideoInfo( movie_state_t *Avi, long *xres, long *yres, float *duration );
 qboolean AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info );
 long AVI_GetAudioChunk( movie_state_t *Avi, char *audiodata, long offset, long length );
-void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, qboolean ignore_hwgamma, int quiet );
-movie_state_t *AVI_LoadVideo( const char *filename, qboolean load_audio, qboolean ignore_hwgamma );
-movie_state_t *AVI_LoadVideoNoSound( const char *filename, qboolean ignore_hwgamma );
+void AVI_OpenVideo( movie_state_t *Avi, const char *filename, qboolean load_audio, int quiet );
+movie_state_t *AVI_LoadVideo( const char *filename, qboolean load_audio );
+movie_state_t *AVI_LoadVideoNoSound( const char *filename );
 void AVI_CloseVideo( movie_state_t *Avi );
 qboolean AVI_IsActive( movie_state_t *Avi );
 void AVI_FreeVideo( movie_state_t *Avi );
@@ -886,7 +886,6 @@ void TrimSpace( const char *source, char *dest );
 const byte *GL_TextureData( unsigned int texnum );
 void GL_FreeImage( const char *name );
 void VID_InitDefaultResolution( void );
-void VID_RestoreGamma( void );
 void UI_SetActiveMenu( qboolean fActive );
 struct cmd_s *Cmd_GetFirstFunctionHandle( void );
 struct cmd_s *Cmd_GetNextFunctionHandle( struct cmd_s *cmd );

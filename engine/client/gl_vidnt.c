@@ -30,12 +30,10 @@ GNU General Public License for more details.
 convar_t	*gl_extensions;
 convar_t	*gl_alphabits;
 convar_t	*gl_stencilbits;
-convar_t	*gl_ignorehwgamma;
 convar_t	*gl_texture_anisotropy;
 convar_t	*gl_texture_lodbias;
 convar_t	*gl_texture_nearest;
 convar_t	*gl_compress_textures;
-convar_t	*gl_compensate_gamma_screenshots;
 convar_t	*gl_keeptjunctions;
 convar_t	*gl_showtextures;
 convar_t	*gl_detailscale;
@@ -65,12 +63,12 @@ convar_t	*r_detailtextures;
 convar_t	*r_faceplanecull;
 convar_t	*r_drawentities;
 convar_t	*r_adjust_fov;
-convar_t	*r_flaresize;
 convar_t	*r_decals;
 convar_t	*r_novis;
 convar_t	*r_nocull;
 convar_t	*r_lockpvs;
 convar_t	*r_lockfrustum;
+convar_t	*r_traceglow;
 convar_t	*r_dynamic;
 convar_t	*r_lightmap;
 convar_t	*r_fastsky;
@@ -87,7 +85,6 @@ ref_globals_t	tr;
 glconfig_t	glConfig;
 glstate_t		glState;
 glwstate_t	glw_state;
-uint		num_instances;
 
 typedef enum
 {
@@ -643,45 +640,6 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 
 /*
 ===============
-GL_BuildGammaTable
-===============
-*/
-void GL_BuildGammaTable( void )
-{
-	double	invGamma;
-	double	div;
-	int	i, v;
-
-	invGamma = 1.0 / bound( 0.5, vid_gamma->value, 2.3 );
-	div = (double) 1.0 / 255.5;
-
-	memcpy( glState.gammaRamp, glState.stateRamp, sizeof( glState.gammaRamp ));
-	
-	for( i = 0; i < 256; i++ )
-	{
-		v = (int)(65535.0 * pow(((double)i + 0.5 ) * div, invGamma ) + 0.5 );
-		glState.gammaRamp[i+0]   = ((word)bound( 0, v, 65535 ));
-		glState.gammaRamp[i+256] = ((word)bound( 0, v, 65535 ));
-		glState.gammaRamp[i+512] = ((word)bound( 0, v, 65535 ));
-	}
-}
-
-/*
-===============
-GL_UpdateGammaRamp
-===============
-*/
-void GL_UpdateGammaRamp( void )
-{
-	if( !glConfig.deviceSupportsGamma ) return;
-
-	GL_BuildGammaTable();
-
-	SetDeviceGammaRamp( glw_state.hDC, glState.gammaRamp );
-}
-
-/*
-===============
 GL_UpdateSwapInterval
 ===============
 */
@@ -919,147 +877,15 @@ static int VID_ChoosePFD( PIXELFORMATDESCRIPTOR *pfd, int colorBits, int alphaBi
 
 /*
 =================
-pfnEnumWnd
-
-callback to enumerate active windows
-=================
-*/
-BOOL CALLBACK pfnEnumWnd( HWND hwnd, LPARAM lParam )
-{
-	string	wndname;
-
-	if( GetClassName( hwnd, wndname, sizeof( wndname ) - 1 ))
-	{
-		if( !Q_strcmp( wndname, WINDOW_NAME ))
-			num_instances++;
-	}
-	return true;
-}
-
-/*
-=================
-VID_EnumerateInstances
-=================
-*/
-uint VID_EnumerateInstances( void )
-{
-	num_instances = 0;
-
-	if( EnumWindows( &pfnEnumWnd, 0 ))
-		return num_instances;
-	return 1;
-}
-
-/*
-=================
 VID_StartupGamma
 =================
 */
 void VID_StartupGamma( void )
 {
-	size_t	gamma_size;
-	byte	*savedGamma;
-
-	// init gamma ramp
-	memset( glState.stateRamp, 0, sizeof( glState.stateRamp ));
-
-	glConfig.deviceSupportsGamma = GetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
-
-	if( !glConfig.deviceSupportsGamma )
-	{
-		// force to set cvar
-		Cvar_FullSet( "gl_ignorehwgamma", "1", FCVAR_GLCONFIG );
-	}
-
-	if( gl_ignorehwgamma->value )
-	{
-		glConfig.deviceSupportsGamma = false;	// even if supported!
-		BuildGammaTable( vid_gamma->value, vid_brightness->value );
-		MsgDev( D_NOTE, "VID_StartupGamma: software gamma initialized\n" );
-		return;
-	}
-
-	savedGamma = FS_LoadFile( "gamma.dat", &gamma_size, false );
-
-	if( !savedGamma || gamma_size != sizeof( glState.stateRamp ))
-	{
-		// saved gamma not found or corrupted file
-		FS_WriteFile( "gamma.dat", glState.stateRamp, sizeof( glState.stateRamp ));
-		MsgDev( D_NOTE, "VID_StartupGamma: gamma.dat initialized\n" );
-		if( savedGamma ) Mem_Free( savedGamma );
-	}
-	else
-	{
-		GL_BuildGammaTable();
-
-		// validate base gamma
-		if( !memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
-		{
-			// all ok, previous gamma is valid
-			MsgDev( D_NOTE, "VID_StartupGamma: validate screen gamma - ok\n" );
-		}
-		else if( !memcmp( glState.gammaRamp, glState.stateRamp, sizeof( glState.stateRamp )))
-		{
-			// screen gamma is equal to render gamma (probably previous instance crashed)
-			// run additional check to make sure for it
-			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
-			{
-				// yes, current gamma it's totally wrong, restore it from gamma.dat
-				MsgDev( D_NOTE, "VID_StartupGamma: restore original gamma after crash\n" );
-				memcpy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));
-			}
-			else
-			{
-				// oops, savedGamma == glState.stateRamp == glState.gammaRamp
-				// probably r_gamma set as default
-				MsgDev( D_NOTE, "VID_StartupGamma: validate screen gamma - disabled\n" ); 
-			}
-		}
-		else if( !memcmp( glState.gammaRamp, savedGamma, sizeof( glState.stateRamp )))
-		{
-			// saved gamma is equal render gamma, probably gamma.dat wroted after crash
-			// run additional check to make sure it
-			if( memcmp( savedGamma, glState.stateRamp, sizeof( glState.stateRamp )))
-			{
-				// yes, saved gamma it's totally wrong, get origianl gamma from screen
-				MsgDev( D_NOTE, "VID_StartupGamma: merge gamma.dat after crash\n" );
-				FS_WriteFile( "gamma.dat", glState.stateRamp, sizeof( glState.stateRamp ));
-			}
-			else
-			{
-				// oops, savedGamma == glState.stateRamp == glState.gammaRamp
-				// probably r_gamma set as default
-				MsgDev( D_NOTE, "VID_StartupGamma: validate screen gamma - disabled\n" ); 
-			}
-		}
-		else
-		{
-			// current gamma unset by other application, so we can restore it here
-			MsgDev( D_NOTE, "VID_StartupGamma: restore original gamma after crash\n" );
-			memcpy( glState.stateRamp, savedGamma, sizeof( glState.gammaRamp ));			
-		}
-
-		Mem_Free( savedGamma );
-	}
-
-	SetBits( vid_brightness->flags, FCVAR_CHANGED );
-	SetBits( vid_gamma->flags, FCVAR_CHANGED );
-}
-
-/*
-=================
-VID_RestoreGamma
-=================
-*/
-void VID_RestoreGamma( void )
-{
-	if( !glw_state.hDC || !glConfig.deviceSupportsGamma )
-		return;
-
-	// don't touch gamma if multiple instances was running
-	if( VID_EnumerateInstances( ) > 1 ) return;
-
-	SetDeviceGammaRamp( glw_state.hDC, glState.stateRamp );
+	BuildGammaTable( vid_gamma->value, vid_brightness->value );
+	MsgDev( D_NOTE, "VID_StartupGamma: gamma initialized\n" );
+	ClearBits( vid_brightness->flags, FCVAR_CHANGED );
+	ClearBits( vid_gamma->flags, FCVAR_CHANGED );
 }
 
 /*
@@ -1617,8 +1443,6 @@ R_Free_OpenGL
 */
 void R_Free_OpenGL( void )
 {
-	VID_RestoreGamma ();
-
 	GL_DeleteContext ();
 
 	VID_DestroyWindow ();
@@ -1719,7 +1543,6 @@ void R_RenderInfo_f( void )
 
 	Msg( "\n" );
 	Msg( "%s [%i x %i]\n", vidmode[(int)vid_mode->value].desc, glState.width, glState.height );
-	Msg( "GAMMA: %s\n", (glConfig.deviceSupportsGamma) ? "hardware" : "software" );
 	Msg( "\n" );
 	Msg( "PICMIP: %i\n", gl_picmip->value );
 	Msg( "SKYMIP: %i\n", gl_skymip->value );
@@ -1752,17 +1575,16 @@ void GL_InitCommands( void )
 	r_lockpvs = Cvar_Get( "r_lockpvs", "0", FCVAR_CHEAT, "lockpvs area at current point (pvs test)" );
 	r_lockfrustum = Cvar_Get( "r_lockfrustum", "0", FCVAR_CHEAT, "lock frustrum area at current point (cull test)" );
 	r_dynamic = Cvar_Get( "r_dynamic", "1", FCVAR_ARCHIVE, "allow dynamic lighting (dlights, lightstyles)" );
+	r_traceglow = Cvar_Get( "r_traceglow", "1", FCVAR_ARCHIVE, "cull flares behind models" );
 	r_lightmap = Cvar_Get( "r_lightmap", "0", FCVAR_CHEAT, "lightmap debugging tool" );
 	r_fastsky = Cvar_Get( "r_fastsky", "0", FCVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
 	r_drawentities = Cvar_Get( "r_drawentities", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render entities" );
-	r_flaresize = Cvar_Get( "r_flaresize", "200", FCVAR_ARCHIVE, "set flares size" );
 	r_decals = Cvar_Get( "r_decals", "4096", FCVAR_ARCHIVE, "sets the maximum number of decals" );
 	r_xpos = Cvar_Get( "r_xpos", "130", FCVAR_RENDERINFO, "window position by horizontal" );
 	r_ypos = Cvar_Get( "r_ypos", "48", FCVAR_RENDERINFO, "window position by vertical" );
 			
 	gl_picmip = Cvar_Get( "gl_picmip", "0", FCVAR_GLCONFIG, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", FCVAR_GLCONFIG, "reduces resolution of skybox textures by powers of 2" );
-	gl_ignorehwgamma = Cvar_Get( "gl_ignorehwgamma", "0", FCVAR_GLCONFIG, "ignore hardware gamma" );
 	gl_alphabits = Cvar_Get( "gl_alphabits", "8", FCVAR_GLCONFIG, "pixelformat alpha bits (0 - auto)" );
 	gl_texture_nearest = Cvar_Get( "gl_texture_nearest", "0", FCVAR_ARCHIVE, "disable texture filter" );
 	gl_round_down = Cvar_Get( "gl_round_down", "0", FCVAR_GLCONFIG, "down size non-power of two textures" );
@@ -1775,7 +1597,6 @@ void GL_InitCommands( void )
 	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "2.0", FCVAR_ARCHIVE, "textures anisotropic filter" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", FCVAR_ARCHIVE, "LOD bias for mipmapped textures (prefomance|quality)" );
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", FCVAR_GLCONFIG, "compress textures to safe video memory" ); 
-	gl_compensate_gamma_screenshots = Cvar_Get( "gl_compensate_gamma_screenshots", "0", FCVAR_ARCHIVE, "allow to apply gamma for screenshots" ); 
 	gl_keeptjunctions = Cvar_Get( "gl_keeptjunctions", "1", FCVAR_ARCHIVE, "but removing tjuncs causes blinking pixels" ); 
 	gl_allow_static = Cvar_Get( "gl_allow_static", "0", FCVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
 	gl_allow_mirrors = Cvar_Get( "gl_allow_mirrors", "1", FCVAR_ARCHIVE, "allow to draw mirror surfaces" );

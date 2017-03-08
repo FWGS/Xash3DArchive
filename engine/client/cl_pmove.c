@@ -577,8 +577,8 @@ void CL_SetSolidPlayers( int playernum )
 		// some fields needs to be override from cls.predicted_players
 		VectorCopy( player->origin, pe->origin );
 		VectorCopy( player->angles, pe->angles );
-		VectorCopy( clgame.player_mins[player->usehull], pe->mins );
-		VectorCopy( clgame.player_maxs[player->usehull], pe->maxs );
+		VectorCopy( clgame.pmove->player_mins[player->usehull], pe->mins );
+		VectorCopy( clgame.pmove->player_maxs[player->usehull], pe->maxs );
 		pe->movetype = player->movetype;
 		pe->solid = player->solid;
 	}
@@ -969,19 +969,17 @@ void CL_InitClientMove( void )
 	clgame.pmove->movevars = &clgame.movevars;
 	clgame.pmove->runfuncs = false;
 
-	Mod_SetupHulls( clgame.player_mins, clgame.player_maxs );
-
 	// enumerate client hulls
 	for( i = 0; i < MAX_MAP_HULLS; i++ )
 	{
-		if( clgame.dllFuncs.pfnGetHullBounds( i, clgame.player_mins[i], clgame.player_maxs[i] ))
+		if( clgame.dllFuncs.pfnGetHullBounds( i, host.player_mins[i], host.player_maxs[i] ))
 			MsgDev( D_NOTE, "CL: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
-			clgame.player_mins[i][0], clgame.player_mins[i][1], clgame.player_mins[i][2],
-			clgame.player_maxs[i][0], clgame.player_maxs[i][1], clgame.player_maxs[i][2] );
+			host.player_mins[i][0], host.player_mins[i][1], host.player_mins[i][2],
+			host.player_maxs[i][0], host.player_maxs[i][1], host.player_maxs[i][2] );
 	}
 
-	memcpy( clgame.pmove->player_mins, clgame.player_mins, sizeof( clgame.player_mins ));
-	memcpy( clgame.pmove->player_maxs, clgame.player_maxs, sizeof( clgame.player_maxs ));
+	memcpy( clgame.pmove->player_mins, host.player_mins, sizeof( host.player_mins ));
+	memcpy( clgame.pmove->player_maxs, host.player_maxs, sizeof( host.player_maxs ));
 
 	// common utilities
 	clgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;

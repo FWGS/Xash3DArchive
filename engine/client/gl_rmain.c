@@ -1055,6 +1055,38 @@ void R_RenderScene( void )
 
 /*
 ===============
+R_DoResetGamma
+
+gamma will be reset for
+some type of screenshots
+===============
+*/
+qboolean R_DoResetGamma( void )
+{
+	switch( cls.scrshot_action )
+	{
+	case scrshot_normal:
+		if( CL_IsDevOverviewMode( ))
+			return true;
+		return false;
+	case scrshot_snapshot:
+		if( CL_IsDevOverviewMode( ))
+			return true;
+		return false;
+	case scrshot_plaque:
+	case scrshot_savegame:
+	case scrshot_demoshot:
+	case scrshot_envshot:
+	case scrshot_skyshot:
+	case scrshot_mapshot:
+		return true;
+	default:
+		return false;
+	}
+}
+
+/*
+===============
 R_BeginFrame
 ===============
 */
@@ -1067,22 +1099,23 @@ void R_BeginFrame( qboolean clearScene )
 		pglClear( GL_COLOR_BUFFER_BIT );
 	}
 
-	// update gamma
-	if( FBitSet( vid_gamma->flags, FCVAR_CHANGED ) || FBitSet( vid_brightness->flags, FCVAR_CHANGED ))
+	if( R_DoResetGamma( ))
 	{
-		if( glConfig.deviceSupportsGamma )
-		{
-			SCR_RebuildGammaTable();
-			GL_UpdateGammaRamp();
-			ClearBits( vid_gamma->flags, FCVAR_CHANGED );
-		}
-		else
-		{
-			BuildGammaTable( vid_gamma->value, vid_brightness->value );
-			glConfig.softwareGammaUpdate = true;
-			GL_RebuildLightmaps();
-			glConfig.softwareGammaUpdate = false;
-		}
+		BuildGammaTable( 1.8f, 0.0f );
+		glConfig.softwareGammaUpdate = true;
+		GL_RebuildLightmaps();
+		glConfig.softwareGammaUpdate = false;
+
+		// next frame will be restored gamma
+		SetBits( vid_brightness->flags, FCVAR_CHANGED );
+		SetBits( vid_gamma->flags, FCVAR_CHANGED );
+	}
+	else if( FBitSet( vid_gamma->flags, FCVAR_CHANGED ) || FBitSet( vid_brightness->flags, FCVAR_CHANGED ))
+	{
+		BuildGammaTable( vid_gamma->value, vid_brightness->value );
+		glConfig.softwareGammaUpdate = true;
+		GL_RebuildLightmaps();
+		glConfig.softwareGammaUpdate = false;
 	}
 
 	R_Set2DMode( true );

@@ -181,12 +181,14 @@ hull_t *SV_HullAutoSelect( model_t *model, const vec3_t mins, const vec3_t maxs,
 	float	curdiff;
 	float	lastdiff = 999;
 	int	i, hullNumber = 0;	// assume we fail
+	vec3_t	clip_size;
 	hull_t	*hull;
 
-	// select the hull automatically
+	// NOTE: this is not matched with hardcoded values in some cases...
 	for( i = 0; i < MAX_MAP_HULLS; i++ )
 	{
-		curdiff = floor( VectorAvg( size )) - floor( VectorAvg( world.hull_sizes[i] ));
+		VectorSubtract( model->hulls[i].clip_maxs, model->hulls[i].clip_mins, clip_size );
+		curdiff = floor( VectorAvg( size )) - floor( VectorAvg( clip_size ));
 		curdiff = fabs( curdiff );
 
 		if( curdiff < lastdiff )

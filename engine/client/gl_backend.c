@@ -442,37 +442,6 @@ const envmap_t r_envMapInfo[6] =
 };
 
 /*
-================
-VID_ImageAdjustGamma
-================
-*/
-void VID_ImageAdjustGamma( byte *in, uint width, uint height )
-{
-	int	i, c = width * height;
-	float	g = 1.0f / bound( 0.5f, vid_gamma->value, 2.3f );
-	byte	r_gammaTable[256];	// adjust screenshot gamma
-	byte	*p = in;
-
-	if( !gl_compensate_gamma_screenshots->value )
-		return;
-
-	// rebuild the gamma table	
-	for( i = 0; i < 256; i++ )
-	{
-		if( g == 1.0f ) r_gammaTable[i] = i;
-		else r_gammaTable[i] = bound( 0, 255 * pow((i + 0.5) / 255.5f, g ) + 0.5f, 255 );
-	}
-
-	// adjust screenshots gamma
-	for( i = 0; i < c; i++, p += 3 )
-	{
-		p[0] = r_gammaTable[p[0]];
-		p[1] = r_gammaTable[p[1]];
-		p[2] = r_gammaTable[p[2]];
-	}
-}
-
-/*
 ===============
 VID_WriteOverviewScript
 
@@ -525,12 +494,8 @@ qboolean VID_ScreenShot( const char *filename, int shot_type )
 	switch( shot_type )
 	{
 	case VID_SCREENSHOT:
-		if( !CL_IsDevOverviewMode( ))
-			VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // scrshot gamma
 		break;
 	case VID_SNAPSHOT:
-		if( !CL_IsDevOverviewMode( ))
-			VID_ImageAdjustGamma( r_shot->buffer, r_shot->width, r_shot->height ); // scrshot gamma
 		FS_AllowDirectPaths( true );
 		break;
 	case VID_LEVELSHOT:

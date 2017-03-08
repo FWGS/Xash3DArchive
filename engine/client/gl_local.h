@@ -417,7 +417,7 @@ void R_DrawSpriteModel( cl_entity_t *e );
 //
 void R_StudioInit( void );
 void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded );
-void R_StudioLerpStepMovement( cl_entity_t *e, double time, vec3_t origin, vec3_t angles );
+void R_StudioLerpMovement( cl_entity_t *e, double time, vec3_t origin, vec3_t angles );
 struct mstudiotex_s *R_StudioGetTexture( cl_entity_t *e );
 float CL_GetStudioEstimatedFrame( cl_entity_t *ent );
 void R_DrawStudioModel( cl_entity_t *e );
@@ -439,7 +439,6 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction );
 void GL_CheckForErrors_( const char *filename, const int fileline );
 void *GL_GetProcAddress( const char *name );
 void GL_UpdateSwapInterval( void );
-void GL_UpdateGammaRamp( void );
 qboolean GL_DeleteContext( void );
 qboolean GL_Support( int r_ext );
 void VID_CheckChanges( void );
@@ -457,7 +456,6 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 void GL_FreeImage( const char *name );
 qboolean VID_ScreenShot( const char *filename, int shot_type );
 qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qboolean skyshot );
-void VID_RestoreGamma( void );
 void R_BeginFrame( qboolean clearScene );
 void R_RenderFrame( const struct ref_viewpass_s *vp );
 void R_EndFrame( void );
@@ -587,15 +585,11 @@ typedef struct
 	gles_wrapper_t	wrapper;
 
 	qboolean		softwareGammaUpdate;
-	qboolean		deviceSupportsGamma;
 	int		prev_mode;
 } glconfig_t;
 
 typedef struct
 {
-	word		gammaRamp[768];		// current gamma ramp
-	word		stateRamp[768];		// original gamma ramp
-
 	int		width, height;
 	qboolean		fullScreen;
 	qboolean		wideScreen;
@@ -638,13 +632,11 @@ extern glwstate_t		glw_state;
 extern convar_t	*gl_texture_anisotropy;
 extern convar_t	*gl_extensions;
 extern convar_t	*gl_stencilbits;
-extern convar_t	*gl_ignorehwgamma;
 extern convar_t	*gl_check_errors;
 extern convar_t	*gl_round_down;
 extern convar_t	*gl_texture_lodbias;
 extern convar_t	*gl_texture_nearest;
 extern convar_t	*gl_compress_textures;
-extern convar_t	*gl_compensate_gamma_screenshots;
 extern convar_t	*gl_keeptjunctions;
 extern convar_t	*gl_detailscale;
 extern convar_t	*gl_wireframe;
@@ -667,12 +659,12 @@ extern convar_t	*r_detailtextures;
 extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;
-extern convar_t	*r_flaresize;
 extern convar_t	*r_decals;
 extern convar_t	*r_novis;
 extern convar_t	*r_nocull;
 extern convar_t	*r_lockpvs;
 extern convar_t	*r_lockfrustum;
+extern convar_t	*r_traceglow;
 extern convar_t	*r_dynamic;
 extern convar_t	*r_lightmap;
 extern convar_t	*r_fastsky;

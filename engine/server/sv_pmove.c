@@ -538,19 +538,17 @@ void SV_InitClientMove( void )
 	svgame.pmove->movevars = &svgame.movevars;
 	svgame.pmove->runfuncs = false;
 
-	Mod_SetupHulls( svgame.player_mins, svgame.player_maxs );
-	
 	// enumerate client hulls
 	for( i = 0; i < MAX_MAP_HULLS; i++ )
 	{
-		if( svgame.dllFuncs.pfnGetHullBounds( i, svgame.player_mins[i], svgame.player_maxs[i] ))
+		if( svgame.dllFuncs.pfnGetHullBounds( i, host.player_mins[i], host.player_maxs[i] ))
 			MsgDev( D_NOTE, "SV: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
-			svgame.player_mins[i][0], svgame.player_mins[i][1], svgame.player_mins[i][2],
-			svgame.player_maxs[i][0], svgame.player_maxs[i][1], svgame.player_maxs[i][2] );
+			host.player_mins[i][0], host.player_mins[i][1], host.player_mins[i][2],
+			host.player_maxs[i][0], host.player_maxs[i][1], host.player_maxs[i][2] );
 	}
 
-	memcpy( svgame.pmove->player_mins, svgame.player_mins, sizeof( svgame.player_mins ));
-	memcpy( svgame.pmove->player_maxs, svgame.player_maxs, sizeof( svgame.player_maxs ));
+	memcpy( svgame.pmove->player_mins, host.player_mins, sizeof( host.player_mins ));
+	memcpy( svgame.pmove->player_maxs, host.player_maxs, sizeof( host.player_maxs ));
 
 	// common utilities
 	svgame.pmove->PM_Info_ValueForKey = Info_ValueForKey;
