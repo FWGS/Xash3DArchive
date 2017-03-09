@@ -2655,7 +2655,7 @@ void CL_UpdateFlashlight( cl_entity_t *ent )
 	trace = CL_VisTraceLine( vecSrc, vecEnd, PM_STUDIO_BOX );
 
 	// update flashlight endpos
-	dl = CL_AllocElight( ent->index );
+	dl = CL_AllocDlight( ent->index );
 #if 0
 	// g-cont. disabled until studio lighting will be finished
 	if( trace.ent > 0 && clgame.pmove->visents[trace.ent].studiomodel )
@@ -2664,9 +2664,6 @@ void CL_UpdateFlashlight( cl_entity_t *ent )
 #else
 	VectorCopy( trace.endpos, dl->origin );
 #endif
-
-	R_DebugParticle( dl->origin, 255, 160, 0 );
-
 	// compute falloff
 	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
 	if( falloff < 500.0f ) falloff = 1.0f;
@@ -2674,9 +2671,9 @@ void CL_UpdateFlashlight( cl_entity_t *ent )
 	falloff *= falloff;
 
 	// apply brigthness to dlight			
-	dl->color.r = bound( 0, 255 * falloff, 255 );
-	dl->color.g = bound( 0, 255 * falloff, 255 );
-	dl->color.b = bound( 0, 255 * falloff, 255 );
+	dl->color.r = bound( 0, falloff * 255, 255 );
+	dl->color.g = bound( 0, falloff * 255, 255 );
+	dl->color.b = bound( 0, falloff * 255, 255 );
 	dl->die = cl.time + 0.01f; // die on next frame
 	dl->radius = 80;
 }

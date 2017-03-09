@@ -152,7 +152,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 		if( filesize < ( sizeof( *pin ) + pixels + 768 ))
 			return false;
 
-		if( flags & STUDIO_NF_TRANSPARENT )
+		if( flags & STUDIO_NF_MASKED )
 		{
 			byte	*pal = fin + pixels;
 

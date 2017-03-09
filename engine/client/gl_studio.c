@@ -52,6 +52,7 @@ typedef struct
 	int		framecount;		// studio framecount
 	qboolean		interpolate;
 	int		rendermode;
+	qboolean		flipmodel;		// viewmodel is flipped
 	float		blend;			// blend value
 
 	// bones
@@ -92,7 +93,7 @@ typedef struct
 	int		numlocallights;
 	int		lightage[MAXSTUDIOBONES];
 	dlight_t		*locallight[MAX_LOCALLIGHTS];
-	int		locallinearlight[MAX_LOCALLIGHTS][3];
+	color24		locallightcolor[MAX_LOCALLIGHTS];
 	vec4_t		lightpos[MAXSTUDIOVERTS][MAX_LOCALLIGHTS];
 	vec3_t		lightbonepos[MAXSTUDIOBONES][MAX_LOCALLIGHTS];
 	float		locallightR2[MAX_LOCALLIGHTS];
@@ -533,7 +534,7 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 
 	Matrix3x4_CreateFromEntity( g_studio.rotationmatrix, angles, origin, 1.0f );
 
-	if( R_StudioFlipViewModel( e ))
+	if( g_studio.flipmodel )
 	{
 		g_studio.rotationmatrix[0][1] = -g_studio.rotationmatrix[0][1];
 		g_studio.rotationmatrix[1][1] = -g_studio.rotationmatrix[1][1];
@@ -1723,7 +1724,7 @@ pfnStudioEntityLight
 void R_StudioEntityLight( alight_t *lightinfo )
 {
 	int		lnum, i, j, k;
-	float		minstrength, dist2, f;
+	float		minstrength, dist2, f, r2;
 	float		lstrength[MAX_LOCALLIGHTS];
 	cl_entity_t	*ent = RI.currententity;
 	vec3_t		mid, origin, pos;
@@ -1748,7 +1749,7 @@ void R_StudioEntityLight( alight_t *lightinfo )
 
 		if(( el->key & 0xFFF ) == ent->index )
 		{
-			int att = (el->key >> 12) & 0xF;
+			int	att = (el->key >> 12) & 0xF;
 
 			if( att ) VectorCopy( ent->attachment[att], el->origin );
 			else VectorCopy( ent->origin, el->origin );
@@ -1757,23 +1758,17 @@ void R_StudioEntityLight( alight_t *lightinfo )
 		VectorCopy( el->origin, pos );
 		VectorSubtract( origin, el->origin, mid );
 
-		f = VectorLength( mid );
+		f = DotProduct( mid, mid );
+		r2 = el->radius * el->radius;
 
-		if( f > ( el->radius * el->radius ))
-			minstrength = (el->radius * el->radius) / f;
+		if( f > r2 ) minstrength = r2 / f;
 		else minstrength = 1.0f;
 
-		if( minstrength > 0.004f )
+		if( minstrength > 0.05f )
 		{
-			if( g_studio.numlocallights < 2 )
+			if( g_studio.numlocallights >= MAX_LOCALLIGHTS )
 			{
-				k = g_studio.numlocallights;
-			}
-			else
-			{
-				k = -1;
-
-				for( j = 0; j < g_studio.numlocallights; j++ )
+				for( j = 0, k = -1; j < g_studio.numlocallights; j++ )
 				{
 					if( lstrength[j] < dist2 && lstrength[j] < minstrength )
 					{
@@ -1782,17 +1777,18 @@ void R_StudioEntityLight( alight_t *lightinfo )
 					}
 				}
 			}
+			else k = g_studio.numlocallights;
 
 			if( k != -1 )
 			{
+				g_studio.locallightcolor[k].r = LightToTexGamma( el->color.r );
+				g_studio.locallightcolor[k].g = LightToTexGamma( el->color.g );
+				g_studio.locallightcolor[k].b = LightToTexGamma( el->color.b );
+				g_studio.locallightR2[k] = r2;
 				g_studio.locallight[k] = el;
 				lstrength[k] = minstrength;
-				g_studio.locallightR2[k] = (el->radius * el->radius);
-				g_studio.locallinearlight[k][0] = el->color.r;
-				g_studio.locallinearlight[k][1] = el->color.g;
-				g_studio.locallinearlight[k][2] = el->color.b;
 
-				if( k + 1 > g_studio.numlocallights )
+				if( k >= g_studio.numlocallights )
 					g_studio.numlocallights = k + 1;
 			}
 		}
@@ -1831,7 +1827,6 @@ R_StudioLighting
 void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 {
 	float 	illum;
-	int	light;
 
 	if( FBitSet( flags, STUDIO_NF_FULLBRIGHT ))
 	{
@@ -1876,7 +1871,6 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 	}
 
 	illum = Q_min( illum, 255.0f );
-//	light = LightToTexGamma( illum );
 	*lv = illum * (1.0f / 255.0f);
 }
 
@@ -1889,37 +1883,42 @@ R_LightLambert
 void R_LightLambert( vec4_t light[MAX_LOCALLIGHTS], vec3_t normal, vec3_t color )
 {
 	vec3_t	finalLight;
+	vec3_t	localLight;
 	int	i;
 
 	VectorCopy( color, finalLight );
 
-	if( g_studio.numlocallights )
+	for( i = 0; i < g_studio.numlocallights; i++ )
 	{
-		for( i = 0; i < g_studio.numlocallights; i++ )
+		float	r, r2;
+
+		if( g_studio.flipmodel )
+			r = DotProduct( normal, light[i] );
+		else r = -DotProduct( normal, light[i] );
+
+		if( r > 0.0f )
 		{
-			float	r, r2;
-
-			r = -DotProduct( normal, light[i] );
-
-			if( r > 0.0f )
+			if( light[i][3] == 0.0f )
 			{
-				if( light[i][3] == 0.0f )
-				{
-					r2 = DotProduct( light[i], light[i] );
+				r2 = DotProduct( light[i], light[i] );
 
-					if( r2 > 0.0f )
-						light[i][3] = g_studio.locallightR2[i] / ( r2 * sqrt( r2 ));
-					else light[i][3] = 1.0f;
-				}
-
-				finalLight[0] += g_studio.locallinearlight[i][0] * (r * light[i][3]);
-				finalLight[1] += g_studio.locallinearlight[i][1] * (r * light[i][3]);
-				finalLight[2] += g_studio.locallinearlight[i][2] * (r * light[i][3]);
+				if( r2 > 0.0f )
+					light[i][3] = g_studio.locallightR2[i] / ( r2 * sqrt( r2 ));
+				else light[i][3] = 0.0001f;
 			}
-		}
 
-		pglColor4f( finalLight[0], finalLight[1], finalLight[2], tr.blend );
+			localLight[0] = Q_min( g_studio.locallightcolor[i].r * r * light[i][3], 255.0f );
+			localLight[1] = Q_min( g_studio.locallightcolor[i].g * r * light[i][3], 255.0f );
+			localLight[2] = Q_min( g_studio.locallightcolor[i].b * r * light[i][3], 255.0f );
+			VectorScale( localLight, ( 1.0f / 255.0f ), localLight );
+
+			finalLight[0] = Q_min( finalLight[0] + localLight[0], 1.0f );
+			finalLight[1] = Q_min( finalLight[1] + localLight[1], 1.0f );
+			finalLight[2] = Q_min( finalLight[2] + localLight[2], 1.0f );
+		}
 	}
+
+	pglColor4f( finalLight[0], finalLight[1], finalLight[2], tr.blend );
 }
 
 /*
@@ -1928,26 +1927,24 @@ R_LightStrength
 
 ====================
 */
-void R_LightStrength( int bone, float *vert, vec4_t light[MAX_LOCALLIGHTS] )
+void R_LightStrength( int bone, vec3_t localpos, vec4_t light[MAX_LOCALLIGHTS] )
 {
-	vec3_t	lpos;
 	int	i;
 
 	if( g_studio.lightage[bone] != g_studio.framecount )
 	{
 		for( i = 0; i < g_studio.numlocallights; i++ )
 		{
-			lpos[0] = g_studio.locallight[i]->origin[0] - g_studio.lighttransform[bone][0][3];
-			lpos[1] = g_studio.locallight[i]->origin[1] - g_studio.lighttransform[bone][1][3];
-			lpos[2] = g_studio.locallight[i]->origin[2] - g_studio.lighttransform[bone][2][3];
-			Matrix3x4_VectorIRotate( g_studio.lighttransform[bone], lpos, g_studio.lightbonepos[bone][i] );
+			dlight_t *el = g_studio.locallight[i];
+			Matrix3x4_VectorITransform( g_studio.lighttransform[bone], el->origin, g_studio.lightbonepos[bone][i] );
 		}
+
 		g_studio.lightage[bone] = g_studio.framecount;
 	}
 
 	for( i = 0; i < g_studio.numlocallights; i++ )
 	{
-		VectorSubtract( vert, g_studio.lightbonepos[bone][i], light[i] );
+		VectorSubtract( localpos, g_studio.lightbonepos[bone][i], light[i] );
 		light[i][3] = 0.0f;
 	}
 }
@@ -2035,11 +2032,8 @@ void R_StudioRenderShadow( int iSprite, float *p1, float *p2, float *p3, float *
 
 	if( TriSpriteTexture( Mod_Handle( iSprite ), 0 ))
 	{
-		pglEnable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		pglColor4f( 0.0f, 0.0f, 0.0f, 1.0f ); // render only alpha
+		TriRenderMode( kRenderTransAlpha );
+		TriColor4f( 0.0f, 0.0f, 0.0f, 1.0f );
 
 		pglBegin( GL_QUADS );
 			pglTexCoord2f( 0.0f, 0.0f );
@@ -2052,8 +2046,7 @@ void R_StudioRenderShadow( int iSprite, float *p1, float *p2, float *p3, float *
 			pglVertex3fv( p4 );
 		pglEnd();
 
-		pglDisable( GL_BLEND );
-		pglDisable( GL_ALPHA_TEST );
+		TriRenderMode( kRenderNormal );
 	}
 }
 
@@ -2066,10 +2059,10 @@ Sorting opaque entities by model type
 */
 static int R_StudioMeshCompare( const sortedmesh_t *a, const sortedmesh_t *b )
 {
-	if( a->flags & STUDIO_NF_ADDITIVE )
+	if( FBitSet( a->flags, STUDIO_NF_ADDITIVE ))
 		return 1;
 
-	if( a->flags & STUDIO_NF_TRANSPARENT )
+	if( FBitSet( a->flags, STUDIO_NF_MASKED ))
 		return -1;
 
 	return 0;
@@ -2204,9 +2197,9 @@ R_StudioDrawPoints
 */
 static void R_StudioDrawPoints( void )
 {
-	int		i, j, m_skinnum;
+	int		i, j, k, m_skinnum;
 	float		shellscale = 0.0f;
-	float		*av, *lv, lv_tmp;
+	qboolean		need_sort = false;
 	byte		*pvertbone;
 	byte		*pnormbone;
 	vec3_t		*pstudioverts;
@@ -2214,6 +2207,7 @@ static void R_StudioDrawPoints( void )
 	mstudiotexture_t	*ptexture;
 	mstudiomesh_t	*pmesh;
 	short		*pskinref;
+	float		lv_tmp;
 
 	if( !m_pStudioHeader ) return;
 
@@ -2239,172 +2233,95 @@ static void R_StudioDrawPoints( void )
 	// generate shared normals for properly scaling glowing shell
 	if( RI.currententity->curstate.renderfx == kRenderFxGlowShell )
 	{
+		color24 *clr = &RI.currententity->curstate.rendercolor;
+
 		shellscale = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
+		pglColor4ub( clr->r, clr->g, clr->b, 255 );
 		R_StudioBuildNormalTable();
 		R_StudioGenerateNormals();
 	}
 
-	lv = (float *)g_studio.lightvalues;
-	for( j = 0; j < m_pSubModel->nummesh; j++ ) 
+	for( j = k = 0; j < m_pSubModel->nummesh; j++ ) 
 	{
 		g_nFaceFlags = ptexture[pskinref[pmesh[j].skinref]].flags | g_nForceFaceFlags;
 
 		// fill in sortedmesh info
-		g_studio.meshes[j].mesh = &pmesh[j];
 		g_studio.meshes[j].flags = g_nFaceFlags;
+		g_studio.meshes[j].mesh = &pmesh[j];
 
-		for( i = 0; i < pmesh[j].numnorms; i++, lv += 3, pstudionorms++, pnormbone++ )
+		for( i = 0; i < pmesh[j].numnorms; i++, k++, pstudionorms++, pnormbone++ )
 		{
 			R_StudioLighting( &lv_tmp, *pnormbone, g_nFaceFlags, (float *)pstudionorms );
-
 			if( FBitSet( g_nFaceFlags, STUDIO_NF_CHROME ))
-				R_StudioSetupChrome( g_studio.chrome[(float (*)[3])lv - g_studio.lightvalues], *pnormbone, (float *)pstudionorms );
+				R_StudioSetupChrome( g_studio.chrome[k], *pnormbone, (float *)pstudionorms );
+			VectorScale( g_studio.lightcolor, lv_tmp, g_studio.lightvalues[k] );
 
-			VectorScale( g_studio.lightcolor, lv_tmp, lv );
+			if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED|STUDIO_NF_ADDITIVE ))
+				need_sort = true;
 		}
 	}
 
-	if( r_studio_sort_textures->value )
+	if( r_studio_sort_textures->value && need_sort )
 	{
-		// sort opaque and translucent for right results
+		// resort opaque and translucent meshes draw order
 		qsort( g_studio.meshes, m_pSubModel->nummesh, sizeof( sortedmesh_t ), R_StudioMeshCompare );
 	}
 
+	// NOTE: rewind normals at start
+	pstudionorms = (vec3_t *)((byte *)m_pStudioHeader + m_pSubModel->normindex);
+
 	for( j = 0; j < m_pSubModel->nummesh; j++ ) 
 	{
-		float	s, t, alpha;
+		float	oldblend = tr.blend;
 		short	*ptricmds;
-		vec3_t	vert;
+		float	s, t;
 
 		pmesh = g_studio.meshes[j].mesh;
 		ptricmds = (short *)((byte *)m_pStudioHeader + pmesh->triindex);
 
-		g_nFaceFlags = ptexture[pskinref[pmesh->skinref]].flags|g_nForceFaceFlags;
-		s = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].width;
-		t = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].height;
+		g_nFaceFlags = ptexture[pskinref[pmesh->skinref]].flags | g_nForceFaceFlags;
 
-		if( g_studio.rendermode != kRenderTransAdd )
-			pglDepthMask( GL_TRUE );
-		else pglDepthMask( GL_FALSE );
-
-		// check bounds
-		if( ptexture[pskinref[pmesh->skinref]].index < 0 || ptexture[pskinref[pmesh->skinref]].index > MAX_TEXTURES )
-			ptexture[pskinref[pmesh->skinref]].index = tr.defaultTexture;
-
-		if( g_nForceFaceFlags & STUDIO_NF_CHROME )
+		if( RI.currententity->curstate.renderfx != kRenderFxGlowShell )
 		{
-			color24 *clr = &RI.currententity->curstate.rendercolor;
-			pglColor4ub( clr->r, clr->g, clr->b, 255 );
-			s = t = (1.0f / 256.0f);
-			alpha = 1.0f;
+			s = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].width;
+			t = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].height;
 		}
-		else if( g_nFaceFlags & STUDIO_NF_TRANSPARENT && R_StudioOpaque( g_studio.rendermode ))
+		else s = t = (1.0f / 256.0f);
+
+		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
-			GL_SetRenderMode( kRenderTransAlpha );
+			pglEnable( GL_ALPHA_TEST );
 			pglAlphaFunc( GL_GREATER, 0.5f );
-			alpha = 1.0f;
+			pglDepthMask( GL_TRUE );
 		}
-		else if( g_nFaceFlags & STUDIO_NF_ADDITIVE && R_StudioOpaque( g_studio.rendermode ))
+		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_StudioOpaque( RI.currententity->curstate.rendermode ))
 		{
-			GL_SetRenderMode( kRenderTransAdd );
-			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
 			pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 			pglDepthMask( GL_FALSE );
-		}
-		else if( g_nFaceFlags & STUDIO_NF_ALPHA && !( host.features & ENGINE_DISABLE_HDTEXTURES )) // Paranoia2 collision flag
-		{
-			GL_SetRenderMode( kRenderTransTexture );
-			alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
-			pglDepthMask( GL_FALSE );
-		}
-		else
-		{
-			GL_SetRenderMode( g_studio.rendermode );
-
-			if( g_studio.rendermode == kRenderNormal )
-			{
-				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-				alpha = 1.0f;
-			}
-			else alpha = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
+			pglEnable( GL_BLEND );
 		}
 
 		R_StudioSetupSkin( m_pStudioHeader, pskinref[pmesh->skinref] );
-#if 1
+
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_CHROME ))
 			R_StudioDrawChromeMesh( ptricmds, pstudionorms, s, t, shellscale );
 		else if( FBitSet( g_nFaceFlags, STUDIO_NF_UV_COORDS ))
 			R_StudioDrawFloatMesh( ptricmds, pstudionorms );
 		else R_StudioDrawNormalMesh( ptricmds, pstudionorms, s, t );
 
-		r_stats.c_studio_polys += pmesh->numtris;
-#else
-		while( i = *( ptricmds++ ))
+		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
-			if( i < 0 )
-			{
-				pglBegin( GL_TRIANGLE_FAN );
-				i = -i;
-			}
-			else
-			{
-				pglBegin( GL_TRIANGLE_STRIP );
-			}
-
-			for( ; i > 0; i--, ptricmds += 4 )
-			{
-				if( g_nForceFaceFlags & STUDIO_NF_CHROME )
-				{
-					int idx = g_studio.normaltable[ptricmds[0]];
-					pglTexCoord2f( g_studio.chrome[idx][0] * s, g_studio.chrome[idx][1] * t );
-				}
-				else if( g_nFaceFlags & STUDIO_NF_CHROME )
-					pglTexCoord2f( g_studio.chrome[ptricmds[1]][0] * s, g_studio.chrome[ptricmds[1]][1] * t );
-				else if( g_nFaceFlags & STUDIO_NF_UV_COORDS )
-					pglTexCoord2f( HalfToFloat( ptricmds[2] ), HalfToFloat( ptricmds[3] ));
-				else pglTexCoord2f( ptricmds[2] * s, ptricmds[3] * t );
-
-				if(!( g_nForceFaceFlags & STUDIO_NF_CHROME ))
-                                        {
-					if( g_studio.rendermode == kRenderTransAdd )
-					{
-						pglColor4f( 1.0f, 1.0f, 1.0f, alpha );
-					}
-					else if( g_studio.rendermode == kRenderTransColor )
-					{
-						color24	*clr;
-						clr = &RI.currententity->curstate.rendercolor;
-						pglColor4ub( clr->r, clr->g, clr->b, alpha * 255 );
-					}
-					else if( g_nFaceFlags & STUDIO_NF_FULLBRIGHT )
-					{
-						pglColor4f( 1.0f, 1.0f, 1.0f, alpha );
-					}
-					else
-					{
-						lv = (float *)g_studio.lightvalues[ptricmds[1]];
-						pglColor4f( lv[0], lv[1], lv[2], alpha );
-					}
-				}
-
-				av = g_studio.verts[ptricmds[0]];
-				lv = g_studio.norms[ptricmds[0]];
-
-				VectorMA( av, 0.58, lv, vert );
-
-				if( gl_test->value && g_nForceFaceFlags & STUDIO_NF_CHROME )
-					pglVertex3fv( vert );
-				else pglVertex3f( av[0], av[1], av[2] );
-			}
-
-			pglEnd();
+			pglDisable( GL_ALPHA_TEST );
 		}
-#endif
-	}
+		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_StudioOpaque( RI.currententity->curstate.rendermode ))
+		{
+			pglDepthMask( GL_TRUE );
+			pglDisable( GL_BLEND );
+		}
 
-	// restore depthmask for next call StudioDrawPoints
-	if( g_studio.rendermode != kRenderTransAdd )
-		pglDepthMask( GL_TRUE );
+		r_stats.c_studio_polys += pmesh->numtris;
+		tr.blend = oldblend;
+	}
 }
 
 /*
@@ -2706,7 +2623,7 @@ static void R_StudioClientEvents( void )
 		el->color.g = 192;
 		el->color.b = 64;
 		el->decay = 320;
-		el->radius = 16;
+		el->radius = 24;
 	}
 
 	sequence = bound( 0, e->curstate.sequence, m_pStudioHeader->numseq - 1 );
@@ -2790,19 +2707,11 @@ R_StudioSetupRenderer
 */
 static void R_StudioSetupRenderer( int rendermode )
 {
-	if( rendermode > kRenderTransAdd ) rendermode = 0;
 	g_studio.rendermode = bound( 0, rendermode, kRenderTransAdd );
 	if( clgame.ds.cullMode != GL_NONE ) GL_Cull( GL_FRONT );
 
-	// enable depthmask on studiomodels
-	if( glState.drawTrans && g_studio.rendermode != kRenderTransAdd )
-		pglDepthMask( GL_TRUE );
-
-	pglAlphaFunc( GL_GEQUAL, 0.5f );
+	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 	pglShadeModel( GL_SMOOTH );
-
-	if( g_iBackFaceCull )
-		GL_FrontFace( true );
 }
 
 /*
@@ -2814,16 +2723,11 @@ R_StudioRestoreRenderer
 static void R_StudioRestoreRenderer( void )
 {
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	pglShadeModel( GL_FLAT );
 
-	// restore depthmask state for sprites etc
-	if( glState.drawTrans && g_studio.rendermode != kRenderTransAdd )
-		pglDepthMask( GL_FALSE );
-	else pglDepthMask( GL_TRUE );
+	if( g_studio.rendermode != kRenderNormal )
+		pglDisable( GL_BLEND );
 
-	if( g_iBackFaceCull )
-		GL_FrontFace( false );
-
-	g_iBackFaceCull = false;
 	m_fDoRemap = false;
 }
 
@@ -2913,6 +2817,41 @@ static void R_StudioDrawPointsShadow( void )
 	if( glState.stencilEnabled )
 		pglDisable( GL_STENCIL_TEST );
 }
+
+/*
+===============
+GL_StudioSetRenderMode
+
+set rendermode for studiomodel
+===============
+*/
+void GL_StudioSetRenderMode( int rendermode )
+{
+	switch( rendermode )
+	{
+	case kRenderNormal:
+		break;
+	case kRenderTransColor:
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ALPHA );
+		pglEnable( GL_BLEND );
+		break;
+	case kRenderTransAdd:
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		pglColor4f( tr.blend, tr.blend, tr.blend, 1.0f );
+		pglBlendFunc( GL_ONE, GL_ONE );
+		pglDepthMask( GL_FALSE );
+		pglEnable( GL_BLEND );
+		break;
+	default:
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglColor4f( 1.0f, 1.0f, 1.0f, tr.blend );
+		pglDepthMask( GL_TRUE );
+		pglEnable( GL_BLEND );
+		break;
+	}
+}
 	
 /*
 ===============
@@ -2993,7 +2932,7 @@ void R_StudioRenderFinal( void )
 		{
 			R_StudioSetupModel( i, &m_pBodyPart, &m_pSubModel );
 
-			GL_SetRenderMode( rendermode );
+			GL_StudioSetRenderMode( rendermode );
 			R_StudioDrawPoints();
 			GL_StudioDrawShadow();
 		}
@@ -3443,7 +3382,7 @@ void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
 	R_StudioSetupTimings();
 
 	// prevent to crash some mods like HLFX in menu Customize
-	if( 1 )//!RI.drawWorld )
+	if( !RI.drawWorld )
 	{
 		if( e->player )
 			result = R_StudioDrawPlayer( flags, &e->curstate );
@@ -3555,7 +3494,10 @@ void R_DrawViewModel( void )
 
 	// backface culling for left-handed weapons
 	if( R_StudioFlipViewModel( RI.currententity ) || g_iBackFaceCull )
+	{
 		GL_FrontFace( !glState.frontFace );
+		g_studio.flipmodel = true;
+	}
 
 	if( !cl.local.weaponstarttime ) cl.local.weaponstarttime = g_studio.time;
 	RI.currententity->curstate.animtime = cl.local.weaponstarttime;
@@ -3568,7 +3510,10 @@ void R_DrawViewModel( void )
 
 	// backface culling for left-handed weapons
 	if( R_StudioFlipViewModel( RI.currententity ) || g_iBackFaceCull )
+	{
 		GL_FrontFace( !glState.frontFace );
+		g_studio.flipmodel = false;
+	}
 
 	RI.currententity = NULL;
 	RI.currentmodel = NULL;
@@ -3646,8 +3591,11 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	FS_StripExtension( mdlname );
 
 	// loading texture filter for studiomodel
-	if( !( ptexture->flags & STUDIO_NF_COLORMAP ))
+	if( !FBitSet( ptexture->flags, STUDIO_NF_COLORMAP ))
 		filter = R_FindTexFilter( va( "%s.mdl/%s", mdlname, name )); // grab texture filter
+
+	if( FBitSet( ptexture->flags, STUDIO_NF_NOMIPS ))
+		SetBits( flags, STUDIO_NF_NOMIPS );
 
 	// NOTE: colormaps must have the palette for properly work. Ignore it.
 	if( Mod_AllowMaterials( ) && !FBitSet( ptexture->flags, STUDIO_NF_COLORMAP ))
@@ -3672,8 +3620,8 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		ptexture->index = (int)((byte *)phdr) + ptexture->index;
 		size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
 
-		if( FBitSet( host.features, ENGINE_DISABLE_HDTEXTURES ) && FBitSet( ptexture->flags, STUDIO_NF_TRANSPARENT ))
-			flags |= TF_KEEP_8BIT; // Paranoia2 alpha-tracing
+		if( FBitSet( host.features, ENGINE_DISABLE_HDTEXTURES ) && FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
+			flags |= TF_KEEP_8BIT; // Paranoia2 texture alpha-tracing
 
 		// build the texname
 		Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
@@ -3895,7 +3843,7 @@ static engine_studio_api_t gStudioAPI =
 	R_StudioSetChromeOrigin,
 	pfnIsHardware,
 	GL_StudioDrawShadow,
-	GL_SetRenderMode,
+	GL_StudioSetRenderMode,
 	R_StudioSetRenderamt,
 	R_StudioSetCullState,
 	R_StudioRenderShadow,
