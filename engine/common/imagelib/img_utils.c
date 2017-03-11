@@ -299,7 +299,17 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 	// setup palette
 	switch( image.d_rendermode )
 	{
-	case LUMP_DECAL:
+	case LUMP_NORMAL:
+		for( i = 0; i < 256; i++ )
+		{
+			rgba[0] = pal[i*3+0];
+			rgba[1] = pal[i*3+1];
+			rgba[2] = pal[i*3+2];
+			rgba[3] = 0xFF;
+			d_table[i] = *(uint *)rgba;
+		}
+		break;
+	case LUMP_GRADIENT:
 		for( i = 0; i < 256; i++ )
 		{
 			rgba[0] = pal[765];
@@ -309,34 +319,18 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 			d_table[i] = *(uint *)rgba;
 		}
 		break;
-	case LUMP_TRANSPARENT:
+	case LUMP_MASKED:
 		for( i = 0; i < 256; i++ )
 		{
-			rgba[0] = pal[i*3+0];
-			rgba[1] = pal[i*3+1];
-			rgba[2] = pal[i*3+2];
-			rgba[3] = pal[i] == 255 ? pal[i] : 0xFF;
-			d_table[i] = *(uint *)rgba;
-		}
-		break;
-	case LUMP_QFONT:
-		for( i = 0; i < 256; i++ )
-		{
-			rgba[0] = pal[i*3+0];
-			rgba[1] = pal[i*3+1];
-			rgba[2] = pal[i*3+2];
-			rgba[3] = 0xFF;
-			d_table[i] = *(uint *)rgba;
-		}
-		break;
-	case LUMP_NORMAL:
-		for( i = 0; i < 256; i++ )
-		{
-			rgba[0] = pal[i*3+0];
-			rgba[1] = pal[i*3+1];
-			rgba[2] = pal[i*3+2];
-			rgba[3] = 0xFF;
-			d_table[i] = *(uint *)rgba;
+			if( i != 255 )
+			{
+				rgba[0] = pal[i*3+0];
+				rgba[1] = pal[i*3+1];
+				rgba[2] = pal[i*3+2];
+				rgba[3] = 0xFF;
+				d_table[i] = *(uint *)rgba;
+			}
+			else d_table[i] = 0;
 		}
 		break;
 	case LUMP_EXTENDED:
@@ -362,6 +356,7 @@ void Image_GetPaletteQ1( void )
 		d_8toQ1table[255] = 0; // 255 is transparent
 		q1palette_init = true;
 	}
+
 	image.d_currentpal = d_8toQ1table;
 }
 
@@ -372,9 +367,9 @@ void Image_GetPaletteHL( void )
 	if( !hlpalette_init )
 	{
 		Image_SetPalette( palette_hl, d_8toHLtable );
-		d_8toHLtable[255] = 0; // 255 is transparent
 		hlpalette_init = true;
 	}
+
 	image.d_currentpal = d_8toHLtable;
 }
 
@@ -396,15 +391,6 @@ void Image_GetPaletteLMP( const byte *pal, int rendermode )
 	if( pal )
 	{
 		Image_SetPalette( pal, d_8to24table );
-		if( rendermode != LUMP_DECAL )
-			d_8to24table[255] &= 0xFFFFFF;
-		image.d_currentpal = d_8to24table;
-	}
-	else if( rendermode == LUMP_QFONT )
-	{
-		// quake1 base palette and font palette have some diferences
-		Image_SetPalette( palette_q1, d_8to24table );
-		d_8to24table[0] = 0;
 		image.d_currentpal = d_8to24table;
 	}
 	else Image_GetPaletteHL(); // default half-life palette          
@@ -549,7 +535,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 {
 	int	*iout = (int *)out;
 	byte	*fin = (byte *)in;
-	rgba_t	*col;
+	byte	*col;
 	int	i;
 
 	if( !image.d_currentpal )
@@ -574,14 +560,26 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 	// check for color
 	for( i = 0; i < 256; i++ )
 	{
-		col = (rgba_t *)&image.d_currentpal[i];
+		col = (byte *)&image.d_currentpal[i];
 		if( col[0] != col[1] || col[1] != col[2] )
 		{
 			image.flags |= IMAGE_HAS_COLOR;
 			break;
 		}
 	}
+#if 0
+	for( i = 0; i < image.width * image.height; i++ )
+	{
+		col = (byte *)&image.d_currentpal[fin[i]];
+		*out++ = col[0];
+		*out++ = col[1];
+		*out++ = col[2];
 
+		if( image.d_rendermode == LUMP_GRADIENT )
+			*out++ = fin[i];
+		else *out++ = col[3];
+	}
+#else
 	while( pixels >= 8 )
 	{
 		iout[0] = image.d_currentpal[in[0]];
@@ -618,7 +616,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 
 	if( pixels & 1 ) // last byte
 		iout[0] = image.d_currentpal[in[0]];
-
+#endif
 	image.type = PF_RGBA_32;	// update image type;
 
 	return true;
@@ -1299,8 +1297,8 @@ qboolean Image_Decompress( const byte *data )
 		if( image.flags & IMAGE_HAS_ALPHA )
 		{
 			if( image.flags & IMAGE_COLORINDEX )
-				Image_GetPaletteLMP( image.palette, LUMP_DECAL ); 
-			else Image_GetPaletteLMP( image.palette, LUMP_TRANSPARENT ); 
+				Image_GetPaletteLMP( image.palette, LUMP_GRADIENT ); 
+			else Image_GetPaletteLMP( image.palette, LUMP_MASKED ); 
 		}
 		else Image_GetPaletteLMP( image.palette, LUMP_NORMAL );
 		// intentional falltrough

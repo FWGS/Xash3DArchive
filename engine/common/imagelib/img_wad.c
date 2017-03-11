@@ -40,12 +40,10 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 		// using palette name as rendermode
 		if( Q_stristr( name, "normal" ))
 			rendermode = LUMP_NORMAL;
-		else if( Q_stristr( name, "transparent" ))
-			rendermode = LUMP_TRANSPARENT;
-		else if( Q_stristr( name, "decal" ))
-			rendermode = LUMP_DECAL;
-		else if( Q_stristr( name, "qfont" ))
-			rendermode = LUMP_QFONT;
+		else if( Q_stristr( name, "masked" ))
+			rendermode = LUMP_MASKED;
+		else if( Q_stristr( name, "gradient" ))
+			rendermode = LUMP_GRADIENT;
 		else if( Q_stristr( name, "valve" ))
 			buffer = NULL; // force to get HL palette
 	}
@@ -109,7 +107,7 @@ qboolean Image_LoadFNT( const char *name, const byte *buffer, size_t filesize )
 	if( numcolors == 768 || numcolors == 256 )
 	{
 		// g-cont. make sure that is didn't hit anything
-		Image_GetPaletteLMP( pal, LUMP_QFONT );
+		Image_GetPaletteLMP( pal, LUMP_MASKED );
 		image.flags |= IMAGE_HAS_ALPHA; // fonts always have transparency
 	}
 	else 
@@ -152,14 +150,11 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 		if( filesize < ( sizeof( *pin ) + pixels + 768 ))
 			return false;
 
-		if( flags & STUDIO_NF_MASKED )
+		if( FBitSet( flags, STUDIO_NF_MASKED ))
 		{
 			byte	*pal = fin + pixels;
 
-			// make transparent color is black, blue color looks ugly
-			pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
-
-			Image_GetPaletteLMP( pal, LUMP_TRANSPARENT );
+			Image_GetPaletteLMP( pal, LUMP_MASKED );
 			image.flags |= IMAGE_HAS_ALPHA;
 		}
 		else Image_GetPaletteLMP( fin + pixels, LUMP_NORMAL );
@@ -222,15 +217,11 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	// detect alpha-channel by palette type
 	switch( image.d_rendermode )
 	{
-	case LUMP_DECAL:
-	case LUMP_TRANSPARENT:
-		image.flags |= IMAGE_HAS_ALPHA;
+	case LUMP_GRADIENT:
+	case LUMP_MASKED:
+		SetBits( image.flags, IMAGE_HAS_ALPHA );
 		break;
 	}
-
-	// make transparent color is black, blue color looks ugly
-	if( image.d_rendermode == LUMP_TRANSPARENT )
-		image.d_currentpal[255] = 0;
 
 	return Image_AddIndexedImageToPack( (byte *)(pin + 1), image.width, image.height );
 }
@@ -261,7 +252,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	memcpy( &lmp, fin, sizeof( lmp ));
 	image.width = lmp.width;
 	image.height = lmp.height;
-	rendermode = LUMP_NORMAL;
+	rendermode = LUMP_MASKED;
 	fin += sizeof( lmp );
 
 	pixels = image.width * image.height;
@@ -294,8 +285,8 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
-	if( fin[0] == 255 ) image.flags |= IMAGE_HAS_ALPHA;
 	Image_GetPaletteLMP( pal, rendermode );
+	image.flags |= IMAGE_HAS_ALPHA;	// FIXME: detect it properly
 	image.type = PF_INDEXED_32; // 32-bit palete
 	image.depth = 1;
 
@@ -348,20 +339,13 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		{
 			if( !host.decal_loading )
 			{
-				rendermode = LUMP_TRANSPARENT;
-
-				// make transparent color is black, blue color looks ugly
-				pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
+				rendermode = LUMP_MASKED;
 			}
 			else
 			{
-				// clear blue color for 'transparent' decals
-				if( pal[255*3+0] == 0 && pal[255*3+1] == 0 && pal[255*3+2] == 255 )
-					pal[255*3+0] = pal[255*3+1] = pal[255*3+2] = 0;
-
 				// apply decal palette immediately
 				image.flags |= IMAGE_COLORINDEX;
-				rendermode = LUMP_DECAL;
+				rendermode = LUMP_GRADIENT;
 			}
 
 			image.flags |= IMAGE_HAS_ALPHA;

@@ -1256,9 +1256,12 @@ void CL_PredictMovement( qboolean repredicting )
 		VectorCopy( frame->clientdata.origin, cl.simorg );
 		VectorCopy( frame->clientdata.punchangle, cl.punchangle );
 		VectorCopy( frame->clientdata.view_ofs, cl.viewheight );
-		cl.local.onground = frame->playerstate[cl.playernum].onground;
 		cl.local.usehull = frame->playerstate[cl.playernum].usehull;
 		cl.local.waterlevel = frame->clientdata.waterlevel;
+
+		if( FBitSet( frame->clientdata.flags, FL_ONGROUND ))
+			cl.local.onground = frame->playerstate[cl.playernum].onground;
+		else cl.local.onground = -1;
 
 		// we need to perform cl_lw prediction while cl_predict is disabled
 		// because cl_lw is enabled by default in Half-Life
@@ -1312,6 +1315,12 @@ void CL_PredictMovement( qboolean repredicting )
 	{
 		to = from;
 		to_cmd = from_cmd;
+	}
+
+	if( !CL_IsPredicted( ))
+	{
+		cl.local.viewmodel = to->client.viewmodel;
+		return;
 	}
 
 	// now interpolate some fraction of the final frame

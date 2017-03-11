@@ -198,7 +198,7 @@ qboolean SV_RunThink( edict_t *ent )
 {
 	float	thinktime;
 
-	if(!( ent->v.flags & FL_KILLME ))
+	if( !FBitSet( ent->v.flags, FL_KILLME ))
 	{
 		thinktime = ent->v.nextthink;
 		if( thinktime <= 0.0f || thinktime > sv.time + sv.frametime )
@@ -213,7 +213,7 @@ qboolean SV_RunThink( edict_t *ent )
 		svgame.dllFuncs.pfnThink( ent );
 	}
 
-	if( ent->v.flags & FL_KILLME )
+	if( FBitSet( ent->v.flags, FL_KILLME ))
 		SV_FreeEdict( ent );
 
 	return !ent->free;
@@ -250,7 +250,10 @@ qboolean SV_PlayerRunThink( edict_t *ent, float frametime, double time )
 	}
 
 	if( FBitSet( ent->v.flags, FL_KILLME ))
-		SV_FreeEdict( ent );
+	{
+		MsgDev( D_ERROR, "client can't be deleted!\n" );
+		ClearBits( ent->v.flags, FL_KILLME );
+          }
 
 	return !ent->free;
 }

@@ -27,6 +27,9 @@ GNU General Public License for more details.
 #define EVENT_CLIENT	5000	// less than this value it's a server-side studio events
 #define MAX_LOCALLIGHTS	4
 
+CVAR_DEFINE_AUTO( r_glowshellfreq, "2.2", 0, "glowing shell frequency update" );
+CVAR_DEFINE_AUTO( r_shadows, "0", 0, "enable shadows from studiomodels" );
+
 static vec3_t hullcolor[8] = 
 {
 { 1.0f, 1.0f, 1.0f },
@@ -99,8 +102,6 @@ typedef struct
 	float		locallightR2[MAX_LOCALLIGHTS];
 } studio_draw_state_t;
 
-CVAR_DEFINE_AUTO( r_shadows, "0", 0, "enable shadows from studiomodels" );
-
 // studio-related cvars 
 convar_t			*r_studio_lambert;
 convar_t			*r_studio_sort_textures;
@@ -132,10 +133,12 @@ void R_StudioInit( void )
 {
 	r_studio_lambert = Cvar_Get( "r_studio_lambert", "2", FCVAR_ARCHIVE, "bonelighting lambert value" );
 	cl_himodels = Cvar_Get( "cl_himodels", "1", FCVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
-	r_studio_sort_textures = Cvar_Get( "r_studio_sort_textures", "0", FCVAR_ARCHIVE, "sort additive and normal textures for right drawing" );
+	r_studio_sort_textures = Cvar_Get( "r_studio_sort_textures", "0", FCVAR_ARCHIVE, "change draw order for additive meshes" );
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
 
 	Matrix3x4_LoadIdentity( g_studio.rotationmatrix );
+	Cvar_RegisterVariable( &r_glowshellfreq );
+//	Cvar_RegisterVariable( &r_shadows );
 
 	g_studio.interpolate = true;
 	g_studio.framecount = 0;
@@ -234,23 +237,23 @@ R_StudioComputeBBox
 Compute a full bounding box for current sequence
 ================
 */
-static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
+static qboolean R_StudioComputeBBox( vec3_t bbox[8] )
 {
-	studiohdr_t	*pstudiohdr = (studiohdr_t *)Mod_Extradata( e->model );
 	vec3_t		studio_mins, studio_maxs;
 	vec3_t		mins, maxs, p1, p2;
+	cl_entity_t	*e = RI.currententity;
 	mstudioseqdesc_t	*pseqdesc;
 	int		i;
 
-	if( !pstudiohdr )
+	if( !m_pStudioHeader )
 		return false;
 
 	// check if we have valid mins\maxs
-	if( !VectorCompare( vec3_origin, e->model->mins ))
+	if( !VectorCompare( vec3_origin, RI.currentmodel->mins ))
 	{
 		// clipping bounding box
-		VectorCopy( e->model->mins, mins );
-		VectorCopy( e->model->maxs, maxs );
+		VectorCopy( RI.currentmodel->mins, mins );
+		VectorCopy( RI.currentmodel->maxs, maxs );
 	}
 	else
 	{
@@ -258,10 +261,10 @@ static qboolean R_StudioComputeBBox( cl_entity_t *e, vec3_t bbox[8] )
 	}
 
 	// check sequence range
-	if( e->curstate.sequence < 0 || e->curstate.sequence >= pstudiohdr->numseq )
+	if( e->curstate.sequence < 0 || e->curstate.sequence >= m_pStudioHeader->numseq )
 		e->curstate.sequence = 0;
 
-	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + e->curstate.sequence;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->curstate.sequence;
 
 	// add sequence box to the model box
 	AddPointToBounds( pseqdesc->bbmin, mins, maxs );
@@ -348,7 +351,7 @@ pfnGetEngineTimes
 */
 static void pfnGetEngineTimes( int *framecount, double *current, double *old )
 {
-	if( framecount ) *framecount = tr.framecount;
+	if( framecount ) *framecount = tr.realframecount;
 	if( current ) *current = g_studio.time;
 	if( old ) *old = g_studio.time - g_studio.frametime;
 }
@@ -623,6 +626,34 @@ float CL_GetStudioEstimatedFrame( cl_entity_t *ent )
 	}
 
 	return 0;
+}
+
+/*
+====================
+CL_GetSequenceDuration
+
+====================
+*/
+float CL_GetSequenceDuration( cl_entity_t *ent, int sequence )
+{
+	studiohdr_t	*pstudiohdr;
+	mstudioseqdesc_t	*pseqdesc;
+
+	if( ent->model != NULL && ent->model->type == mod_studio )
+	{
+		pstudiohdr = (studiohdr_t *)Mod_Extradata( ent->model );
+
+		if( pstudiohdr )
+		{
+			sequence = bound( 0, sequence, pstudiohdr->numseq - 1 );
+			pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + sequence;
+
+			if( pseqdesc->numframes > 1 && pseqdesc->fps > 0 )
+				return (float)pseqdesc->numframes / (float)pseqdesc->fps;
+		}
+	}
+
+	return 0.1f;
 }
 
 /*
@@ -1112,7 +1143,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 
 	f = R_StudioEstimateFrame( e, pseqdesc );
 
-	panim = R_StudioGetAnim( m_pStudioHeader, e->model, pseqdesc );
+	panim = R_StudioGetAnim( m_pStudioHeader, RI.currentmodel, pseqdesc );
 	R_StudioCalcRotations( e, pos, q, pseqdesc, panim, f );
 
 	if( pseqdesc->numblends > 1 )
@@ -1152,7 +1183,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 		float		s;
 
 		pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + e->latched.prevsequence;
-		panim = R_StudioGetAnim( m_pStudioHeader, e->model, pseqdesc );
+		panim = R_StudioGetAnim( m_pStudioHeader, RI.currentmodel, pseqdesc );
 
 		// clip prevframe
 		R_StudioCalcRotations( e, pos1b, q1b, pseqdesc, panim, e->latched.prevframe );
@@ -1202,7 +1233,7 @@ void R_StudioSetupBones( cl_entity_t *e )
 
 		pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + m_pPlayerInfo->gaitsequence;
 
-		panim = R_StudioGetAnim( m_pStudioHeader, e->model, pseqdesc );
+		panim = R_StudioGetAnim( m_pStudioHeader, RI.currentmodel, pseqdesc );
 		R_StudioCalcRotations( e, pos2, q2, pseqdesc, panim, m_pPlayerInfo->gaitframe );
 
 		for( i = 0; i < m_pStudioHeader->numbones; i++ )
@@ -1270,6 +1301,7 @@ NOTE: m_pSubModel must be set
 */
 void R_StudioBuildNormalTable( void )
 {
+	cl_entity_t	*e = RI.currententity;
 	mstudiomesh_t	*pmesh;
 	int		i, j;
 
@@ -1300,6 +1332,14 @@ void R_StudioBuildNormalTable( void )
 			}
 		}
 	}
+
+	g_studio.chrome_origin[0] = cos( r_glowshellfreq.value * g_studio.time ) * 4000.0f;
+	g_studio.chrome_origin[1] = sin( r_glowshellfreq.value * g_studio.time ) * 4000.0f;
+	g_studio.chrome_origin[2] = cos( r_glowshellfreq.value * g_studio.time * 0.33f ) * 4000.0f;
+
+	if( e->curstate.rendercolor.r || e->curstate.rendercolor.g || e->curstate.rendercolor.b )
+		TriColor4ub( e->curstate.rendercolor.r, e->curstate.rendercolor.g, e->curstate.rendercolor.b, 255 );
+	else TriColor4ub( 255, 255, 255, 255 );
 }
 
 /*
@@ -1422,23 +1462,10 @@ void R_StudioSetupChrome( float *pchrome, int bone, vec3_t normal )
 		tmp[2] += g_studio.bonestransform[bone][2][3];
 
 		VectorNormalize( tmp );
-
-		if( g_nForceFaceFlags & STUDIO_NF_CHROME )
-		{
-			float	sr, cr;
-
-			// g-cont. rotate texture for glowshell effect
-			SinCos( DEG2RAD( g_studio.time * 40 ), &sr, &cr );
-			VectorMAMAM( -cr, RI.vright, sr, RI.vup, 0.0f, vec3_origin, chromerightvec );
-			VectorMAMAM( sr, RI.vright, cr, RI.vup, 0.0f, vec3_origin, chromeupvec );
-		}
-		else
-		{
-			CrossProduct( tmp, RI.vright, chromeupvec );
-			VectorNormalize( chromeupvec );
-			CrossProduct( tmp, chromeupvec, chromerightvec );
-			VectorNormalize( chromerightvec );
-		}
+		CrossProduct( tmp, RI.vright, chromeupvec );
+		VectorNormalize( chromeupvec );
+		CrossProduct( tmp, chromeupvec, chromerightvec );
+		VectorNormalize( chromerightvec );
 
 		Matrix3x4_VectorIRotate( g_studio.bonestransform[bone], chromeupvec, g_studio.chromeup[bone] );
 		Matrix3x4_VectorIRotate( g_studio.bonestransform[bone], chromerightvec, g_studio.chromeright[bone] );
@@ -1527,12 +1554,10 @@ R_StudioCheckBBox
 */
 static int R_StudioCheckBBox( void )
 {
-	cl_entity_t	*e = RI.currententity;
-
-	if( !e || !e->model || !e->model->cache.data )
+	if( !RI.currententity || !RI.currentmodel )
 		return false;
 
-	return R_StudioComputeBBox( e, NULL );
+	return R_StudioComputeBBox( NULL );
 }
 
 /*
@@ -1570,7 +1595,14 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 	else VectorSet( lightDir, 0.0f, 0.0f, -1.0f );
 
 	if( ent == RI.currententity )
-		Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, origin );
+	{
+		int sequence = bound( 0, ent->curstate.sequence, m_pStudioHeader->numseq - 1 );
+		mstudioseqdesc_t *pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + sequence;
+
+		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ) && !pseqdesc->activity )
+			Matrix3x4_OriginFromMatrix( g_studio.lighttransform[0], origin );
+		else Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, origin );
+	}
 	else VectorCopy( ent->origin, origin );
 
 	VectorSet( vecSrc, origin[0], origin[1], origin[2] - lightDir[2] * 8.0f );
@@ -1578,7 +1610,8 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 
 	if(( mv->skycolor_r + mv->skycolor_g + mv->skycolor_b ) != 0 )
 	{
-		msurface_t	*psurf;
+		msurface_t	*psurf = NULL;
+		pmtrace_t		trace;
 
 		if( FBitSet( host.features, ENGINE_WRITE_LARGE_COORD ))
 		{
@@ -1593,8 +1626,10 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 			vecEnd[2] = origin[2] - mv->skyvec_z * 8192.0f;
 		}
 
-		psurf = PM_TraceSurface( clgame.pmove->physents, vecSrc, vecEnd );
-
+		trace = CL_TraceLine( vecSrc, vecEnd, PM_STUDIO_IGNORE );
+		if( trace.ent > 0 ) psurf = PM_TraceSurface( &clgame.pmove->physents[trace.ent], vecSrc, vecEnd );
+ 		else psurf = PM_TraceSurface( clgame.pmove->physents, vecSrc, vecEnd );
+ 
 		if( FBitSet( ent->model->flags, STUDIO_FORCE_SKYLIGHT ) || ( psurf && FBitSet( psurf->flags, SURF_DRAWSKY )))
 		{
 			VectorSet( lightDir, mv->skyvec_x, mv->skyvec_y, mv->skyvec_z );
@@ -1615,9 +1650,6 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 
 		light = R_LightVec( vecSrc, vecEnd, g_studio.lightspot );
 
-		// NOTE: we can't compute fake direction with using root bone origin
-		// because bone may some fluctuating and this looks ugly
-		Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, vecSrc );
 		VectorScale( lightDir, 2048.0f, vecEnd );
 		VectorAdd( vecEnd, vecSrc, vecEnd );
 
@@ -2233,10 +2265,7 @@ static void R_StudioDrawPoints( void )
 	// generate shared normals for properly scaling glowing shell
 	if( RI.currententity->curstate.renderfx == kRenderFxGlowShell )
 	{
-		color24 *clr = &RI.currententity->curstate.rendercolor;
-
-		shellscale = RI.currententity->curstate.renderamt * (1.0f / 255.0f);
-		pglColor4ub( clr->r, clr->g, clr->b, 255 );
+		shellscale = RI.currententity->curstate.renderamt * (1.0f/255.0f);
 		R_StudioBuildNormalTable();
 		R_StudioGenerateNormals();
 	}
@@ -2281,12 +2310,8 @@ static void R_StudioDrawPoints( void )
 
 		g_nFaceFlags = ptexture[pskinref[pmesh->skinref]].flags | g_nForceFaceFlags;
 
-		if( RI.currententity->curstate.renderfx != kRenderFxGlowShell )
-		{
-			s = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].width;
-			t = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].height;
-		}
-		else s = t = (1.0f / 256.0f);
+		s = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].width;
+		t = 1.0f / (float)ptexture[pskinref[pmesh->skinref]].height;
 
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
@@ -2311,6 +2336,7 @@ static void R_StudioDrawPoints( void )
 
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
+			pglAlphaFunc( GL_NOTEQUAL, 0.0f );
 			pglDisable( GL_ALPHA_TEST );
 		}
 		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_StudioOpaque( RI.currententity->curstate.rendermode ))
@@ -2339,7 +2365,8 @@ static void R_StudioDrawHulls( void )
 		alpha = 0.5f;
 	else alpha = 1.0f;
 
-	pglDisable( GL_TEXTURE_2D );
+	GL_Bind( GL_TEXTURE0, tr.whiteTexture );
+	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
 	for( i = 0; i < m_pStudioHeader->numhitboxes; i++ )
 	{
@@ -2374,8 +2401,6 @@ static void R_StudioDrawHulls( void )
 		}
 		TriEnd();
 	}
-
-	pglEnable( GL_TEXTURE_2D );
 }
 
 /*
@@ -2394,10 +2419,10 @@ static void R_StudioDrawAbsBBox( void )
 	if( RI.currententity == &clgame.viewent )
 		return;
 
-	if( !R_StudioComputeBBox( RI.currententity, p ))
+	if( !R_StudioComputeBBox( p ))
 		return;
 
-	pglDisable( GL_TEXTURE_2D );
+	GL_Bind( GL_TEXTURE0, tr.whiteTexture );
 	TriColor4f( 0.5f, 0.5f, 1.0f, 0.5f );
 	TriRenderMode( kRenderTransAdd );
 
@@ -2415,8 +2440,6 @@ static void R_StudioDrawAbsBBox( void )
 		TriVertex3fv( p[boxpnt[i][3]] );
 	}
 	TriEnd();
-
-	pglEnable( GL_TEXTURE_2D );
 }
 
 /*
@@ -2528,19 +2551,6 @@ R_StudioSetRemapColors
 */
 void R_StudioSetRemapColors( int newTop, int newBottom )
 {
-	// update colors for viewentity
-	if( RI.currententity == &clgame.viewent )
-	{
-		player_info_t	*pLocalPlayer;
-
-		// copy top and bottom colors for viewmodel
-		if(( pLocalPlayer = pfnPlayerInfo( clgame.viewent.curstate.number - 1 )) != NULL )
-		{
-			newTop = bound( 0, pLocalPlayer->topcolor, 360 );
-			newBottom = bound( 0, pLocalPlayer->bottomcolor, 360 );
-		}
-	}
-
 	CL_AllocRemapInfo( newTop, newBottom );
 
 	if( CL_GetRemapInfoForEntity( RI.currententity ))
@@ -2559,7 +2569,7 @@ R_StudioSetupPlayerModel
 static model_t *R_StudioSetupPlayerModel( int index )
 {
 	player_info_t	*info;
-	string		modelpath;
+	player_model_t	*state;
 
 	if( !RI.drawWorld )
 	{
@@ -2568,31 +2578,38 @@ static model_t *R_StudioSetupPlayerModel( int index )
 	}
 	else
 	{
-		if( index < 0 || index > cl.maxclients )
+		if( index < 0 || index >= cl.maxclients )
 			return NULL; // bad client ?
 		info = &cl.players[index];
 	}
 
-	// set to invisible, skip
-	if( !info->model[0] ) return NULL;
+	state = &cl.player_models[index];
 
-	if( !Q_stricmp( info->model, "player" ))
+	if(( host.developer || !Host_IsLocalGame( )) && info->model[0] )
 	{
-		Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
+		if( Q_strcmp( state->name, info->model ))
+		{
+			Q_strncpy( state->name, info->model, sizeof( state->name ));
+			state->name[sizeof( state->name ) - 1] = 0;
+
+			Q_snprintf( state->modelname, sizeof( state->modelname ), "models/player/%s/%s.mdl", info->model, info->model );
+
+			if( FS_FileExists( state->modelname, false ))
+				state->model = Mod_ForName( state->modelname, false );
+			else state->model = NULL;
+
+			if( !state->model )
+				state->model = RI.currententity->model;
+		}
 	}
 	else
 	{
-		Q_snprintf( modelpath, sizeof( modelpath ), "models/player/%s/%s.mdl", info->model, info->model );
-
-		// replace with default if missed
-		if( !FS_FileExists( modelpath, false ))
-			Q_strncpy( modelpath, "models/player.mdl", sizeof( modelpath ));
+		if( state->model != RI.currententity->model )
+			state->model = RI.currententity->model;
+		state->name[0] = 0;
 	}
 
-	if( !FS_FileExists( modelpath, false ))
-		return NULL;
-
-	return Mod_ForName( modelpath, false );
+	return state->model;
 }
 
 /*
@@ -2707,10 +2724,10 @@ R_StudioSetupRenderer
 */
 static void R_StudioSetupRenderer( int rendermode )
 {
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	g_studio.rendermode = bound( 0, rendermode, kRenderTransAdd );
 	if( clgame.ds.cullMode != GL_NONE ) GL_Cull( GL_FRONT );
 
-	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 	pglShadeModel( GL_SMOOTH );
 }
 
@@ -2727,7 +2744,6 @@ static void R_StudioRestoreRenderer( void )
 
 	if( g_studio.rendermode != kRenderNormal )
 		pglDisable( GL_BLEND );
-
 	m_fDoRemap = false;
 }
 
@@ -2830,6 +2846,7 @@ void GL_StudioSetRenderMode( int rendermode )
 	switch( rendermode )
 	{
 	case kRenderNormal:
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		break;
 	case kRenderTransColor:
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -2839,7 +2856,7 @@ void GL_StudioSetRenderMode( int rendermode )
 	case kRenderTransAdd:
 		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		pglColor4f( tr.blend, tr.blend, tr.blend, 1.0f );
-		pglBlendFunc( GL_ONE, GL_ONE );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		pglDepthMask( GL_FALSE );
 		pglEnable( GL_BLEND );
 		break;
@@ -2862,46 +2879,25 @@ NOTE: this code sucessfully working with ShadowHack only in Release build
 */
 static void GL_StudioDrawShadow( void )
 {
-	int	rendermode;
-	float	shadow_alpha;
-	float	shadow_alpha2;
-	GLenum	depthmode;
-	GLenum	depthmode2;
-
 	pglDepthMask( GL_TRUE );
 
-	if( r_shadows.value != 0.0f )
+	if( r_shadows.value && g_studio.rendermode != kRenderTransAdd && !FBitSet( RI.currentmodel->flags, STUDIO_AMBIENT_LIGHT ))
 	{
-		if( RI.currententity->baseline.movetype != MOVETYPE_FLY )
-		{
-			rendermode = RI.currententity->baseline.rendermode;
+		float	color = 1.0 - (tr.blend * 0.5);
 
-			if( rendermode == kRenderNormal && RI.currententity != &clgame.viewent )
-			{
-				shadow_alpha = 1.0f - (tr.blend * 0.5f);
-				pglDisable( GL_TEXTURE_2D );
-				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-				pglEnable( GL_BLEND );
-				pglShadeModel( GL_FLAT );
-				shadow_alpha2 = 1.0f - shadow_alpha;
+		pglDisable( GL_TEXTURE_2D );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglEnable( GL_BLEND );
+		pglColor4f( 0.0f, 0.0f, 0.0f, 1.0f - color );
 
-				pglColor4f( 0.0f, 0.0f, 0.0f, shadow_alpha2 );
+		pglDepthFunc( GL_LESS );
+		R_StudioDrawPointsShadow();
+		pglDepthFunc( GL_LEQUAL );
 
-				depthmode = GL_LESS;
-				pglDepthFunc( depthmode );
-
-				R_StudioDrawPointsShadow();
-
-				depthmode2 = GL_LEQUAL;
-				pglDepthFunc( depthmode2 );
-
-				pglEnable( GL_TEXTURE_2D );
-				pglDisable( GL_BLEND );
-
-				pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
-				pglShadeModel( GL_SMOOTH );
-			}
-		}
+		pglEnable( GL_TEXTURE_2D );
+		pglDisable( GL_BLEND );
+		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+		pglShadeModel( GL_SMOOTH );
 	}
 }
 
@@ -3000,7 +2996,7 @@ void R_StudioEstimateGait( entity_state_t *pplayer )
 
 	dt = bound( 0.0f, g_studio.frametime, 1.0f );
 
-	if( dt == 0.0f || m_pPlayerInfo->renderframe == tr.framecount )
+	if( dt == 0.0f || m_pPlayerInfo->renderframe == tr.realframecount )
 	{
 		m_flGaitMovement = 0;
 		return;
@@ -3190,7 +3186,7 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	R_StudioSetupBones( RI.currententity );
 	R_StudioSaveBones( );
 
-	m_pPlayerInfo->renderframe = tr.framecount;
+	m_pPlayerInfo->renderframe = tr.realframecount;
 	m_pPlayerInfo = NULL;
 
 	if( flags & STUDIO_EVENTS )
@@ -3360,58 +3356,24 @@ static int R_StudioDrawModel( int flags )
 
 /*
 =================
-R_DrawStudioModel
+R_StudioDrawModelInternal
 =================
 */
-void R_DrawStudioModelInternal( cl_entity_t *e, qboolean follow_entity )
+void R_StudioDrawModelInternal( cl_entity_t *e, int flags )
 {
-	int	i, flags, result;
-
-	if( RI.params & RP_ENVVIEW )
-		return;
-
-	if( !Mod_Extradata( e->model ))
-		return;
-
-	ASSERT( pStudioDraw != NULL );
-
-	if( e == &clgame.viewent )
-		flags = STUDIO_RENDER;	
-	else flags = STUDIO_RENDER|STUDIO_EVENTS;
-
-	R_StudioSetupTimings();
-
-	// prevent to crash some mods like HLFX in menu Customize
 	if( !RI.drawWorld )
 	{
 		if( e->player )
-			result = R_StudioDrawPlayer( flags, &e->curstate );
-		else result = R_StudioDrawModel( flags );
+			R_StudioDrawPlayer( flags, &e->curstate );
+		else R_StudioDrawModel( flags );
 	}
 	else
 	{
 		// select the properly method
 		if( e->player )
-			result = pStudioDraw->StudioDrawPlayer( flags, R_StudioGetPlayerState( e->index - 1 ));
-		else result = pStudioDraw->StudioDrawModel( flags );
+			pStudioDraw->StudioDrawPlayer( flags, R_StudioGetPlayerState( e->index - 1 ));
+		else pStudioDraw->StudioDrawModel( flags );
 	}
-
-	if( !result || follow_entity ) return;
-
-	// NOTE: we must draw all followed entities
-	// immediately after drawing parent when cached bones is valid
-	for( i = 0; i < tr.num_child_entities; i++ )
-	{
-		if( CL_GetEntityByIndex( tr.child_entities[i]->curstate.aiment ) == e )
-		{
-			// copy the parent origin for right frustum culling
-			VectorCopy( e->origin, tr.child_entities[i]->origin );
-
-			RI.currententity = tr.child_entities[i];
-			RI.currentmodel = RI.currententity->model;
-			R_DrawStudioModelInternal( RI.currententity, true );
-		}
-	} 
 }
 
 /*
@@ -3421,7 +3383,26 @@ R_DrawStudioModel
 */
 void R_DrawStudioModel( cl_entity_t *e )
 {
-	R_DrawStudioModelInternal( e, false );
+	if( FBitSet( RI.params, RP_ENVVIEW ))
+		return;
+
+	R_StudioSetupTimings();
+
+	if( e->player )
+	{
+		R_StudioDrawModelInternal( e, STUDIO_RENDER|STUDIO_EVENTS );
+	}
+	else
+	{
+		if( e->curstate.movetype == MOVETYPE_FOLLOW )
+		{
+			RI.currententity = CL_GetEntityByIndex( e->curstate.aiment );
+			R_StudioDrawModelInternal( RI.currententity, 0 );
+			RI.currententity = e;
+		}
+
+		R_StudioDrawModelInternal( e, STUDIO_RENDER|STUDIO_EVENTS );
+	}
 }
 
 /*
@@ -3431,33 +3412,26 @@ R_RunViewmodelEvents
 */
 void R_RunViewmodelEvents( void )
 {
-	if( RI.onlyClientDraw || r_drawviewmodel->value == 0 )
+	int	i;
+
+	if( cl.local.thirdperson || RI.onlyClientDraw || r_drawviewmodel->value == 0 )
 		return;
 
 	// ignore in thirdperson, camera view or client is died
-	if( cl.local.thirdperson || cl.local.health <= 0 || cl.viewentity != ( cl.playernum + 1 ))
-		return;
-
-	if( RI.params & RP_NONVIEWERREF )
-		return;
-
-	if( !Mod_Extradata( clgame.viewent.model ))
+	if( !RP_NORMALPASS() || cl.local.health <= 0 || cl.viewentity != ( cl.playernum + 1 ))
 		return;
 
 	RI.currententity = &clgame.viewent;
-	RI.currentmodel = RI.currententity->model;
-	if( !RI.currentmodel ) return;
+
+	if( !RI.currententity->model )
+		return;
 
 	R_StudioSetupTimings();
 
-	if( !cl.local.weaponstarttime ) cl.local.weaponstarttime = g_studio.time;
-	RI.currententity->curstate.animtime = cl.local.weaponstarttime;
-	RI.currententity->curstate.sequence = cl.local.weaponsequence;
+	for( i = 0; i < 4; i++ )
+		VectorCopy( cl.simorg, RI.currententity->attachment[i] );
 
-	pStudioDraw->StudioDrawModel( STUDIO_EVENTS );
-
-	RI.currententity = NULL;
-	RI.currentmodel = NULL;
+	R_StudioDrawModelInternal( RI.currententity, STUDIO_EVENTS );
 }
 
 /*
@@ -3467,25 +3441,23 @@ R_DrawViewModel
 */
 void R_DrawViewModel( void )
 {
-	if( RI.onlyClientDraw || r_drawviewmodel->value == 0 )
+	cl_entity_t	*view = &clgame.viewent;
+
+	if( cl.local.thirdperson || RI.onlyClientDraw || r_drawviewmodel->value == 0 )
 		return;
 
 	// ignore in thirdperson, camera view or client is died
-	if( cl.local.thirdperson || cl.local.health <= 0 || cl.viewentity != ( cl.playernum + 1 ))
+	if( !RP_NORMALPASS() || cl.local.health <= 0 || cl.viewentity != ( cl.playernum + 1 ))
 		return;
 
-	if( RI.params & RP_NONVIEWERREF )
+	tr.blend = CL_FxBlend( view ) / 255.0f;
+	if( !R_StudioOpaque( view->curstate.rendermode ) && tr.blend <= 0.0f )
+		return; // invisible ?
+
+	RI.currententity = view;
+
+	if( !RI.currententity->model )
 		return;
-
-	if( !Mod_Extradata( clgame.viewent.model ))
-		return;
-
-	tr.blend = CL_FxBlend( &clgame.viewent ) / 255.0f;
-	if( tr.blend <= 0.0f ) return; // invisible ?
-
-	RI.currententity = &clgame.viewent;
-	RI.currentmodel = RI.currententity->model;
-	if( !RI.currentmodel ) return;
 
 	R_StudioSetupTimings();
 
@@ -3499,11 +3471,7 @@ void R_DrawViewModel( void )
 		g_studio.flipmodel = true;
 	}
 
-	if( !cl.local.weaponstarttime ) cl.local.weaponstarttime = g_studio.time;
-	RI.currententity->curstate.animtime = cl.local.weaponstarttime;
-	RI.currententity->curstate.sequence = cl.local.weaponsequence;
-
-	pStudioDraw->StudioDrawModel( STUDIO_RENDER );
+	R_StudioDrawModelInternal( RI.currententity, STUDIO_RENDER );
 
 	// restore depth range
 	pglDepthRange( gldepthmin, gldepthmax );
@@ -3514,9 +3482,6 @@ void R_DrawViewModel( void )
 		GL_FrontFace( !glState.frontFace );
 		g_studio.flipmodel = false;
 	}
-
-	RI.currententity = NULL;
-	RI.currentmodel = NULL;
 }
 
 /*

@@ -571,34 +571,10 @@ void CL_WeaponAnim( int iAnim, int body )
 {
 	cl_entity_t	*view = &clgame.viewent;
 
-	cl.local.weaponstarttime = 0;
+	cl.local.weaponstarttime = 0.0f;
 	cl.local.weaponsequence = iAnim;
-
-	// anim is changed. update latchedvars
-	if( iAnim != view->curstate.sequence )
-	{
-		int	i;
-			
-		// save current blends to right lerping from last sequence
-		for( i = 0; i < 2; i++ )
-			view->latched.prevseqblending[i] = view->curstate.blending[i];
-		view->latched.prevsequence = view->curstate.sequence; // save old sequence
-
-		// save animtime
-		view->latched.prevanimtime = view->curstate.animtime;
-		view->latched.sequencetime = 0.0f;
-	}
-
-	view->curstate.animtime = cl.time;	// start immediately
 	view->curstate.framerate = 1.0f;
-	view->curstate.sequence = iAnim;
-	view->latched.prevframe = 0.0f;
-	view->curstate.scale = 1.0f;
-	view->curstate.frame = 0.0f;
 	view->curstate.body = body;
-
-	view->curstate.rendermode = kRenderNormal;
-	view->curstate.renderamt = 255;
 
 #if 0	// g-cont. for GlowShell testing
 	view->curstate.renderfx = kRenderFxGlowShell;
@@ -964,6 +940,10 @@ void CL_ParseClientData( sizebuf_t *msg )
 
 		MSG_ReadWeaponData( msg, &from_wd[idx], &to_wd[idx], cl.mtime[0] );
 	}
+
+	// shared predicted viewmodel actual index with clientdata
+	if( CL_LocalWeapons() && cl.local.viewmodel && frame->clientdata.viewmodel )
+		frame->clientdata.viewmodel = cl.local.viewmodel;
 
 	// make a local copy of physinfo
 	Q_strncpy( cls.physinfo, frame->clientdata.physinfo,  sizeof( cls.physinfo ));

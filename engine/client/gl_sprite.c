@@ -219,16 +219,12 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, ui
 		// install palette
 		switch( psprite->texFormat )
 		{
-		case SPR_ADDITIVE:
-			pal = FS_LoadImage( "#normal.pal", src, 768 );
-			break;
                     case SPR_INDEXALPHA:
-			pal = FS_LoadImage( "#decal.pal", src, 768 ); 
+			pal = FS_LoadImage( "#gradient.pal", src, 768 ); 
 			break;
 		case SPR_ALPHTEST:		
-			pal = FS_LoadImage( "#transparent.pal", src, 768 );
+			pal = FS_LoadImage( "#masked.pal", src, 768 );
                               break;
-		case SPR_NORMAL:
 		default:
 			pal = FS_LoadImage( "#normal.pal", src, 768 );
 			break;
@@ -746,7 +742,7 @@ R_GlowSightDistance
 Set sprite brightness factor
 ================
 */
-static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, int alpha, float *pscale )
+static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, float *pscale )
 {
 	float	dist, brightness;
 	vec3_t	glowDist;
@@ -764,7 +760,7 @@ static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, int
 	}
 
 	if( renderfx == kRenderFxNoDissipation )
-		return (float)alpha * (1.0f / 255.0f);
+		return 1.0f;
 
 	brightness = GLARE_FALLOFF / ( dist * dist );
 	brightness = bound( 0.05f, brightness, 1.0f );
@@ -782,11 +778,11 @@ R_SpriteOccluded
 Do occlusion test for glow-sprites
 ================
 */
-qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, int *alpha, float *pscale )
+qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, float *pscale )
 {
 	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderWorldGlow )
 	{
-		float	blend = 1.0f;
+		float	blend;
 		vec3_t	v;
 
 		// don't reflect this entity in mirrors
@@ -804,8 +800,8 @@ qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, int *alpha, float *psc
 		if( v[1] < RI.viewport[1] || v[1] > RI.viewport[1] + RI.viewport[3] )
 			return true; // do scissor
 
-		blend *= R_SpriteGlowBlend( origin, e->curstate.rendermode, e->curstate.renderfx, *alpha, pscale );
-		*alpha *= blend;
+		blend = R_SpriteGlowBlend( origin, e->curstate.rendermode, e->curstate.renderfx, pscale );
+		tr.blend *= blend;
 
 		if( blend <= 0.01f )
 			return true; // faded
@@ -887,8 +883,8 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	mspriteframe_t	*frame, *oldframe;
 	msprite_t		*psprite;
 	model_t		*model;
-	int		i, alpha, type;
-	float		angle, dot, sr, cr, flAlpha;
+	int		i, type;
+	float		angle, dot, sr, cr;
 	float		lerp = 1.0f, ilerp, scale;
 	vec3_t		v_forward, v_right, v_up;
 	vec3_t		origin, color, color2;
@@ -918,11 +914,10 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		}
 	}
 
-	alpha = e->curstate.renderamt;
 	scale = e->curstate.scale;
 	if( !scale ) scale = 1.0f;
 
-	if( R_SpriteOccluded( e, origin, &alpha, &scale ))
+	if( R_SpriteOccluded( e, origin, &scale ))
 		return; // sprite culled
 
 	r_stats.c_sprite_models_drawn++;
@@ -1044,15 +1039,13 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		break;
 	}
 
-	flAlpha = (float)alpha * ( 1.0f / 255.0f );
-
 	if( psprite->facecull == SPR_CULL_NONE )
 		GL_Cull( GL_NONE );
 		
 	if( oldframe == frame )
 	{
 		// draw the single non-lerped frame
-		pglColor4f( color[0], color[1], color[2], flAlpha );
+		pglColor4f( color[0], color[1], color[2], tr.blend );
 		GL_Bind( GL_TEXTURE0, frame->gl_texturenum );
 		R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 	}
@@ -1064,14 +1057,14 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 		if( ilerp != 0.0f )
 		{
-			pglColor4f( color[0], color[1], color[2], flAlpha * ilerp );
+			pglColor4f( color[0], color[1], color[2], tr.blend * ilerp );
 			GL_Bind( GL_TEXTURE0, oldframe->gl_texturenum );
 			R_DrawSpriteQuad( oldframe, origin, v_right, v_up, scale );
 		}
 
 		if( lerp != 0.0f )
 		{
-			pglColor4f( color[0], color[1], color[2], flAlpha * lerp );
+			pglColor4f( color[0], color[1], color[2], tr.blend * lerp );
 			GL_Bind( GL_TEXTURE0, frame->gl_texturenum );
 			R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 		}
@@ -1086,7 +1079,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
-		pglColor4f( color2[0], color2[1], color2[2], flAlpha );
+		pglColor4f( color2[0], color2[1], color2[2], tr.blend );
 		GL_Bind( GL_TEXTURE0, tr.whiteTexture );
 		R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
 

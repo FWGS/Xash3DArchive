@@ -510,6 +510,7 @@ void Host_GetCommands( void )
 
 	cmd = Con_Input();
 	if( cmd ) Cbuf_AddText( cmd );
+	Cbuf_Execute ();
 }
 
 /*
@@ -604,8 +605,8 @@ void Host_Frame( float time )
 		return;
 
 	Host_InputFrame ();  // input frame
-	Host_GetCommands (); // dedicated in
 	Host_ClientBegin (); // begin client
+	Host_GetCommands (); // dedicated in
 	Host_ServerFrame (); // server frame
 	Host_ClientFrame (); // client frame
 

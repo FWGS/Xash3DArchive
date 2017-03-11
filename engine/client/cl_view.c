@@ -80,14 +80,36 @@ V_SetupViewModel
 void V_SetupViewModel( void )
 {
 	cl_entity_t	*view = &clgame.viewent;
+	player_info_t	*info = &cl.players[cl.playernum];
+	static qboolean	model_changing = false;
+	static int	skipframe = 0;
+
+	if( CL_LocalWeapons() && view->curstate.modelindex != cl.local.viewmodel && !model_changing )
+	{
+		model_changing = true;
+		skipframe = 2; // server ack & server responce
+	}
 
 	// setup the viewent variables
-	view->model = Mod_Handle( cl.local.viewmodel );
-	view->curstate.modelindex = cl.local.viewmodel;
+	view->curstate.colormap = (info->topcolor & 0xFFFF)|((info->bottomcolor << 8) & 0xFFFF);
 	view->curstate.number = cl.playernum + 1;
 	view->index = cl.playernum + 1;
-	view->curstate.colormap = 0;
-	view->curstate.frame = 0;
+	view->curstate.frame = 0.0f;
+
+	if( skipframe <= 0 )
+	{
+		if( !cl.local.weaponstarttime )
+			cl.local.weaponstarttime = cl.time;
+		view->model = Mod_Handle( cl.local.viewmodel );
+		view->curstate.modelindex = cl.local.viewmodel;
+		view->curstate.animtime = cl.local.weaponstarttime;
+		view->curstate.sequence = cl.local.weaponsequence;
+		model_changing = false;
+	}
+	else
+	{
+		skipframe--;
+	}
 }
 
 /*
@@ -305,7 +327,6 @@ void V_RenderView( void )
 	R_Set2DMode( false );
 	SCR_DirtyScreen();
 	GL_BackendStartFrame ();
-	tr.realframecount++;
 
 	do
 	{

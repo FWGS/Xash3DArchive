@@ -2275,6 +2275,9 @@ void Host_ClientBegin( void )
 	// evaluate console animation
 	Con_RunConsole ();
 
+	// exec console commands
+	Cbuf_Execute ();
+
 	// finalize connection process if needs
 	CL_CheckClientState();
 
@@ -2314,6 +2317,7 @@ void Host_ClientFrame( void )
 
 //	Voice_Idle( host.frametime );
 
+	// emit visible entities
 	CL_EmitEntities ();
 
 	// in case we lost connection

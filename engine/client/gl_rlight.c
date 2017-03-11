@@ -276,14 +276,13 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 
 	// check for impact on this node
 	surf = model->surfaces + node->firstsurface;
-	sample_size = Mod_SampleSizeForFace( surf );
 	VectorCopy( mid, g_trace_lightspot );
 
 	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
 		tex = surf->texinfo;
 
-		if( surf->flags & ( SURF_DRAWSKY|SURF_DRAWTURB ))
+		if( FBitSet( surf->flags, SURF_DRAWTILED ))
 			continue;	// no lightmaps
 
 		s = DotProduct( mid, tex->vecs[0] ) + tex->vecs[0][3] - surf->texturemins[0];
@@ -292,13 +291,14 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 		if(( s < 0 || s > surf->extents[0] ) || ( t < 0 || t > surf->extents[1] ))
 			continue;
 
-		s /= sample_size;
-		t /= sample_size;
-
 		cv->r = cv->g = cv->b = cv->a = 0;
 
 		if( !surf->samples )
 			return true;
+
+		sample_size = Mod_SampleSizeForFace( surf );
+		s /= sample_size;
+		t /= sample_size;
 
 		lm = surf->samples + (t * ((surf->extents[0]  / sample_size) + 1) + s);
 		size = ((surf->extents[0] / sample_size) + 1) * ((surf->extents[1] / sample_size) + 1);

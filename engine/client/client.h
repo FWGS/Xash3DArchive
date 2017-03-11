@@ -148,6 +148,13 @@ typedef struct
 	float		weaponstarttime;
 } cl_local_data_t;
 
+typedef struct
+{
+	char		name[MAX_OSPATH];
+	char		modelname[MAX_OSPATH];
+	model_t		*model;
+} player_model_t;
+
 // the client_t structure is wiped completely at every
 // server map change
 typedef struct
@@ -191,6 +198,7 @@ typedef struct
 	float		timedelta;		// floating delta between two updates
 
 	char		serverinfo[MAX_SERVERINFO_STRING];
+	player_model_t	player_models[MAX_CLIENTS];	// cache of player models
 	player_info_t	players[MAX_CLIENTS];	// collected info about all other players include himself
 	event_state_t	events;
 
@@ -799,6 +807,7 @@ void CL_SetupPMove( playermove_t *pmove, local_state_t *from, usercmd_t *ucmd, q
 pmtrace_t CL_VisTraceLine( vec3_t start, vec3_t end, int flags );
 pmtrace_t CL_TraceLine( vec3_t start, vec3_t end, int flags );
 void CL_MoveSpectatorCamera( void );
+qboolean CL_LocalWeapons( void );
 void CL_SetLastUpdate( void );
 void CL_RedoPrediction( void );
 void CL_ClearPhysEnts( void );

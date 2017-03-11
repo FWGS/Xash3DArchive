@@ -48,7 +48,7 @@ extern byte	*r_temppool;
 
 #define RP_NONVIEWERREF	(RP_MIRRORVIEW|RP_ENVVIEW)
 #define R_StudioOpaque( rm )	( rm == kRenderNormal || rm == kRenderTransAlpha )
-#define RP_LOCALCLIENT( e )	((e)->index == ( cl.playernum + 1 ) && e->player )
+#define RP_LOCALCLIENT( e )	((e) != NULL && (e)->index == ( cl.playernum + 1 ) && e->player )
 #define RP_NORMALPASS()	((RI.params & RP_NONVIEWERREF) == 0 )
 
 #define TF_SKY		(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP|TF_NOPICMIP)
@@ -192,12 +192,10 @@ typedef struct
 	gl_entity_t	mirror_entities[MAX_VISIBLE_PACKET];	// an entities that has mirror
 	cl_entity_t	*solid_entities[MAX_VISIBLE_PACKET];	// opaque moving or alpha brushes
 	cl_entity_t	*trans_entities[MAX_VISIBLE_PACKET];	// translucent brushes
-	cl_entity_t	*child_entities[MAX_VISIBLE_PACKET];	// entities with MOVETYPE_FOLLOW
 	uint		num_static_entities;
 	uint		num_mirror_entities;
 	uint		num_solid_entities;
 	uint		num_trans_entities;
-	uint		num_child_entities;
          
 	// OpenGL matrix states
 	qboolean		modelviewIdentity;
@@ -245,7 +243,7 @@ extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
 extern dlight_t		cl_elights[MAX_ELIGHTS];
-#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_child_entities + tr.num_static_entities)
+#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_static_entities)
 #define r_numStatics	(r_stats.c_client_ents)
 
 extern struct beam_s	*cl_active_beams;
@@ -418,6 +416,7 @@ void R_DrawSpriteModel( cl_entity_t *e );
 void R_StudioInit( void );
 void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded );
 void R_StudioLerpMovement( cl_entity_t *e, double time, vec3_t origin, vec3_t angles );
+float CL_GetSequenceDuration( cl_entity_t *ent, int sequence );
 struct mstudiotex_s *R_StudioGetTexture( cl_entity_t *e );
 float CL_GetStudioEstimatedFrame( cl_entity_t *ent );
 void R_DrawStudioModel( cl_entity_t *e );

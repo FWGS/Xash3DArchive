@@ -94,6 +94,8 @@ static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3 and higher
 { NULL, NULL }
 };
 
+static void pfnSPR_DrawHoles( int frame, int x, int y, const wrect_t *prc );
+
 /*
 ====================
 CL_GetEntityByIndex
@@ -522,6 +524,7 @@ static void SPR_DrawGeneric( int frame, float x, float y, float width, float hei
 	SPR_AdjustSize( &x, &y, &width, &height );
 	texnum = R_GetSpriteTexture( clgame.ds.pSprite, frame );
 	pglColor4ubv( clgame.ds.spriteColor );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 	R_DrawStretchPic( x, y, width, height, s1, t1, s2, t2, texnum );
 }
 
@@ -864,13 +867,15 @@ void CL_DrawCrosshair( void )
 		y += ( clgame.viewport[3] >> 1 ) * screen[1] + 0.5f;
 	}
 
-	clgame.ds.pSprite = clgame.ds.pCrosshair;
+	// move at center the screen
+	x -= 0.5f * width;
+	y -= 0.5f * height;
 
-	GL_SetRenderMode( kRenderTransTexture );
+	clgame.ds.pSprite = clgame.ds.pCrosshair;
 	*(int *)clgame.ds.spriteColor = *(int *)clgame.ds.rgbaCrosshair;
 
-	SPR_EnableScissor( x - 0.5f * width, y - 0.5f * height, width, height );
-	SPR_DrawGeneric( 0, x - 0.5f * width, y - 0.5f * height, -1, -1, &clgame.ds.rcCrosshair );
+	SPR_EnableScissor( x, y, width, height );
+	pfnSPR_DrawHoles( 0, x, y, &clgame.ds.rcCrosshair );
 	SPR_DisableScissor();
 }
 
@@ -1318,11 +1323,6 @@ static void pfnSPR_Set( HSPRITE hPic, int r, int g, int b )
 	clgame.ds.spriteColor[1] = bound( 0, g, 255 );
 	clgame.ds.spriteColor[2] = bound( 0, b, 255 );
 	clgame.ds.spriteColor[3] = 255;
-
-	// set default state
-	pglDisable( GL_BLEND );
-	pglDisable( GL_ALPHA_TEST );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 }
 
 /*
@@ -1333,7 +1333,6 @@ pfnSPR_Draw
 */
 static void pfnSPR_Draw( int frame, int x, int y, const wrect_t *prc )
 {
-	pglEnable( GL_ALPHA_TEST );
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
 }
 
@@ -1345,8 +1344,14 @@ pfnSPR_DrawHoles
 */
 static void pfnSPR_DrawHoles( int frame, int x, int y, const wrect_t *prc )
 {
-	GL_SetRenderMode( kRenderTransAlpha );
+	pglEnable( GL_ALPHA_TEST );
+	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+	pglEnable( GL_BLEND );
+
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
+
+	pglDisable( GL_ALPHA_TEST );
+	pglDisable( GL_BLEND );
 }
 
 /*
@@ -1357,8 +1362,12 @@ pfnSPR_DrawAdditive
 */
 static void pfnSPR_DrawAdditive( int frame, int x, int y, const wrect_t *prc )
 {
-	GL_SetRenderMode( kRenderTransAdd );
+	pglEnable( GL_BLEND );
+	pglBlendFunc( GL_ONE, GL_ONE );
+
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
+
+	pglDisable( GL_BLEND );
 }
 
 /*
@@ -1440,19 +1449,31 @@ CL_FillRGBA
 
 =============
 */
-void CL_FillRGBA( int x, int y, int width, int height, int r, int g, int b, int a )
+void CL_FillRGBA( int x, int y, int w, int h, int r, int g, int b, int a )
 {
 	r = bound( 0, r, 255 );
 	g = bound( 0, g, 255 );
 	b = bound( 0, b, 255 );
 	a = bound( 0, a, 255 );
-	pglColor4ub( r, g, b, a );
 
-	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&width, (float *)&height );
+	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&w, (float *)&h );
 
-	GL_SetRenderMode( kRenderTransAdd );
-	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, tr.whiteTexture );
-	pglColor4ub( 255, 255, 255, 255 );
+	pglDisable( GL_TEXTURE_2D );
+	pglEnable( GL_BLEND );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+	pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+	pglColor4f( r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f );
+
+	pglBegin( GL_QUADS );
+		pglVertex2f( x, y );
+		pglVertex2f( x + w, y );
+		pglVertex2f( x + w, y + h );
+		pglVertex2f( x, y + h );
+	pglEnd ();
+
+	pglColor3f( 1.0f, 1.0f, 1.0f );
+	pglEnable( GL_TEXTURE_2D );
+	pglDisable( GL_BLEND );
 }
 
 /*
@@ -2181,11 +2202,12 @@ int CL_FindModelIndex( const char *m )
 			return i;
 	}
 
-	if( cls.state == ca_active && Q_strnicmp( m, "models/player/", 14 ))
+	if( cls.state == ca_active )
 	{
 		// tell user about problem (but don't spam console about playermodel)
 		MsgDev( D_NOTE, "CL_ModelIndex: %s not precached\n", m );
 	}
+
 	return 0;
 }
 
@@ -2820,23 +2842,31 @@ CL_FillRGBABlend
 
 =============
 */
-void CL_FillRGBABlend( int x, int y, int width, int height, int r, int g, int b, int a )
+void CL_FillRGBABlend( int x, int y, int w, int h, int r, int g, int b, int a )
 {
 	r = bound( 0, r, 255 );
 	g = bound( 0, g, 255 );
 	b = bound( 0, b, 255 );
 	a = bound( 0, a, 255 );
-	pglColor4ub( r, g, b, a );
 
-	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&width, (float *)&height );
+	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&w, (float *)&h );
 
+	pglDisable( GL_TEXTURE_2D );
 	pglEnable( GL_BLEND );
-	pglDisable( GL_ALPHA_TEST );
-	pglBlendFunc( GL_ONE_MINUS_SRC_ALPHA, GL_ONE );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+	pglColor4f( r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f );
 
-	R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, tr.whiteTexture );
-	pglColor4ub( 255, 255, 255, 255 );
+	pglBegin( GL_QUADS );
+		pglVertex2f( x, y );
+		pglVertex2f( x + w, y );
+		pglVertex2f( x + w, y + h );
+		pglVertex2f( x, y + h );
+	pglEnd ();
+
+	pglColor3f( 1.0f, 1.0f, 1.0f );
+	pglEnable( GL_TEXTURE_2D );
+	pglDisable( GL_BLEND );
 }
 
 /*
@@ -2879,6 +2909,7 @@ void TriRenderMode( int mode )
 	switch( mode )
 	{
 	case kRenderNormal:
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		pglDisable( GL_BLEND );
 		pglDepthMask( GL_TRUE );
 		break;

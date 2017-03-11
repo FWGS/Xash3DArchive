@@ -258,6 +258,8 @@ void R_Set2DMode( qboolean enable )
 
 		pglDepthMask( GL_FALSE );
 		pglDisable( GL_DEPTH_TEST );
+		pglEnable( GL_ALPHA_TEST );
+		pglAlphaFunc( GL_NOTEQUAL, 0.0f );
 		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 
 		glState.in2DMode = true;

@@ -79,28 +79,6 @@ static qboolean R_StaticEntity( cl_entity_t *ent )
 
 /*
 ===============
-R_FollowEntity
-
-Follow entity is attached to another studiomodel and used last cached bones
-from parent
-===============
-*/
-static qboolean R_FollowEntity( cl_entity_t *ent )
-{
-	if( ent->model->type != mod_studio )
-		return false;
-
-	if( ent->curstate.movetype != MOVETYPE_FOLLOW )
-		return false;
-
-	if( ent->curstate.aiment <= 0 )
-		return false;
-
-	return true;
-}
-
-/*
-===============
 R_OpaqueEntity
 
 Opaque entity can be brush or studio model but sprite
@@ -264,7 +242,7 @@ void R_ClearScene( void )
 {
 	tr.num_solid_entities = tr.num_trans_entities = 0;
 	tr.num_static_entities = tr.num_mirror_entities = 0;
-	tr.num_child_entities = cl.num_custombeams = 0;
+	cl.num_custombeams = 0;
 }
 
 /*
@@ -288,18 +266,6 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int type )
 
 	if( type == ET_FRAGMENTED )
 		r_stats.c_client_ents++;
-
-	if( R_FollowEntity( clent ))
-	{
-		// follow entity
-		if( tr.num_child_entities >= MAX_VISIBLE_PACKET )
-			return false;
-
-		tr.child_entities[tr.num_child_entities] = clent;
-		tr.num_child_entities++;
-
-		return true;
-	}
 
 	if( R_OpaqueEntity( clent ))
 	{
@@ -331,6 +297,7 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int type )
 		tr.trans_entities[tr.num_trans_entities] = clent;
 		tr.num_trans_entities++;
 	}
+
 	return true;
 }
 
@@ -633,9 +600,6 @@ static void R_SetupFrame( void )
 {
 	// setup viewplane dist
 	RI.viewplanedist = DotProduct( RI.vieworg, RI.vforward );
-
-	// prepare events for viewmodel (e.g. muzzleflashes)
-	R_RunViewmodelEvents();
 
 	// sort opaque entities by model type to avoid drawing model shadows under alpha-surfaces
 	qsort( tr.solid_entities, tr.num_solid_entities, sizeof( cl_entity_t* ), R_SolidEntityCompare );
@@ -1063,6 +1027,9 @@ some type of screenshots
 */
 qboolean R_DoResetGamma( void )
 {
+	// FIXME: this looks ugly. apply the backward gamma changes to the output image
+	return false;
+
 	switch( cls.scrshot_action )
 	{
 	case scrshot_normal:
@@ -1195,6 +1162,9 @@ void R_RenderFrame( const ref_viewpass_t *rvp )
 			return;
 		}
 	}
+
+	R_RunViewmodelEvents();
+	tr.realframecount++; // right called after viewmodel events
 
 	if( gl_allow_mirrors->value )
 	{

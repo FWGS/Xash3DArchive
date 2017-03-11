@@ -1224,16 +1224,19 @@ void R_BeamDraw( BEAM *pbeam, float frametime )
 	switch( pbeam->type )
 	{
 	case TE_BEAMTORUS:
+		GL_Cull( GL_NONE );
 		TriBegin( TRI_TRIANGLE_STRIP );
 		R_DrawTorus( pbeam->source, pbeam->delta, pbeam->width, pbeam->amplitude, pbeam->freq, pbeam->speed, pbeam->segments );
 		TriEnd();
 		break;
 	case TE_BEAMDISK:
+		GL_Cull( GL_NONE );
 		TriBegin( TRI_TRIANGLE_STRIP );
 		R_DrawDisk( pbeam->source, pbeam->delta, pbeam->width, pbeam->amplitude, pbeam->freq, pbeam->speed, pbeam->segments );
 		TriEnd();
 		break;
 	case TE_BEAMCYLINDER:
+		GL_Cull( GL_NONE );
 		TriBegin( TRI_TRIANGLE_STRIP );
 		R_DrawCylinder( pbeam->source, pbeam->delta, pbeam->width, pbeam->amplitude, pbeam->freq, pbeam->speed, pbeam->segments );
 		TriEnd();
@@ -1249,11 +1252,14 @@ void R_BeamDraw( BEAM *pbeam, float frametime )
 		TriEnd();
 		break;
 	case TE_BEAMRING:
+		GL_Cull( GL_NONE );
 		TriBegin( TRI_TRIANGLE_STRIP );
 		R_DrawRing( pbeam->source, pbeam->delta, pbeam->width, pbeam->amplitude, pbeam->freq, pbeam->speed, pbeam->segments );
 		TriEnd();
 		break;
 	}
+
+	GL_Cull( GL_FRONT );
 }
 
 /*
@@ -1323,7 +1329,7 @@ void R_BeamDrawCustomEntity( cl_entity_t *ent )
 		SetBits( beam.flags, FBEAM_SHADEOUT );
 
 	// draw it
-	R_BeamDraw( &beam, cl.time - cl.oldtime );
+	R_BeamDraw( &beam, tr.frametime );
 }
 
 /*
@@ -1512,6 +1518,8 @@ void CL_DrawBeams( int fTrans )
 
 	if( !cl_draw_beams->value )
 		return;
+
+	pglShadeModel( GL_SMOOTH );
 	
 	// server beams don't allocate beam chains
 	// all params are stored in cl_entity_t
@@ -1531,9 +1539,6 @@ void CL_DrawBeams( int fTrans )
 	}
 
 	RI.currentbeam = NULL;
-
-	if( !cl_active_beams )
-		return;
 
 	// draw temporary entity beams
 	for( pBeam = cl_active_beams; pBeam; pBeam = pNext )
@@ -1565,6 +1570,8 @@ void CL_DrawBeams( int fTrans )
 		r_stats.c_view_beams_count++;
 		pPrev = pBeam;
 	}
+
+	pglShadeModel( GL_FLAT );
 }
 
 /*

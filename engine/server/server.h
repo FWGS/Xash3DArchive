@@ -590,6 +590,7 @@ void SV_UpdateBaseVelocity( edict_t *ent );
 byte *pfnSetFatPVS( const float *org );
 byte *pfnSetFatPAS( const float *org );
 int pfnPrecacheModel( const char *s );
+void pfnRemoveEntity( edict_t* e );
 int pfnNumberOfEntities( void );
 void SV_RestartStaticEnts( void );
 char *SV_Localinfo( void );

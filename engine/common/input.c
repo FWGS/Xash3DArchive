@@ -379,8 +379,6 @@ void Host_InputFrame( void )
 
 	Sys_SendKeyEvents ();
 
-	Cbuf_Execute ();
-
 	if( !in_mouseinitialized )
 		return;
 
