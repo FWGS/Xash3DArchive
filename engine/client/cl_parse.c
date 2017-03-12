@@ -795,9 +795,8 @@ CL_ParseClientData
 */
 void CL_ParseClientData( sizebuf_t *msg )
 {
-	int		i, j;
 	float		parsecounttime;
-	int		command_ack;
+	int		i, j, command_ack;
 	clientdata_t	*from_cd, *to_cd;
 	weapon_data_t	*from_wd, *to_wd;
 	weapon_data_t	nullwd[64];
@@ -941,12 +940,12 @@ void CL_ParseClientData( sizebuf_t *msg )
 		MSG_ReadWeaponData( msg, &from_wd[idx], &to_wd[idx], cl.mtime[0] );
 	}
 
-	// shared predicted viewmodel actual index with clientdata
-	if( CL_LocalWeapons() && cl.local.viewmodel && frame->clientdata.viewmodel )
+	// keep predicted viewmodel index until server receive actual data
+	if( CL_LocalWeapons() && from_cd->viewmodel == to_cd->viewmodel )
 		frame->clientdata.viewmodel = cl.local.viewmodel;
 
 	// make a local copy of physinfo
-	Q_strncpy( cls.physinfo, frame->clientdata.physinfo,  sizeof( cls.physinfo ));
+	Q_strncpy( cls.physinfo, frame->clientdata.physinfo, sizeof( cls.physinfo ));
 
 	cl.local.maxspeed = frame->clientdata.maxspeed;
 	cl.local.pushmsec = frame->clientdata.pushmsec;
