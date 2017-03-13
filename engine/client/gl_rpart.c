@@ -528,7 +528,7 @@ static qboolean CL_CullTracer( particle_t *p, const vec3_t start, const vec3_t e
 	}
 
 	// check bbox
-	return R_CullBox( mins, maxs, RI.clipFlags );
+	return R_CullBox( mins, maxs );
 }
 
 /*
@@ -648,17 +648,35 @@ void CL_DrawTracers( double frametime )
 	}
 }
 
-void CL_DrawParticlesExternal( const float *vieworg, const float *forward, const float *right, const float *up, uint clipFlags )
+/*
+===============
+CL_DrawParticlesExternal
+
+allow to draw effects from custom renderer
+===============
+*/
+void CL_DrawParticlesExternal( const ref_viewpass_t *rvp, qboolean solid_pass )
 {
-	if( vieworg ) VectorCopy( vieworg, RI.vieworg );
-	if( forward ) VectorCopy( forward, RI.vforward );
-	if( right ) VectorCopy( right, RI.vright );
-	if( up ) VectorCopy( up, RI.vup );
+	ref_instance_t	oldRI = RI;
 
-	RI.clipFlags = clipFlags;
+	memcpy( &oldRI, &RI, sizeof( ref_instance_t ));
+	R_SetupRefParams( rvp );
+	R_SetupFrustum();
+	R_SetupGL( false );	// don't touch GL-states
 
-	CL_DrawParticles ( tr.frametime );
-	CL_DrawTracers( tr.frametime );
+	if( solid_pass )
+	{
+		CL_DrawBeams( false );
+	}
+	else
+	{
+		CL_DrawBeams( true );
+		CL_DrawParticles( tr.frametime );
+		CL_DrawTracers( tr.frametime );
+	}
+
+	// restore internal state
+	memcpy( &RI, &oldRI, sizeof( ref_instance_t ));
 }
 
 /*

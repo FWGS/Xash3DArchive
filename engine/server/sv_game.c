@@ -863,6 +863,12 @@ edict_t *SV_AllocEdict( void )
 	return pEdict;
 }
 
+LINK_ENTITY_FUNC SV_GetEntityClass( const char *pszClassName )
+{
+	// allocate edict private memory (passed by dlls)
+	return (LINK_ENTITY_FUNC)Com_GetProcAddress( svgame.hInstance, pszClassName );
+}
+
 edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 {
 	const char	*pszClassName;
@@ -885,7 +891,7 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 	ent->v.pContainingEntity = ent; // re-link
 	
 	// allocate edict private memory (passed by dlls)
-	SpawnEdict = (LINK_ENTITY_FUNC)Com_GetProcAddress( svgame.hInstance, pszClassName );
+	SpawnEdict = SV_GetEntityClass( pszClassName );
 
 	if( !SpawnEdict )
 	{
@@ -893,16 +899,33 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 		if( svgame.physFuncs.SV_CreateEntity && svgame.physFuncs.SV_CreateEntity( ent, pszClassName ) != -1 )
 			return ent;
 
-		MsgDev( D_ERROR, "No spawn function for %s\n", STRING( className ));
+		SpawnEdict = SV_GetEntityClass( "custom" );
 
-		// kill entity immediately
-		SV_FreeEdict( ent );
+		if( !SpawnEdict )
+		{
+			MsgDev( D_ERROR, "No spawn function for %s\n", STRING( className ));
 
-		return NULL;
+			// kill entity immediately
+			SV_FreeEdict( ent );
+
+			return NULL;
+		}
+
+		SetBits( ent->v.flags, FL_CUSTOMENTITY ); // sort of hack
 	}
-	else SpawnEdict( &ent->v );
+
+	SpawnEdict( &ent->v );
 
 	return ent;
+}
+
+edict_t* SV_CreateNamedEntity( edict_t *ent, string_t className )
+{
+	edict_t *ed = SV_AllocPrivateData( ent, className );
+
+	if( ed ) ClearBits( ed->v.flags, FL_CUSTOMENTITY );
+
+	return ed;
 }
 
 void SV_FreeEdicts( void )
@@ -1613,7 +1636,7 @@ pfnCreateNamedEntity
 */
 edict_t* pfnCreateNamedEntity( string_t className )
 {
-	return SV_AllocPrivateData( NULL, className );
+	return SV_CreateNamedEntity( NULL, className );
 }
 
 /*
@@ -4527,7 +4550,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 {
 	KeyValueData	pkvd[256]; // per one entity
 	int		i, numpairs = 0;
-	const char	*classname = NULL;
+	char		*classname = NULL;
 	char		token[2048];
 
 	// go through all the dictionary pairs
@@ -4565,19 +4588,19 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 		if( !token[0] ) continue;
 
 		// create keyvalue strings
-		pkvd[numpairs].szClassName = (char *)classname;	// unknown at this moment
+		pkvd[numpairs].szClassName = ""; // unknown at this moment
 		pkvd[numpairs].szKeyName = copystring( keyname );
 		pkvd[numpairs].szValue = copystring( token );
 		pkvd[numpairs].fHandled = false;		
 
 		if( !Q_strcmp( keyname, "classname" ) && classname == NULL )
-			classname = pkvd[numpairs].szValue;
+			classname = copystring( pkvd[numpairs].szValue );
 		if( ++numpairs >= 256 ) break;
 	}
 	
 	ent = SV_AllocPrivateData( ent, ALLOC_STRING( classname ));
 
-	if( !SV_IsValidEdict( ent ) || ent->v.flags & FL_KILLME )
+	if( !SV_IsValidEdict( ent ) || FBitSet( ent->v.flags, FL_KILLME ))
 	{
 		// release allocated strings
 		for( i = 0; i < numpairs; i++ )
@@ -4586,6 +4609,19 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 			Mem_Free( pkvd[i].szValue );
 		}
 		return false;
+	}
+
+	if( FBitSet( ent->v.flags, FL_CUSTOMENTITY ))
+	{
+		ClearBits( ent->v.flags, FL_CUSTOMENTITY );
+		if( numpairs < 256 )
+		{
+			pkvd[numpairs].szClassName = "custom";
+			pkvd[numpairs].szKeyName = "customclass";
+			pkvd[numpairs].szValue = classname;
+			pkvd[numpairs].fHandled = false;
+			numpairs++;
+		}
 	}
 
 	for( i = 0; i < numpairs; i++ )
@@ -4615,7 +4651,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 
 		if( !pkvd[i].fHandled )
 		{
-			pkvd[i].szClassName = (char *)classname;
+			pkvd[i].szClassName = classname;
 			svgame.dllFuncs.pfnKeyValue( ent, &pkvd[i] );
 		}
 
@@ -4623,6 +4659,9 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 		Mem_Free( pkvd[i].szKeyName );
 		Mem_Free( pkvd[i].szValue );
 	}
+
+	if( classname )
+		Mem_Free( classname );
 
 	return true;
 }

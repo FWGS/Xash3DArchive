@@ -171,7 +171,7 @@ void R_PushDlights( void )
 		if( l->die < cl.time || !l->radius )
 			continue;
 
-		if( R_CullSphere( l->origin, l->radius, 15 ))
+		if( GL_FrustumCullSphere( &RI.frustum, l->origin, l->radius, 15 ))
 			continue;
 
 		R_MarkLights( l, 1<<i, RI.currentmodel->nodes );

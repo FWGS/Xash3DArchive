@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include "render_api.h"
 #include "protocol.h"
 #include "dlight.h"
+#include "gl_frustum.h"
 
 extern byte	*r_temppool;
 
@@ -112,7 +113,7 @@ typedef struct
 	cl_entity_t	*currentbeam;	// same as above but for beams
 
 	int		viewport[4];
-	mplane_t		frustum[6];
+	gl_frustum_t	frustum;
 
 	mleaf_t		*viewleaf;
 	mleaf_t		*oldviewleaf;
@@ -129,7 +130,6 @@ typedef struct
 	vec3_t		cull_vup;
 
 	float		farClip;
-	uint		clipFlags;
 
 	qboolean		fogCustom;
 	qboolean		fogEnabled;
@@ -277,9 +277,9 @@ void R_ShowTextures( void );
 // gl_cull.c
 //
 int R_CullModel( cl_entity_t *e, const vec3_t absmin, const vec3_t absmax );
-qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
-qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipflags );
-qboolean R_CullSurface( msurface_t *surf, uint clipflags );
+qboolean R_CullBox( const vec3_t mins, const vec3_t maxs );
+qboolean R_CullSphere( const vec3_t centre, const float radius );
+qboolean R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags );
 
 //
 // gl_decals.c
@@ -352,8 +352,11 @@ void R_ClearScene( void );
 void R_LoadIdentity( void );
 void R_RenderScene( void );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
+void R_SetupRefParams( const struct ref_viewpass_s *rvp );
+qboolean R_StaticEntity( cl_entity_t *ent );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
+void R_SetupGL( qboolean set_gl_state );
 qboolean R_InitRenderAPI( void );
 void R_SetupFrustum( void );
 void R_FindViewLeaf( void );
@@ -465,7 +468,7 @@ void R_DrawStretchRaw( float x, float y, float w, float h, int cols, int rows, c
 void R_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, int texnum );
 qboolean R_SpeedsMessage( char *out, size_t size );
 void R_SetupSky( const char *skyboxname );
-qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags );
+qboolean R_CullBox( const vec3_t mins, const vec3_t maxs );
 qboolean R_WorldToScreen( const vec3_t point, vec3_t screen );
 void R_ScreenToWorld( const vec3_t screen, vec3_t point );
 qboolean R_AddEntity( struct cl_entity_s *pRefEntity, int entityType );

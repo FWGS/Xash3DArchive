@@ -1442,7 +1442,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 		rotated = false;
 	}
 
-	if( R_CullBox( mins, maxs, RI.clipFlags ))
+	if( R_CullBox( mins, maxs ))
 		return;
 
 	memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
@@ -1505,7 +1505,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		if( R_CullSurface( psurf, 0 ))
+		if( R_CullSurface( psurf, NULL, 0 )) // ignore frustum for bmodels
 			continue;
 
 		if( need_sort && !gl_nosort->value )
@@ -1561,7 +1561,7 @@ void R_DrawStaticModel( cl_entity_t *e )
 	dlight_t		*l;
 	
 	clmodel = e->model;
-	if( R_CullBox( clmodel->mins, clmodel->maxs, RI.clipFlags ))
+	if( R_CullBox( clmodel->mins, clmodel->maxs ))
 		return;
 
 	// calculate dynamic lighting for bmodel
@@ -1575,7 +1575,7 @@ void R_DrawStaticModel( cl_entity_t *e )
 	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		if( R_CullSurface( psurf, RI.clipFlags ))
+		if( R_CullSurface( psurf, &RI.frustum, 0 ))
 			continue;
 
 		if( psurf->flags & SURF_DRAWSKY )
@@ -1638,7 +1638,6 @@ R_RecursiveWorldNode
 */
 void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 {
-	const mplane_t	*clipplane;
 	int		i, clipped;
 	msurface_t	*surf, **mark;
 	mleaf_t		*pleaf;
@@ -1653,14 +1652,16 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 
 	if( clipflags )
 	{
-		for( i = 0, clipplane = RI.frustum; i < 6; i++, clipplane++ )
+		for( i = 0; i < 6; i++ )
 		{
-			if(!( clipflags & ( 1<<i )))
+			const mplane_t	*p = &RI.frustum.planes[i];
+
+			if( !FBitSet( clipflags, BIT( i )))
 				continue;
 
-			clipped = BoxOnPlaneSide( node->minmaxs, node->minmaxs + 3, clipplane );
+			clipped = BoxOnPlaneSide( node->minmaxs, node->minmaxs + 3, p );
 			if( clipped == 2 ) return;
-			if( clipped == 1 ) clipflags &= ~(1<<i);
+			if( clipped == 1 ) ClearBits( clipflags, BIT( i ));
 		}
 	}
 
@@ -1701,7 +1702,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	// draw stuff
 	for( c = node->numsurfaces, surf = cl.worldmodel->surfaces + node->firstsurface; c; c--, surf++ )
 	{
-		if( R_CullSurface( surf, clipflags ))
+		if( R_CullSurface( surf, &RI.frustum, clipflags ))
 			continue;
 
 		if( surf->flags & SURF_DRAWSKY )
@@ -1764,7 +1765,7 @@ static void R_DrawTopViewLeaf( mleaf_t *pleaf, uint clipflags )
 
 		surf->visframe = tr.framecount;
 
-		if( R_CullSurface( surf, clipflags ))
+		if( R_CullSurface( surf, &RI.frustum, clipflags ))
 			continue;
 
 		if(!( surf->flags & SURF_DRAWSKY ))
@@ -1788,8 +1789,7 @@ R_DrawWorldTopView
 */
 void R_DrawWorldTopView( mnode_t *node, uint clipflags )
 {
-	const mplane_t	*clipplane;
-	int		c, clipped;
+	int		i, c, clipped;
 	msurface_t	*surf;
 
 	do
@@ -1802,14 +1802,16 @@ void R_DrawWorldTopView( mnode_t *node, uint clipflags )
 
 		if( clipflags )
 		{
-			for( c = 0, clipplane = RI.frustum; c < 6; c++, clipplane++ )
+			for( i = 0; i < 6; i++ )
 			{
-				if(!( clipflags & ( 1<<c )))
+				const mplane_t	*p = &RI.frustum.planes[i];
+
+				if( !FBitSet( clipflags, BIT( i )))
 					continue;
 
-				clipped = BoxOnPlaneSide( node->minmaxs, node->minmaxs + 3, clipplane );
+				clipped = BoxOnPlaneSide( node->minmaxs, node->minmaxs + 3, p );
 				if( clipped == 2 ) return;
-				if( clipped == 1 ) clipflags &= ~(1<<c);
+				if( clipped == 1 ) ClearBits( clipflags, BIT( i ));
 			}
 		}
 
@@ -1833,7 +1835,7 @@ void R_DrawWorldTopView( mnode_t *node, uint clipflags )
 
 			surf->visframe = tr.framecount;
 
-			if( R_CullSurface( surf, clipflags ))
+			if( R_CullSurface( surf, &RI.frustum, clipflags ))
 				continue;
 
 			if(!( surf->flags & SURF_DRAWSKY ))
@@ -1938,11 +1940,11 @@ void R_DrawWorld( void )
 
 	if( RI.drawOrtho )
 	{
-		R_DrawWorldTopView( cl.worldmodel->nodes, RI.clipFlags );
+		R_DrawWorldTopView( cl.worldmodel->nodes, RI.frustum.clipFlags );
 	}
 	else
 	{
-		R_RecursiveWorldNode( cl.worldmodel->nodes, RI.clipFlags );
+		R_RecursiveWorldNode( cl.worldmodel->nodes, RI.frustum.clipFlags );
 	}
 
 	R_DrawStaticBrushes();

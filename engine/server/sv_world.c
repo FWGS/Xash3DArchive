@@ -216,12 +216,18 @@ SV_HullForBsp
 forcing to select BSP hull
 ==================
 */
-hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float *offset )
+hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_t offset )
 {
 	hull_t		*hull;
 	model_t		*model;
 	vec3_t		size;
-			
+
+	if( svgame.physFuncs.SV_HullForBsp != NULL )
+	{
+		hull = svgame.physFuncs.SV_HullForBsp( ent, mins, maxs, offset );
+		if( hull ) return hull;
+	}
+
 	// decide which clipping hull to use, based on the size
 	model = Mod_Handle( ent->v.modelindex );
 
@@ -234,7 +240,8 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 	// author: The FiEctro
 	hull = &model->hulls[COM_RandomLong( 0, 0 )];
 #endif
-	if( sv_quakehulls->value == 1 )
+
+	if( world.sky_sphere || world.version == Q1BSP_VERSION )
 	{
 		// Using quake-style hull select for my Quake remake
 		if( size[0] < 3.0f || ( model->flags & MODEL_LIQUID && ent->v.solid != SOLID_TRIGGER ))
@@ -244,11 +251,6 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, float
 		else hull = &model->hulls[2];
 
 		VectorSubtract( hull->clip_mins, mins, offset );
-	}
-	else if( sv_quakehulls->value == 2 )
-	{
-		// undocumented feature: auto hull select
-		hull = SV_HullAutoSelect( model, mins, maxs, size, offset );
 	}
 	else
 	{
@@ -421,7 +423,6 @@ areanode_t *SV_CreateAreaNode( int depth, vec3_t mins, vec3_t maxs )
 
 	ClearLink( &anode->trigger_edicts );
 	ClearLink( &anode->solid_edicts );
-	ClearLink( &anode->water_edicts );
 	
 	if( depth == AREA_DEPTH )
 	{
@@ -676,8 +677,6 @@ void SV_LinkEdict( edict_t *ent, qboolean touch_triggers )
 	// link it in	
 	if( ent->v.solid == SOLID_TRIGGER )
 		InsertLinkBefore( &ent->area, &node->trigger_edicts );
-	else if( ent->v.solid == SOLID_NOT && ent->v.skin < CONTENTS_EMPTY )
-		InsertLinkBefore( &ent->area, &node->water_edicts );
 	else InsertLinkBefore( &ent->area, &node->solid_edicts );
 
 	if( touch_triggers && !iTouchLinkSemaphore )
@@ -704,7 +703,7 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 	model_t	*mod;
 
 	// get water edicts
-	for( l = node->water_edicts.next; l != &node->water_edicts; l = next )
+	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
 	{
 		next = l->next;
 		touch = EDICT_FROM_AREA( l );

@@ -67,8 +67,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 	if( ed->v.flags & FL_CLIENT )
 	{
 		// client
-		if( svs.currentPlayer )
-			SV_GetTrueOrigin( svs.currentPlayer, (pe->info - 1), pe->origin );
+		SV_GetTrueOrigin( &svs.clients[pe->info - 1], (pe->info - 1), pe->origin );
 		Q_strncpy( pe->name, "player", sizeof( pe->name ));
 		pe->player = pe->info;
 	}
@@ -148,13 +147,13 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 
 void SV_GetTrueOrigin( sv_client_t *cl, int edictnum, vec3_t origin )
 {
-	if( !FBitSet( cl->flags, FCL_LAG_COMPENSATION ) || !sv_unlag.value )
-		return;
-
 	// don't allow unlag in singleplayer
 	if( svs.maxclients <= 1 ) return;
 
 	if( cl->state < cs_connected || edictnum < 0 || edictnum >= svs.maxclients )
+		return;
+
+	if( !FBitSet( cl->flags, FCL_LAG_COMPENSATION ) || !sv_unlag.value )
 		return;
 
 	if( !svgame.interp[edictnum].active || !svgame.interp[edictnum].moving )
@@ -165,13 +164,13 @@ void SV_GetTrueOrigin( sv_client_t *cl, int edictnum, vec3_t origin )
 
 void SV_GetTrueMinMax( sv_client_t *cl, int edictnum, vec3_t mins, vec3_t maxs )
 {
-	if( !FBitSet( cl->flags, FCL_LAG_COMPENSATION ) || !sv_unlag.value )
-		return;
-
 	// don't allow unlag in singleplayer
 	if( svs.maxclients <= 1 ) return;
 
 	if( cl->state < cs_connected || edictnum < 0 || edictnum >= svs.maxclients )
+		return;
+
+	if( !FBitSet( cl->flags, FCL_LAG_COMPENSATION ) || !sv_unlag.value )
 		return;
 
 	if( !svgame.interp[edictnum].active || !svgame.interp[edictnum].moving )
@@ -241,9 +240,10 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 
 		if( FBitSet( check->v.flags, FL_CLIENT ))
 		{
+			int	e = NUM_FOR_EDICT( check ) - 1;
+
 			// trying to get interpolated values
-			if( svs.currentPlayer )
-				SV_GetTrueMinMax( svs.currentPlayer, ( NUM_FOR_EDICT( check ) - 1), mins, maxs );
+			SV_GetTrueMinMax( &svs.clients[e], e, mins, maxs );
 		}
 
 		if( !BoundsIntersect( pmove_mins, pmove_maxs, mins, maxs ))
@@ -279,12 +279,12 @@ void SV_AddLaddersToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3
 	physent_t	*pe;
 	
 	// get water edicts
-	for( l = node->water_edicts.next; l != &node->water_edicts; l = next )
+	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
 	{
 		next = l->next;
 		check = EDICT_FROM_AREA( l );
 
-		if( check->v.solid != SOLID_NOT ) // disabled ?
+		if( check->v.solid != SOLID_NOT || check->v.skin != CONTENTS_LADDER )
 			continue;
 
 		// only brushes can have special contents

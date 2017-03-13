@@ -215,7 +215,7 @@ typedef struct render_api_s
 	void		(*GL_Reserved2)( void );
 
 	// Misc renderer functions
-	void		(*GL_DrawParticles)( const float *vieworg, const float *fwd, const float *rt, const float *up, unsigned int clipFlags );
+	void		(*GL_DrawParticles)( const struct ref_viewpass_s *rvp, qboolean solid_pass );
 	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot, int shotsize ); // creates a cubemap or skybox into gfx\env folder
 	int		(*COM_CompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
 	void		(*Host_Error)( const char *error, ... ); // cause Host Error

@@ -78,8 +78,8 @@ typedef struct ref_overview_s
 
 	float		xLeft;
 	float		xRight;
-	float		xTop;
-	float		xBottom;
+	float		yTop;
+	float		yBottom;
 	float		zFar;
 	float		zNear;
 	float		flZoom;

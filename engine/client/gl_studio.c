@@ -1599,7 +1599,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		int sequence = bound( 0, ent->curstate.sequence, m_pStudioHeader->numseq - 1 );
 		mstudioseqdesc_t *pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + sequence;
 
-		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ) && !pseqdesc->activity )
+		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ) && !pseqdesc->activity && m_pStudioHeader->numseq > 1 )
 			Matrix3x4_OriginFromMatrix( g_studio.lighttransform[0], origin );
 		else Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, origin );
 	}
@@ -2650,14 +2650,14 @@ static void R_StudioClientEvents( void )
 	if( pseqdesc->numevents == 0 )
 		return;
 
-	end = R_StudioEstimateFrame( e, pseqdesc ) + 0.01f;
+	end = R_StudioEstimateFrame( e, pseqdesc );
 	start = end - e->curstate.framerate * host.frametime * pseqdesc->fps;
 	pevent = (mstudioevent_t *)((byte *)m_pStudioHeader + pseqdesc->eventindex);
 
 	if( e->latched.sequencetime == e->curstate.animtime )
 	{
 		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ))
-			start -= 0.01f;
+			start = -0.01f;
 	}
 
 	for( i = 0; i < pseqdesc->numevents; i++ )
@@ -2666,7 +2666,7 @@ static void R_StudioClientEvents( void )
 		if( pevent[i].event < EVENT_CLIENT )
 			continue;
 
-		if( (float)pevent[i].frame > start && end >= pevent[i].frame )
+		if( (float)pevent[i].frame > start && pevent[i].frame <= end )
 			clgame.dllFuncs.pfnStudioEvent( &pevent[i], e );
 	}
 }

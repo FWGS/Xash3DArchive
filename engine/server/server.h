@@ -430,7 +430,6 @@ extern	convar_t		*sv_novis;
 extern	convar_t		*sv_allow_studio_attachment_angles;
 extern	convar_t		*sv_allow_rotate_pushables;
 extern	convar_t		*sv_sendvelocity;
-extern	convar_t		*sv_quakehulls;
 extern	convar_t		*sv_validate_changelevel;
 extern	convar_t		*public_server;
 
@@ -575,6 +574,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags );
 float SV_AngleMod( float ideal, float current, float speed );
 void SV_SpawnEntities( const char *mapname, char *entities );
 edict_t* SV_AllocPrivateData( edict_t *ent, string_t className );
+edict_t* SV_CreateNamedEntity( edict_t *ent, string_t className );
 string_t SV_AllocString( const char *szValue );
 string_t SV_MakeString( const char *szValue );
 const char *SV_GetString( string_t iString );

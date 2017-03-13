@@ -32,59 +32,9 @@ R_CullBox
 Returns true if the box is completely outside the frustum
 =================
 */
-qboolean R_CullBox( const vec3_t mins, const vec3_t maxs, uint clipflags )
+qboolean R_CullBox( const vec3_t mins, const vec3_t maxs )
 {
-	uint		i, bit;
-	const mplane_t	*p;
-
-	// client.dll may use additional passes for render custom mirrors etc
-	if( r_nocull->value )
-		return false;
-
-	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit++, p++ )
-	{
-		if( !FBitSet( clipflags, BIT( bit )))
-			continue;
-
-		switch( p->signbits )
-		{
-		case 0:
-			if( p->normal[0] * maxs[0] + p->normal[1] * maxs[1] + p->normal[2] * maxs[2] < p->dist )
-				return true;
-			break;
-		case 1:
-			if( p->normal[0] * mins[0] + p->normal[1] * maxs[1] + p->normal[2] * maxs[2] < p->dist )
-				return true;
-			break;
-		case 2:
-			if( p->normal[0] * maxs[0] + p->normal[1] * mins[1] + p->normal[2] * maxs[2] < p->dist )
-				return true;
-			break;
-		case 3:
-			if( p->normal[0] * mins[0] + p->normal[1] * mins[1] + p->normal[2] * maxs[2] < p->dist )
-				return true;
-			break;
-		case 4:
-			if( p->normal[0] * maxs[0] + p->normal[1] * maxs[1] + p->normal[2] * mins[2] < p->dist )
-				return true;
-			break;
-		case 5:
-			if( p->normal[0] * mins[0] + p->normal[1] * maxs[1] + p->normal[2] * mins[2] < p->dist )
-				return true;
-			break;
-		case 6:
-			if( p->normal[0] * maxs[0] + p->normal[1] * mins[1] + p->normal[2] * mins[2] < p->dist )
-				return true;
-			break;
-		case 7:
-			if( p->normal[0] * mins[0] + p->normal[1] * mins[1] + p->normal[2] * mins[2] < p->dist )
-				return true;
-			break;
-		default:
-			return false;
-		}
-	}
-	return false;
+	return GL_FrustumCullBox( &RI.frustum, mins, maxs, 0 );
 }
 
 /*
@@ -94,25 +44,9 @@ R_CullSphere
 Returns true if the sphere is completely outside the frustum
 =================
 */
-qboolean R_CullSphere( const vec3_t centre, const float radius, const uint clipflags )
+qboolean R_CullSphere( const vec3_t centre, const float radius )
 {
-	uint		i, bit;
-	const mplane_t	*p;
-
-	// client.dll may use additional passes for render custom mirrors etc
-	if( r_nocull->value )
-		return false;
-
-	for( i = sizeof( RI.frustum ) / sizeof( RI.frustum[0] ), bit = 1, p = RI.frustum; i > 0; i--, bit++, p++ )
-	{
-		if( !FBitSet( clipflags, BIT( bit )))
-			continue;
-
-		if( DotProduct( centre, p->normal ) - p->dist <= -radius )
-			return true;
-	}
-
-	return false;
+	return GL_FrustumCullSphere( &RI.frustum, centre, radius, 0 );
 }
 
 /*
@@ -148,7 +82,7 @@ int R_CullModel( cl_entity_t *e, const vec3_t absmin, const vec3_t absmax )
 			return 1;
 	}
 
-	if( R_CullBox( absmin, absmax, RI.clipFlags ))
+	if( R_CullBox( absmin, absmax ))
 		return 1;
 
 	return 0;
@@ -161,9 +95,8 @@ R_CullSurface
 cull invisible surfaces
 =================
 */
-qboolean R_CullSurface( msurface_t *surf, uint clipflags )
+qboolean R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags )
 {
-	mextrasurf_t	*info;
 	cl_entity_t	*e = RI.currententity;
 
 	if( !surf || !surf->texinfo || !surf->texinfo->texture )
@@ -188,46 +121,57 @@ qboolean R_CullSurface( msurface_t *surf, uint clipflags )
 
 	if( r_faceplanecull->value && glState.faceCull != 0 )
 	{
-		if( e->curstate.scale == 0.0f )
+		if( e->curstate.scale == 0.0f && !VectorIsNull( surf->plane->normal ))
 		{
-			if( !VectorIsNull( surf->plane->normal ))
+			float	dist;
+
+			// can use normal.z for world (optimisation)
+			if( RI.drawOrtho )
 			{
-				float	dist;
+				vec3_t	orthonormal;
 
-				if( RI.drawOrtho ) dist = surf->plane->normal[2];
-				else dist = PlaneDiff( tr.modelorg, surf->plane );
+				if( e == clgame.entities || R_StaticEntity( e ))
+					orthonormal[2] = surf->plane->normal[2];
+				else Matrix4x4_VectorRotate( RI.objectMatrix, surf->plane->normal, orthonormal );
 
-				if( glState.faceCull == GL_FRONT || ( RI.params & RP_MIRRORVIEW ))
+				dist = orthonormal[2];
+			}
+			else dist = PlaneDiff( tr.modelorg, surf->plane );
+
+			if( glState.faceCull == GL_FRONT || ( RI.params & RP_MIRRORVIEW ))
+			{
+				if( surf->flags & SURF_PLANEBACK )
 				{
-					if( surf->flags & SURF_PLANEBACK )
-					{
-						if( dist >= -BACKFACE_EPSILON )
-							return true; // wrong side
-					}
-					else
-					{
-						if( dist <= BACKFACE_EPSILON )
-							return true; // wrong side
-					}
+					if( dist >= -BACKFACE_EPSILON )
+						return true; // wrong side
 				}
-				else if( glState.faceCull == GL_BACK )
+				else
 				{
-					if( surf->flags & SURF_PLANEBACK )
-					{
-						if( dist <= BACKFACE_EPSILON )
-							return true; // wrong side
-					}
-					else
-					{
-						if( dist >= -BACKFACE_EPSILON )
-							return true; // wrong side
-					}
+					if( dist <= BACKFACE_EPSILON )
+						return true; // wrong side
+				}
+			}
+			else if( glState.faceCull == GL_BACK )
+			{
+				if( surf->flags & SURF_PLANEBACK )
+				{
+					if( dist <= BACKFACE_EPSILON )
+						return true; // wrong side
+				}
+				else
+				{
+					if( dist >= -BACKFACE_EPSILON )
+						return true; // wrong side
 				}
 			}
 		}
 	}
 
-	info = SURF_INFO( surf, RI.currentmodel );
+	if( frustum )
+	{
+		mextrasurf_t *info = SURF_INFO( surf, RI.currentmodel );
+		return GL_FrustumCullBox( frustum, info->mins, info->maxs, clipflags );
+	}
 
-	return ( clipflags && R_CullBox( info->mins, info->maxs, clipflags ));
+	return false;
 }

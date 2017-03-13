@@ -108,6 +108,7 @@ GNU General Public License for more details.
 #define VectorNegate(x, y) ((y)[0] = -(x)[0], (y)[1] = -(x)[1], (y)[2] = -(x)[2])
 #define VectorM(scale1, b1, c) ((c)[0] = (scale1) * (b1)[0],(c)[1] = (scale1) * (b1)[1],(c)[2] = (scale1) * (b1)[2])
 #define VectorMA(a, scale, b, c) ((c)[0] = (a)[0] + (scale) * (b)[0],(c)[1] = (a)[1] + (scale) * (b)[1],(c)[2] = (a)[2] + (scale) * (b)[2])
+#define VectorMAM(scale1, b1, scale2, b2, c) ((c)[0] = (scale1) * (b1)[0] + (scale2) * (b2)[0],(c)[1] = (scale1) * (b1)[1] + (scale2) * (b2)[1],(c)[2] = (scale1) * (b1)[2] + (scale2) * (b2)[2])
 #define VectorMAMAM(scale1, b1, scale2, b2, scale3, b3, c) ((c)[0] = (scale1) * (b1)[0] + (scale2) * (b2)[0] + (scale3) * (b3)[0],(c)[1] = (scale1) * (b1)[1] + (scale2) * (b2)[1] + (scale3) * (b3)[1],(c)[2] = (scale1) * (b1)[2] + (scale2) * (b2)[2] + (scale3) * (b3)[2])
 #define VectorIsNull( v ) ((v)[0] == 0.0f && (v)[1] == 0.0f && (v)[2] == 0.0f)
 #define MakeRGBA( out, x, y, z, w ) Vector4Set( out, x, y, z, w )
@@ -121,6 +122,7 @@ word FloatToHalf( float v );
 float HalfToFloat( word h );
 void RoundUpHullSize( vec3_t size );
 int SignbitsForPlane( const vec3_t normal );
+int PlaneTypeForNormal( const vec3_t normal );
 int NearestPOW( int value, qboolean roundDown );
 void SinCos( float radians, float *sine, float *cosine );
 float VectorNormalizeLength2( const vec3_t v, vec3_t out );
@@ -128,7 +130,8 @@ void VectorVectors( const vec3_t forward, vec3_t right, vec3_t up );
 void VectorAngles( const float *forward, float *angles );
 void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up );
 void VectorsAngles( const vec3_t forward, const vec3_t right, const vec3_t up, vec3_t angles );
-void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
+qboolean PlanesGetIntersectionPoint( const struct mplane_s *plane1, const struct mplane_s *plane2, const struct mplane_s *plane3, vec3_t out );
+void PlaneIntersect( const struct mplane_s *plane, const vec3_t p0, const vec3_t p1, vec3_t out );
 
 void ClearBounds( vec3_t mins, vec3_t maxs );
 void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs );
@@ -136,6 +139,7 @@ qboolean BoundsIntersect( const vec3_t mins1, const vec3_t maxs1, const vec3_t m
 qboolean BoundsAndSphereIntersect( const vec3_t mins, const vec3_t maxs, const vec3_t origin, float radius );
 qboolean SphereIntersect( const vec3_t vSphereCenter, float fSphereRadiusSquared, const vec3_t vLinePt, const vec3_t vLineDir );
 float RadiusFromBounds( const vec3_t mins, const vec3_t maxs );
+void ExpandBounds( vec3_t mins, vec3_t maxs, float offset );
 
 void AngleQuaternion( const vec3_t angles, vec4_t q, qboolean studio );
 void QuaternionAngle( const vec4_t q, vec3_t angles );

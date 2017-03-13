@@ -51,7 +51,7 @@ Static entity is the brush which has no custom origin and not rotated
 typically is a func_wall, func_breakable, func_ladder etc
 ===============
 */
-static qboolean R_StaticEntity( cl_entity_t *ent )
+qboolean R_StaticEntity( cl_entity_t *ent )
 {
 	if( !gl_allow_static->value )
 		return false;
@@ -356,62 +356,12 @@ static float R_GetFarClip( void )
 
 /*
 ===============
-R_SetupFrustumOrtho
-===============
-*/
-static void R_SetupFrustumOrtho( void )
-{
-	ref_overview_t	*ov = &clgame.overView;
-	float		orgOffset;
-	int		i;
-
-	// 0 - left
-	// 1 - right
-	// 2 - down
-	// 3 - up
-	// 4 - farclip
-	// 5 - nearclip
-
-	// setup the near and far planes.
-	orgOffset = DotProduct( RI.cullorigin, RI.cull_vforward );
-	VectorNegate( RI.cull_vforward, RI.frustum[4].normal );
-	RI.frustum[4].dist = -ov->zFar - orgOffset;
-
-	VectorCopy( RI.cull_vforward, RI.frustum[5].normal );
-	RI.frustum[5].dist = ov->zNear + orgOffset;
-
-	// left and right planes...
-	orgOffset = DotProduct( RI.cullorigin, RI.cull_vright );
-	VectorCopy( RI.cull_vright, RI.frustum[0].normal );
-	RI.frustum[0].dist = ov->xLeft + orgOffset;
-
-	VectorNegate( RI.cull_vright, RI.frustum[1].normal );
-	RI.frustum[1].dist = -ov->xRight - orgOffset;
-
-	// top and buttom planes...
-	orgOffset = DotProduct( RI.cullorigin, RI.cull_vup );
-	VectorCopy( RI.cull_vup, RI.frustum[3].normal );
-	RI.frustum[3].dist = ov->xTop + orgOffset;
-
-	VectorNegate( RI.cull_vup, RI.frustum[2].normal );
-	RI.frustum[2].dist = -ov->xBottom - orgOffset;
-
-	for( i = 0; i < 6; i++ )
-	{
-		RI.frustum[i].type = PLANE_NONAXIAL;
-		RI.frustum[i].signbits = SignbitsForPlane( RI.frustum[i].normal );
-	}
-}
-
-/*
-===============
 R_SetupFrustum
 ===============
 */
 void R_SetupFrustum( void )
 {
-	vec3_t	farPoint;
-	int	i;
+	ref_overview_t	*ov = &clgame.overView;
 
 	// build the transformation matrix for the given view angles
 	AngleVectors( RI.viewangles, RI.vforward, RI.vright, RI.vup );
@@ -425,40 +375,8 @@ void R_SetupFrustum( void )
 	}
 
 	if( RI.drawOrtho )
-	{
-		R_SetupFrustumOrtho();
-		return;
-	}
-
-	// 0 - left
-	// 1 - right
-	// 2 - down
-	// 3 - up
-	// 4 - farclip
-	// 5 - nearclip
-
-	// rotate RI.vforward right by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[0].normal, RI.cull_vup, RI.cull_vforward, -( 90 - RI.fov_x / 2 ));
-	// rotate RI.vforward left by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[1].normal, RI.cull_vup, RI.cull_vforward, 90 - RI.fov_x / 2 );
-	// rotate RI.vforward up by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[2].normal, RI.cull_vright, RI.cull_vforward, 90 - RI.fov_y / 2 );
-	// rotate RI.vforward down by FOV_X/2 degrees
-	RotatePointAroundVector( RI.frustum[3].normal, RI.cull_vright, RI.cull_vforward, -( 90 - RI.fov_y / 2 ));
-	// negate forward vector
-	VectorNegate( RI.cull_vforward, RI.frustum[4].normal );
-
-	for( i = 0; i < 4; i++ )
-	{
-		RI.frustum[i].type = PLANE_NONAXIAL;
-		RI.frustum[i].dist = DotProduct( RI.cullorigin, RI.frustum[i].normal );
-		RI.frustum[i].signbits = SignbitsForPlane( RI.frustum[i].normal );
-	}
-
-	VectorMA( RI.cullorigin, R_GetFarClip(), RI.cull_vforward, farPoint );
-	RI.frustum[i].type = PLANE_NONAXIAL;
-	RI.frustum[i].dist = DotProduct( farPoint, RI.frustum[i].normal );
-	RI.frustum[i].signbits = SignbitsForPlane( RI.frustum[i].normal );
+		GL_FrustumInitOrtho( &RI.frustum, ov->xLeft, ov->xRight, ov->yTop, ov->yBottom, ov->zNear, ov->zFar );
+	else GL_FrustumInitProj( &RI.frustum, 0.0f, R_GetFarClip(), RI.fov_x, RI.fov_y ); // NOTE: we ignore nearplane here (mirrors only)
 }
 
 /*
@@ -473,8 +391,7 @@ static void R_SetupProjectionMatrix( matrix4x4 m )
 	if( RI.drawOrtho )
 	{
 		ref_overview_t *ov = &clgame.overView;
-		Matrix4x4_CreateOrtho( m, ov->xLeft, ov->xRight, ov->xTop, ov->xBottom, ov->zNear, ov->zFar );
-		RI.clipFlags = 0;
+		Matrix4x4_CreateOrtho( m, ov->xLeft, ov->xRight, ov->yTop, ov->yBottom, ov->zNear, ov->zFar );
 		return;
 	}
 
@@ -623,7 +540,7 @@ static void R_SetupFrame( void )
 R_SetupGL
 =============
 */
-static void R_SetupGL( void )
+void R_SetupGL( qboolean set_gl_state )
 {
 	if( RP_NORMALPASS() && ( cl.local.waterlevel >= 3 ))
 	{
@@ -633,9 +550,10 @@ static void R_SetupGL( void )
 
 	R_SetupModelviewMatrix( RI.worldviewMatrix );
 	R_SetupProjectionMatrix( RI.projectionMatrix );
-//	if( RI.params & RP_MIRRORVIEW ) RI.projectionMatrix[0][0] = -RI.projectionMatrix[0][0];
 
 	Matrix4x4_Concat( RI.worldviewProjectionMatrix, RI.projectionMatrix, RI.worldviewMatrix );
+
+	if( !set_gl_state ) return;
 
 	if( RP_NORMALPASS( ))
 	{
@@ -1001,7 +919,7 @@ void R_RenderScene( void )
 
 	R_SetupFrustum();
 	R_SetupFrame();
-	R_SetupGL();
+	R_SetupGL( true );
 	R_Clear( ~0 );
 
 	R_MarkLeaves();
@@ -1112,7 +1030,6 @@ void R_SetupRefParams( const ref_viewpass_t *rvp )
 	RI.params = RP_NONE;
 	RI.drawWorld = FBitSet( rvp->flags, RF_DRAW_WORLD );
 	RI.onlyClientDraw = FBitSet( rvp->flags, RF_ONLY_CLIENTDRAW );
-	RI.clipFlags = 15;	// top, bottom, left, right
 	RI.farClip = 0;
 
 	if( !FBitSet( rvp->flags, RF_DRAW_CUBEMAP ))

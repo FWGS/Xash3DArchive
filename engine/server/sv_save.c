@@ -1574,7 +1574,7 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 					pent = EDICT_NUM( 0 );
 
 					SV_InitEdict( pent );
-					pent = SV_AllocPrivateData( pent, pEntInfo->classname );
+					pent = SV_CreateNamedEntity( pent, pEntInfo->classname );
 				}
 				else if(( pEntInfo->id > 0 ) && ( pEntInfo->id < svgame.globals->maxClients + 1 ))
 				{
@@ -1592,13 +1592,13 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 					{
 						ASSERT( ed->free == false );
 						// create the player
-						pent = SV_AllocPrivateData( ed, pEntInfo->classname );
+						pent = SV_CreateNamedEntity( ed, pEntInfo->classname );
 					}
 					else pent = NULL;
 				}
 				else
 				{
-					pent = SV_AllocPrivateData( NULL, pEntInfo->classname );
+					pent = SV_CreateNamedEntity( NULL, pEntInfo->classname );
 				}
 
 				pEntInfo->pent = pent;
@@ -1706,13 +1706,13 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 								ASSERT( 0 );
 							}
 
-							pent = SV_AllocPrivateData( ed, pEntInfo->classname );
+							pent = SV_CreateNamedEntity( ed, pEntInfo->classname );
 						}
 					}
 					else if( active )
 					{
 						// create named entity
-						pent = SV_AllocPrivateData( NULL, pEntInfo->classname );
+						pent = SV_CreateNamedEntity( NULL, pEntInfo->classname );
 					}
 				}
 				else

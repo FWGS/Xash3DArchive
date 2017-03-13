@@ -201,7 +201,7 @@ qboolean SV_RunThink( edict_t *ent )
 	if( !FBitSet( ent->v.flags, FL_KILLME ))
 	{
 		thinktime = ent->v.nextthink;
-		if( thinktime <= 0.0f || thinktime > sv.time + sv.frametime )
+		if( thinktime <= 0.0f || thinktime > (sv.time + sv.frametime))
 			return true;
 		
 		if( thinktime < sv.time )
@@ -236,7 +236,7 @@ qboolean SV_PlayerRunThink( edict_t *ent, float frametime, double time )
 	if( !FBitSet( ent->v.flags, FL_KILLME|FL_DORMANT ))
 	{
 		thinktime = ent->v.nextthink;
-		if( thinktime <= 0.0f || (time + frametime) < thinktime )
+		if( thinktime <= 0.0f || thinktime > (time + frametime))
 			return true;
 
 		if( thinktime < time )

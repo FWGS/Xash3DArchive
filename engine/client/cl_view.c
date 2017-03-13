@@ -81,35 +81,19 @@ void V_SetupViewModel( void )
 {
 	cl_entity_t	*view = &clgame.viewent;
 	player_info_t	*info = &cl.players[cl.playernum];
-	static qboolean	model_changing = false;
-	static int	skipframe = 0;
 
-	if( CL_LocalWeapons() && view->curstate.modelindex != cl.local.viewmodel && !model_changing )
-	{
-		model_changing = true;
-		skipframe = 2; // server ack & server responce
-	}
+	if( !cl.local.weaponstarttime )
+		cl.local.weaponstarttime = cl.time;
 
 	// setup the viewent variables
 	view->curstate.colormap = (info->topcolor & 0xFFFF)|((info->bottomcolor << 8) & 0xFFFF);
 	view->curstate.number = cl.playernum + 1;
 	view->index = cl.playernum + 1;
 	view->curstate.frame = 0.0f;
-
-	if( skipframe <= 0 )
-	{
-		if( !cl.local.weaponstarttime )
-			cl.local.weaponstarttime = cl.time;
-		view->model = Mod_Handle( cl.local.viewmodel );
-		view->curstate.modelindex = cl.local.viewmodel;
-		view->curstate.animtime = cl.local.weaponstarttime;
-		view->curstate.sequence = cl.local.weaponsequence;
-		model_changing = false;
-	}
-	else
-	{
-		skipframe--;
-	}
+	view->model = Mod_Handle( cl.local.viewmodel );
+	view->curstate.modelindex = cl.local.viewmodel;
+	view->curstate.animtime = cl.local.weaponstarttime;
+	view->curstate.sequence = cl.local.weaponsequence;
 }
 
 /*
@@ -196,8 +180,8 @@ void V_RefApplyOverview( ref_viewpass_t *rvp )
 	// compute rectangle
 	ov->xLeft = -(size_x / 2);
 	ov->xRight = (size_x / 2);
-	ov->xTop = -(size_y / 2);
-	ov->xBottom = (size_y / 2);
+	ov->yTop = -(size_y / 2);
+	ov->yBottom = (size_y / 2);
 
 	if( CL_IsDevOverviewMode() == 1 )
 	{
@@ -212,8 +196,8 @@ void V_RefApplyOverview( ref_viewpass_t *rvp )
 
 	mins[!ov->rotated] += ov->xLeft;
 	maxs[!ov->rotated] += ov->xRight;
-	mins[ov->rotated] += ov->xTop;
-	maxs[ov->rotated] += ov->xBottom;
+	mins[ov->rotated] += ov->yTop;
+	maxs[ov->rotated] += ov->yBottom;
 
 	rvp->viewangles[0] = 90.0f;
 	rvp->viewangles[1] = 90.0f;

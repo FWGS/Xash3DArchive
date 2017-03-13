@@ -117,7 +117,6 @@ convar_t	*sv_allow_studio_attachment_angles;
 convar_t	*sv_allow_rotate_pushables;
 convar_t	*sv_validate_changelevel;
 convar_t	*sv_sendvelocity;
-convar_t	*sv_quakehulls;
 
 void Master_Shutdown( void );
 
@@ -776,7 +775,6 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_send_logos);
 	Cvar_RegisterVariable (&sv_send_resources);
 	sv_sendvelocity = Cvar_Get( "sv_sendvelocity", "1", FCVAR_ARCHIVE, "force to send velocity for event_t structure across network" );
-	sv_quakehulls = Cvar_Get( "sv_quakehulls", "0", FCVAR_ARCHIVE, "using quake style hull select instead of half-life style hull select" );
 	Cvar_RegisterVariable (&sv_consistency);
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
 

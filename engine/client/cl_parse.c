@@ -570,7 +570,10 @@ Set new weapon animation
 void CL_WeaponAnim( int iAnim, int body )
 {
 	cl_entity_t	*view = &clgame.viewent;
-
+#if 0
+	if( CL_LocalWeapons() && cl.local.repredicting )
+		return;
+#endif
 	cl.local.weaponstarttime = 0.0f;
 	cl.local.weaponsequence = iAnim;
 	view->curstate.framerate = 1.0f;
@@ -939,10 +942,6 @@ void CL_ParseClientData( sizebuf_t *msg )
 
 		MSG_ReadWeaponData( msg, &from_wd[idx], &to_wd[idx], cl.mtime[0] );
 	}
-
-	// keep predicted viewmodel index until server receive actual data
-	if( CL_LocalWeapons() && from_cd->viewmodel == to_cd->viewmodel )
-		frame->clientdata.viewmodel = cl.local.viewmodel;
 
 	// make a local copy of physinfo
 	Q_strncpy( cls.physinfo, frame->clientdata.physinfo, sizeof( cls.physinfo ));

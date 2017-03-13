@@ -381,7 +381,7 @@ qboolean R_BeamCull( const vec3_t start, const vec3_t end, qboolean pvsOnly )
 	// check bbox
 	if( Mod_BoxVisible( mins, maxs, Mod_GetCurrentVis( )))
 	{
-		if( pvsOnly || !R_CullBox( mins, maxs, RI.clipFlags ))
+		if( pvsOnly || !R_CullBox( mins, maxs ))
 		{
 			// beam is visible
 			return false;	
@@ -1010,7 +1010,7 @@ void R_DrawRing(vec3_t source, vec3_t delta, float width, float amplitude, float
 		return;
 
 	// is that box in PVS && frustum?
-	if( !Mod_BoxVisible( screen, tmp, Mod_GetCurrentVis( )) || R_CullBox( screen, tmp, RI.clipFlags ))
+	if( !Mod_BoxVisible( screen, tmp, Mod_GetCurrentVis( )) || R_CullBox( screen, tmp ))
 	{
 		return;
 	}

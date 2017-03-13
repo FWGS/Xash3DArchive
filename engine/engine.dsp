@@ -260,6 +260,10 @@ SOURCE=.\client\gl_draw.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\gl_frustum.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_image.c
 # End Source File
 # Begin Source File
@@ -585,6 +589,10 @@ SOURCE=.\common\filesystem.h
 # Begin Source File
 
 SOURCE=.\client\gl_export.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\client\gl_frustum.h
 # End Source File
 # Begin Source File
 

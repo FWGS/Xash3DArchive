@@ -1281,6 +1281,7 @@ void CL_PredictMovement( qboolean repredicting )
 
 	time = frame->time;
 	stoppoint = ( repredicting ) ? 0 : 1;
+	cl.local.repredicting = repredicting;
 	cl.local.onground = -1;
 
 	// predict forward until cl.time <= to->senttime
@@ -1309,7 +1310,10 @@ void CL_PredictMovement( qboolean repredicting )
 	CL_PopPMStates();
 
 	if(( i == CL_UPDATE_MASK ) || ( !to && !repredicting ))
+	{
+		cl.local.repredicting = false;
 		return; // net hasn't deliver packets in a long time...
+	}
 
 	if( !to )
 	{
@@ -1320,6 +1324,7 @@ void CL_PredictMovement( qboolean repredicting )
 	if( !CL_IsPredicted( ))
 	{
 		cl.local.viewmodel = to->client.viewmodel;
+		cl.local.repredicting = false;
 		return;
 	}
 
@@ -1356,7 +1361,7 @@ void CL_PredictMovement( qboolean repredicting )
 
 	cl.local.waterlevel = to->client.waterlevel;
 	cl.local.usehull = to->playerstate.usehull;
-	cl.local.viewmodel = to->client.viewmodel;
+	if( !repredicting ) cl.local.viewmodel = to->client.viewmodel;
 
 	if( FBitSet( to->client.flags, FL_ONGROUND ))
 	{
@@ -1417,4 +1422,5 @@ void CL_PredictMovement( qboolean repredicting )
 	}
 
 	VectorCopy( cl.simorg, cl.local.lastorigin );
+	cl.local.repredicting = false;
 }

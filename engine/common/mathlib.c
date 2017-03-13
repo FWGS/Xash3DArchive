@@ -159,6 +159,65 @@ int SignbitsForPlane( const vec3_t normal )
 
 /*
 =================
+PlaneTypeForNormal
+=================
+*/
+int PlaneTypeForNormal( const vec3_t normal )
+{
+	if( normal[0] == 1.0f )
+		return PLANE_X;
+	if( normal[1] == 1.0f )
+		return PLANE_Y;
+	if( normal[2] == 1.0f )
+		return PLANE_Z;
+	return PLANE_NONAXIAL;
+}
+
+/*
+=================
+PlanesGetIntersectionPoint
+
+=================
+*/
+qboolean PlanesGetIntersectionPoint( const mplane_t *plane1, const mplane_t *plane2, const mplane_t *plane3, vec3_t out )
+{
+	vec3_t	n1, n2, n3;
+	vec3_t	n1n2, n2n3, n3n1;
+	float	denom;
+
+	VectorNormalize2( plane1->normal, n1 );
+	VectorNormalize2( plane2->normal, n2 );
+	VectorNormalize2( plane3->normal, n3 );
+
+	CrossProduct( n1, n2, n1n2 );
+	CrossProduct( n2, n3, n2n3 );
+	CrossProduct( n3, n1, n3n1 );
+
+	denom = DotProduct( n1, n2n3 );
+	VectorClear( out );
+
+	// check if the denominator is zero (which would mean that no intersection is to be found
+	if( denom == 0.0f )
+	{
+		// no intersection could be found, return <0,0,0>
+		return false;
+	}
+
+	// compute intersection point
+#if 0
+	VectorMAMAM( plane1->dist, n2n3, plane2->dist, n3n1, plane3->dist, n1n2, out );
+#else
+	VectorMA( out, plane1->dist, n2n3, out );
+	VectorMA( out, plane2->dist, n3n1, out );
+	VectorMA( out, plane3->dist, n1n2, out );
+#endif
+	VectorScale( out, ( 1.0f / denom ), out );
+
+	return true;
+}
+
+/*
+=================
 NearestPOW
 =================
 */
@@ -410,6 +469,21 @@ void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs )
 
 /*
 =================
+ExpandBounds
+=================
+*/
+void ExpandBounds( vec3_t mins, vec3_t maxs, float offset )
+{
+	mins[0] -= offset;
+	mins[1] -= offset;
+	mins[2] -= offset;
+	maxs[0] += offset;
+	maxs[1] += offset;
+	maxs[2] += offset;
+}
+
+/*
+=================
 BoundsIntersect
 =================
 */
@@ -461,6 +535,23 @@ qboolean SphereIntersect( const vec3_t vSphereCenter, float fSphereRadiusSquared
 
 /*
 =================
+PlaneIntersect
+
+find point where ray
+was intersect with plane
+=================
+*/
+void PlaneIntersect( const mplane_t *plane, const vec3_t p0, const vec3_t p1, vec3_t out )
+{
+	float distToPlane = PlaneDiff( p0, plane );
+	float planeDotRay = DotProduct( plane->normal, p1 );
+	float sect = -(distToPlane) / planeDotRay;
+
+	VectorMA( p0, sect, p1, out );
+}
+
+/*
+=================
 RadiusFromBounds
 =================
 */
@@ -474,41 +565,6 @@ float RadiusFromBounds( const vec3_t mins, const vec3_t maxs )
 		corner[i] = fabs( mins[i] ) > fabs( maxs[i] ) ? fabs( mins[i] ) : fabs( maxs[i] );
 	}
 	return VectorLength( corner );
-}
-
-/*
-====================
-RotatePointAroundVector
-====================
-*/
-void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees )
-{
-	float	t0, t1;
-	float	angle, c, s;
-	vec3_t	vr, vu, vf;
-
-	angle = DEG2RAD( degrees );
-	SinCos( angle, &s, &c );
-	VectorCopy( dir, vf );
-	VectorVectors( vf, vr, vu );
-
-	t0 = vr[0] *  c + vu[0] * -s;
-	t1 = vr[0] *  s + vu[0] *  c;
-	dst[0] = (t0 * vr[0] + t1 * vu[0] + vf[0] * vf[0]) * point[0]
-	       + (t0 * vr[1] + t1 * vu[1] + vf[0] * vf[1]) * point[1]
-	       + (t0 * vr[2] + t1 * vu[2] + vf[0] * vf[2]) * point[2];
-
-	t0 = vr[1] *  c + vu[1] * -s;
-	t1 = vr[1] *  s + vu[1] *  c;
-	dst[1] = (t0 * vr[0] + t1 * vu[0] + vf[1] * vf[0]) * point[0]
-	       + (t0 * vr[1] + t1 * vu[1] + vf[1] * vf[1]) * point[1]
-	       + (t0 * vr[2] + t1 * vu[2] + vf[1] * vf[2]) * point[2];
-
-	t0 = vr[2] *  c + vu[2] * -s;
-	t1 = vr[2] *  s + vu[2] *  c;
-	dst[2] = (t0 * vr[0] + t1 * vu[0] + vf[2] * vf[0]) * point[0]
-	       + (t0 * vr[1] + t1 * vu[1] + vf[2] * vf[1]) * point[1]
-	       + (t0 * vr[2] + t1 * vu[2] + vf[2] * vf[2]) * point[2];
 }
 
 //
