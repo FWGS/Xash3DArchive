@@ -2303,6 +2303,27 @@ void pfnServerCommand( const char* str )
 
 /*
 =========
+pfnServerExecute
+
+=========
+*/
+void pfnServerExecute( void )
+{
+	Cbuf_Execute();
+
+	if( svgame.config_executed )
+		return;
+
+	// here we restore arhcived cvars only from game.dll
+	host.apply_game_config = true;
+	Cbuf_AddText( "exec config.cfg\n" );
+	Cbuf_Execute();
+	host.apply_game_config = false;
+	svgame.config_executed = true;
+}
+
+/*
+=========
 pfnClientCommand
 
 =========
@@ -4418,7 +4439,7 @@ static enginefuncs_t gEngfuncs =
 	pfnTraceSphere,
 	pfnGetAimVector,
 	pfnServerCommand,
-	Cbuf_Execute,
+	pfnServerExecute,
 	pfnClientCommand,
 	pfnParticleEffect,
 	pfnLightStyle,

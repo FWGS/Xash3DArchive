@@ -161,10 +161,12 @@ load sprite model
 */
 void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, uint texFlags )
 {
+	dsprite_q1_t	*pinq1;
+	dsprite_hl_t	*pinhl;
 	dsprite_t		*pin;
-	short		*numi;
-	msprite_t		*psprite;
+	short		*numi = NULL;
 	dframetype_t	*pframetype;
+	msprite_t		*psprite;
 	int		i, size;
 
 	if( loaded ) *loaded = false;
@@ -179,29 +181,54 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, ui
 		return;
 	}
 		
-	if( i != SPRITE_VERSION )
+	if( i != SPRITE_VERSION_Q1 && i != SPRITE_VERSION_HL )
 	{
-		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)\n", mod->name, i, SPRITE_VERSION );
+		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i or %i)\n", mod->name, i, SPRITE_VERSION_Q1, SPRITE_VERSION_HL );
 		return;
 	}
 
 	mod->mempool = Mem_AllocPool( va( "^2%s^7", mod->name ));
-	size = sizeof( msprite_t ) + ( pin->numframes - 1 ) * sizeof( psprite->frames );
-	psprite = Mem_Alloc( mod->mempool, size );
-	mod->cache.data = psprite;	// make link to extradata
-	
-	psprite->type = pin->type;
-	psprite->texFormat = pin->texFormat;
-	psprite->numframes = mod->numframes = pin->numframes;
-	psprite->facecull = pin->facetype;
-	psprite->radius = pin->boundingradius;
-	psprite->synctype = pin->synctype;
 
-	mod->mins[0] = mod->mins[1] = -pin->bounds[0] * 0.5f;
-	mod->maxs[0] = mod->maxs[1] = pin->bounds[0] * 0.5f;
-	mod->mins[2] = -pin->bounds[1] * 0.5f;
-	mod->maxs[2] = pin->bounds[1] * 0.5f;
-	numi = (short *)(pin + 1);
+	if( i == SPRITE_VERSION_Q1 )
+	{
+		pinq1 = (dsprite_q1_t *)buffer;
+		size = sizeof( msprite_t ) + ( pinq1->numframes - 1 ) * sizeof( psprite->frames );
+		psprite = Mem_Alloc( mod->mempool, size );
+		mod->cache.data = psprite;	// make link to extradata
+
+		psprite->type = pinq1->type;
+		psprite->texFormat = SPR_ADDITIVE;	//SPR_ALPHTEST;
+		psprite->numframes = mod->numframes = pinq1->numframes;
+		psprite->facecull = SPR_CULL_FRONT;
+		psprite->radius = pinq1->boundingradius;
+		psprite->synctype = pinq1->synctype;
+
+		mod->mins[0] = mod->mins[1] = -pinq1->bounds[0] * 0.5f;
+		mod->maxs[0] = mod->maxs[1] = pinq1->bounds[0] * 0.5f;
+		mod->mins[2] = -pinq1->bounds[1] * 0.5f;
+		mod->maxs[2] = pinq1->bounds[1] * 0.5f;
+		numi = NULL;
+	}
+	else if( i == SPRITE_VERSION_HL )
+	{
+		pinhl = (dsprite_hl_t *)buffer;
+		size = sizeof( msprite_t ) + ( pinhl->numframes - 1 ) * sizeof( psprite->frames );
+		psprite = Mem_Alloc( mod->mempool, size );
+		mod->cache.data = psprite;	// make link to extradata
+
+		psprite->type = pinhl->type;
+		psprite->texFormat = pinhl->texFormat;
+		psprite->numframes = mod->numframes = pinhl->numframes;
+		psprite->facecull = pinhl->facetype;
+		psprite->radius = pinhl->boundingradius;
+		psprite->synctype = pinhl->synctype;
+
+		mod->mins[0] = mod->mins[1] = -pinhl->bounds[0] * 0.5f;
+		mod->maxs[0] = mod->maxs[1] = pinhl->bounds[0] * 0.5f;
+		mod->mins[2] = -pinhl->bounds[1] * 0.5f;
+		mod->maxs[2] = pinhl->bounds[1] * 0.5f;
+		numi = (short *)(pinhl + 1);
+	}
 
 	if( host.type == HOST_DEDICATED )
 	{
@@ -211,7 +238,15 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, ui
 		return;
 	}
 
-	if( *numi == 256 )
+	if( numi == NULL )
+	{
+		rgbdata_t	*pal;
+	
+		pal = FS_LoadImage( "#id.pal", (byte *)&i, 768 );
+		pframetype = (dframetype_t *)(pinq1 + 1);
+		FS_FreeImage( pal ); // palette installed, no reason to keep this data
+	}
+	else if( *numi == 256 )
 	{	
 		byte	*src = (byte *)(numi+1);
 		rgbdata_t	*pal;
@@ -235,17 +270,17 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, ui
 	}
 	else 
 	{
-		MsgDev( D_ERROR, "%s has wrong number of palette colors %i (should be 256)\n", mod->name, numi );
+		MsgDev( D_ERROR, "%s has wrong number of palette colors %i (should be 256)\n", mod->name, *numi );
 		return;
 	}
 
-	if( pin->numframes < 1 )
+	if( mod->numframes < 1 )
 	{
-		MsgDev( D_ERROR, "%s has invalid # of frames: %d\n", mod->name, pin->numframes );
+		MsgDev( D_ERROR, "%s has invalid # of frames: %d\n", mod->name, mod->numframes );
 		return;
 	}
 
-	for( i = 0; i < pin->numframes; i++ )
+	for( i = 0; i < mod->numframes; i++ )
 	{
 		frametype_t frametype = pframetype->type;
 		psprite->frames[i].type = frametype;

@@ -348,28 +348,28 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 
 void Image_GetPaletteQ1( void )
 {
-	image.d_rendermode = LUMP_NORMAL;
-
 	if( !q1palette_init )
 	{
+		image.d_rendermode = LUMP_NORMAL;
 		Image_SetPalette( palette_q1, d_8toQ1table );
 		d_8toQ1table[255] = 0; // 255 is transparent
 		q1palette_init = true;
 	}
 
+	image.d_rendermode = LUMP_QUAKE1;
 	image.d_currentpal = d_8toQ1table;
 }
 
 void Image_GetPaletteHL( void )
 {
-	image.d_rendermode = LUMP_NORMAL;
-
 	if( !hlpalette_init )
 	{
+		image.d_rendermode = LUMP_NORMAL;
 		Image_SetPalette( palette_hl, d_8toHLtable );
 		hlpalette_init = true;
 	}
 
+	image.d_rendermode = LUMP_HALFLIFE;
 	image.d_currentpal = d_8toHLtable;
 }
 
@@ -393,7 +393,22 @@ void Image_GetPaletteLMP( const byte *pal, int rendermode )
 		Image_SetPalette( pal, d_8to24table );
 		image.d_currentpal = d_8to24table;
 	}
-	else Image_GetPaletteHL(); // default half-life palette          
+	else
+	{
+		switch( rendermode )
+		{
+		case LUMP_QUAKE1:
+			Image_GetPaletteQ1();
+			break;
+		case LUMP_HALFLIFE:
+			Image_GetPaletteHL(); // default half-life palette
+			break;
+		default:
+			MsgDev( D_ERROR, "Image_GetPaletteLMP: invalid palette specified\n" );
+			Image_GetPaletteHL(); // defaulting to half-life palette
+			break;
+		}
+	}
 }
 
 void Image_ConvertPalTo24bit( rgbdata_t *pic )

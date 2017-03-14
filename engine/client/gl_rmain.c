@@ -1463,7 +1463,6 @@ static render_api_t gRenderAPI =
 	COM_CompareFileTime,
 	Host_Error,
 	pfnSPR_LoadExt,
-	Mod_TesselatePolygon,
 	R_StudioGetTexture,
 	GL_GetOverviewParms,
 	S_FadeMusicVolume,

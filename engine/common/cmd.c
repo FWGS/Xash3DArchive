@@ -962,30 +962,40 @@ void Cmd_ExecuteString( char *text )
 	// execute the command line
 	Cmd_TokenizeString( text );		
 
-	if( !Cmd_Argc()) return; // no tokens
+	if( !Cmd_Argc( )) return; // no tokens
 
-	// check aliases
-	for( a = cmd_alias; a; a = a->next )
+	if( !host.apply_game_config )
 	{
-		if( !Q_stricmp( cmd_argv[0], a->name ))
+		// check aliases
+		for( a = cmd_alias; a; a = a->next )
 		{
-			Cbuf_InsertText( a->value );
-			return;
+			if( !Q_stricmp( cmd_argv[0], a->name ))
+			{
+				Cbuf_InsertText( a->value );
+				return;
+			}
 		}
 	}
 
-	// check functions
-	for( cmd = cmd_functions; cmd; cmd = cmd->next )
+	// special mode for restore game.dll archived cvars
+	if( !host.apply_game_config || !Q_strcmp( cmd_argv[0], "exec" ))
 	{
-		if( !Q_stricmp( cmd_argv[0], cmd->name ) && cmd->function )
+		// check functions
+		for( cmd = cmd_functions; cmd; cmd = cmd->next )
 		{
-			cmd->function();
-			return;
+			if( !Q_stricmp( cmd_argv[0], cmd->name ) && cmd->function )
+			{
+				cmd->function();
+				return;
+			}
 		}
 	}
 
 	// check cvars
 	if( Cvar_Command( )) return;
+
+	if( host.apply_game_config )
+		return; // don't send nothing to server: we is a server!
 
 	// forward the command line to the server, so the entity DLL can parse it
 	if( host.type == HOST_NORMAL )

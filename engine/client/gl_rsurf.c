@@ -829,7 +829,6 @@ R_BlendLightmaps
 void R_BlendLightmaps( void )
 {
 	msurface_t	*surf, *newsurf = NULL;
-	mextrasurf_t	*info;
 	int		i;
 
 	if( r_fullbright->value || !cl.worldmodel->lightdata )
@@ -876,7 +875,7 @@ void R_BlendLightmaps( void )
 		{
 			GL_Bind( GL_TEXTURE0, tr.lightmapTextures[i] );
 
-			for( surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->lightmapchain )
+			for( surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->info->lightmapchain )
 			{
 				if( surf->polys ) DrawGLPolyChain( surf->polys, 0.0f, 0.0f );
 			}
@@ -894,7 +893,7 @@ void R_BlendLightmaps( void )
 
 		newsurf = gl_lms.dynamic_surfaces;
 
-		for( surf = gl_lms.dynamic_surfaces; surf != NULL; surf = surf->lightmapchain )
+		for( surf = gl_lms.dynamic_surfaces; surf != NULL; surf = surf->info->lightmapchain )
 		{
 			int	smax, tmax;
 			int	sample_size;
@@ -903,12 +902,11 @@ void R_BlendLightmaps( void )
 			sample_size = Mod_SampleSizeForFace( surf );
 			smax = ( surf->extents[0] / sample_size ) + 1;
 			tmax = ( surf->extents[1] / sample_size ) + 1;
-			info = SURF_INFO( surf, RI.currentmodel );
 
-			if( LM_AllocBlock( smax, tmax, &info->dlight_s, &info->dlight_t ))
+			if( LM_AllocBlock( smax, tmax, &surf->info->dlight_s, &surf->info->dlight_t ))
 			{
 				base = gl_lms.lightmap_buffer;
-				base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
+				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * 4;
 
 				R_BuildLightMap( surf, base, BLOCK_SIZE * 4, true );
 			}
@@ -920,15 +918,13 @@ void R_BlendLightmaps( void )
 				LM_UploadBlock( true );
 
 				// draw all surfaces that use this lightmap
-				for( drawsurf = newsurf; drawsurf != surf; drawsurf = drawsurf->lightmapchain )
+				for( drawsurf = newsurf; drawsurf != surf; drawsurf = drawsurf->info->lightmapchain )
 				{
 					if( drawsurf->polys )
 					{
-						info = SURF_INFO( drawsurf, RI.currentmodel );
-
 						DrawGLPolyChain( drawsurf->polys,
-						( drawsurf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ), 
-						( drawsurf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
+						( drawsurf->light_s - drawsurf->info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ), 
+						( drawsurf->light_t - drawsurf->info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
 					}
 				}
 
@@ -937,14 +933,12 @@ void R_BlendLightmaps( void )
 				// clear the block
 				LM_InitBlock();
 
-				info = SURF_INFO( surf, RI.currentmodel );
-
 				// try uploading the block now
-				if( !LM_AllocBlock( smax, tmax, &info->dlight_s, &info->dlight_t ))
+				if( !LM_AllocBlock( smax, tmax, &surf->info->dlight_s, &surf->info->dlight_t ))
 					Host_Error( "AllocBlock: full\n" );
 
 				base = gl_lms.lightmap_buffer;
-				base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
+				base += ( surf->info->dlight_t * BLOCK_SIZE + surf->info->dlight_s ) * 4;
 
 				R_BuildLightMap( surf, base, BLOCK_SIZE * 4, true );
 			}
@@ -953,15 +947,13 @@ void R_BlendLightmaps( void )
 		// draw remainder of dynamic lightmaps that haven't been uploaded yet
 		if( newsurf ) LM_UploadBlock( true );
 
-		for( surf = newsurf; surf != NULL; surf = surf->lightmapchain )
+		for( surf = newsurf; surf != NULL; surf = surf->info->lightmapchain )
 		{
 			if( surf->polys )
 			{
-				info = SURF_INFO( surf, RI.currentmodel );
-
 				DrawGLPolyChain( surf->polys,
-				( surf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ),
-				( surf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
+				( surf->light_s - surf->info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ),
+				( surf->light_t - surf->info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
 			}
 		}
 	}
@@ -1068,7 +1060,7 @@ void R_RenderDetails( void )
 
 		for( p = es; p; p = p->detailchain )
 		{
-			fa = INFO_SURF( p, RI.currentmodel );
+			fa = p->surf;
 			glt = R_GetTexture( fa->texinfo->texture->gl_texturenum ); // get texture scale
 			DrawGLPoly( fa->polys, glt->xscale, glt->yscale );
                     }
@@ -1112,9 +1104,9 @@ void R_RenderBrushPoly( msurface_t *fa )
 
 	if( RP_NORMALPASS() && fa->flags & SURF_REFLECT )
 	{
-		if( SURF_INFO( fa, RI.currentmodel )->mirrortexturenum )
+		if( fa->info->mirrortexturenum )
 		{
-			GL_Bind( GL_TEXTURE0, SURF_INFO( fa, RI.currentmodel )->mirrortexturenum );
+			GL_Bind( GL_TEXTURE0, fa->info->mirrortexturenum );
 			is_mirror = true;
 
 			// BEGIN WATER STUFF
@@ -1128,7 +1120,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 		else GL_Bind( GL_TEXTURE0, t->gl_texturenum ); // dummy
 
 		// DEBUG: reset the mirror texture after drawing
-		SURF_INFO( fa, RI.currentmodel )->mirrortexturenum = 0;
+		fa->info->mirrortexturenum = 0;
 	}
 	else GL_Bind( GL_TEXTURE0, t->gl_texturenum );
 
@@ -1151,8 +1143,6 @@ void R_RenderBrushPoly( msurface_t *fa )
 
 	if( r_detailtextures->value )
 	{
-		mextrasurf_t *es = SURF_INFO( fa, RI.currentmodel );
-
 		if( RI.fogEnabled || RI.fogCustom )
 		{
 			// don't apply detail textures for windows in the fog
@@ -1160,22 +1150,22 @@ void R_RenderBrushPoly( msurface_t *fa )
 			{
 				if( t->dt_texturenum )
 				{
-					es->detailchain = detail_surfaces[t->dt_texturenum];
-					detail_surfaces[t->dt_texturenum] = es;
+					fa->info->detailchain = detail_surfaces[t->dt_texturenum];
+					detail_surfaces[t->dt_texturenum] = fa->info;
 				}
 				else
 				{
 					// draw stub detail texture for underwater surfaces
-					es->detailchain = detail_surfaces[tr.grayTexture];
-					detail_surfaces[tr.grayTexture] = es;
+					fa->info->detailchain = detail_surfaces[tr.grayTexture];
+					detail_surfaces[tr.grayTexture] = fa->info;
 				}
 				draw_details = true;
 			}
 		}
 		else if( t->dt_texturenum )
 		{
-			es->detailchain = detail_surfaces[t->dt_texturenum];
-			detail_surfaces[t->dt_texturenum] = es;
+			fa->info->detailchain = detail_surfaces[t->dt_texturenum];
+			detail_surfaces[t->dt_texturenum] = fa->info;
 			draw_details = true;
 		}
 	}
@@ -1227,18 +1217,18 @@ dynamic:
 			pglTexSubImage2D( GL_TEXTURE_2D, 0, fa->light_s, fa->light_t, smax, tmax,
 			GL_RGBA, GL_UNSIGNED_BYTE, temp );
 
-			fa->lightmapchain = gl_lms.lightmap_surfaces[fa->lightmaptexturenum];
+			fa->info->lightmapchain = gl_lms.lightmap_surfaces[fa->lightmaptexturenum];
 			gl_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
 		}
 		else
 		{
-			fa->lightmapchain = gl_lms.dynamic_surfaces;
+			fa->info->lightmapchain = gl_lms.dynamic_surfaces;
 			gl_lms.dynamic_surfaces = fa;
 		}
 	}
 	else
 	{
-		fa->lightmapchain = gl_lms.lightmap_surfaces[fa->lightmaptexturenum];
+		fa->info->lightmapchain = gl_lms.lightmap_surfaces[fa->lightmaptexturenum];
 		gl_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
 	}
 }
@@ -1373,18 +1363,14 @@ compare translucent surfaces
 static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
 {
 	msurface_t	*surf1, *surf2;
-	mextrasurf_t	*info1, *info2;
 	vec3_t		org1, org2;
 	float		len1, len2;
 
 	surf1 = (msurface_t *)*a;
 	surf2 = (msurface_t *)*b;
 
-	info1 = SURF_INFO( surf1, RI.currentmodel );
-	info2 = SURF_INFO( surf2, RI.currentmodel );
-
-	VectorAdd( RI.currententity->origin, info1->origin, org1 );
-	VectorAdd( RI.currententity->origin, info2->origin, org2 );
+	VectorAdd( RI.currententity->origin, surf1->info->origin, org1 );
+	VectorAdd( RI.currententity->origin, surf2->info->origin, org2 );
 
 	// compare by plane dists
 	len1 = DotProduct( org1, RI.vforward ) - RI.viewplanedist;
@@ -1875,7 +1861,7 @@ void R_DrawTriangleOutlines( void )
 	// render static surfaces first
 	for( i = 0; i < MAX_LIGHTMAPS; i++ )
 	{
-		for( surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->lightmapchain )
+		for( surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->info->lightmapchain )
 		{
 			p = surf->polys;
 			for( ; p != NULL; p = p->chain )
@@ -1890,7 +1876,7 @@ void R_DrawTriangleOutlines( void )
 	}
 
 	// render surfaces with dynamic lightmaps
-	for( surf = gl_lms.dynamic_surfaces; surf != NULL; surf = surf->lightmapchain )
+	for( surf = gl_lms.dynamic_surfaces; surf != NULL; surf = surf->info->lightmapchain )
 	{
 		p = surf->polys;
 
@@ -2049,10 +2035,6 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 
 	R_SetCacheState( surf );
 	R_BuildLightMap( surf, base, BLOCK_SIZE * 4, false );
-
-	// moved here in case we need valid lightmap coords
-	if( host.features & ENGINE_BUILD_SURFMESHES )
-		Mod_BuildSurfacePolygons( surf, SURF_INFO( surf, loadmodel ));
 }
 
 /*

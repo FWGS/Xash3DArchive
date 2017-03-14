@@ -137,6 +137,7 @@ qboolean CL_EntityCustomLerp( cl_entity_t *e )
 	case MOVETYPE_STEP:
 	case MOVETYPE_WALK:
 	case MOVETYPE_FLY:
+	case MOVETYPE_COMPOUND:
 		return false;
 	}
 
@@ -1057,7 +1058,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 		parametric = ( ent->curstate.impacttime != 0.0f && ent->curstate.starttime != 0.0f );
 
-		if( !parametric )
+		if( !parametric && ent->curstate.movetype != MOVETYPE_COMPOUND )
 		{
 			if( ent->curstate.animtime == ent->prevstate.animtime && !VectorCompare( ent->curstate.origin, ent->prevstate.origin ))
 				ent->lastmove = cl.time + 0.2;
@@ -1133,7 +1134,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 			continue;
 		}
 
-		if( ent->curstate.aiment != 0 )
+		if( ent->curstate.aiment != 0 && ent->curstate.movetype != MOVETYPE_COMPOUND )
 			ent->curstate.movetype = MOVETYPE_FOLLOW;
 
 		if( FBitSet( ent->curstate.effects, EF_NOINTERP ))

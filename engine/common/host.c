@@ -74,9 +74,6 @@ void Host_PrintEngineFeatures( void )
 	if( FBitSet( host.features, ENGINE_WRITE_LARGE_COORD ))
 		MsgDev( D_REPORT, "^3EXT:^7 big world support enabled\n" );
 
-	if( FBitSet( host.features, ENGINE_BUILD_SURFMESHES ))
-		MsgDev( D_REPORT, "^3EXT:^7 surfmeshes enabled\n" );
-
 	if( FBitSet( host.features, ENGINE_LOAD_DELUXEDATA ))
 		MsgDev( D_REPORT, "^3EXT:^7 deluxemap support enabled\n" );
 
@@ -258,9 +255,9 @@ void Host_Exec_f( void )
 		return;
 	}
 
-	if( !Q_stricmp( "settings.rc", Cmd_Argv( 1 )))
+	if( !Q_stricmp( "game.cfg", Cmd_Argv( 1 )))
 	{
-		// don't execute settings.rc in singleplayer
+		// don't execute game.cfg in singleplayer
 		if( SV_GetMaxClients() == 1 )
 			return;
 	}
@@ -281,7 +278,9 @@ void Host_Exec_f( void )
 	Q_strncat( txt, "\n", len + 2 );
 	Mem_Free( f );
 
-	MsgDev( D_INFO, "execing %s\n", Cmd_Argv( 1 ));
+	if( host.apply_game_config )
+		MsgDev( D_INFO, "execing ^2%s^7\n", Cmd_Argv( 1 ));
+	else MsgDev( D_INFO, "execing %s\n", Cmd_Argv( 1 ));
 	Cbuf_InsertText( txt );
 	Mem_Free( txt );
 }
@@ -637,6 +636,7 @@ void Host_Print( const char *txt )
 		Q_strcat( host.rd.buffer, txt );
 		return;
 	}
+
 	Con_Print( txt ); // echo to client console
 }
 
@@ -753,12 +753,16 @@ static void Host_Crash_f( void )
 Host_InitCommon
 =================
 */
-void Host_InitCommon( const char *progname, qboolean bChangeGame )
+void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 {
 	MEMORYSTATUS	lpBuffer;
 	char		dev_level[4];
+	char		progname[128];
+	char		cmdline[128];
+	qboolean		parse_cmdline = false;
 	char		szTemp[MAX_SYSPATH];
 	string		szRootPath;
+	char		*in, *out;
 
 	lpBuffer.dwLength = sizeof( MEMORYSTATUS );
 	GlobalMemoryStatus( &lpBuffer );
@@ -777,10 +781,30 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 
 	Memory_Init();		// init memory subsystem
 
-	// some commands may turn engine into infinity loop,
-	// e.g. xash.exe +game xash -game xash
-	// so we clearing all cmd_args, but leave dbg states as well
-	Sys_ParseCommandLine( GetCommandLine( ));
+	progname[0] = cmdline[0] = '\0';
+	in = (char *)hostname;
+	out = progname;
+
+	while( *in != '\0' )
+	{
+		if( parse_cmdline )
+		{
+			*out++ = *in++;
+		}
+		else
+		{
+			if( *in == ' ' )
+			{
+				parse_cmdline = true;
+				*out++ = '\0';
+				out = cmdline;
+			}
+			else *out++ = *in++; 
+		}
+	}
+	*out = '\0'; // write terminator
+
+	Sys_ParseCommandLine( GetCommandLine( ), false );
 	SetErrorMode( SEM_FAILCRITICALERRORS );	// no abort/retry/fail errors
 
 	host.mempool = Mem_AllocPool( "Zone Engine" );
@@ -823,6 +847,9 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 	}
 	else Q_strncpy( SI.ModuleName, progname, sizeof( SI.ModuleName )); 
 
+	if( Sys_CheckParm( "-dedicated" ))
+		host.type = HOST_DEDICATED;
+
 	if( host.type == HOST_DEDICATED )
 	{
 		// check for duplicate dedicated server
@@ -835,7 +862,7 @@ void Host_InitCommon( const char *progname, qboolean bChangeGame )
 			return;
 		}
 
-		Sys_MergeCommandLine( GetCommandLine( ));
+		Sys_MergeCommandLine( cmdline );
 
 		CloseHandle( host.hMutex );
 		host.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
@@ -955,21 +982,10 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 
 		Cmd_AddCommand( "quit", Sys_Quit, "quit the game" );
 		Cmd_AddCommand( "exit", Sys_Quit, "quit the game" );
-
-		// dedicated servers using settings from server.cfg file
-		Cbuf_AddText( va( "exec %s\n", "settings.rc" ));
-		Cbuf_Execute();
-
-		Cbuf_AddText( va( "map %s\n", Cvar_VariableString( "defaultmap" )));
 	}
-	else
-	{
-		Cmd_AddCommand( "minimize", Host_Minimize_f, "minimize main window to tray" );
-		Cbuf_AddText( "exec config.cfg\n" );
-	}
+	else Cmd_AddCommand( "minimize", Host_Minimize_f, "minimize main window to tray" );
 
 	host.errorframe = 0;
-	Cbuf_Execute();
 
 	// post initializations
 	switch( host.type )
@@ -978,6 +994,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 		Con_ShowConsole( false ); // hide console
 		// execute startup config and cmdline
 		Cbuf_AddText( va( "exec %s.rc\n", SI.ModuleName ));
+		Cbuf_AddText( "exec config.cfg\n" );
 		// intentional fallthrough
 	case HOST_DEDICATED:
 		// if stuffcmds wasn't run, then init.rc is probably missing, use default
@@ -992,7 +1009,6 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	Cmd_RemoveCommand( "setgl" );
 
 	// we need to execute it again here
-	Cmd_ExecuteString( "exec config.cfg\n" );
 	oldtime = Sys_DoubleTime() - 0.1;
 	SCR_CheckStartupVids(); // must be last
 

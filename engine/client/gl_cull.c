@@ -168,10 +168,7 @@ qboolean R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags 
 	}
 
 	if( frustum )
-	{
-		mextrasurf_t *info = SURF_INFO( surf, RI.currentmodel );
-		return GL_FrustumCullBox( frustum, info->mins, info->maxs, clipflags );
-	}
+		return GL_FrustumCullBox( frustum, surf->info->mins, surf->info->maxs, clipflags );
 
 	return false;
 }

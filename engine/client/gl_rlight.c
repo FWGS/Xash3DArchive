@@ -133,9 +133,7 @@ void R_MarkLights( dlight_t *light, int bit, mnode_t *node )
 
 	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
-		mextrasurf_t	*info = SURF_INFO( surf, RI.currentmodel );
-
-		if( !BoundsAndSphereIntersect( info->mins, info->maxs, light->origin, light->radius ))
+		if( !BoundsAndSphereIntersect( surf->info->mins, surf->info->maxs, light->origin, light->radius ))
 			continue;	// no intersection
 
 		if( surf->dlightframe != tr.dlightframecount )

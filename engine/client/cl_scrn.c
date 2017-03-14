@@ -518,7 +518,7 @@ void SCR_InstallParticlePalette( void )
 	if( !pic ) pic = FS_LoadImage( "gfx/palette.pal", NULL, 0 );
 
 	// NOTE: imagelib required this fakebuffer for loading internal palette
-	if( !pic ) pic = FS_LoadImage( "#valve.pal", ((byte *)&i), 768 );
+	if( !pic ) pic = FS_LoadImage( "#valve.pal", (byte *)&i, 768 );
 
 	if( pic )
 	{
@@ -545,11 +545,11 @@ void SCR_InstallParticlePalette( void )
 void SCR_RegisterTextures( void )
 {
 	// register gfx.wad images
-	cls.pauseIcon = GL_LoadTexture( "gfx.wad/paused.lmp", NULL, 0, TF_IMAGE, NULL );
+	cls.pauseIcon = GL_LoadTexture( "gfx/paused.lmp", NULL, 0, TF_IMAGE, NULL );
 	if( cl_allow_levelshots->value )
-		cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE, NULL );
-	else cls.loadingBar = GL_LoadTexture( "gfx.wad/lambda.lmp", NULL, 0, TF_IMAGE, NULL ); 
-	cls.tileImage = GL_LoadTexture( "gfx.wad/backtile.lmp", NULL, 0, TF_IMAGE, NULL );
+		cls.loadingBar = GL_LoadTexture( "gfx/lambda.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE, NULL );
+	else cls.loadingBar = GL_LoadTexture( "gfx/lambda.lmp", NULL, 0, TF_IMAGE, NULL ); 
+	cls.tileImage = GL_LoadTexture( "gfx/backtile.lmp", NULL, 0, TF_IMAGE, NULL );
 }
 
 /*

@@ -323,6 +323,7 @@ typedef struct
 	int		gmsgHudText;		// -1 if not catched (e.g. mod not registered this message)
 
 	void		*hInstance;		// pointer to game.dll
+	qboolean		config_executed;		// should to execute config.cfg once time to restore FCVAR_ARCHIVE that specified in hl.dll
 
 	union
 	{

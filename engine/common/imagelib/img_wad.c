@@ -45,7 +45,15 @@ qboolean Image_LoadPAL( const char *name, const byte *buffer, size_t filesize )
 		else if( Q_stristr( name, "gradient" ))
 			rendermode = LUMP_GRADIENT;
 		else if( Q_stristr( name, "valve" ))
+		{
+			rendermode = LUMP_HALFLIFE;
 			buffer = NULL; // force to get HL palette
+		}
+		else if( Q_stristr( name, "id" ))
+		{
+			rendermode = LUMP_QUAKE1;
+			buffer = NULL; // force to get Q1 palette
+		}
 	}
 
 	// NOTE: image.d_currentpal not cleared with Image_Reset()
@@ -219,6 +227,7 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	{
 	case LUMP_GRADIENT:
 	case LUMP_MASKED:
+	case LUMP_QUAKE1:
 		SetBits( image.flags, IMAGE_HAS_ALPHA );
 		break;
 	}

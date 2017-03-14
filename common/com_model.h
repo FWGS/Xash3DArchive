@@ -89,6 +89,8 @@ typedef struct
 	unsigned short	max_extent;	// default is 16, subdivision step ((texture_step * max_extent) - texture_step)
 	short		groupid;		// to determine equal landscapes from various groups, -1 - no group
 
+	vec3_t		mins, maxs;	// terrain bounds (fill by user)
+
 	int		reserved[32];	// just for future expansions or mod-makers
 } mfaceinfo_t;
 
@@ -101,20 +103,6 @@ typedef struct
 	texture_t		*texture;
 	int		flags;		// sky or slime, no lightmap or 256 subdivision
 } mtexinfo_t;
-
-// 73 bytes per VBO vertex
-// FIXME: align to 32 bytes
-typedef struct glvert_s
-{
-	vec3_t		vertex;		// position
-	vec3_t		normal;		// normal
-	vec2_t		stcoord;		// ST texture coords
-	vec2_t		lmcoord;		// ST lightmap coords
-	vec2_t		sccoord;		// ST scissor coords (decals only) - for normalmap coords migration
-	vec3_t		tangent;		// tangent
-	vec3_t		binormal;		// binormal
-	byte		color[4];		// colors per vertex
-} glvert_t;
 
 typedef struct glpoly_s
 {
@@ -154,13 +142,11 @@ struct decal_s
 	float		dy;		// 
 	float		scale;		// Pixel scale
 	short		texture;		// Decal texture
-	byte		flags;		// Decal flags  FDECAL_*
+	short		flags;		// Decal flags  FDECAL_*
 	short		entityIndex;	// Entity this is attached to
-// Xash3D added
+// Xash3D specific
 	vec3_t		position;		// location of the decal center in world space.
-	vec3_t		saxis;		// direction of the s axis in world space
-	struct msurfmesh_s	*mesh;		// decal mesh in local space
-	int		reserved[4];	// for future expansions
+	glpoly_t		*polys;		// precomputed decal vertices
 };
 
 typedef struct mleaf_s
@@ -182,6 +168,32 @@ typedef struct mleaf_s
 	byte		ambient_sound_level[NUM_AMBIENTS];
 
 } mleaf_t;
+
+// surface extradata
+typedef struct mextrasurf_s
+{
+	vec3_t		mins, maxs;
+	vec3_t		origin;		// surface origin
+	struct msurface_s	*surf;		// upcast to surface
+
+	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
+
+	int		mirrortexturenum;	// gl texnum
+	float		mirrormatrix[4][4];
+
+	struct mextrasurf_s	*mirrorchain;	// for gl_texsort drawing
+	struct mextrasurf_s	*detailchain;	// for detail textures drawing
+	struct msurface_s	*lightmapchain;	// lightmapped polys
+	struct cl_entity_s	*parent;		// upcast to owner entity
+	color24		*deluxemap;	// note: this is the actual deluxemap data for this surface
+// begin userdata
+	struct grasshdr_s	*grass;		// grass that linked by this surface
+	unsigned short	grasscount;	// number of bushes per polygon (used to determine total VBO size)
+	unsigned short	numverts;		// world->vertexes[]
+	int		firstvertex;	// fisrt look up in tr.tbn_vectors[], then acess to world->vertexes[]
+
+	int		reserved[32];	// just for future expansions or mod-makers
+} mextrasurf_t;
 
 typedef struct msurface_s
 {
@@ -211,43 +223,11 @@ typedef struct msurface_s
 	int		lightmaptexturenum;
 	byte		styles[MAXLIGHTMAPS];
 	int		cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
-	struct msurface_s	*lightmapchain;		// for new dlights rendering (was cached_dlight)
+	mextrasurf_t	*info;		// pointer to surface extradata (was cached_dlight)
 
 	color24		*samples;		// note: this is the actual lightmap data for this surface
 	decal_t		*pdecals;
 } msurface_t;
-
-typedef struct msurfmesh_s
-{
-	unsigned short	numVerts;
-	unsigned short	numElems;		// ~ 20 000 vertex per one surface. Should be enough
-	unsigned int	startVert;	// user-variable. may be used for construct world single-VBO
-	unsigned int	startElem;	// user-variable. may be used for construct world single-VBO
-
-	glvert_t		*verts;		// vertexes array
-	unsigned short	*elems;		// indices		
-
-	struct msurface_s	*surf;		// pointer to parent surface. Just for consistency
-	struct msurfmesh_s	*next;		// temporary chain of subdivided surfaces
-} msurfmesh_t;
-
-// surface extradata stored in cache.data for all brushmodels
-typedef struct mextrasurf_s
-{
-	vec3_t		mins, maxs;
-	vec3_t		origin;		// surface origin
-	msurfmesh_t	*mesh;		// VBO\VA ready surface mesh. Not used by engine but can be used by mod-makers
-
-	int		dlight_s, dlight_t;	// gl lightmap coordinates for dynamic lightmaps
-
-	int		mirrortexturenum;	// gl texnum
-	float		mirrormatrix[4][4];
-	struct mextrasurf_s	*mirrorchain;	// for gl_texsort drawing
-	struct mextrasurf_s	*detailchain;	// for detail textures drawing
-	color24		*deluxemap;	// note: this is the actual deluxemap data for this surface
-
-	int		reserved[32];	// just for future expansions or mod-makers
-} mextrasurf_t;
 
 typedef struct hull_s
 {

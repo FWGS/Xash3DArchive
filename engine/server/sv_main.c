@@ -31,7 +31,7 @@ CVAR_DEFINE_AUTO( rcon_password, "", 0, "remote connect password" );
 CVAR_DEFINE_AUTO( sv_filterban, "1", 0, "filter banned users" );
 CVAR_DEFINE_AUTO( sv_cheats, "0", FCVAR_SERVER, "allow cheats on server" );
 CVAR_DEFINE_AUTO( sv_instancedbaseline, "1", 0, "allow to use instanced baselines to saves network overhead" );
-CVAR_DEFINE_AUTO( sv_contact, "1", FCVAR_ARCHIVE|FCVAR_SERVER, "server techincal support contact address or web-page" );
+CVAR_DEFINE_AUTO( sv_contact, "", FCVAR_ARCHIVE|FCVAR_SERVER, "server techincal support contact address or web-page" );
 CVAR_DEFINE_AUTO( sv_minupdaterate, "10.0", FCVAR_ARCHIVE, "minimal value for 'cl_updaterate' window" );
 CVAR_DEFINE_AUTO( sv_maxupdaterate, "30.0", FCVAR_ARCHIVE, "maximal value for 'cl_updaterate' window" );
 CVAR_DEFINE_AUTO( sv_minrate, "0", FCVAR_SERVER, "min bandwidth rate allowed on server, 0 == unlimited" );
@@ -698,7 +698,6 @@ void SV_Init( void )
 	SV_InitHostCommands();
 
 	Cvar_Get ("protocol", va( "%i", PROTOCOL_VERSION ), FCVAR_READ_ONLY, "displays server protocol version" );
-	Cvar_Get ("defaultmap", "", FCVAR_SERVER, "holds the multiplayer mapname" );
 	Cvar_Get ("suitvolume", "0.25", FCVAR_ARCHIVE, "HEV suit volume" );
 	Cvar_Get ("sv_background", "0", FCVAR_READ_ONLY, "indicate what background map is running" );
 	Cvar_Get( "gamedir", GI->gamefolder, FCVAR_SERVER|FCVAR_READ_ONLY, "game folder" );
@@ -760,9 +759,9 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_friction);
 	Cvar_RegisterVariable (&sv_edgefriction);
 	Cvar_RegisterVariable (&sv_stopspeed);
-	sv_maxclients = Cvar_Get( "maxplayers", "1", FCVAR_LATCH|FCVAR_SERVER|FCVAR_UNLOGGED, "server max capacity" );
+	sv_maxclients = Cvar_Get( "maxplayers", "1", FCVAR_LATCH, "server max capacity" );
 	sv_check_errors = Cvar_Get( "sv_check_errors", "0", FCVAR_ARCHIVE, "check edicts for errors" );
-	public_server = Cvar_Get ("public", "0", FCVAR_SERVER, "change server type from private to public" );
+	public_server = Cvar_Get ("public", "0", 0, "change server type from private to public" );
 	sv_lighting_modulate = Cvar_Get( "r_lighting_modulate", "0.6", FCVAR_ARCHIVE, "lightstyles modulate scale" );
 	sv_reconnect_limit = Cvar_Get ("sv_reconnect_limit", "3", FCVAR_ARCHIVE, "max reconnect attempts" );
 	Cvar_RegisterVariable (&sv_failuretime );

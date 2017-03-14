@@ -1348,7 +1348,7 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 		e = loadmodel->surfedges[surf->firstedge + i];
 
 		if( e >= loadmodel->numedges || e <= -loadmodel->numedges )
-			Host_Error( "Mod_CalcSurfaceBounds: bad edge\n" );
+			Host_Error( "Mod_CalcSurfaceExtents: bad edge\n" );
 
 		if( e >= 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
 		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
@@ -1381,12 +1381,12 @@ Mod_CalcSurfaceBounds
 fills in surf->mins and surf->maxs
 =================
 */
-static void Mod_CalcSurfaceBounds( msurface_t *surf, mextrasurf_t *info )
+static void Mod_CalcSurfaceBounds( msurface_t *surf )
 {
 	int	i, e;
 	mvertex_t	*v;
 
-	ClearBounds( info->mins, info->maxs );
+	ClearBounds( surf->info->mins, surf->info->maxs );
 
 	for( i = 0; i < surf->numedges; i++ )
 	{
@@ -1397,506 +1397,10 @@ static void Mod_CalcSurfaceBounds( msurface_t *surf, mextrasurf_t *info )
 
 		if( e >= 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
 		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
-		AddPointToBounds( v->position, info->mins, info->maxs );
+		AddPointToBounds( v->position, surf->info->mins, surf->info->maxs );
 	}
 
-	VectorAverage( info->mins, info->maxs, info->origin );
-}
-
-/*
-=================
-Mod_BuildPolygon
-=================
-*/
-static void Mod_BuildPolygon( mextrasurf_t *info, msurface_t *surf, int numVerts, const float *verts )
-{
-	float		s, t;
-	uint		bufSize;
-	vec3_t		normal, tangent, binormal;
-	mtexinfo_t	*texinfo = surf->texinfo;
-	int		i, numElems, sample_size;
-	byte		*buffer;
-	msurfmesh_t	*mesh;
-
-	// allocate mesh
-	numElems = (numVerts - 2) * 3;
-
-	bufSize = sizeof( msurfmesh_t ) + numVerts * sizeof( glvert_t ) + numElems * sizeof( word );
-	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
-
-	sample_size = Mod_SampleSizeForFace( surf );
-	mesh = (msurfmesh_t *)buffer;
-	buffer += sizeof( msurfmesh_t );
-	mesh->numVerts = numVerts;
-	mesh->numElems = numElems;
-
-	// calc tangent space
-	if( surf->flags & SURF_PLANEBACK )
-		VectorNegate( surf->plane->normal, normal );
-	else VectorCopy( surf->plane->normal, normal );
-	VectorCopy( surf->texinfo->vecs[0], tangent );
-	VectorNegate( surf->texinfo->vecs[1], binormal );
-
-	VectorNormalize( normal ); // g-cont. this is even needed?
-	VectorNormalize( tangent );
-	VectorNormalize( binormal );
-
-	// setup pointers
-	mesh->verts = (glvert_t *)buffer;
-	buffer += numVerts * sizeof( glvert_t );
-	mesh->elems = (word *)buffer;
-	buffer += numElems * sizeof( word );
-
-	mesh->next = info->mesh;
-	mesh->surf = surf;	// NOTE: meshchains can be linked with one surface
-	info->mesh = mesh;
-
-	// create indices
-	for( i = 0; i < mesh->numVerts - 2; i++ )
-	{
-		mesh->elems[i*3+0] = 0;
-		mesh->elems[i*3+1] = i + 1;
-		mesh->elems[i*3+2] = i + 2;
-	}
-
-	for( i = 0; i < numVerts; i++, verts += 3 )
-	{
-		glvert_t	*out = &mesh->verts[i];
-
-		// vertex
-		VectorCopy( verts, out->vertex );
-		VectorCopy( tangent, out->tangent );
-		VectorCopy( binormal, out->binormal );
-		VectorCopy( normal, out->normal );
-
-		// texture coordinates
-		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3];
-		s /= texinfo->texture->width;
-
-		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3];
-		t /= texinfo->texture->height;
-
-		out->stcoord[0] = s;
-		out->stcoord[1] = t;
-
-		// lightmap texture coordinates
-		s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
-		s += surf->light_s * sample_size;
-		s += sample_size >> 1;
-		s /= BLOCK_SIZE * sample_size;
-
-		t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
-		t += surf->light_t * sample_size;
-		t += sample_size >> 1;
-		t /= BLOCK_SIZE * sample_size;
-
-		out->lmcoord[0] = s;
-		out->lmcoord[1] = t;
-
-		// clear colors (it can be used for vertex lighting)
-		memset( out->color, 0xFF, sizeof( out->color ));
-	}
-}
-
-/*
-=================
-Mod_SubdividePolygon
-=================
-*/
-static void Mod_SubdividePolygon( mextrasurf_t *info, msurface_t *surf, int numVerts, float *verts, float tessSize )
-{
-	vec3_t		vTotal, nTotal, tTotal, bTotal;
-	vec3_t		front[MAX_SIDE_VERTS], back[MAX_SIDE_VERTS];
-	float		*v, m, oneDivVerts, dist, dists[MAX_SIDE_VERTS];
-	qboolean		lightmap = (surf->flags & SURF_DRAWTILED) ? false : true;
-	vec3_t		normal, tangent, binormal, mins, maxs;
-	mtexinfo_t	*texinfo = surf->texinfo;
-	vec2_t		totalST, totalLM;
-	int		sample_size;
-	float		s, t, scale;
-	int		i, j, f, b;
-	uint		bufSize;
-	byte		*buffer;
-	msurfmesh_t	*mesh;
-
-	ClearBounds( mins, maxs );
-
-	for( i = 0, v = verts; i < numVerts; i++, v += 3 )
-		AddPointToBounds( v, mins, maxs );
-
-	sample_size = Mod_SampleSizeForFace( surf );
-
-	for( i = 0; i < 3; i++ )
-	{
-		m = tessSize * (float)floor((( mins[i] + maxs[i] ) * 0.5f ) / tessSize + 0.5f );
-
-		if( maxs[i] - m < 8.0f ) continue;
-		if( m - mins[i] < 8.0f ) continue;
-
-		// cut it
-		for( j = 0, v = verts + i; j < numVerts; j++, v += 3 )
-			dists[j] = *v - m;
-
-		// wrap cases
-		dists[j] = dists[0];
-		v -= i;
-
-		VectorCopy( verts, v );
-
-		for( f = j = b = 0, v = verts; j < numVerts; j++, v += 3 )
-		{
-			if( dists[j] >= 0.0f )
-			{
-				VectorCopy( v, front[f] );
-				f++;
-			}
-
-			if( dists[j] <= 0.0f )
-			{
-				VectorCopy( v, back[b] );
-				b++;
-			}
-			
-			if( dists[j] == 0.0f || dists[j+1] == 0.0f )
-				continue;
-			
-			if(( dists[j] > 0.0f ) != ( dists[j+1] > 0.0f ))
-			{
-				// clip point
-				dist = dists[j] / (dists[j] - dists[j+1]);
-				front[f][0] = back[b][0] = v[0] + (v[3] - v[0]) * dist;
-				front[f][1] = back[b][1] = v[1] + (v[4] - v[1]) * dist;
-				front[f][2] = back[b][2] = v[2] + (v[5] - v[2]) * dist;
-				f++, b++;
-			}
-		}
-
-		Mod_SubdividePolygon( info, surf, f, front[0], tessSize );
-		Mod_SubdividePolygon( info, surf, b, back[0], tessSize );
-		return;
-	}
-
-	bufSize = sizeof( msurfmesh_t ) + ( numVerts + 2 ) * sizeof( glvert_t ); // temp buffer has no indices
-	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
-
-	mesh = (msurfmesh_t *)buffer;
-	buffer += sizeof( msurfmesh_t );
-
-	// create vertices
-	mesh->numVerts = numVerts + 2;
-	mesh->numElems = numVerts * 3;
-
-	// calc tangent space
-	if( surf->flags & SURF_PLANEBACK )
-		VectorNegate( surf->plane->normal, normal );
-	else VectorCopy( surf->plane->normal, normal );
-	VectorCopy( surf->texinfo->vecs[0], tangent );
-	VectorNegate( surf->texinfo->vecs[1], binormal );
-
-	VectorNormalize( normal ); // g-cont. this is even needed?
-	VectorNormalize( tangent );
-	VectorNormalize( binormal );
-
-	// setup pointers
-	mesh->verts = (glvert_t *)buffer;
-	buffer += numVerts * sizeof( glvert_t );
-
-	VectorClear( vTotal );
-	VectorClear( nTotal );
-	VectorClear( bTotal );
-	VectorClear( tTotal );
-
-	totalST[0] = totalST[1] = 0;
-	totalLM[0] = totalLM[1] = 0;
-
-	scale = ( 1.0f / tessSize );
-
-	for( i = 0; i < numVerts; i++, verts += 3 )
-	{
-		glvert_t	*out = &mesh->verts[i+1];
-
-		// vertex
-		VectorCopy( verts, out->vertex );
-		VectorCopy( normal, out->normal );
-		VectorCopy( tangent, out->tangent );
-		VectorCopy( binormal, out->binormal );
-
-		VectorAdd( vTotal, verts, vTotal );
- 		VectorAdd( nTotal, normal, nTotal );
- 		VectorAdd( tTotal, tangent, tTotal );
- 		VectorAdd( bTotal, binormal, bTotal );
-
-		if( lightmap )
-		{
-			// texture coordinates
-			s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3];
-			s /= texinfo->texture->width;
-
-			t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3];
-			t /= texinfo->texture->height;
-		}
-		else
-		{
-			// texture coordinates
-			s = DotProduct( verts, texinfo->vecs[0] ) * scale;
-			t = DotProduct( verts, texinfo->vecs[1] ) * scale;
-		}
-
-		out->stcoord[0] = s;
-		out->stcoord[1] = t;
-
-		totalST[0] += s;
-		totalST[1] += t;
-
-		if( lightmap )
-		{
-			// lightmap texture coordinates
-			s = DotProduct( verts, texinfo->vecs[0] ) + texinfo->vecs[0][3] - surf->texturemins[0];
-			s += surf->light_s * sample_size;
-			s += sample_size >> 1;
-			s /= BLOCK_SIZE * sample_size;
-
-			t = DotProduct( verts, texinfo->vecs[1] ) + texinfo->vecs[1][3] - surf->texturemins[1];
-			t += surf->light_t * sample_size;
-			t += sample_size >> 1;
-			t /= BLOCK_SIZE * sample_size;
-		}
-		else
-		{
-			s = t = 0.0f;
-		}
-
-		out->lmcoord[0] = s;
-		out->lmcoord[1] = t;
-
-		totalLM[0] += s;
-		totalLM[1] += t;
-
-		// clear colors (it can be used for vertex lighting)
-		memset( out->color, 0xFF, sizeof( out->color ));
-	}
-
-	// vertex
-	oneDivVerts = ( 1.0f / (float)numVerts );
-
-	VectorScale( vTotal, oneDivVerts, mesh->verts[0].vertex );
-	VectorScale( nTotal, oneDivVerts, mesh->verts[0].normal );
-	VectorScale( tTotal, oneDivVerts, mesh->verts[0].tangent );
-	VectorScale( bTotal, oneDivVerts, mesh->verts[0].binormal );
-
-	VectorNormalize( mesh->verts[0].normal );
-	VectorNormalize( mesh->verts[0].tangent );
-	VectorNormalize( mesh->verts[0].binormal );
-
-	// texture coordinates
-	mesh->verts[0].stcoord[0] = totalST[0] * oneDivVerts;
-	mesh->verts[0].stcoord[1] = totalST[1] * oneDivVerts;
-
-	// lightmap texture coordinates
-	mesh->verts[0].lmcoord[0] = totalLM[0] * oneDivVerts;
-	mesh->verts[0].lmcoord[1] = totalLM[1] * oneDivVerts;
-
-	// copy first vertex to last
-	memcpy( &mesh->verts[i+1], &mesh->verts[1], sizeof( glvert_t ));
-
-	mesh->next = info->mesh;
-	mesh->surf = surf;	// NOTE: meshchains can be linked with one surface
-	info->mesh = mesh;
-}
-
-/*
-================
-Mod_ConvertSurface
-
-turn the polychain into one subdivided surface
-================
-*/
-static void Mod_ConvertSurface( mextrasurf_t *info, msurface_t *surf )
-{
-	msurfmesh_t	*poly, *next, *mesh;
-	int		numElems, numVerts;
-	glvert_t		*outVerts;
-	word		*outElems;
-	int		i, bufSize;
-	byte		*buffer;
-
-	// find the total vertex count and index count
-	numElems = numVerts = 0;
-
-	// determine count of indices and vertices
-	for( poly = info->mesh; poly; poly = poly->next )
-	{
-		numElems += ( poly->numVerts - 2 ) * 3;
-		numVerts += poly->numVerts;
-	}
-
-	// unsigned short limit
-	if( numVerts >= 65536 ) Host_Error( "Mod_ConvertSurface: vertex count %i exceeds 65535\n", numVerts );
-	if( numElems >= 65536 ) Host_Error( "Mod_ConvertSurface: index count %i exceeds 65535\n", numElems );
-
-	bufSize = sizeof( msurfmesh_t ) + numVerts * sizeof( glvert_t ) + numElems * sizeof( word );
-	buffer = Mem_Alloc( loadmodel->mempool, bufSize );
-
-	mesh = (msurfmesh_t *)buffer;
-	buffer += sizeof( msurfmesh_t );
-
-	mesh->numVerts = numVerts;
-	mesh->numElems = numElems;
-
-	// setup pointers
-	mesh->verts = (glvert_t *)buffer;
-	buffer += numVerts * sizeof( glvert_t );
-	mesh->elems = (word *)buffer;
-	buffer += numElems * sizeof( word );
-
-	// setup moving pointers
-	outVerts = (glvert_t *)mesh->verts;
-	outElems = (word *)mesh->elems;
-
-	// store vertex data
-	numElems = numVerts = 0;
-
-	for( poly = info->mesh; poly; poly = poly->next )
-	{
-		// indexes
-		outElems = mesh->elems + numElems;
-		outVerts = mesh->verts + numVerts;
-
-		for( i = 0; i < poly->numVerts - 2; i++ )
-		{
-			outElems[i*3+0] = numVerts;
-			outElems[i*3+1] = numVerts + i + 1;
-			outElems[i*3+2] = numVerts + i + 2;
-		}
-
-		memcpy( outVerts, poly->verts, sizeof( glvert_t ) * poly->numVerts );
-
-		numElems += (poly->numVerts - 2) * 3;
-		numVerts += poly->numVerts;
-	}
-
-	// release the old polys crap
-	for( poly = info->mesh; poly; poly = next )
-	{
-		next = poly->next;
-		Mem_Free( poly );
-	}
-
-	ASSERT( mesh->numVerts == numVerts );
-	ASSERT( mesh->numElems == numElems );
-
-	mesh->next = info->mesh;
-	mesh->surf = surf;	// NOTE: meshchains can be linked with one surface
-	info->mesh = mesh;
-}
-
-/*
-=================
-Mod_BuildSurfacePolygons
-=================
-*/
-void Mod_BuildSurfacePolygons( msurface_t *surf, mextrasurf_t *info )
-{
-	vec3_t	verts[MAX_SIDE_VERTS];
-	char	*texname;
-	int	i, e;
-	mvertex_t	*v;
-
-	if( info->mesh ) return; // already exist
-
-	// convert edges back to a normal polygon
-	for( i = 0; i < surf->numedges; i++ )
-	{
-		if( i == MAX_SIDE_VERTS )
-		{
-			MsgDev( D_ERROR, "BuildSurfMesh: poly %i exceeded %i vertexes!\n", surf - loadmodel->surfaces, MAX_SIDE_VERTS );
-			break; // too big polygon ?
-		}
-
-		e = loadmodel->surfedges[surf->firstedge + i];
-		if( e > 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
-		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
-		VectorCopy( v->position, verts[i] );
-	}
-
-	// subdivide water or sky sphere for Quake1 maps
-	if( surf->flags & SURF_DRAWTURB && !( surf->flags & SURF_REFLECT ))
-	{
-		Mod_SubdividePolygon( info, surf, surf->numedges, verts[0], 64.0f );
-		Mod_ConvertSurface( info, surf );
-	}
-	else
-	{
-		Mod_BuildPolygon( info, surf, surf->numedges, verts[0] );
-	}
-
-	if( info->mesh ) return;	// all done
-
-	if( surf->texinfo && surf->texinfo->texture )
-		texname = surf->texinfo->texture->name;
-	else texname = "notexture";
-
-	MsgDev( D_ERROR, "BuildSurfMesh: surface %i (%s) failed to build surfmesh\n", surf - loadmodel->surfaces, texname );
-}
-
-/*
-=================
-Mod_TesselatePolygon
-
-tesselate specified polygon
-by user request
-=================
-*/
-void Mod_TesselatePolygon( msurface_t *surf, model_t *mod, float tessSize )
-{
-	mextrasurf_t	*info;
-	model_t		*old = loadmodel;
-	vec3_t		verts[MAX_SIDE_VERTS];
-	char		*texname;
-	int		i, e;
-	mvertex_t		*v;
-
-	if( !surf || !mod ) return; // bad arguments?
-
-	tessSize = bound( 8.0f, tessSize, 256.0f );
-	info = SURF_INFO( surf, mod );
-	loadmodel = mod;
-
-	// release old mesh
-	if( info->mesh )
-	{
-		Mem_Free( info->mesh );
-		info->mesh = NULL;
-	}
-
-	// convert edges back to a normal polygon
-	for( i = 0; i < surf->numedges; i++ )
-	{
-		if( i == MAX_SIDE_VERTS )
-		{
-			MsgDev( D_ERROR, "BuildSurfMesh: poly %i exceeded %i vertexes!\n", surf - loadmodel->surfaces, MAX_SIDE_VERTS );
-			break; // too big polygon ?
-		}
-
-		e = loadmodel->surfedges[surf->firstedge + i];
-		if( e > 0 ) v = &loadmodel->vertexes[loadmodel->edges[e].v[0]];
-		else v = &loadmodel->vertexes[loadmodel->edges[-e].v[1]];
-		VectorCopy( v->position, verts[i] );
-	}
-
-	Mod_SubdividePolygon( info, surf, surf->numedges, verts[0], tessSize );
-	Mod_ConvertSurface( info, surf );
-
-	// restore loadmodel value
-	loadmodel = old;
-
-	if( info->mesh ) return;	// all done
-
-	if( surf->texinfo && surf->texinfo->texture )
-		texname = surf->texinfo->texture->name;
-	else texname = "notexture";
-
-	MsgDev( D_ERROR, "BuildSurfMesh: surface %i (%s) failed to build surfmesh\n", surf - loadmodel->surfaces, texname );
+	VectorAverage( surf->info->mins, surf->info->maxs, surf->info->origin );
 }
 
 /*
@@ -1918,14 +1422,16 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 	count = l->filelen / sizeof( *in );
 
 	loadmodel->numsurfaces = count;
-	loadmodel->surfaces = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t ));
-	loadmodel->cache.data =  Mem_Alloc( loadmodel->mempool, count * sizeof( mextrasurf_t ));
-	out = loadmodel->surfaces;
-	info = loadmodel->cache.data;
+	loadmodel->surfaces = out = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t ));
+	info = Mem_Alloc( loadmodel->mempool, count * sizeof( mextrasurf_t ));
 
 	for( i = 0; i < count; i++, in++, out++, info++ )
 	{
 		texture_t	*tex;
+
+		// setup crosslinks between two parts of msurface_t
+		out->info = info;
+		info->surf = out;
 
 		if(( in->firstedge + in->numedges ) > loadmodel->numsurfedges )
 		{
@@ -1947,12 +1453,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			out->flags |= (SURF_DRAWTILED|SURF_DRAWSKY);
 
 		if(( tex->name[0] == '*' && Q_stricmp( tex->name, "*default" )) || tex->name[0] == '!' )
-		{
-			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED);
-
-			if( !( host.features & ENGINE_BUILD_SURFMESHES ))
-				out->flags |= SURF_NOCULL;
-		}
+			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
 
 		if( !Q_strncmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
@@ -1978,7 +1479,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		if( out->texinfo->flags & TEX_SPECIAL )
 			out->flags |= SURF_DRAWTILED;
 
-		Mod_CalcSurfaceBounds( out, info );
+		Mod_CalcSurfaceBounds( out );
 		Mod_CalcSurfaceExtents( out );
 
 		if( loadmodel->lightdata && in->lightofs != -1 )
@@ -1989,15 +1490,11 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 			// if deluxemap is present setup it too
 			if( world.deluxedata )
-				info->deluxemap = world.deluxedata + (in->lightofs / 3);
+				out->info->deluxemap = world.deluxedata + (in->lightofs / 3);
 		}
 
 		for( j = 0; j < MAXLIGHTMAPS; j++ )
 			out->styles[j] = in->styles[j];
-
-		// build polygons for non-lightmapped surfaces
-		if( host.features & ENGINE_BUILD_SURFMESHES && (( out->flags & SURF_DRAWTILED ) || !out->samples ))
-			Mod_BuildSurfacePolygons( out, info );
 
 		if( out->flags & SURF_DRAWTURB )
 			GL_SubdivideSurface( out ); // cut up polygon for warps
@@ -2813,7 +2310,6 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		for( j = 0; i != 0 && j < mod->nummodelsurfaces; j++ )
 		{
 			msurface_t	*surf = mod->surfaces + mod->firstmodelsurface + j;
-			mextrasurf_t	*info = SURF_INFO( surf, mod );
 
 			if( surf->flags & SURF_CONVEYOR )
 				mod->flags |= MODEL_CONVEYOR;
@@ -2826,7 +2322,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 				if( surf->plane->type == PLANE_Z )
 				{
 					// kill bottom plane too
-					if( info->mins[2] == bm->mins[2] + 1.0f )
+					if( surf->info->mins[2] == bm->mins[2] + 1.0f )
 						surf->flags |= SURF_WATERCSG;
 				}
 				else

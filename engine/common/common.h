@@ -332,6 +332,7 @@ typedef struct host_parm_s
 	qboolean		overview_loading;	// another nasty hack to tell imagelib about ovierview
 	qboolean		force_draw_version;	// used when fraps is loaded
 	qboolean		write_to_clipboard;	// put image to clipboard instead of disk
+	qboolean		apply_game_config;	// when true apply only to game cvars and ignore all other commands
 	qboolean		crashed;		// set to true if crashed
 
 	// some settings were changed and needs to global update

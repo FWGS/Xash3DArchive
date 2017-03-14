@@ -375,7 +375,7 @@ void Cvar_DirectSet( convar_t *var, const char *value )
 	if( !var ) return;	// ???
 
 	// lookup for registration
-	if( CVAR_CHECK_SENTINEL( var ) || var->next == NULL )
+	if( CVAR_CHECK_SENTINEL( var ) || ( var->next == NULL && !FBitSet( var->flags, FCVAR_EXTENDED|FCVAR_ALLOCATED )))
 	{
 		// need to registering cvar fisrt
 		MsgDev( D_WARN, "Cvar_DirectSet: called for unregistered cvar '%s'\n", var->name );
@@ -472,8 +472,10 @@ void Cvar_Set( const char *var_name, const char *value )
 	convar_t	*var = Cvar_FindVar( var_name );
 
 	if( !var )
-	{	// there is an error in C code if this happens
-		MsgDev( D_ERROR, "Cvar_Set: variable '%s' not found\n", var_name );
+	{
+		// there is an error in C code if this happens
+		if( host.type != HOST_DEDICATED )
+			MsgDev( D_ERROR, "Cvar_Set: variable '%s' not found\n", var_name );
 		return;
 	}
 
@@ -600,6 +602,12 @@ qboolean Cvar_Command( void )
 		else Msg( "\"%s\" is \"%s\"\n", v->name, v->string );
 
 		return true;
+	}
+
+	if( host.apply_game_config )
+	{
+		if( !FBitSet( v->flags, FCVAR_EXTDLL ))
+			return true; // only game.dll cvars passed
 	}
 
 	if( FBitSet( v->flags, FCVAR_SPONLY ) && CL_GetMaxClients() > 1 )

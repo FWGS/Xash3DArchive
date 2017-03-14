@@ -30,11 +30,9 @@ void R_BeginDrawMirror( msurface_t *fa )
 {
 	matrix4x4		m1, m2, matrix;
 	GLfloat		genVector[4][4];
-	mextrasurf_t	*es;
 	int		i;
 
-	es = SURF_INFO( fa, RI.currentmodel );
-	Matrix4x4_Copy( matrix, es->mirrormatrix );
+	Matrix4x4_Copy( matrix, fa->info->mirrormatrix );
 
 	Matrix4x4_LoadIdentity( m1 );
 	Matrix4x4_ConcatScale( m1, 0.5f );
@@ -205,7 +203,7 @@ void R_DrawMirrors( void )
 			RI.currententity = e = tr.mirror_entities[i].ent;
 			RI.currentmodel = m = RI.currententity->model;
 
-			surf = INFO_SURF( es, m );
+			surf = es->surf;
 
 			ASSERT( RI.currententity != NULL );
 			ASSERT( RI.currentmodel != NULL );
@@ -218,7 +216,7 @@ void R_DrawMirrors( void )
 			{
 				for( tmp = mirrorchain; tmp != es; tmp = tmp->mirrorchain )
 				{
-					surf2 = INFO_SURF( tmp, m );
+					surf2 = tmp->surf;
 
 					if( !tmp->mirrortexturenum )
 						continue;	// not filled?
@@ -343,7 +341,6 @@ R_RecursiveMirrorNode
 */
 void R_RecursiveMirrorNode( mnode_t *node, uint clipflags )
 {
-	mextrasurf_t	*extrasurf;
 	int		i, clipped;
 	msurface_t	*surf, **mark;
 	mleaf_t		*pleaf;
@@ -402,15 +399,14 @@ void R_RecursiveMirrorNode( mnode_t *node, uint clipflags )
 	// draw stuff
 	for( c = node->numsurfaces, surf = cl.worldmodel->surfaces + node->firstsurface; c; c--, surf++ )
 	{
-		if(!( surf->flags & SURF_REFLECT ))
+		if( !FBitSet( surf->flags, SURF_REFLECT ))
 			continue;
 
 		if( R_CullSurface( surf, &RI.frustum, clipflags ))
 			continue;
 
-		extrasurf = SURF_INFO( surf, RI.currentmodel );
-		extrasurf->mirrorchain = tr.mirror_entities[0].chain;
-		tr.mirror_entities[0].chain = extrasurf;
+		surf->info->mirrorchain = tr.mirror_entities[0].chain;
+		tr.mirror_entities[0].chain = surf->info;
 	}
 
 	// recurse down the back side
@@ -426,7 +422,6 @@ Check all bmodel surfaces and make personal mirror chain
 */
 void R_FindBmodelMirrors( cl_entity_t *e, qboolean static_entity )
 {
-	mextrasurf_t	*extrasurf;
 	vec3_t		mins, maxs;
 	msurface_t	*psurf;
 	model_t		*clmodel;
@@ -493,9 +488,8 @@ void R_FindBmodelMirrors( cl_entity_t *e, qboolean static_entity )
 		if( R_CullSurface( psurf, frustum, 0 ))
 			continue;
 
-		extrasurf = SURF_INFO( psurf, RI.currentmodel );
-		extrasurf->mirrorchain = tr.mirror_entities[tr.num_mirror_entities].chain;
-		tr.mirror_entities[tr.num_mirror_entities].chain = extrasurf;
+		psurf->info->mirrorchain = tr.mirror_entities[tr.num_mirror_entities].chain;
+		tr.mirror_entities[tr.num_mirror_entities].chain = psurf->info;
 	}
 
 	// store new mirror entity

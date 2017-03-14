@@ -30,9 +30,6 @@ GNU General Public License for more details.
 #define CL_RENDER_INTERFACE_VERSION	36
 #define MAX_STUDIO_DECALS		4096	// + unused space of BSP decals
 
-#define SURF_INFO( surf, mod )	((mextrasurf_t *)mod->cache.data + (surf - mod->surfaces)) 
-#define INFO_SURF( surf, mod )	(mod->surfaces + (surf - (mextrasurf_t *)mod->cache.data)) 
-
 // render info parms
 #define PARM_TEX_WIDTH	1	// all parms with prefix 'TEX_' receive arg as texnum
 #define PARM_TEX_HEIGHT	2	// otherwise it's not used
@@ -220,7 +217,6 @@ typedef struct render_api_s
 	int		(*COM_CompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
 	void		(*Host_Error)( const char *error, ... ); // cause Host Error
 	int		(*SPR_LoadExt)( const char *szPicName, unsigned int texFlags ); // extended version of SPR_Load
-	void		(*TessPolygon)( struct msurface_s *surf, struct model_s *mod, float tessSize );
 	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );
 	const struct ref_overview_s *( *GetOverviewParms )( void );
 	void		(*S_FadeMusicVolume)( float fadePercent );	// fade background track (0-100 percents)

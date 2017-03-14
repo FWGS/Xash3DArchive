@@ -148,7 +148,7 @@ GNU General Public License for more details.
 #define FDECAL_DONTSAVE		0x04	// Decal was loaded from adjacent level, don't save it for this level
 // reserved			0x08
 // reserved			0x10
-#define FDECAL_USESAXIS		0x20	// Uses the s axis field to determine orientation (footprints)
+// reserved			0x20
 #define FDECAL_STUDIO		0x40	// Indicates a studio decal
 #define FDECAL_LOCAL_SPACE		0x80	// decal is in local space (any decal after serialization)
 

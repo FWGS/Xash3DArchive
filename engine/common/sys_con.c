@@ -478,7 +478,7 @@ void Sys_InitLog( void )
 {
 	const char	*mode;
 
-	if( host.change_game )
+	if( host.change_game && host.type != HOST_DEDICATED )
 		mode = "a";
 	else mode = "w";
 

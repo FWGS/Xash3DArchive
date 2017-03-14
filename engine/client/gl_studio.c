@@ -1598,8 +1598,12 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 	{
 		int sequence = bound( 0, ent->curstate.sequence, m_pStudioHeader->numseq - 1 );
 		mstudioseqdesc_t *pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + sequence;
+		vec3_t size;
 
-		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ) && !pseqdesc->activity && m_pStudioHeader->numseq > 1 )
+		VectorSubtract( pseqdesc->bbmax, pseqdesc->bbmin, size );
+		total = Q_max( size[0], Q_max( size[1], size[2] ));
+
+		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ) && !pseqdesc->activity && m_pStudioHeader->numseq > 1 && total > 128.0f )
 			Matrix3x4_OriginFromMatrix( g_studio.lighttransform[0], origin );
 		else Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, origin );
 	}
@@ -1634,9 +1638,9 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		{
 			VectorSet( lightDir, mv->skyvec_x, mv->skyvec_y, mv->skyvec_z );
 
-			light.r = LightToTexGamma( mv->skycolor_r );
-			light.g = LightToTexGamma( mv->skycolor_g );
-			light.b = LightToTexGamma( mv->skycolor_b );
+			light.r = mv->skycolor_r;
+			light.g = mv->skycolor_g;
+			light.b = mv->skycolor_b;
 		}
 	}
 
@@ -3394,11 +3398,16 @@ void R_DrawStudioModel( cl_entity_t *e )
 	}
 	else
 	{
-		if( e->curstate.movetype == MOVETYPE_FOLLOW )
+		if( e->curstate.movetype == MOVETYPE_FOLLOW && e->curstate.aiment > 0 )
 		{
-			RI.currententity = CL_GetEntityByIndex( e->curstate.aiment );
-			R_StudioDrawModelInternal( RI.currententity, 0 );
-			RI.currententity = e;
+			cl_entity_t *parent = CL_GetEntityByIndex( e->curstate.aiment );
+
+			if( parent && parent->model && parent->model->type == mod_studio )
+			{
+				RI.currententity = parent;
+				R_StudioDrawModelInternal( RI.currententity, 0 );
+				RI.currententity = e;
+			}
 		}
 
 		R_StudioDrawModelInternal( e, STUDIO_RENDER|STUDIO_EVENTS );

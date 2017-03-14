@@ -75,7 +75,7 @@ void Sys_Error( const char *error, ... );
 qboolean Sys_LoadLibrary( dll_info_t *dll );
 void* Sys_GetProcAddress( dll_info_t *dll, const char* name );
 qboolean Sys_FreeLibrary( dll_info_t *dll );
-void Sys_ParseCommandLine( LPSTR lpCmdLine );
+void Sys_ParseCommandLine( LPSTR lpCmdLine, qboolean uncensored );
 void Sys_MergeCommandLine( LPSTR lpCmdLine );
 long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo );
 void Sys_SetClipboardData( const byte *buffer, size_t size );

@@ -2163,6 +2163,10 @@ void Con_VidInit( void )
 		}
 	}
 
+
+	if( !con.background ) // last chance - quake conback image
+		con.background = GL_LoadTexture( "gfx/conback.lmp", NULL, 0, TF_IMAGE, NULL );
+
 	// missed console image will be replaced as gray background like X-Ray or Crysis
 	if( con.background == tr.defaultTexture || con.background == 0 )
 		con.background = tr.grayTexture;

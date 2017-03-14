@@ -1067,6 +1067,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	soundlist_t	soundInfo[MAX_CHANNELS];
 	string		curtrack, looptrack;
 	int		soundCount = 0;
+	byte		decalFlags;
 
 	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
@@ -1110,12 +1111,13 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 
 		nameSize = Q_strlen( entry->name ) + 1;
 		decalScale = (entry->scale * 4096);
+		decalFlags = entry->flags;
 
 		FS_Write( pFile, localPos, sizeof( localPos ));
 		FS_Write( pFile, &nameSize, sizeof( nameSize ));
 		FS_Write( pFile, entry->name, nameSize ); 
 		FS_Write( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
-		FS_Write( pFile, &entry->flags, sizeof( entry->flags ));
+		FS_Write( pFile, &decalFlags, sizeof( decalFlags ));
 		FS_Write( pFile, &decalScale, sizeof( decalScale ));
 		FS_Write( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
 
@@ -1238,6 +1240,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 	ClientSections_t	sections;
 	soundlist_t	soundInfo[MAX_CHANNELS];
 	int		soundCount;
+	byte		decalFlags;
 	
 	Q_snprintf( name, sizeof( name ), "save/%s.HL2", level );
 
@@ -1286,7 +1289,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 			FS_Read( pFile, &nameSize, sizeof( nameSize ));
 			FS_Read( pFile, entry->name, nameSize ); 
 			FS_Read( pFile, &entry->entityIndex, sizeof( entry->entityIndex ));
-			FS_Read( pFile, &entry->flags, sizeof( entry->flags ));
+			FS_Read( pFile, &decalFlags, sizeof( decalFlags ));
 			FS_Read( pFile, &decalScale, sizeof( decalScale ));
 			FS_Read( pFile, entry->impactPlaneNormal, sizeof( entry->impactPlaneNormal ));
 
@@ -1295,6 +1298,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 			else VectorCopy( localPos, entry->position );
 
 			entry->scale = ((float)decalScale / 4096.0f);
+			entry->flags = decalFlags;
 
 			if( entry->flags & FDECAL_STUDIO )
 			{

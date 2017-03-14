@@ -165,7 +165,7 @@ Sys_ParseCommandLine
 
 ==================
 */
-void Sys_ParseCommandLine( LPSTR lpCmdLine )
+void Sys_ParseCommandLine( LPSTR lpCmdLine, qboolean uncensored )
 {
 	const char	*blank = "censored";
 	static char	commandline[MAX_SYSPATH];
@@ -208,7 +208,8 @@ void Sys_ParseCommandLine( LPSTR lpCmdLine )
 		}
 	}
 
-	if( !host.change_game ) return;
+	if( uncensored || !host.change_game )
+		return;
 
 	for( i = 0; i < host.argc; i++ )
 	{
@@ -233,16 +234,42 @@ Sys_MergeCommandLine
 */
 void Sys_MergeCommandLine( LPSTR lpCmdLine )
 {
-	const char	*blank = "censored";
-	int		i;
+	static char	commandline[MAX_SYSPATH];
 
 	if( !host.change_game ) return;
 
-	for( i = 0; i < host.argc; i++ )
+	Q_strncpy( commandline, lpCmdLine, Q_strlen( lpCmdLine ) + 1 );
+	lpCmdLine = commandline; // to prevent modify original commandline
+
+	while( *lpCmdLine && ( host.argc < MAX_NUM_ARGVS ))
 	{
-		// second call
-		if( host.type == HOST_DEDICATED && !Q_strnicmp( "+menu_", host.argv[i], 6 ))
-			host.argv[i] = (char *)blank;
+		while( *lpCmdLine && *lpCmdLine <= ' ' )
+			lpCmdLine++;
+		if( !*lpCmdLine ) break;
+
+		if( *lpCmdLine == '\"' )
+		{
+			// quoted string
+			lpCmdLine++;
+			host.argv[host.argc] = lpCmdLine;
+			host.argc++;
+			while( *lpCmdLine && ( *lpCmdLine != '\"' ))
+				lpCmdLine++;
+		}
+		else
+		{
+			// unquoted word
+			host.argv[host.argc] = lpCmdLine;
+			host.argc++;
+			while( *lpCmdLine && *lpCmdLine > ' ')
+				lpCmdLine++;
+		}
+
+		if( *lpCmdLine )
+		{
+			*lpCmdLine = 0;
+			lpCmdLine++;
+		}
 	}
 }
 
