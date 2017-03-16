@@ -96,7 +96,7 @@ GNU General Public License for more details.
 
 #define MAX_VISIBLE_PACKET_BITS	10
 #define MAX_VISIBLE_PACKET		(1<<MAX_VISIBLE_PACKET_BITS)	// 1024 visible entities per frame (hl1 has 256)
-#define MAX_VISIBLE_PACKET_VIS_BYTES	((MAX_VISIBLE_PACKET + 7 ) / 8)
+#define MAX_VISIBLE_PACKET_VIS_BYTES	((MAX_VISIBLE_PACKET + 7) / 8)
 
 // additional protocol data
 #define MAX_CLIENT_BITS		5
@@ -116,6 +116,7 @@ GNU General Public License for more details.
 
 #define MAX_ENTITY_BITS		12
 #define MAX_EDICTS			(1<<MAX_ENTITY_BITS)// 12 bits = 4096 edicts
+#define MAX_EDICTS_BYTES		((MAX_EDICTS + 7) / 8)
 
 #define MAX_CUSTOM			1024	// max custom resources per level
 #define MAX_USER_MESSAGES		197	// another 58 messages reserved for engine routines

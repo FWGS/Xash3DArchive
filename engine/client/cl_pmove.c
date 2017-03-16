@@ -1230,10 +1230,7 @@ void CL_PredictMovement( qboolean repredicting )
 	double		time;
 	float		f;
 
-	if( cls.state != ca_active )
-		return;
-
-	if( cls.spectator || cl.background )
+	if( cls.state != ca_active || cls.spectator )
 		return;
 
 	if( cls.demoplayback && cl.cmd != NULL && !repredicting )

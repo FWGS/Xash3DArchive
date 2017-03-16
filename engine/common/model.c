@@ -1467,7 +1467,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 		// g-cont this texture from decals.wad he-he
 		// support !reflect for reflected water
-		if( !Q_strncmp( tex->name, "reflect", 7 ) || !Q_strncmp( tex->name, "!reflect", 8 ))
+		if( !Q_strcmp( tex->name, "reflect1" ) || !Q_strncmp( tex->name, "!reflect", 8 ))
 		{
 			out->flags |= SURF_REFLECT;
 			world.has_mirrors = true;

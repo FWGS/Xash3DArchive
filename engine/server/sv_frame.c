@@ -22,7 +22,7 @@ typedef struct
 {
 	int		num_entities;
 	entity_state_t	entities[MAX_VISIBLE_PACKET];	
-	byte		sended[MAX_VISIBLE_PACKET_VIS_BYTES];
+	byte		sended[MAX_EDICTS_BYTES];
 } sv_ents_t;
 
 int	c_fullsend;	// just a debug counter
@@ -101,7 +101,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 			continue;
 
 		// don't double add an entity through portals (in case this already added)
-		if( CHECKVISBIT( ents->sended, NUM_FOR_EDICT( ent )))
+		if( CHECKVISBIT( ents->sended, e ))
 			continue;
 
 		if( FBitSet( ent->v.effects, EF_REQUEST_PHS ))
@@ -115,7 +115,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 		if( svgame.dllFuncs.pfnAddToFullPack( state, e, ent, pClient, sv.hostflags, ( netclient != NULL ), pset ))
 		{
 			// to prevent adds it twice through portals
-			SETVISBIT( ents->sended, NUM_FOR_EDICT( ent ));
+			SETVISBIT( ents->sended, e );
 
 			if( netclient && netclient->modelindex )
 			{

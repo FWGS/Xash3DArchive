@@ -191,7 +191,7 @@ typedef struct netchan_s
 	// reliable message buffer.
 	// we keep adding to it until reliable is acknowledged.  Then we clear it.
 	int		reliable_length;
-	byte		reliable_buf[MAX_MSGLEN];	// unacked reliable message
+	byte		reliable_buf[NET_MAX_PAYLOAD];	// unacked reliable message (max size for loopback connection)
 
 	// Waiting list of buffered fragments to go onto queue.
 	// Multiple outgoing buffers can be queued in succession

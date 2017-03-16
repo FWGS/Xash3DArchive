@@ -1839,17 +1839,24 @@ R_StudioSetupLighting
 */
 void R_StudioSetupLighting( alight_t *plight )
 {
+	float	scale = 1.0f;
 	int	i;
 
 	if( !m_pStudioHeader || !plight )
 		return;
+
+	if( RI.currententity != NULL )
+		scale = RI.currententity->curstate.scale;
 
 	g_studio.ambientlight = plight->ambientlight;
 	g_studio.shadelight = plight->shadelight;
 	VectorCopy( plight->plightvec, g_studio.lightvec );
 
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )
+	{
 		Matrix3x4_VectorIRotate( g_studio.lighttransform[i], plight->plightvec, g_studio.blightvec[i] );
+		if( scale > 1.0f ) VectorNormalize( g_studio.blightvec[i] ); // in case model may be scaled
+	}
 
 	VectorCopy( plight->color, g_studio.lightcolor );
 }
@@ -2269,7 +2276,8 @@ static void R_StudioDrawPoints( void )
 	// generate shared normals for properly scaling glowing shell
 	if( RI.currententity->curstate.renderfx == kRenderFxGlowShell )
 	{
-		shellscale = RI.currententity->curstate.renderamt * (1.0f/255.0f);
+		float factor = (1.0f / 255.0f);
+		shellscale = Q_max( factor, RI.currententity->curstate.renderamt * factor );
 		R_StudioBuildNormalTable();
 		R_StudioGenerateNormals();
 	}
@@ -2728,10 +2736,13 @@ R_StudioSetupRenderer
 */
 static void R_StudioSetupRenderer( int rendermode )
 {
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	if( rendermode > kRenderTransAdd ) rendermode = 0;
 	g_studio.rendermode = bound( 0, rendermode, kRenderTransAdd );
-	if( clgame.ds.cullMode != GL_NONE ) GL_Cull( GL_FRONT );
+	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
+	// enable depthmask on studiomodels
+	if( glState.drawTrans && g_studio.rendermode != kRenderTransAdd )
+		pglDepthMask( GL_TRUE );
 	pglShadeModel( GL_SMOOTH );
 }
 
@@ -2744,10 +2755,11 @@ R_StudioRestoreRenderer
 static void R_StudioRestoreRenderer( void )
 {
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-	pglShadeModel( GL_FLAT );
 
-	if( g_studio.rendermode != kRenderNormal )
-		pglDisable( GL_BLEND );
+	// restore depthmask state for sprites etc
+	if( glState.drawTrans && g_studio.rendermode != kRenderTransAdd )
+		pglDepthMask( GL_FALSE );
+	pglShadeModel( GL_FLAT );
 	m_fDoRemap = false;
 }
 
@@ -2850,7 +2862,8 @@ void GL_StudioSetRenderMode( int rendermode )
 	switch( rendermode )
 	{
 	case kRenderNormal:
-		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		pglDepthMask( GL_TRUE );
+		pglDisable( GL_BLEND );
 		break;
 	case kRenderTransColor:
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -3439,6 +3452,7 @@ void R_RunViewmodelEvents( void )
 
 	for( i = 0; i < 4; i++ )
 		VectorCopy( cl.simorg, RI.currententity->attachment[i] );
+	RI.currentmodel = RI.currententity->model;
 
 	R_StudioDrawModelInternal( RI.currententity, STUDIO_EVENTS );
 }
@@ -3472,6 +3486,7 @@ void R_DrawViewModel( void )
 
 	// hack the depth range to prevent view model from poking into walls
 	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
+	RI.currentmodel = RI.currententity->model;
 
 	// backface culling for left-handed weapons
 	if( R_StudioFlipViewModel( RI.currententity ) || g_iBackFaceCull )

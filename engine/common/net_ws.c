@@ -1556,9 +1556,19 @@ NET_IsConfigured
 Is winsock ip initialized?
 ====================
 */
-int NET_IsConfigured( void )
+qboolean NET_IsConfigured( void )
 {
 	return net.configured;
+}
+
+/*
+====================
+NET_IsActive
+====================
+*/
+qboolean NET_IsActive( void )
+{
+	return net.initialized;
 }
 
 /*

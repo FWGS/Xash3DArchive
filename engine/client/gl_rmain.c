@@ -505,6 +505,7 @@ R_FindViewLeaf
 */
 void R_FindViewLeaf( void )
 {
+	RI.oldviewleaf = RI.viewleaf;
 	RI.viewleaf = Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes );
 }
 

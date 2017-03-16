@@ -139,6 +139,20 @@ void Netchan_ReportFlow( netchan_t *chan )
 
 /*
 ==============
+Netchan_IsLocal
+
+detect a loopback message
+==============
+*/
+qboolean Netchan_IsLocal( netchan_t *chan )
+{
+	if( !NET_IsActive() || NET_IsLocalAddress( chan->remote_address ))
+		return true;
+	return false;
+}
+
+/*
+==============
 Netchan_Setup
 
 called to open a channel to a remote system
@@ -560,6 +574,9 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 		chunksize = chan->pfnBlockSize( chan->client );
 	else chunksize = (FRAGMENT_MAX_SIZE >> 1);
 
+	if( Netchan_IsLocal( chan ))
+		chunksize = NET_MAX_PAYLOAD;
+
 	wait = (fragbufwaiting_t *)Mem_Alloc( net_mempool, sizeof( fragbufwaiting_t ));
 
 	remaining = MSG_GetNumBitsWritten( msg );
@@ -568,7 +585,7 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 
 	while( remaining > 0 )
 	{
-		byte	buffer[MAX_MSGLEN];
+		byte	buffer[NET_MAX_PAYLOAD];
 		sizebuf_t	temp;
 
 		bits = Q_min( remaining, chunksize );
@@ -1217,7 +1234,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 		int	send_from_frag[MAX_STREAMS] = { 0, 0 };
 		int	send_from_regular = false;
 
-		if( MSG_GetNumBytesWritten( &chan->message ) > MAX_MSGLEN )
+		if( MSG_GetNumBytesWritten( &chan->message ) > MAX_MSGLEN && !Netchan_IsLocal( chan ))
 		{
 			Netchan_CreateFragments_( chan, &chan->message );
 			MSG_Clear( &chan->message );
@@ -1313,7 +1330,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 				// if it's not in-memory, then we'll need to copy it in frame the file handle.
 				if( pbuf->isfile && !pbuf->isbuffer )
 				{
-					byte	filebuffer[MAX_MSGLEN];
+					byte	filebuffer[NET_MAX_PAYLOAD];
 					file_t	*file;
 
 					file = FS_Open( pbuf->filename, "rb", false );
@@ -1400,9 +1417,10 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 
 	// is there room for the unreliable payload?
 	max_send_size = (FRAGMENT_MAX_SIZE << 3);
-	if( !send_resending ) max_send_size = MSG_GetMaxBits( &send );
+	if( !send_resending || Netchan_IsLocal( chan ))
+		max_send_size = MSG_GetMaxBits( &send );
 
-	if(( max_send_size - MSG_GetNumBitsWritten( &send ) ) >= length )
+	if(( max_send_size - MSG_GetNumBitsWritten( &send )) >= length )
 		MSG_WriteBits( &send, data, length );
 	else MsgDev( D_WARN, "Netchan_Transmit: unreliable message overflow\n" );
 
@@ -1620,7 +1638,7 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 
 				if( pbuf )
 				{
-					byte	buffer[MAX_MSGLEN];
+					byte	buffer[NET_MAX_PAYLOAD];
 					sizebuf_t	temp;
 					int	bits;
 

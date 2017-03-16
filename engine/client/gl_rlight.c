@@ -41,8 +41,7 @@ void CL_RunLightStyles( void )
 	float		scale;
 	lightstyle_t	*ls;
 
-	if( !RI.drawWorld || !cl.worldmodel )
-		return;
+	if( !cl.worldmodel ) return;
 
 	scale = r_lighting_modulate->value;
 
@@ -474,8 +473,8 @@ get_light:
 			if( f > 1.0f )
 			{
 				light.r *= (255.0f / f);
-				light.r *= (255.0f / f);
-				light.r *= ( 255.0f / f);
+				light.g *= (255.0f / f);
+				light.b *= (255.0f / f);
 			}
 
 			ambientLight->r = light.r;
@@ -500,7 +499,7 @@ colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot )
 
 	if( cl.worldmodel->lightdata )
 	{
-		light.r = light.b = light.b = light.a = 0;
+		light.r = light.g = light.b = light.a = 0;
 		last_fraction = 1.0f;
 
 		// get light from bmodels too

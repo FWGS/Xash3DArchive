@@ -275,7 +275,7 @@ void CL_ProcessEntityUpdate( cl_entity_t *ent )
 		// but it's used to reduce player body pitch...
 		if( ent->player )
 		{
-			if( RP_LOCALCLIENT( ent ) && !cl.local.thirdperson )
+			if( RP_LOCALCLIENT( ent ) && !cl.local.thirdperson && gl_allow_mirrors->value && world.has_mirrors )
 				ent->curstate.angles[PITCH] /= 3.0f;
 			else ent->curstate.angles[PITCH] /= -3.0f;
 		}
@@ -886,7 +886,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		return false;
 
 	// don't add himself on firstperson
-	if( RP_LOCALCLIENT( ent ) && !cl.local.thirdperson && cls.key_dest != key_menu && cl.viewentity == ( cl.playernum + 1 ))
+	if( RP_LOCALCLIENT( ent ) && !cl.local.thirdperson && cl.viewentity == ( cl.playernum + 1 ))
 	{
 		if( gl_allow_mirrors->value && world.has_mirrors )
 		{
