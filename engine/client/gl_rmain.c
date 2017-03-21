@@ -1209,13 +1209,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return host.features;
 	case PARM_ACTIVE_TMU:
 		return glState.activeTMU;
-	case PARM_TEX_CACHEFRAME:
-		glt = R_GetTexture( arg );
-		return glt->cacheframe;
 	case PARM_MAP_HAS_DELUXE:
 		return (world.deluxedata != NULL);
-	case PARM_CACHEFRAME:
-		return world.load_sequence;
 	case PARM_MAX_IMAGE_UNITS:
 		return GL_MaxTextureUnits();
 	case PARM_CLIENT_ACTIVE:
@@ -1252,13 +1247,6 @@ static void R_GetExtraParmsForTexture( int texture, byte *red, byte *green, byte
 	if( green ) *green = glt->fogParams[1];
 	if( blue ) *blue = glt->fogParams[2];
 	if( density ) *density = glt->fogParams[3];
-}
-
-static void GL_TextureUpdateCache( unsigned int texture )
-{
-	gltexture_t *glt = R_GetTexture( texture );
-	if( !glt || !glt->texnum ) return;
-	glt->cacheframe = world.load_sequence;
 }
 
 /*
@@ -1337,20 +1325,6 @@ static dlight_t *CL_GetEntityLight( int number )
 	return &cl_elights[number];
 }
 
-static void CL_GetBeamChains( BEAM ***active_beams, BEAM ***free_beams, particle_t ***free_trails )
-{
-	*active_beams = &cl_active_beams;
-	*free_beams = &cl_free_beams;
-	*free_trails = &cl_free_particles; 
-}
-
-static void GL_SetWorldviewProjectionMatrix( const float *glmatrix )
-{
-	if( !glmatrix ) return;
-
-	Matrix4x4_FromArrayFloatGL( RI.worldviewProjectionMatrix, glmatrix );
-}
-
 static const char *GL_TextureName( unsigned int texnum )
 {
 	return R_GetTexture( texnum )->name;	
@@ -1424,10 +1398,10 @@ static render_api_t gRenderAPI =
 	CL_GetDynamicLight,
 	CL_GetEntityLight,
 	LightToTexGamma,
-	CL_GetBeamChains,
+	NULL,
 	R_SetCurrentEntity,
 	R_SetCurrentModel,
-	GL_SetWorldviewProjectionMatrix,
+	NULL,
 	R_StoreEfrags,
 	GL_FindTexture,
 	GL_TextureName,
@@ -1437,7 +1411,7 @@ static render_api_t gRenderAPI =
 	GL_LoadTextureArrayNoFilter,
 	GL_CreateTextureArray,
 	GL_FreeTexture,
-	DrawSingleDecal,
+	NULL,
 	R_DecalSetupVerts,
 	R_EntityRemoveDecals,
 	AVI_LoadVideoNoSound,

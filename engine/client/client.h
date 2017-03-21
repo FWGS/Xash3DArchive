@@ -857,7 +857,7 @@ void CL_DrawParticlesExternal( const ref_viewpass_t *rvp, qboolean solid_pass );
 void CL_FireCustomDecal( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags, float scale );
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos );
-void R_FreeDeadParticles( particle_t **ppparticles );
+void R_FreeDeadParticles( struct particle_s **ppparticles );
 int CL_FxBlend( cl_entity_t *e );
 void CL_InitParticles( void );
 void CL_ClearParticles( void );

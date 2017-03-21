@@ -52,9 +52,9 @@ extern byte	*r_temppool;
 #define RP_LOCALCLIENT( e )	((e) != NULL && (e)->index == ( cl.playernum + 1 ) && e->player )
 #define RP_NORMALPASS()	((RI.params & RP_NONVIEWERREF) == 0 )
 
-#define TF_SKY		(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP|TF_NOPICMIP)
-#define TF_FONT		(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP)
-#define TF_IMAGE		(TF_UNCOMPRESSED|TF_NOPICMIP|TF_NOMIPMAP|TF_CLAMP)
+#define TF_SKY		(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP)
+#define TF_FONT		(TF_UNCOMPRESSED|TF_NOMIPMAP|TF_CLAMP)
+#define TF_IMAGE		(TF_UNCOMPRESSED|TF_NOMIPMAP|TF_CLAMP)
 #define TF_DECAL		(TF_CLAMP|TF_UNCOMPRESSED)
 
 typedef struct gltexture_s
@@ -66,8 +66,6 @@ typedef struct gltexture_s
 	word		height;
 	word		depth;		// texture depth or count of layers for 2D_ARRAY
 	byte		numMips;		// mipmap count
-
-	uint		cacheframe;	// worldmodel->load_sequence
 
 	GLuint		target;		// glTarget
 	GLuint		texnum;		// gl texture binding
@@ -644,7 +642,6 @@ extern convar_t	*gl_detailscale;
 extern convar_t	*gl_wireframe;
 extern convar_t	*gl_allow_static;
 extern convar_t	*gl_allow_mirrors;
-extern convar_t	*gl_picmip;
 extern convar_t	*gl_skymip;
 extern convar_t	*gl_finish;
 extern convar_t	*gl_nosort;

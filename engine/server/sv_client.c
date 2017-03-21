@@ -1137,7 +1137,7 @@ void SV_PutClientInServer( sv_client_t *cl )
 		int		i, viewEnt;
 
 		// NOTE: it's will be fragmented automatically in right ordering
-//		MSG_WriteBits( &cl->netchan.message, MSG_GetData( &sv.signon ), MSG_GetNumBitsWritten( &sv.signon ));
+		MSG_WriteBits( &cl->netchan.message, MSG_GetData( &sv.signon ), MSG_GetNumBitsWritten( &sv.signon ));
 
 		if( cl->pViewEntity )
 			viewEnt = NUM_FOR_EDICT( cl->pViewEntity );
@@ -1147,8 +1147,8 @@ void SV_PutClientInServer( sv_client_t *cl )
 		MSG_WriteWord( &cl->netchan.message, viewEnt );
 
 		// time to send signon buffer
-		Netchan_CreateFragments( &cl->netchan, &sv.signon );
-		Netchan_FragSend( &cl->netchan );
+//		Netchan_CreateFragments( &cl->netchan, &sv.signon );
+//		Netchan_FragSend( &cl->netchan );
 
 		// collect the info about all the players and send to me
 		for( i = 0, cur = svs.clients; i < svs.maxclients; i++, cur++ )

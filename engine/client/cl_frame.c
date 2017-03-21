@@ -1052,7 +1052,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 		if( !ent->model )
 		{
-			MsgDev( D_ERROR, "CL_LinkPacketEntity: entity %i without model\n", state->number );
+//			MsgDev( D_ERROR, "CL_LinkPacketEntity: entity %i without model\n", state->number );
 			continue;
 		}
 

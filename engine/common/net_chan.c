@@ -1065,6 +1065,7 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 qboolean Netchan_Validate( netchan_t *chan, sizebuf_t *sb, qboolean *frag_message, uint *fragid, int *frag_offset, int *frag_length )
 {
 	int	i, j, frag_end;
+	int	chunksize;
 
 	for( i = 0; i < MAX_STREAMS; i++ )
 	{
@@ -1084,7 +1085,12 @@ qboolean Netchan_Validate( netchan_t *chan, sizebuf_t *sb, qboolean *frag_messag
 		if( !frag_length[i] )
 			return false;
 
-		if( BitByte( frag_length[i] ) > FRAGMENT_MAX_SIZE || BitByte( frag_offset[i] ) > ( NET_MAX_PAYLOAD - 1 ))
+		chunksize = FRAGMENT_MAX_SIZE;
+
+		if( i == FRAG_NORMAL_STREAM && Netchan_IsLocal( chan ))
+			chunksize = NET_MAX_PAYLOAD;
+
+		if( BitByte( frag_length[i] ) > chunksize || BitByte( frag_offset[i] ) > ( NET_MAX_PAYLOAD - 1 ))
 			return false;
 
 		frag_end = frag_offset[i] + frag_length[i];
@@ -1233,8 +1239,12 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 		// will be true if we are active and should let chan->message get some bandwidth
 		int	send_from_frag[MAX_STREAMS] = { 0, 0 };
 		int	send_from_regular = false;
+		int	frag_size = MAX_MSGLEN;
 
-		if( MSG_GetNumBytesWritten( &chan->message ) > MAX_MSGLEN && !Netchan_IsLocal( chan ))
+		if( Netchan_IsLocal( chan ))
+			frag_size = (NET_MAX_PAYLOAD / 2);
+
+		if( MSG_GetNumBytesWritten( &chan->message ) > frag_size )
 		{
 			Netchan_CreateFragments_( chan, &chan->message );
 			MSG_Clear( &chan->message );

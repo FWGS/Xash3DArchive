@@ -552,12 +552,6 @@ static void GL_SetTextureDimensions( gltexture_t *tex, int width, int height, in
 		width >>= (int)gl_skymip->value;
 		height >>= (int)gl_skymip->value;
 	}
-	else if( !FBitSet( tex->flags, TF_NOPICMIP ))
-	{
-		// let people sample down the world textures for speed
-		width >>= (int)gl_picmip->value;
-		height >>= (int)gl_picmip->value;
-	}
 
 	// set the texture dimensions
 	tex->width = Q_max( 1, width );
@@ -1187,7 +1181,6 @@ static void GL_ProcessImage( gltexture_t *tex, rgbdata_t *pic, imgfilter_t *filt
 		// clear all the unsupported flags
 		tex->flags &= ~TF_KEEP_8BIT;
 		tex->flags &= ~TF_KEEP_RGBDATA;
-		tex->flags |= TF_NOPICMIP;
 	}
 	else
 	{
@@ -1251,11 +1244,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
 		if( !Q_stricmp( tex->name, name ))
-		{
-			// prolonge registration
-			tex->cacheframe = world.load_sequence;
 			return (tex - r_textures);
-		}
 	}
 
 	if( flags & TF_NOFLIP_TGA )
@@ -1365,11 +1354,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
 		if( !Q_stricmp( tex->name, name ))
-		{
-			// prolonge registration
-			tex->cacheframe = world.load_sequence;
 			return (tex - r_textures);
-		}
 	}
 
 	// load all the images and pack it into single image
@@ -1519,8 +1504,6 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	{
 		if( !Q_stricmp( tex->name, name ))
 		{
-			// prolonge registration
-			tex->cacheframe = world.load_sequence;
 			if( update ) break;
 			return (tex - r_textures);
 		}
@@ -1740,11 +1723,7 @@ int GL_FindTexture( const char *name )
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
 		if( !Q_stricmp( tex->name, name ))
-		{
-			// prolonge registration
-			tex->cacheframe = world.load_sequence;
 			return (tex - r_textures);
-		}
 	}
 
 	return 0;
@@ -1895,7 +1874,7 @@ static rgbdata_t *R_InitSkyTexture( texFlags_t *flags )
 	for( i = 0; i < 256; i++ )
 		((uint *)&data2D)[i] = 0xFFFFDEB5;
 
-	*flags = TF_NOPICMIP|TF_UNCOMPRESSED;
+	*flags = TF_UNCOMPRESSED;
 
 	r_image.buffer = data2D;
 	r_image.width = r_image.height = 16;
@@ -1919,7 +1898,7 @@ static rgbdata_t *R_InitCinematicTexture( texFlags_t *flags )
 	r_image.width = r_image.height = 256;
 	r_image.size = r_image.width * r_image.height * 4;
 
-	*flags = TF_NOMIPMAP|TF_NOPICMIP|TF_UNCOMPRESSED|TF_CLAMP;
+	*flags = TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CLAMP;
 
 	return &r_image;
 }
@@ -1938,7 +1917,7 @@ static rgbdata_t *R_InitSolidColorTexture( texFlags_t *flags, int color )
 	r_image.type = PF_RGB_24;
 	r_image.size = r_image.width * r_image.height * 3;
 
-	*flags = TF_NOPICMIP|TF_UNCOMPRESSED;
+	*flags = TF_UNCOMPRESSED;
 
 	data2D[0] = data2D[1] = data2D[2] = color;
 	return &r_image;
@@ -2163,7 +2142,7 @@ static rgbdata_t *R_InitDlightTexture( texFlags_t *flags )
 
 	memset( data2D, 0x00, r_image.size );
 
-	*flags = TF_NOPICMIP|TF_UNCOMPRESSED|TF_NOMIPMAP;
+	*flags = TF_UNCOMPRESSED|TF_NOMIPMAP;
 
 	return &r_image;
 }
@@ -2180,7 +2159,7 @@ static rgbdata_t *R_InitDlightTexture2( texFlags_t *flags )
 
 	memset( data2D, 0x00, r_image.size );
 
-	*flags = TF_NOPICMIP|TF_UNCOMPRESSED|TF_NOMIPMAP;
+	*flags = TF_UNCOMPRESSED|TF_NOMIPMAP;
 
 	return &r_image;
 }
@@ -2231,7 +2210,7 @@ static rgbdata_t *R_InitNormalizeCubemap( texFlags_t *flags )
 		dataCM += (size*size*4); // move pointer
 	}
 
-	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
+	*flags = (TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
 
 	r_image.width = r_image.height = size;
 	r_image.size = r_image.width * r_image.height * 4 * 6;
@@ -2276,7 +2255,7 @@ static rgbdata_t *R_InitDlightCubemap( texFlags_t *flags )
 		dataCM += (size * size * 4); // move pointer
 	}
 
-	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
+	*flags = (TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
 
 	r_image.width = r_image.height = size;
 	r_image.size = r_image.width * r_image.height * 4 * 6;
@@ -2303,7 +2282,7 @@ static rgbdata_t *R_InitGrayCubemap( texFlags_t *flags )
 	// gray cubemap - just stub for pointlights
 	memset( dataCM, 0x7F, size * size * 6 * 4 );
 
-	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
+	*flags = (TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
 
 	r_image.width = r_image.height = size;
 	r_image.size = r_image.width * r_image.height * 4 * 6;
@@ -2330,7 +2309,7 @@ static rgbdata_t *R_InitWhiteCubemap( texFlags_t *flags )
 	// white cubemap - just stub for pointlights
 	memset( dataCM, 0xFF, size * size * 6 * 4 );
 
-	*flags = (TF_NOPICMIP|TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
+	*flags = (TF_NOMIPMAP|TF_UNCOMPRESSED|TF_CUBEMAP|TF_CLAMP);
 
 	r_image.width = r_image.height = size;
 	r_image.size = r_image.width * r_image.height * 4 * 6;
@@ -2364,7 +2343,7 @@ static rgbdata_t *R_InitVSDCTCubemap( texFlags_t *flags )
 		0x00, 0x00, 0x99, 0xFF, // -Z: <0, 0>, <1.5, 2.5>
 	};
 
-	*flags = (TF_NOPICMIP|TF_UNCOMPRESSED|TF_NEAREST|TF_CUBEMAP|TF_CLAMP);
+	*flags = (TF_UNCOMPRESSED|TF_NEAREST|TF_CUBEMAP|TF_CLAMP);
 
 	r_image.width = r_image.height = 1;
 	r_image.size = r_image.width * r_image.height * 4 * 6;

@@ -153,7 +153,7 @@ typedef struct physics_interface_s
 	// alloc or destroy model custom data (called only for dedicated servers, otherwise using an client version)
 	void		(*Mod_ProcessUserData)( struct model_s *mod, qboolean create, const byte *buffer );
 	// select BSP-hull for trace with specified mins\maxs
-	void		*(*SV_HullForBsp)( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_t offset );
+	void		*(*SV_HullForBsp)( edict_t *ent, const float *mins, const float *maxs, float *offset );
 } physics_interface_t;
 
 #endif//PHYSINT_H

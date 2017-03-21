@@ -188,7 +188,7 @@ static void Cvar_Changed( convar_t *var )
 	if( FBitSet( var->flags, FCVAR_MOVEVARS ))
 		host.movevars_changed = true;
 
-	if( FBitSet( var->flags, FCVAR_RENDERINFO ))
+	if( FBitSet( var->flags, FCVAR_VIDRESTART ))
 		host.renderinfo_changed = true;
 
 	if( !Q_strcmp( var->name, "sv_cheats" ))

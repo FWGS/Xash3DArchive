@@ -43,7 +43,6 @@ convar_t	*gl_allow_mirrors;
 convar_t	*gl_wireframe;
 convar_t	*gl_round_down;
 convar_t	*gl_max_size;
-convar_t	*gl_picmip;
 convar_t	*gl_skymip;
 convar_t	*gl_finish;
 convar_t	*gl_nosort;
@@ -51,8 +50,8 @@ convar_t	*gl_vsync;
 convar_t	*gl_clear;
 convar_t	*gl_test;
 
-convar_t	*r_xpos;
-convar_t	*r_ypos;
+convar_t	*window_xpos;
+convar_t	*window_ypos;
 convar_t	*r_speeds;
 convar_t	*r_fullbright;
 convar_t	*r_norefresh;
@@ -883,7 +882,7 @@ VID_StartupGamma
 void VID_StartupGamma( void )
 {
 	BuildGammaTable( vid_gamma->value, vid_brightness->value );
-	MsgDev( D_NOTE, "VID_StartupGamma: gamma initialized\n" );
+	MsgDev( D_NOTE, "VID_StartupGamma: gamma %g brightness %g\n", vid_gamma->value, vid_brightness->value );
 	ClearBits( vid_brightness->flags, FCVAR_CHANGED );
 	ClearBits( vid_gamma->flags, FCVAR_CHANGED );
 }
@@ -1098,8 +1097,8 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 
 	if( !fullscreen )
 	{
-		x = r_xpos->value;
-		y = r_ypos->value;
+		x = window_xpos->value;
+		y = window_ypos->value;
 
 		// adjust window coordinates if necessary 
 		// so that the window is completely on screen
@@ -1544,7 +1543,6 @@ void R_RenderInfo_f( void )
 	Msg( "\n" );
 	Msg( "%s [%i x %i]\n", vidmode[(int)vid_mode->value].desc, glState.width, glState.height );
 	Msg( "\n" );
-	Msg( "PICMIP: %i\n", gl_picmip->value );
 	Msg( "SKYMIP: %i\n", gl_skymip->value );
 	Msg( "VERTICAL SYNC: %s\n", gl_vsync->value ? "enabled" : "disabled" );
 	Msg( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
@@ -1580,10 +1578,9 @@ void GL_InitCommands( void )
 	r_fastsky = Cvar_Get( "r_fastsky", "0", FCVAR_ARCHIVE, "enable algorhytm fo fast sky rendering (for old machines)" );
 	r_drawentities = Cvar_Get( "r_drawentities", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render entities" );
 	r_decals = Cvar_Get( "r_decals", "4096", FCVAR_ARCHIVE, "sets the maximum number of decals" );
-	r_xpos = Cvar_Get( "r_xpos", "130", FCVAR_RENDERINFO, "window position by horizontal" );
-	r_ypos = Cvar_Get( "r_ypos", "48", FCVAR_RENDERINFO, "window position by vertical" );
+	window_xpos = Cvar_Get( "_window_xpos", "130", FCVAR_RENDERINFO, "window position by horizontal" );
+	window_ypos = Cvar_Get( "_window_ypos", "48", FCVAR_RENDERINFO, "window position by vertical" );
 			
-	gl_picmip = Cvar_Get( "gl_picmip", "0", FCVAR_GLCONFIG, "reduces resolution of textures by powers of 2" );
 	gl_skymip = Cvar_Get( "gl_skymip", "0", FCVAR_GLCONFIG, "reduces resolution of skybox textures by powers of 2" );
 	gl_alphabits = Cvar_Get( "gl_alphabits", "8", FCVAR_GLCONFIG, "pixelformat alpha bits (0 - auto)" );
 	gl_texture_nearest = Cvar_Get( "gl_texture_nearest", "0", FCVAR_ARCHIVE, "disable texture filter" );
@@ -1613,11 +1610,11 @@ void GL_InitCommands( void )
 	// make sure gl_vsync is checked after vid_restart
 	SetBits( gl_vsync->flags, FCVAR_CHANGED );
 
-	vid_gamma = Cvar_Get( "gamma", "1.0", FCVAR_ARCHIVE, "gamma amount" );
-	vid_brightness = Cvar_Get( "brightness", "1.0", FCVAR_ARCHIVE, "brighntess factor" );
-	vid_mode = Cvar_Get( "vid_mode", VID_AUTOMODE, FCVAR_RENDERINFO, "display resolution mode" );
-	vid_fullscreen = Cvar_Get( "fullscreen", "0", FCVAR_RENDERINFO, "set in 1 to enable fullscreen mode" );
-	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", FCVAR_RENDERINFO, "fullscreen refresh rate" );
+	vid_gamma = Cvar_Get( "gamma", "1.0", FCVAR_RENDERINFO, "gamma amount" );
+	vid_brightness = Cvar_Get( "brightness", "1.0", FCVAR_RENDERINFO, "brighntess factor" );
+	vid_mode = Cvar_Get( "vid_mode", VID_AUTOMODE, FCVAR_RENDERINFO|FCVAR_VIDRESTART, "display resolution mode" );
+	vid_fullscreen = Cvar_Get( "fullscreen", "0", FCVAR_RENDERINFO|FCVAR_VIDRESTART, "set in 1 to enable fullscreen mode" );
+	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", FCVAR_RENDERINFO|FCVAR_VIDRESTART, "fullscreen refresh rate" );
 
 	Cmd_AddCommand( "r_info", R_RenderInfo_f, "display renderer info" );
 

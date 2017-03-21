@@ -243,7 +243,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 
 	if( world.sky_sphere || world.version == Q1BSP_VERSION )
 	{
-		// Using quake-style hull select for my Quake remake
+		// alternate hull select for quake maps
 		if( size[0] < 3.0f || ( model->flags & MODEL_LIQUID && ent->v.solid != SOLID_TRIGGER ))
 			hull = &model->hulls[0];
 		else if( size[0] <= 32.0f )

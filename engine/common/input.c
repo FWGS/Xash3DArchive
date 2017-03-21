@@ -489,8 +489,8 @@ LONG IN_WndProc( HWND hWnd, UINT uMsg, UINT wParam, LONG lParam )
 			style = GetWindowLong( hWnd, GWL_STYLE );
 			AdjustWindowRect( &rect, style, FALSE );
 
-			Cvar_SetValue( "r_xpos", xPos + rect.left );
-			Cvar_SetValue( "r_ypos", yPos + rect.top );
+			Cvar_SetValue( "_window_xpos", xPos + rect.left );
+			Cvar_SetValue( "_window_ypos", yPos + rect.top );
 			GetWindowRect( host.hWnd, &real_rect );
 		}
 		break;
