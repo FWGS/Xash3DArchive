@@ -180,5 +180,6 @@ inline void TextMessageSetColor( int r, int g, int b, int alpha = 255 )
 #define RANDOM_FLOAT	(*g_engfuncs.pfnRandomFloat)
 
 #define COMPARE_FILE_TIME	(*g_engfuncs.pfnCompareFileTime)
+#define VID_GET_MODE	(*g_engfuncs.pfnGetModeString)
 
 #endif//ENGINECALLBACKS_H

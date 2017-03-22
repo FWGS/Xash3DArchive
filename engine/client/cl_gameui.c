@@ -989,6 +989,7 @@ static ui_enginefuncs_t gEngfuncs =
 	pfnIsMapValid,
 	GL_ProcessTexture,
 	COM_CompareFileTime,
+	VID_GetModeString,
 };
 
 void UI_UnloadProgs( void )

@@ -437,6 +437,7 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction );
 //
 #define GL_CheckForErrors() GL_CheckForErrors_( __FILE__, __LINE__ )
 void GL_CheckForErrors_( const char *filename, const int fileline );
+const char *VID_GetModeString( int vid_mode );
 void *GL_GetProcAddress( const char *name );
 void GL_UpdateSwapInterval( void );
 qboolean GL_DeleteContext( void );
