@@ -283,7 +283,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 				return false;
 			}
 
-			if( !Image_CheckFlag( IL_KEEP_8BIT ) && ( red != green || green != blue ))
+			if( red != green || green != blue )
 				image.flags |= IMAGE_HAS_COLOR;
 
 			reflectivity[0] += red;

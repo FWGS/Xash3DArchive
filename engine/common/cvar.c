@@ -618,6 +618,8 @@ qboolean Cvar_Command( void )
 	else
 	{
 		Cvar_DirectSet( v, Cmd_Argv( 1 ));
+		if( host.apply_game_config )
+			host.sv_cvars_restored++;
 		return true;
 	}
 }

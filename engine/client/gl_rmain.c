@@ -1411,7 +1411,7 @@ static render_api_t gRenderAPI =
 	GL_LoadTextureArrayNoFilter,
 	GL_CreateTextureArray,
 	GL_FreeTexture,
-	NULL,
+	DrawSingleDecal,
 	R_DecalSetupVerts,
 	R_EntityRemoveDecals,
 	AVI_LoadVideoNoSound,

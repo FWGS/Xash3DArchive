@@ -24,9 +24,8 @@ typedef int		HIMAGE;		// handle to a graphic
 
 // flags for PIC_Load
 #define PIC_NEAREST		(1<<0)		// disable texfilter
-#define PIC_KEEP_RGBDATA	(1<<1)		// some images keep source
+#define PIC_KEEP_SOURCE	(1<<1)		// some images keep source
 #define PIC_NOFLIP_TGA	(1<<2)		// Steam background completely ignore tga attribute 0x20
-#define PIC_KEEP_8BIT	(1<<3)		// keep original 8-bit image (if present)
 
 typedef struct ui_globalvars_s
 {	

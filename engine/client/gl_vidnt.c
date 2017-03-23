@@ -28,8 +28,6 @@ GNU General Public License for more details.
 #define WINDOW_NAME			"Xash3D Window" // Half-Life
 
 convar_t	*gl_extensions;
-convar_t	*gl_alphabits;
-convar_t	*gl_stencilbits;
 convar_t	*gl_texture_anisotropy;
 convar_t	*gl_texture_lodbias;
 convar_t	*gl_texture_nearest;
@@ -41,9 +39,7 @@ convar_t	*gl_check_errors;
 convar_t	*gl_allow_static;
 convar_t	*gl_allow_mirrors;
 convar_t	*gl_wireframe;
-convar_t	*gl_round_down;
 convar_t	*gl_max_size;
-convar_t	*gl_skymip;
 convar_t	*gl_finish;
 convar_t	*gl_nosort;
 convar_t	*gl_vsync;
@@ -920,16 +916,12 @@ GL_SetPixelformat
 qboolean GL_SetPixelformat( void )
 {
 	PIXELFORMATDESCRIPTOR	PFD;
-	int			alphaBits;
-	int			stencilBits;
-	int			pixelFormat;
+	int			alphaBits = 8;
+	int			stencilBits = 8;
+	int			pixelFormat = 0;
 
 	if(( glw_state.hDC = GetDC( host.hWnd )) == NULL )
 		return false;
-
-	// set alpha/stencil
-	alphaBits = bound( 0, gl_alphabits->value, 8 );
-	stencilBits = bound( 0, gl_stencilbits->value, 8 );
 
 	if( glw_state.desktopBitsPixel < 32 )
 	{
@@ -1555,7 +1547,6 @@ void R_RenderInfo_f( void )
 	Msg( "\n" );
 	Msg( "%s [%i x %i]\n", vidmode[(int)vid_mode->value].desc, glState.width, glState.height );
 	Msg( "\n" );
-	Msg( "SKYMIP: %i\n", gl_skymip->value );
 	Msg( "VERTICAL SYNC: %s\n", gl_vsync->value ? "enabled" : "disabled" );
 	Msg( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
 		glConfig.alpha_bits, glConfig.depth_bits, glConfig.stencil_bits );
@@ -1592,20 +1583,16 @@ void GL_InitCommands( void )
 	r_decals = Cvar_Get( "r_decals", "4096", FCVAR_ARCHIVE, "sets the maximum number of decals" );
 	window_xpos = Cvar_Get( "_window_xpos", "130", FCVAR_RENDERINFO, "window position by horizontal" );
 	window_ypos = Cvar_Get( "_window_ypos", "48", FCVAR_RENDERINFO, "window position by vertical" );
-			
-	gl_skymip = Cvar_Get( "gl_skymip", "0", FCVAR_GLCONFIG, "reduces resolution of skybox textures by powers of 2" );
-	gl_alphabits = Cvar_Get( "gl_alphabits", "8", FCVAR_GLCONFIG, "pixelformat alpha bits (0 - auto)" );
+
+	gl_extensions = Cvar_Get( "gl_extensions", "1", FCVAR_GLCONFIG, "allow gl_extensions" );			
+	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", FCVAR_GLCONFIG, "compress textures to safe video memory" );
 	gl_texture_nearest = Cvar_Get( "gl_texture_nearest", "0", FCVAR_ARCHIVE, "disable texture filter" );
-	gl_round_down = Cvar_Get( "gl_round_down", "0", FCVAR_GLCONFIG, "down size non-power of two textures" );
 	gl_max_size = Cvar_Get( "gl_max_size", "512", FCVAR_ARCHIVE, "no effect in Xash3D just a legacy" );
-	gl_stencilbits = Cvar_Get( "gl_stencilbits", "8", FCVAR_GLCONFIG, "pixelformat stencil bits (0 - auto)" );
 	gl_check_errors = Cvar_Get( "gl_check_errors", "1", FCVAR_ARCHIVE, "ignore video engine errors" );
 	gl_vsync = Cvar_Get( "gl_vsync", "0", FCVAR_ARCHIVE,  "enable vertical syncronization" );
-	gl_extensions = Cvar_Get( "gl_extensions", "1", FCVAR_GLCONFIG, "allow gl_extensions" );
 	gl_detailscale = Cvar_Get( "gl_detailscale", "4.0", FCVAR_ARCHIVE, "default scale applies while auto-generate list of detail textures" );
 	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "2.0", FCVAR_ARCHIVE, "textures anisotropic filter" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", FCVAR_ARCHIVE, "LOD bias for mipmapped textures (prefomance|quality)" );
-	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", FCVAR_GLCONFIG, "compress textures to safe video memory" ); 
 	gl_keeptjunctions = Cvar_Get( "gl_keeptjunctions", "1", FCVAR_ARCHIVE, "but removing tjuncs causes blinking pixels" ); 
 	gl_allow_static = Cvar_Get( "gl_allow_static", "0", FCVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
 	gl_allow_mirrors = Cvar_Get( "gl_allow_mirrors", "1", FCVAR_ARCHIVE, "allow to draw mirror surfaces" );

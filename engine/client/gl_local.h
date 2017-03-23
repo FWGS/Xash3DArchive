@@ -632,9 +632,7 @@ extern glwstate_t		glw_state;
 //
 extern convar_t	*gl_texture_anisotropy;
 extern convar_t	*gl_extensions;
-extern convar_t	*gl_stencilbits;
 extern convar_t	*gl_check_errors;
-extern convar_t	*gl_round_down;
 extern convar_t	*gl_texture_lodbias;
 extern convar_t	*gl_texture_nearest;
 extern convar_t	*gl_compress_textures;
@@ -643,7 +641,6 @@ extern convar_t	*gl_detailscale;
 extern convar_t	*gl_wireframe;
 extern convar_t	*gl_allow_static;
 extern convar_t	*gl_allow_mirrors;
-extern convar_t	*gl_skymip;
 extern convar_t	*gl_finish;
 extern convar_t	*gl_nosort;
 extern convar_t	*gl_clear;

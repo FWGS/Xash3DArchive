@@ -799,9 +799,7 @@ static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, flo
 
 	brightness = GLARE_FALLOFF / ( dist * dist );
 	brightness = bound( 0.05f, brightness, 1.0f );
-
-	if( rendermode != kRenderWorldGlow )
-		*pscale *= dist * ( 1.0f / 200.0f );
+	*pscale *= dist * ( 1.0f / 200.0f );
 
 	return brightness;
 }
@@ -815,7 +813,7 @@ Do occlusion test for glow-sprites
 */
 qboolean R_SpriteOccluded( cl_entity_t *e, vec3_t origin, float *pscale )
 {
-	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderWorldGlow )
+	if( e->curstate.rendermode == kRenderGlow )
 	{
 		float	blend;
 		vec3_t	v;
@@ -963,7 +961,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		pglAlphaFunc( GL_GREATER, 0.0f );
 	}
 
-	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderWorldGlow )
+	if( e->curstate.rendermode == kRenderGlow )
 		pglDisable( GL_DEPTH_TEST );
 
 	// select properly rendermode
@@ -977,7 +975,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		break;
 	case kRenderGlow:
 	case kRenderTransAdd:
-	case kRenderWorldGlow:
 		pglDisable( GL_FOG );
 		pglEnable( GL_BLEND );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
@@ -1125,7 +1122,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( psprite->facecull == SPR_CULL_NONE )
 		GL_Cull( GL_FRONT );
 
-	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderWorldGlow )
+	if( e->curstate.rendermode == kRenderGlow )
 		pglEnable( GL_DEPTH_TEST );
 
 	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )

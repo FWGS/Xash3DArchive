@@ -81,9 +81,9 @@ enum
 typedef enum
 {
 	TF_NEAREST	= (1<<0),		// disable texfilter
-	TF_KEEP_RGBDATA	= (1<<1),		// some images keep source
+	TF_KEEP_SOURCE	= (1<<1),		// some images keep source
 	TF_NOFLIP_TGA	= (1<<2),		// Steam background completely ignore tga attribute 0x20
-	TF_KEEP_8BIT	= (1<<3),		// keep original 8-bit image (if present)
+// reserved
 // reserved
 	TF_UNCOMPRESSED	= (1<<5),		// don't compress texture in video memory
 	TF_CUBEMAP	= (1<<6),		// it's cubemap texture
@@ -167,7 +167,7 @@ typedef struct render_api_s
 	// Set renderer info (tell engine about changes)
 	void		(*R_SetCurrentEntity)( struct cl_entity_s *ent ); // tell engine about both currententity and currentmodel
 	void		(*R_SetCurrentModel)( struct model_s *mod );	// change currentmodel but leave currententity unchanged
-	void		(*Reserved1)( void ); // update viewprojection matrix (tracers uses it)
+	void		(*Reserved1)( void );
 	void		(*R_StoreEfrags)( struct efrag_s **ppefrag, int framecount );// store efrags for static entities
 
 	// Texture tools
@@ -181,7 +181,7 @@ typedef struct render_api_s
 	void		(*GL_FreeTexture)( unsigned int texnum );
 
 	// Decals manipulating (draw & remove)
-	void		(*Reserved2)( void );
+	void		(*DrawSingleDecal)( struct decal_s *pDecal, struct msurface_s *fa );
 	float		*(*R_DecalSetupVerts)( struct decal_s *pDecal, struct msurface_s *surf, int texture, int *outCount );
 	void		(*R_EntityRemoveDecals)( struct model_s *mod ); // remove all the decals from specified entity (BSP only)
 

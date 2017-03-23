@@ -3610,7 +3610,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
 
 		if( FBitSet( host.features, ENGINE_DISABLE_HDTEXTURES ) && FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
-			flags |= TF_KEEP_8BIT; // Paranoia2 texture alpha-tracing
+			flags |= TF_KEEP_SOURCE; // Paranoia2 texture alpha-tracing
 
 		// build the texname
 		Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );

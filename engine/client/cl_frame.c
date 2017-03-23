@@ -1050,6 +1050,10 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 		ent->curstate = *state;
 
+		// XASH SPECIFIC
+		if( ent->curstate.rendermode == kRenderNormal && ent->curstate.renderfx == kRenderFxNone )
+			ent->curstate.renderamt = 255.0f;
+
 		if( !ent->model )
 		{
 //			MsgDev( D_ERROR, "CL_LinkPacketEntity: entity %i without model\n", state->number );
@@ -1132,6 +1136,16 @@ void CL_LinkPacketEntities( frame_t *frame )
 		{
 			CL_LinkCustomEntity( ent, state );
 			continue;
+		}
+
+		if( ent->model->type != mod_brush )
+		{
+			// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
+			if( !ent->curstate.rendercolor.r && !ent->curstate.rendercolor.g && !ent->curstate.rendercolor.b )
+				ent->curstate.rendercolor.r = ent->curstate.rendercolor.g = ent->curstate.rendercolor.b = 255;
+
+			// apply scale to studiomodels and sprites only
+			if( !ent->curstate.scale ) ent->curstate.scale = 1.0f;
 		}
 
 		if( ent->curstate.aiment != 0 && ent->curstate.movetype != MOVETYPE_COMPOUND )

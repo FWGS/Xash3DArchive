@@ -545,14 +545,6 @@ static void GL_SetTextureDimensions( gltexture_t *tex, int width, int height, in
 		}
 	}
 
-	// apply custom downscales
-	if( FBitSet( tex->flags, TF_SKYSIDE ))
-	{
-		// let people sample down the sky textures for speed
-		width >>= (int)gl_skymip->value;
-		height >>= (int)gl_skymip->value;
-	}
-
 	// set the texture dimensions
 	tex->width = Q_max( 1, width );
 	tex->height = Q_max( 1, height );
@@ -1179,8 +1171,7 @@ static void GL_ProcessImage( gltexture_t *tex, rgbdata_t *pic, imgfilter_t *filt
 			tex->flags |= TF_NOMIPMAP; // disable mipmapping by user request
 
 		// clear all the unsupported flags
-		tex->flags &= ~TF_KEEP_8BIT;
-		tex->flags &= ~TF_KEEP_RGBDATA;
+		tex->flags &= ~TF_KEEP_SOURCE;
 	}
 	else
 	{
@@ -1195,7 +1186,7 @@ static void GL_ProcessImage( gltexture_t *tex, rgbdata_t *pic, imgfilter_t *filt
 			tex->flags &= ~TF_MAKELUMA;
 		}
 
-		if( !( tex->flags & TF_IMG_UPLOADED ) && ( tex->flags & ( TF_KEEP_8BIT|TF_KEEP_RGBDATA )))
+		if( !FBitSet( tex->flags, TF_IMG_UPLOADED ) && FBitSet( tex->flags, TF_KEEP_SOURCE ))
 			tex->original = FS_CopyImage( pic ); // because current pic will be expanded to rgba
 
 		// we need to expand image into RGBA buffer
@@ -1250,7 +1241,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	if( flags & TF_NOFLIP_TGA )
 		picFlags |= IL_DONTFLIP_TGA;
 
-	if( flags & TF_KEEP_8BIT )
+	if( flags & TF_KEEP_SOURCE )
 		picFlags |= IL_KEEP_8BIT;	
 
 	// set some image flags

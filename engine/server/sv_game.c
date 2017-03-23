@@ -2318,8 +2318,14 @@ void pfnServerExecute( void )
 	host.apply_game_config = true;
 	Cbuf_AddText( "exec config.cfg\n" );
 	Cbuf_Execute();
+
+	if( host.sv_cvars_restored > 0 )
+		MsgDev( D_INFO, " (%i cvars)\n", host.sv_cvars_restored );
+	else MsgDev( D_INFO, "\n" );
+
 	host.apply_game_config = false;
 	svgame.config_executed = true;
+	host.sv_cvars_restored = 0;
 }
 
 /*

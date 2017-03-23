@@ -239,7 +239,7 @@ static void UI_PlayerSetup_UpdateConfig( void )
 			if( stricmp( name, "player" ))
 			{
 				sprintf( lastImage, "models/player/%s/%s.bmp", name, name );
-				playerImage = PIC_Load( lastImage, PIC_KEEP_8BIT ); // if present of course
+				playerImage = PIC_Load( lastImage, PIC_KEEP_SOURCE ); // if present of course
 			}
 			else if( lastImage[0] && playerImage )
 			{

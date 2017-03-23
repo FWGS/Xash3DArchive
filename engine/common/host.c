@@ -279,7 +279,7 @@ void Host_Exec_f( void )
 	Mem_Free( f );
 
 	if( host.apply_game_config )
-		MsgDev( D_INFO, "execing ^2%s^7\n", Cmd_Argv( 1 ));
+		MsgDev( D_INFO, "execing ^2%s^7", Cmd_Argv( 1 ));
 	else MsgDev( D_INFO, "execing %s\n", Cmd_Argv( 1 ));
 	Cbuf_InsertText( txt );
 	Mem_Free( txt );

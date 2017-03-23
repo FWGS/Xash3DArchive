@@ -1242,7 +1242,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 		int	frag_size = MAX_MSGLEN;
 
 		if( Netchan_IsLocal( chan ))
-			frag_size = (NET_MAX_PAYLOAD / 2);
+			frag_size = (NET_MAX_PAYLOAD - MAX_MSGLEN);
 
 		if( MSG_GetNumBytesWritten( &chan->message ) > frag_size )
 		{
