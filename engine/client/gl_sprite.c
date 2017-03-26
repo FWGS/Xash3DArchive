@@ -781,7 +781,7 @@ static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, flo
 {
 	float	dist, brightness;
 	vec3_t	glowDist;
-	pmtrace_t	tr;
+	pmtrace_t	*tr;
 
 	VectorSubtract( origin, RI.vieworg, glowDist );
 	dist = VectorLength( glowDist );
@@ -790,7 +790,7 @@ static float R_SpriteGlowBlend( vec3_t origin, int rendermode, int renderfx, flo
 	{
 		tr = CL_VisTraceLine( RI.vieworg, origin, r_traceglow->value ? PM_GLASS_IGNORE : (PM_GLASS_IGNORE|PM_STUDIO_IGNORE));
 
-		if(( 1.0f - tr.fraction ) * dist > 8.0f )
+		if(( 1.0f - tr->fraction ) * dist > 8.0f )
 			return 0.0f;
 	}
 

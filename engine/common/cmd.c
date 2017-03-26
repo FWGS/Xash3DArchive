@@ -213,37 +213,21 @@ void Cbuf_Execute( void )
 }
 
 /*
-==============================================================================
-
-			SCRIPT COMMANDS
-
-==============================================================================
-*/
-/*
 ===============
-Cmd_StuffCmds_f
+Cbuf_ExecStuffCmds
 
-Adds command line parameters as script statements
-Commands lead with a +, and continue until a - or another +
-xash -dev 3 +map c1a0d
-xash -nosound -game bshift
+execute commandline
 ===============
 */
-void Cmd_StuffCmds_f( void )
+void Cbuf_ExecStuffCmds( void )
 {
-	int	i, j, l = 0;
 	char	build[MAX_CMD_LINE]; // this is for all commandline options combined (and is bounds checked)
-
-	if( Cmd_Argc() != 1 )
-	{
-		Msg( "Usage: stuffcmds : execute command line parameters\n" );
-		return;
-	}
+	int	i, j, l = 0;
 
 	// no reason to run the commandline arguments twice
-	if( host.stuffcmdsrun ) return;
+	if( !host.stuffcmds_pending )
+		return;
 
-	host.stuffcmdsrun = true;
 	build[0] = 0;
 
 	for( i = 0; i < host.argc; i++ )
@@ -282,6 +266,33 @@ void Cmd_StuffCmds_f( void )
 	// we already reserved space for the terminator
 	build[l++] = 0;
 	Cbuf_InsertText( build );
+	Cbuf_Execute(); // apply now
+
+	// this command can be called only from .rc
+	Cmd_RemoveCommand( "stuffcmds" );
+	host.stuffcmds_pending = false;
+}
+
+/*
+==============================================================================
+
+			SCRIPT COMMANDS
+
+==============================================================================
+*/
+/*
+===============
+Cmd_StuffCmds_f
+
+Adds command line parameters as script statements
+Commands lead with a +, and continue until a - or another +
+xash -dev 3 +map c1a0d
+xash -nosound -game bshift
+===============
+*/
+void Cmd_StuffCmds_f( void )
+{
+	host.stuffcmds_pending = true;
 }
 
 /*

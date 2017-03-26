@@ -447,7 +447,7 @@ texture_t *R_TextureAnimation( msurface_t *s )
 		reletive = (int)(cl.time * speed) % base->anim_total;
 	}
 
-	count = 0;	
+	count = 0;
 
 	while( base->anim_min > reletive || base->anim_max <= reletive )
 	{
@@ -1962,10 +1962,11 @@ void R_MarkLeaves( void )
 
 	if( !RI.drawWorld ) return;
 
-	if( FBitSet( r_novis->flags, FCVAR_CHANGED ))
+	if( FBitSet( r_novis->flags, FCVAR_CHANGED ) || tr.fResetVis )
 	{
 		// force recalc viewleaf
 		ClearBits( r_novis->flags, FCVAR_CHANGED );
+		tr.fResetVis = false;
 		RI.viewleaf = NULL;
 	}
 

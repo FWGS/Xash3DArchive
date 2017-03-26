@@ -36,7 +36,7 @@ CL_RunLightStyles
 void CL_RunLightStyles( void )
 {
 	int		i, k, flight, clight;
-	float		l, c, lerpfrac, backlerp;
+	float		l, lerpfrac, backlerp;
 	float		frametime = (cl.time - cl.oldtime);
 	float		scale;
 	lightstyle_t	*ls;
@@ -52,7 +52,6 @@ void CL_RunLightStyles( void )
 		if( r_fullbright->value || !cl.worldmodel->lightdata )
 		{
 			tr.lightstylevalue[i] = 256 * 256;
-			tr.lightcache[i] = 3.0f;
 			continue;
 		}
 
@@ -67,20 +66,17 @@ void CL_RunLightStyles( void )
 		if( !ls->length )
 		{
 			tr.lightstylevalue[i] = 256 * scale;
-			tr.lightcache[i] = 3.0f * scale;
 			continue;
 		}
 		else if( ls->length == 1 )
 		{
 			// single length style so don't bother interpolating
 			tr.lightstylevalue[i] = ls->map[0] * 22 * scale;
-			tr.lightcache[i] = ( ls->map[0] / 12.0f ) * 3.0f * scale;
 			continue;
 		}
 		else if( !ls->interp || !cl_lightstyle_lerping->value )
 		{
 			tr.lightstylevalue[i] = ls->map[flight%ls->length] * 22 * scale;
-			tr.lightcache[i] = ( ls->map[flight%ls->length] / 12.0f ) * 3.0f * scale;
 			continue;
 		}
 
@@ -88,15 +84,12 @@ void CL_RunLightStyles( void )
 		// frame just gone
 		k = ls->map[flight % ls->length];
 		l = (float)( k * 22.0f ) * backlerp;
-		c = (float)( k / 12.0f ) * backlerp;
 
 		// upcoming frame
 		k = ls->map[clight % ls->length];
 		l += (float)( k * 22.0f ) * lerpfrac;
-		c += (float)( k / 12.0f ) * lerpfrac;
 
 		tr.lightstylevalue[i] = (int)l * scale;
-		tr.lightcache[i] = c * 3.0f * scale;
 	}
 }
 

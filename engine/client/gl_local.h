@@ -203,8 +203,10 @@ typedef struct
 	int		realframecount;	// not including viewpasses
 	int		framecount;
 
+	qboolean		fResetVis;
+
+	byte		visbytes[(MAX_MAP_LEAFS+7)/8];	// member custom PVS
 	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
-	float		lightcache[MAX_LIGHTSTYLES];
 
 	double		frametime;	// special frametime for multipass rendering (will set to 0 on a nextview)
 	float		blend;		// global blend value

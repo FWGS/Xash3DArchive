@@ -1199,6 +1199,9 @@ void CL_EmitEntities( void )
 	// set client ideal pitch when mlook is disabled
 	CL_SetIdealPitch ();
 
+	// think thirdperson camera
+	clgame.dllFuncs.CAM_Think ();
+
 	// link all the visible clients first
 	CL_LinkPlayers ( &cl.frames[cl.parsecountmod] );
 
@@ -1213,9 +1216,6 @@ void CL_EmitEntities( void )
 
 	// fire events (client and server)
 	CL_FireEvents ();
-
-	// think thirdperson camera
-	clgame.dllFuncs.CAM_Think ();
 
 	// handle spectator camera movement
 	CL_MoveSpectatorCamera();

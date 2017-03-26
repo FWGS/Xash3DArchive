@@ -726,17 +726,17 @@ CL_VisTraceLine
 trace by visible objects (thats can be non-solid)
 =============
 */
-pmtrace_t CL_VisTraceLine( vec3_t start, vec3_t end, int flags )
+pmtrace_t *CL_VisTraceLine( vec3_t start, vec3_t end, int flags )
 {
-	int	old_usehull;
-	pmtrace_t	tr;
+	int		old_usehull;
+	static pmtrace_t	tr;
 
 	old_usehull = clgame.pmove->usehull;
 	clgame.pmove->usehull = 2;	
 	tr = PM_PlayerTraceExt( clgame.pmove, start, end, flags, clgame.pmove->numvisent, clgame.pmove->visents, -1, NULL );
 	clgame.pmove->usehull = old_usehull;
 
-	return tr;
+	return &tr;
 }
 
 /*

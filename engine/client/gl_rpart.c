@@ -655,7 +655,7 @@ CL_DrawParticlesExternal
 allow to draw effects from custom renderer
 ===============
 */
-void CL_DrawParticlesExternal( const ref_viewpass_t *rvp, qboolean solid_pass )
+void CL_DrawParticlesExternal( const ref_viewpass_t *rvp, qboolean trans_pass )
 {
 	ref_instance_t	oldRI = RI;
 
@@ -664,7 +664,10 @@ void CL_DrawParticlesExternal( const ref_viewpass_t *rvp, qboolean solid_pass )
 	R_SetupFrustum();
 	R_SetupGL( false );	// don't touch GL-states
 
-	if( solid_pass )
+	// setup PVS for frame
+	memcpy( RI.visbytes, tr.visbytes, world.visbytes );
+
+	if( trans_pass == false )
 	{
 		CL_DrawBeams( false );
 	}

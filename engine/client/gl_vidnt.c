@@ -121,6 +121,7 @@ vidmode_t vidmode[] =
 { "1680 x 1050 (wide)",	1680,	1050,	true	},
 { "1920 x 1080 (wide)",	1920,	1080,	true	},
 { "1920 x 1200 (wide)",	1920,	1200,	true	},
+{ "2560 x 1440 (wide)",	2560,	1440,	true	},
 { "2560 x 1600 (wide)",	2560,	1600,	true	},
 { "1600 x 900 (wide)",	1600,	 900,	true	},
 };
@@ -1584,7 +1585,7 @@ void GL_InitCommands( void )
 	window_xpos = Cvar_Get( "_window_xpos", "130", FCVAR_RENDERINFO, "window position by horizontal" );
 	window_ypos = Cvar_Get( "_window_ypos", "48", FCVAR_RENDERINFO, "window position by vertical" );
 
-	gl_extensions = Cvar_Get( "gl_extensions", "1", FCVAR_GLCONFIG, "allow gl_extensions" );			
+	gl_extensions = Cvar_Get( "gl_allow_extensions", "1", FCVAR_GLCONFIG, "allow gl_extensions" );			
 	gl_compress_textures = Cvar_Get( "gl_compress_textures", "0", FCVAR_GLCONFIG, "compress textures to safe video memory" );
 	gl_texture_nearest = Cvar_Get( "gl_texture_nearest", "0", FCVAR_ARCHIVE, "disable texture filter" );
 	gl_max_size = Cvar_Get( "gl_max_size", "512", FCVAR_ARCHIVE, "no effect in Xash3D just a legacy" );

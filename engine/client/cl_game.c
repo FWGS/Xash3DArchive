@@ -1194,7 +1194,7 @@ static model_t *CL_LoadSpriteModel( const char *filename, uint type, uint texFla
 	}
 
 	// load new map sprite
-	if( CL_LoadHudSprite( name, &clgame.sprites[i], type, 0 ))
+	if( CL_LoadHudSprite( name, &clgame.sprites[i], type, texFlags ))
 	{
 		if( i < ( MAX_IMAGES - 1 ))
 			clgame.sprites[i].needload = clgame.load_sequence;
@@ -2295,6 +2295,22 @@ physent_t *pfnGetPhysent( int idx )
 
 /*
 =============
+pfnGetVisent
+
+=============
+*/
+physent_t *pfnGetVisent( int idx )
+{
+	if( idx >= 0 && idx < clgame.pmove->numvisent )
+	{
+		// return physent
+		return &clgame.pmove->visents[idx];
+	}
+	return NULL;
+}
+
+/*
+=============
 pfnSetTraceHull
 
 =============
@@ -2361,6 +2377,17 @@ static struct msurface_s *pfnTraceSurface( int ground, float *vstart, float *ven
 
 	pe = &clgame.pmove->physents[ground];
 	return PM_TraceSurface( pe, vstart, vend );
+}
+
+/*
+=============
+pfnGetMovevars
+
+=============
+*/
+static movevars_t *pfnGetMoveVars( void )
+{
+	return &clgame.movevars;
 }
 	
 /*
@@ -3763,6 +3790,9 @@ static event_api_t gEventApi =
 	CL_PlayerTraceExt,
 	CL_SoundFromIndex,
 	pfnTraceSurface,
+	pfnGetMoveVars,
+	CL_VisTraceLine,
+	pfnGetVisent,
 };
 
 static demo_api_t gDemoApi =
@@ -4080,8 +4110,11 @@ qboolean CL_LoadProgs( const char *name )
 
 	CL_InitStudioAPI( );
 
-	// grab them from client.dll
-	cl_righthand = Cvar_Get( "cl_righthand", "0", FCVAR_ARCHIVE, "flip viewmodel (left to right)" );
+	// trying to grab them from client.dll
+	cl_righthand = Cvar_FindVar( "cl_righthand" );
+
+	if( cl_righthand == NULL )
+		cl_righthand = Cvar_Get( "cl_righthand", "0", FCVAR_ARCHIVE, "flip viewmodel (left to right)" );
 
 	return true;
 }

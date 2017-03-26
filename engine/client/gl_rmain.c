@@ -1076,7 +1076,8 @@ void R_RenderFrame( const ref_viewpass_t *rvp )
 	{
 		if( clgame.drawFuncs.GL_RenderFrame( rvp ))
 		{
-			RI.viewleaf = NULL;	// force markleafs next frame
+			tr.realframecount++;
+			tr.fResetVis = true;
 			return;
 		}
 	}
@@ -1174,7 +1175,7 @@ static int GL_RenderGetParm( int parm, int arg )
 	case PARM_TEX_SKYTEXNUM:
 		return tr.skytexturenum;
 	case PARM_TEX_LIGHTMAP:
-		ASSERT( arg >= 0 && arg < MAX_LIGHTMAPS );
+		arg = bound( 0, arg, MAX_LIGHTMAPS - 1 );
 		return tr.lightmapTextures[arg];
 	case PARM_SKY_SPHERE:
 		return world.sky_sphere && !world.custom_skybox;
@@ -1209,6 +1210,9 @@ static int GL_RenderGetParm( int parm, int arg )
 		return host.features;
 	case PARM_ACTIVE_TMU:
 		return glState.activeTMU;
+	case PARM_LIGHTSTYLEVALUE:
+		arg = bound( 0, arg, MAX_LIGHTSTYLES - 1 );
+		return tr.lightstylevalue[arg];
 	case PARM_MAP_HAS_DELUXE:
 		return (world.deluxedata != NULL);
 	case PARM_MAX_IMAGE_UNITS:
@@ -1227,6 +1231,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return glConfig.context;
 	case PARM_GLES_WRAPPER:
 		return glConfig.wrapper;
+	case PARM_STENCIL_ACTIVE:
+		return glState.stencilEnabled;
 	}
 	return 0;
 }
@@ -1307,6 +1313,13 @@ static void R_SetCurrentModel( model_t *mod )
 	RI.currentmodel = mod;
 }
 
+static int R_FatPVS( const vec3_t org, float radius, byte *visbuffer, qboolean merge, qboolean fullvis )
+{
+	int bytes = Mod_FatPVS( org, radius, visbuffer, world.visbytes, merge, fullvis );
+	if( visbuffer ) memcpy( tr.visbytes, visbuffer, world.visbytes );
+	return bytes;
+}
+
 static lightstyle_t *CL_GetLightStyle( int number )
 {
 	ASSERT( number >= 0 && number < MAX_LIGHTSTYLES );
@@ -1323,6 +1336,11 @@ static dlight_t *CL_GetEntityLight( int number )
 {
 	ASSERT( number >= 0 && number < MAX_ELIGHTS );
 	return &cl_elights[number];
+}
+
+static float R_GetFrameTime( void )
+{
+	return tr.frametime;
 }
 
 static const char *GL_TextureName( unsigned int texnum )
@@ -1398,10 +1416,10 @@ static render_api_t gRenderAPI =
 	CL_GetDynamicLight,
 	CL_GetEntityLight,
 	LightToTexGamma,
-	NULL,
+	R_GetFrameTime,
 	R_SetCurrentEntity,
 	R_SetCurrentModel,
-	NULL,
+	R_FatPVS,
 	R_StoreEfrags,
 	GL_FindTexture,
 	GL_TextureName,

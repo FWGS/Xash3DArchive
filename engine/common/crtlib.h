@@ -40,6 +40,7 @@ void Cbuf_Init( void );
 void Cbuf_Clear( void );
 void Cbuf_AddText( const char *text );
 void Cbuf_InsertText( const char *text );
+void Cbuf_ExecStuffCmds( void );
 void Cbuf_Execute (void);
 uint Cmd_Argc( void );
 char *Cmd_Args( void );

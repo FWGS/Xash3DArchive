@@ -995,22 +995,21 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 		// execute startup config and cmdline
 		Cbuf_AddText( va( "exec %s.rc\n", SI.ModuleName ));
 		Cbuf_AddText( "exec config.cfg\n" );
-		// intentional fallthrough
-	case HOST_DEDICATED:
-		// if stuffcmds wasn't run, then init.rc is probably missing, use default
-		if( !host.stuffcmdsrun ) Cbuf_AddText( "stuffcmds\n" );
-
 		Cbuf_Execute();
+		break;
+	case HOST_DEDICATED:
+		// allways parse commandline in dedicated-mode
+		host.stuffcmds_pending = true;
 		break;
 	}
 
 	host.change_game = false;	// done
 	Cmd_RemoveCommand( "setr" );	// remove potentially backdoor for change render settings
 	Cmd_RemoveCommand( "setgl" );
+	Cbuf_ExecStuffCmds();	// execute stuffcmds (commandline)
+	SCR_CheckStartupVids();	// must be last
 
-	// we need to execute it again here
 	oldtime = Sys_DoubleTime() - 0.1;
-	SCR_CheckStartupVids(); // must be last
 
 	// main window message loop
 	while( !host.crashed )

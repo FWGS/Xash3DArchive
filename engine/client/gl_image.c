@@ -808,7 +808,7 @@ byte *GL_ApplyGamma( const byte *source, int pixels, qboolean isNormalMap )
 	byte	*out = (byte *)source;
 	int	i;
 
-	if( !isNormalMap )
+	if( source && !isNormalMap )
 	{
 		for( i = 0; i < pixels; i++, in += 4 )
 		{

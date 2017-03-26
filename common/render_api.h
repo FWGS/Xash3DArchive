@@ -58,7 +58,7 @@ GNU General Public License for more details.
 #define PARM_CLIENT_INGAME	25
 #define PARM_FEATURES	26	// same as movevars->features
 #define PARM_ACTIVE_TMU	27	// for debug
-//reserved
+#define PARM_LIGHTSTYLEVALUE	28	// second arg is stylenum
 #define PARM_MAX_IMAGE_UNITS	29
 #define PARM_CLIENT_ACTIVE	30
 #define PARM_REBUILD_GAMMA	31	// if true lightmaps rebuilding for gamma change
@@ -66,6 +66,7 @@ GNU General Public License for more details.
 #define PARM_SURF_SAMPLESIZE	33	// lightmap resolution per face (second arg interpret as facenumber)
 #define PARM_GL_CONTEXT_TYPE	34	// opengl or opengles
 #define PARM_GLES_WRAPPER	35	//
+#define PARM_STENCIL_ACTIVE	36
 
 enum
 {
@@ -162,12 +163,12 @@ typedef struct render_api_s
 	dlight_t*		(*GetDynamicLight)( int number );
 	dlight_t*		(*GetEntityLight)( int number );
 	byte		(*LightToTexGamma)( byte color );	// software gamma support
-	void		(*Reserved0)( void );
+	float		(*GetFrameTime)( void );
 
 	// Set renderer info (tell engine about changes)
 	void		(*R_SetCurrentEntity)( struct cl_entity_s *ent ); // tell engine about both currententity and currentmodel
 	void		(*R_SetCurrentModel)( struct model_s *mod );	// change currentmodel but leave currententity unchanged
-	void		(*Reserved1)( void );
+	int		(*R_FatPVS)( const float *org, float radius, byte *visbuffer, qboolean merge, qboolean fullvis );
 	void		(*R_StoreEfrags)( struct efrag_s **ppefrag, int framecount );// store efrags for static entities
 
 	// Texture tools
@@ -209,7 +210,7 @@ typedef struct render_api_s
 	void		(*GL_Reserved2)( void );
 
 	// Misc renderer functions
-	void		(*GL_DrawParticles)( const struct ref_viewpass_s *rvp, qboolean solid_pass );
+	void		(*GL_DrawParticles)( const struct ref_viewpass_s *rvp, qboolean trans_pass );
 	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot, int shotsize ); // creates a cubemap or skybox into gfx\env folder
 	int		(*COM_CompareFileTime)( const char *filename1, const char *filename2, int *iCompare );
 	void		(*Host_Error)( const char *error, ... ); // cause Host Error

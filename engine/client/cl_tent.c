@@ -2622,7 +2622,7 @@ void CL_UpdateFlashlight( cl_entity_t *ent )
 	vec3_t	forward, view_ofs;
 	vec3_t	vecSrc, vecEnd;
 	float	falloff;
-	pmtrace_t	trace;
+	pmtrace_t	*trace;
 	dlight_t	*dl;
 
 	if( ent->index == ( cl.playernum + 1 ))
@@ -2658,14 +2658,14 @@ void CL_UpdateFlashlight( cl_entity_t *ent )
 	dl = CL_AllocDlight( ent->index );
 #if 0
 	// g-cont. disabled until studio lighting will be finished
-	if( trace.ent > 0 && clgame.pmove->visents[trace.ent].studiomodel )
-		VectorCopy( clgame.pmove->visents[trace.ent].origin, dl->origin );
-	else VectorCopy( trace.endpos, dl->origin );
+	if( trace->ent > 0 && clgame.pmove->visents[trace->ent].studiomodel )
+		VectorCopy( clgame.pmove->visents[trace->ent].origin, dl->origin );
+	else VectorCopy( trace->endpos, dl->origin );
 #else
-	VectorCopy( trace.endpos, dl->origin );
+	VectorCopy( trace->endpos, dl->origin );
 #endif
 	// compute falloff
-	falloff = trace.fraction * FLASHLIGHT_DISTANCE;
+	falloff = trace->fraction * FLASHLIGHT_DISTANCE;
 	if( falloff < 500.0f ) falloff = 1.0f;
 	else falloff = 500.0f / falloff;
 	falloff *= falloff;

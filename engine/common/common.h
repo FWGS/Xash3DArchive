@@ -320,7 +320,7 @@ typedef struct host_parm_s
 	int		developer;	// show all developer's message
 	int		old_developer;	// keep real dev state (we need enable dev-mode in multiplayer)
 	qboolean		key_overstrike;	// key overstrike mode
-	qboolean		stuffcmdsrun;	// execute stuff commands
+	qboolean		stuffcmds_pending;	// should execute stuff commands
 	qboolean		allow_cheats;	// this host will allow cheating
 	qboolean		con_showalways;	// show console always (developer and dedicated)
 	qboolean		com_handlecolon;	// allow COM_ParseFile to handle colon as single char

@@ -119,6 +119,7 @@ void SCR_CheckStartupVids( void )
 	{
 		cls.movienum = 0;
 		SCR_NextMovie ();
+		Cbuf_Execute();
 	}
 	else cls.movienum = -1;
 }
