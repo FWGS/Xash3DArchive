@@ -597,6 +597,9 @@ static void GL_SetTextureTarget( gltexture_t *tex, rgbdata_t *pic )
 	// depth cubemaps only allowed when GL_EXT_gpu_shader4 is supported
 	if( tex->target == GL_TEXTURE_CUBE_MAP_ARB && !GL_Support( GL_EXT_GPU_SHADER4 ) && FBitSet( tex->flags, TF_DEPTHMAP ))
 		tex->target = GL_NONE;
+
+	if( tex->target == GL_TEXTURE_CUBE_MAP_ARB )
+		tex->flags |= TF_CUBEMAP; // it's cubemap!
 }
 
 /*

@@ -105,9 +105,6 @@ qboolean R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags 
 	if( surf->flags & SURF_WATERCSG && !( e->curstate.effects & EF_NOWATERCSG ))
 		return true;
 
-	if( surf->flags & SURF_NOCULL )
-		return false;
-
 	// don't cull transparent surfaces because we should be draw decals on them
 	if( surf->pdecals && ( e->curstate.rendermode == kRenderTransTexture || e->curstate.rendermode == kRenderTransAdd ))
 		return false;
@@ -119,9 +116,9 @@ qboolean R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags 
 	if( RI.currententity == clgame.entities && surf->visframe != tr.framecount )
 		return true;
 
-	if( r_faceplanecull->value && glState.faceCull != 0 )
+	if( r_faceplanecull->value && !FBitSet( surf->flags, SURF_DRAWTURB ))
 	{
-		if( e->curstate.scale == 0.0f && !VectorIsNull( surf->plane->normal ))
+		if( !VectorIsNull( surf->plane->normal ))
 		{
 			float	dist;
 

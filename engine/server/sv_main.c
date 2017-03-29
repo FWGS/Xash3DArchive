@@ -512,7 +512,7 @@ void SV_RunGameFrame( void )
 	{
 		sv.time_residual += host.frametime;
 
-		while( sv.time_residual >= sv.frametime )
+		if( sv.time_residual >= sv.frametime )
 		{
 			SV_Physics();
 

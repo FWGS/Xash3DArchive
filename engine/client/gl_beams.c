@@ -654,7 +654,7 @@ void R_DrawTorus( vec3_t source, vec3_t delta, float width, float scale, float f
 		}
 		
 		// Transform point into screen space
-		R_WorldToScreen( point, screen );
+		TriWorldToScreen( point, screen );
 
 		if( i != 0 )
 		{
@@ -961,7 +961,7 @@ R_DrawRing
 Draw beamring
 ================
 */
-void R_DrawRing(vec3_t source, vec3_t delta, float width, float amplitude, float freq, float speed, int segments)
+void R_DrawRing( vec3_t source, vec3_t delta, float width, float amplitude, float freq, float speed, int segments )
 {
 	int	i, j, noiseIndex, noiseStep;
 	float	div, length, fraction, factor, vLast, vStep;
@@ -1024,21 +1024,21 @@ void R_DrawRing(vec3_t source, vec3_t delta, float width, float amplitude, float
 	for( i = 0; i < segments + 1; i++ )
 	{
 		fraction = i * div;
-		x = cos( fraction * 2 * M_PI );
-		y = sin( fraction * 2 * M_PI );
+		SinCos( fraction * M_PI2, &x, &y );
 
 		VectorMAMAM( x, xaxis, y, yaxis, 1.0f, center, point ); 
 
 		// distort using noise
-		factor = rgNoise[(noiseIndex >> 16) & 0x7F] * scale;
+		factor = rgNoise[(noiseIndex >> 16) & (NOISE_DIVISIONS - 1)] * scale;
 		VectorMA( point, factor, RI.vup, point );
 
 		// Rotate the noise along the perpendicluar axis a bit to keep the bolt from looking diagonal
-		factor = rgNoise[(noiseIndex >> 16) & 0x7F] * scale * cos( fraction * M_PI * 3 * 8 + freq );
+		factor = rgNoise[(noiseIndex >> 16) & (NOISE_DIVISIONS - 1)] * scale;
+		factor *= cos( fraction * M_PI * 24 + freq );
 		VectorMA( point, factor, RI.vright, point );
 		
 		// Transform point into screen space
-		R_WorldToScreen( point, screen );
+		TriWorldToScreen( point, screen );
 
 		if( i != 0 )
 		{
@@ -1048,6 +1048,8 @@ void R_DrawRing(vec3_t source, vec3_t delta, float width, float amplitude, float
 			// we don't need Z, we're in screen space
 			tmp[2] = 0;
 			VectorNormalize( tmp );
+
+			// Build point along normal line (normal is -y, x)
 			VectorScale( RI.vup, tmp[0], normal );
 			VectorMA( normal, tmp[1], RI.vright, normal );
 			

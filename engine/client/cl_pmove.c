@@ -1265,6 +1265,7 @@ void CL_PredictMovement( qboolean repredicting )
 		if( !CL_LocalWeapons( ))
 		{
 			cl.local.viewmodel = frame->clientdata.viewmodel;
+			cl.local.moving = false;
 			return;
 		}
 	}
@@ -1322,6 +1323,7 @@ void CL_PredictMovement( qboolean repredicting )
 	{
 		cl.local.viewmodel = to->client.viewmodel;
 		cl.local.repredicting = false;
+		cl.local.moving = false;
 		return;
 	}
 
@@ -1365,7 +1367,7 @@ void CL_PredictMovement( qboolean repredicting )
 		cl_entity_t	*ent = CL_GetEntityByIndex( cl.local.lastground );
 			
 		cl.local.onground = cl.local.lastground;
-		cl.local.moving = 0;
+		cl.local.moving = false;
 
 		if( ent )
 		{
@@ -1378,7 +1380,7 @@ void CL_PredictMovement( qboolean repredicting )
 			if( VectorLength( delta ) > 0.0f )
 			{
 				cls.correction_time = 0;
-				cl.local.moving = 1;
+				cl.local.moving = true;
 			}
 		}
 	}

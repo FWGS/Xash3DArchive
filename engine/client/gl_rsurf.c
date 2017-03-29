@@ -44,6 +44,8 @@ static void LM_UploadBlock( int lightmapnum );
 
 byte *Mod_GetCurrentVis( void )
 {
+	if( clgame.drawFuncs.Mod_GetCurrentVis && tr.fCustomRendering )
+		return clgame.drawFuncs.Mod_GetCurrentVis();
 	return RI.visbytes;
 }
 
@@ -1199,7 +1201,7 @@ dynamic:
 
 	if( is_dynamic )
 	{
-		if(( fa->styles[maps] >= 32 || fa->styles[maps] == 0 ) && ( fa->dlightframe != tr.framecount ))
+		if(( fa->styles[maps] >= 32 || fa->styles[maps] == 0 || fa->styles[maps] == 20 ) && ( fa->dlightframe != tr.framecount ))
 		{
 			byte	temp[132*132*4];
 			int	sample_size;

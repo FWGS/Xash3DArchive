@@ -1603,6 +1603,9 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		VectorSubtract( pseqdesc->bbmax, pseqdesc->bbmin, size );
 		total = Q_max( size[0], Q_max( size[1], size[2] ));
 
+		if( RI.currententity == &clgame.viewent )
+			total = 0.0f; // never used for viewmodels
+
 		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ) && !pseqdesc->activity && m_pStudioHeader->numseq > 1 && total > 128.0f )
 			Matrix3x4_OriginFromMatrix( g_studio.lighttransform[0], origin );
 		else Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, origin );

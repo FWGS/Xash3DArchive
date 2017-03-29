@@ -190,12 +190,13 @@ CL_UpdateLatchedVars
 */
 void CL_UpdateLatchedVars( cl_entity_t *ent )
 {
-	VectorCopy( ent->prevstate.origin, ent->latched.prevorigin );
-	VectorCopy( ent->prevstate.angles, ent->latched.prevangles );
-	ent->latched.prevanimtime = ent->prevstate.animtime;
-
 	if( !ent->model || ent->model->type != mod_studio )
 		return; // below fields used only for studio interpolation
+
+	VectorCopy( ent->prevstate.origin, ent->latched.prevorigin );
+	VectorCopy( ent->prevstate.angles, ent->latched.prevangles );
+
+	ent->latched.prevanimtime = ent->prevstate.animtime;
 
 	if( ent->curstate.sequence != ent->prevstate.sequence )
 	{
@@ -216,15 +217,14 @@ CL_ResetLatchedVars
 */
 void CL_ResetLatchedVars( cl_entity_t *ent, qboolean full_reset )
 {
+	if( !ent->model || ent->model->type != mod_studio )
+		return; // below fields used only for studio interpolation
+
 	if( full_reset )
 	{
 		// don't modify for sprites to avoid broke sprite interp
-		if( ent->model && ent->model->type == mod_studio )
-		{
-			memcpy( ent->latched.prevblending, ent->curstate.blending, sizeof( ent->latched.prevblending ));
-			ent->latched.sequencetime = ent->curstate.animtime;
-		}
-
+		memcpy( ent->latched.prevblending, ent->curstate.blending, sizeof( ent->latched.prevblending ));
+		ent->latched.sequencetime = ent->curstate.animtime;
 		memcpy( ent->latched.prevcontroller, ent->curstate.controller, sizeof( ent->latched.prevcontroller ));
 		ent->latched.prevframe = CL_GetStudioEstimatedFrame( ent );
 		ent->prevstate = ent->curstate;
@@ -679,7 +679,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		CL_WriteDemoJumpTime();
 
 	// sentinel count. save it for debug checking
-	count = MSG_ReadUBitLong( msg, MAX_VISIBLE_PACKET_BITS );
+	count = MSG_ReadUBitLong( msg, MAX_VISIBLE_PACKET_BITS ) + 1;
 	newframe = &cl.frames[cl.parsecountmod];
 
 	// allocate parse entities

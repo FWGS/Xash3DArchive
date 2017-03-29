@@ -249,6 +249,8 @@ typedef struct render_interface_s
 	void		(*Mod_ProcessUserData)( struct model_s *mod, qboolean create, const byte *buffer );
 	// alloc or destroy entity custom data
 	void		(*R_ProcessEntData)( qboolean allocate );
+	// get visdata for current frame from custom renderer
+	byte*		(*Mod_GetCurrentVis)( void );
 } render_interface_t;
 
 #endif//RENDER_API_H

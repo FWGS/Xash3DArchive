@@ -203,6 +203,7 @@ typedef struct
 	int		realframecount;	// not including viewpasses
 	int		framecount;
 
+	qboolean		fCustomRendering;
 	qboolean		fResetVis;
 
 	byte		visbytes[(MAX_MAP_LEAFS+7)/8];	// member custom PVS

@@ -195,7 +195,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 			MsgDev( D_WARN, "%s: delta request from out of date entities.\n", cl->name );
 
 			MSG_BeginServerCmd( msg, svc_packetentities );
-			MSG_WriteUBitLong( msg, to->num_entities, MAX_VISIBLE_PACKET_BITS );
+			MSG_WriteUBitLong( msg, to->num_entities - 1, MAX_VISIBLE_PACKET_BITS );
 
 			from = NULL;
 			oldmax = 0;
@@ -203,7 +203,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		else
 		{
 			MSG_BeginServerCmd( msg, svc_deltapacketentities );
-			MSG_WriteUBitLong( msg, to->num_entities, MAX_VISIBLE_PACKET_BITS );
+			MSG_WriteUBitLong( msg, to->num_entities - 1, MAX_VISIBLE_PACKET_BITS );
 			MSG_WriteByte( msg, cl->delta_sequence );
 		}
 	}
@@ -213,7 +213,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		oldmax = 0;
 
 		MSG_BeginServerCmd( msg, svc_packetentities );
-		MSG_WriteUBitLong( msg, to->num_entities, MAX_VISIBLE_PACKET_BITS );
+		MSG_WriteUBitLong( msg, to->num_entities - 1, MAX_VISIBLE_PACKET_BITS );
 	}
 
 	newent = NULL;

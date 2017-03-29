@@ -1074,6 +1074,8 @@ void R_RenderFrame( const ref_viewpass_t *rvp )
 	// completely override rendering
 	if( clgame.drawFuncs.GL_RenderFrame != NULL )
 	{
+		tr.fCustomRendering = true;
+
 		if( clgame.drawFuncs.GL_RenderFrame( rvp ))
 		{
 			tr.realframecount++;
@@ -1082,6 +1084,7 @@ void R_RenderFrame( const ref_viewpass_t *rvp )
 		}
 	}
 
+	tr.fCustomRendering = false;
 	R_RunViewmodelEvents();
 	tr.realframecount++; // right called after viewmodel events
 
@@ -1315,9 +1318,7 @@ static void R_SetCurrentModel( model_t *mod )
 
 static int R_FatPVS( const vec3_t org, float radius, byte *visbuffer, qboolean merge, qboolean fullvis )
 {
-	int bytes = Mod_FatPVS( org, radius, visbuffer, world.visbytes, merge, fullvis );
-	if( visbuffer ) memcpy( tr.visbytes, visbuffer, world.visbytes );
-	return bytes;
+	return Mod_FatPVS( org, radius, visbuffer, world.visbytes, merge, fullvis );
 }
 
 static lightstyle_t *CL_GetLightStyle( int number )
