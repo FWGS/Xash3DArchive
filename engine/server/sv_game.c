@@ -2388,17 +2388,17 @@ void pfnParticleEffect( const float *org, const float *dir, float color, float c
 	if( MSG_GetNumBytesLeft( &sv.datagram ) < 16 )
 		return;
 
-	MSG_BeginServerCmd( &sv.multicast, svc_particle );
-	MSG_WriteVec3Coord( &sv.multicast, org );
+	MSG_BeginServerCmd( &sv.datagram, svc_particle );
+	MSG_WriteVec3Coord( &sv.datagram, org );
 	v = bound( -128, dir[0] * 16.0f, 127 );
-	MSG_WriteChar( &sv.multicast, v );
+	MSG_WriteChar( &sv.datagram, v );
 	v = bound( -128, dir[1] * 16.0f, 127 );
-	MSG_WriteChar( &sv.multicast, v );
+	MSG_WriteChar( &sv.datagram, v );
 	v = bound( -128, dir[2] * 16.0f, 127 );
-	MSG_WriteChar( &sv.multicast, v );
-	MSG_WriteByte( &sv.multicast, count );
-	MSG_WriteByte( &sv.multicast, color );
-	MSG_WriteByte( &sv.multicast, 0 );
+	MSG_WriteChar( &sv.datagram, v );
+	MSG_WriteByte( &sv.datagram, count );
+	MSG_WriteByte( &sv.datagram, color );
+	MSG_WriteByte( &sv.datagram, 0 );
 }
 
 /*

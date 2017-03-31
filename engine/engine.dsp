@@ -44,7 +44,6 @@ RSC=rc.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
 # ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "common" /I "common/imagelib" /I "common/soundlib" /I "server" /I "client" /I "client/vgui" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
-# SUBTRACT CPP /Fr /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -65,6 +64,7 @@ BuildCmds= \
 	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Paranoia2\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Area51\xash.dll" \
+	copy $(TargetDir)\xash.dll "D:\Quake\xash.dll" \
 	
 
 "D:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -74,6 +74,9 @@ BuildCmds= \
    $(BuildCmds)
 
 "D:\Area51\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"D:\Quake\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
 # End Custom Build
 
@@ -113,6 +116,7 @@ BuildCmds= \
 	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Paranoia2\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Area51\xash.dll" \
+	copy $(TargetDir)\xash.dll "D:\Quake\xash.dll" \
 	
 
 "D:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -122,6 +126,9 @@ BuildCmds= \
    $(BuildCmds)
 
 "D:\Area51\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"D:\Quake\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
 # End Custom Build
 

@@ -1610,8 +1610,8 @@ void GL_InitCommands( void )
 	// make sure gl_vsync is checked after vid_restart
 	SetBits( gl_vsync->flags, FCVAR_CHANGED );
 
-	vid_gamma = Cvar_Get( "gamma", "1.0", FCVAR_RENDERINFO, "gamma amount" );
-	vid_brightness = Cvar_Get( "brightness", "1.0", FCVAR_RENDERINFO, "brighntess factor" );
+	vid_gamma = Cvar_Get( "gamma", "1.0", FCVAR_ARCHIVE, "gamma amount" );
+	vid_brightness = Cvar_Get( "brightness", "1.0", FCVAR_ARCHIVE, "brighntess factor" );
 	vid_mode = Cvar_Get( "vid_mode", VID_AUTOMODE, FCVAR_RENDERINFO|FCVAR_VIDRESTART, "display resolution mode" );
 	vid_fullscreen = Cvar_Get( "fullscreen", "0", FCVAR_RENDERINFO|FCVAR_VIDRESTART, "set in 1 to enable fullscreen mode" );
 	vid_displayfrequency = Cvar_Get ( "vid_displayfrequency", "0", FCVAR_RENDERINFO|FCVAR_VIDRESTART, "fullscreen refresh rate" );

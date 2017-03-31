@@ -1232,7 +1232,8 @@ HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags )
 {
 	model_t	*spr;
 
-	spr = CL_LoadSpriteModel( szPicName, SPR_CLIENT, texFlags );
+	if(( spr = CL_LoadSpriteModel( szPicName, SPR_CLIENT, texFlags )) == NULL )
+		return 0;
 
 	return (spr - clgame.sprites); // return index
 }
@@ -1247,7 +1248,8 @@ HSPRITE pfnSPR_Load( const char *szPicName )
 {
 	model_t	*spr;
 
-	spr = CL_LoadSpriteModel( szPicName, SPR_HUDSPRITE, 0 );
+	if(( spr = CL_LoadSpriteModel( szPicName, SPR_HUDSPRITE, 0 )) == NULL )
+		return 0;
 
 	return (spr - clgame.sprites); // return index
 }

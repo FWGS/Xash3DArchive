@@ -272,6 +272,9 @@ void Host_Exec_f( void )
 		return;
 	}
 
+	if( !Q_stricmp( "config.cfg", Cmd_Argv( 1 )))
+		host.config_executed = true;
+
 	// adds \n\0 at end of the file
 	txt = Z_Malloc( len + 2 );
 	memcpy( txt, f, len );
@@ -778,6 +781,7 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 	host.change_game = bChangeGame;
 	host.state = HOST_INIT; // initialzation started
 	host.developer = host.old_developer = 0;
+	host.config_executed = false;
 
 	Memory_Init();		// init memory subsystem
 
@@ -994,8 +998,12 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 		Con_ShowConsole( false ); // hide console
 		// execute startup config and cmdline
 		Cbuf_AddText( va( "exec %s.rc\n", SI.ModuleName ));
-		Cbuf_AddText( "exec config.cfg\n" );
 		Cbuf_Execute();
+		if( !host.config_executed )
+		{
+			Cbuf_AddText( "exec config.cfg\n" );
+			Cbuf_Execute();
+		}
 		break;
 	case HOST_DEDICATED:
 		// allways parse commandline in dedicated-mode

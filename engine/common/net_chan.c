@@ -129,6 +129,9 @@ void Netchan_ReportFlow( netchan_t *chan )
 	char	incoming[CS_SIZE];
 	char	outgoing[CS_SIZE];
 
+	if( CL_IsPlaybackDemo( ))
+		return;
+
 	ASSERT( chan != NULL );
 
 	Q_strcpy( incoming, Q_pretifymem((float)chan->flow[FLOW_INCOMING].totalbytes, 3 ));
