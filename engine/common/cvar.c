@@ -62,7 +62,7 @@ Cvar_UpdateInfo
 deal with userinfo etc
 ============
 */
-static qboolean Cvar_UpdateInfo( convar_t *var, const char *value )
+static qboolean Cvar_UpdateInfo( convar_t *var, const char *value, qboolean notify )
 {
 	if( FBitSet( var->flags, FCVAR_USERINFO ))
 	{
@@ -82,7 +82,7 @@ static qboolean Cvar_UpdateInfo( convar_t *var, const char *value )
 		}
 	}
 
-	if( FBitSet( var->flags, FCVAR_SERVER ))
+	if( FBitSet( var->flags, FCVAR_SERVER ) && notify )
 	{
 		if( !FBitSet( var->flags, FCVAR_UNLOGGED ))
 		{
@@ -299,7 +299,7 @@ convar_t *Cvar_Get( const char *name, const char *value, int flags, const char *
 	var->next = find;
 
 	// fill it cls.userinfo, svs.serverinfo
-	Cvar_UpdateInfo( var, var->string );
+	Cvar_UpdateInfo( var, var->string, false );
 
 	// tell engine about changes
 	Cvar_Changed( var );
@@ -355,7 +355,7 @@ void Cvar_RegisterVariable( convar_t *var )
 	var->next = find;
 
 	// fill it cls.userinfo, svs.serverinfo
-	Cvar_UpdateInfo( var, var->string );
+	Cvar_UpdateInfo( var, var->string, false );
 
 	// tell engine about changes
 	Cvar_Changed( var );
@@ -424,7 +424,7 @@ void Cvar_DirectSet( convar_t *var, const char *value )
 		return;
 
 	// fill it cls.userinfo, svs.serverinfo
-	if( !Cvar_UpdateInfo( var, pszValue ))
+	if( !Cvar_UpdateInfo( var, pszValue, true ))
 		return;
 
 	// and finally changed the cvar itself

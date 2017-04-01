@@ -2865,8 +2865,8 @@ void GL_StudioSetRenderMode( int rendermode )
 	switch( rendermode )
 	{
 	case kRenderNormal:
-		pglDepthMask( GL_TRUE );
-		pglDisable( GL_BLEND );
+//		pglDepthMask( GL_TRUE );
+//		pglDisable( GL_BLEND );
 		break;
 	case kRenderTransColor:
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -3468,6 +3468,12 @@ R_DrawViewModel
 void R_DrawViewModel( void )
 {
 	cl_entity_t	*view = &clgame.viewent;
+	colorVec		c;
+
+	tr.ignore_lightgamma = true;
+	c = R_LightPoint( view->origin );
+	tr.ignore_lightgamma = false;
+	cl.local.light_level = (c.r + c.g + c.b) / 3;
 
 	if( cl.local.thirdperson || RI.onlyClientDraw || r_drawviewmodel->value == 0 )
 		return;

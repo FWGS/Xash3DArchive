@@ -2320,8 +2320,7 @@ void pfnServerExecute( void )
 	Cbuf_Execute();
 
 	if( host.sv_cvars_restored > 0 )
-		MsgDev( D_INFO, " (%i cvars)\n", host.sv_cvars_restored );
-	else MsgDev( D_INFO, "\n" );
+		MsgDev( D_INFO, "server executing ^2config.cfg^7 (%i cvars)\n", host.sv_cvars_restored );
 
 	host.apply_game_config = false;
 	svgame.config_executed = true;

@@ -298,10 +298,18 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 		{
 			uint	scale = tr.lightstylevalue[surf->styles[map]];
 
-			cv->r += LightToTexGamma( lm->r ) * scale;
-			cv->g += LightToTexGamma( lm->g ) * scale;
-			cv->b += LightToTexGamma( lm->b ) * scale;
-
+			if( tr.ignore_lightgamma )
+			{
+				cv->r += lm->r * scale;
+				cv->g += lm->g * scale;
+				cv->b += lm->b * scale;
+			}
+			else
+			{
+				cv->r += LightToTexGamma( lm->r ) * scale;
+				cv->g += LightToTexGamma( lm->g ) * scale;
+				cv->b += LightToTexGamma( lm->b ) * scale;
+			}
 			lm += size; // skip to next lightmap
 		}
 

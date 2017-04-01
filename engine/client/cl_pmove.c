@@ -371,7 +371,7 @@ static void CL_CopyEntityToPhysEnt( physent_t *pe, entity_state_t *state, qboole
 	}
 	else
 	{
-		if( pe->solid != SOLID_BSP && mod->type == mod_studio )
+		if( pe->solid != SOLID_BSP && Mod_GetType( state->modelindex ) == mod_studio )
 			pe->studiomodel = mod;
 		else pe->model = mod;
 	}

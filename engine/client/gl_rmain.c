@@ -261,7 +261,7 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int type )
 	if( clent->curstate.effects & EF_NODRAW )
 		return false; // done
 
-	if( !R_OpaqueEntity( clent ) && clent->curstate.renderamt <= 0.0f )
+	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0.0f )
 		return true; // invisible
 
 	if( type == ET_FRAGMENTED )

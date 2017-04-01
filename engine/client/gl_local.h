@@ -203,6 +203,7 @@ typedef struct
 	int		realframecount;	// not including viewpasses
 	int		framecount;
 
+	qboolean		ignore_lightgamma;
 	qboolean		fCustomRendering;
 	qboolean		fResetVis;
 
