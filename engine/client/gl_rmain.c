@@ -1236,6 +1236,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return glConfig.wrapper;
 	case PARM_STENCIL_ACTIVE:
 		return glState.stencilEnabled;
+	case PARM_WATER_ALPHA:
+		return world.water_alpha;
 	}
 	return 0;
 }

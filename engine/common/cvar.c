@@ -255,14 +255,21 @@ convar_t *Cvar_Get( const char *name, const char *value, int flags, const char *
 		// already existed?
 		if( FBitSet( flags, FCVAR_GLCONFIG ))
 		{
-			// directly set value
-			freestring( var->string );
-			var->string = copystring( value );
-			var->value = Q_atof( var->string );
-			SetBits( var->flags, flags );
+			// NOTE: cvars without description produced by Cvar_FullSet
+			// which executed from the config file. So we don't need to
+			// change value here: we *already* have actual value from config.
+			// in other cases we need to rewrite them
+			if( Q_strcmp( var->desc, "" ))
+			{
+				// directly set value
+				freestring( var->string );
+				var->string = copystring( value );
+				var->value = Q_atof( var->string );
+				SetBits( var->flags, flags );
 
-			// tell engine about changes
-			Cvar_Changed( var );
+				// tell engine about changes
+				Cvar_Changed( var );
+			}
 		}
 		else
 		{
@@ -698,7 +705,7 @@ void Cvar_SetGL_f( void )
 		return;
 	}
 
-	Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), 0 );
+	Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), FCVAR_GLCONFIG );
 }
 
 /*

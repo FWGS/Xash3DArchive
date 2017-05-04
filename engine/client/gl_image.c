@@ -1244,7 +1244,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	if( flags & TF_NOFLIP_TGA )
 		picFlags |= IL_DONTFLIP_TGA;
 
-	if( flags & TF_KEEP_SOURCE )
+	if( FBitSet( flags, TF_KEEP_SOURCE ) && !FBitSet( flags, TF_EXPAND_SOURCE ))
 		picFlags |= IL_KEEP_8BIT;	
 
 	// set some image flags

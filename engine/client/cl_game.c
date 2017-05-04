@@ -89,8 +89,6 @@ static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3 and higher
 { "HUD_GetRenderInterface", (void **)&clgame.dllFuncs.pfnGetRenderInterface },	// Xash3D ext
 { "HUD_GetPlayerTeam", (void **)&clgame.dllFuncs.pfnGetPlayerTeam },
 { "HUD_ClipMoveToEntity", (void **)&clgame.dllFuncs.pfnClipMoveToEntity },	// Xash3D ext
-{ "HUD_UpdateEntityState", (void **)&clgame.dllFuncs.pfnUpdateEntityState },
-{ "HUD_InterpolateEntity", (void **)&clgame.dllFuncs.pfnInterpolateEntity },
 { NULL, NULL }
 };
 

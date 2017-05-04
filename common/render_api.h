@@ -67,6 +67,7 @@ GNU General Public License for more details.
 #define PARM_GL_CONTEXT_TYPE	34	// opengl or opengles
 #define PARM_GLES_WRAPPER	35	//
 #define PARM_STENCIL_ACTIVE	36
+#define PARM_WATER_ALPHA	37
 
 enum
 {
@@ -84,7 +85,7 @@ typedef enum
 	TF_NEAREST	= (1<<0),		// disable texfilter
 	TF_KEEP_SOURCE	= (1<<1),		// some images keep source
 	TF_NOFLIP_TGA	= (1<<2),		// Steam background completely ignore tga attribute 0x20
-// reserved
+	TF_EXPAND_SOURCE	= (1<<3),		// Don't keep source as 8-bit expand to RGBA
 // reserved
 	TF_UNCOMPRESSED	= (1<<5),		// don't compress texture in video memory
 	TF_CUBEMAP	= (1<<6),		// it's cubemap texture

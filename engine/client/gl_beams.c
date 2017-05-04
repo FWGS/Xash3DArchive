@@ -30,7 +30,6 @@ GNU General Public License for more details.
 typedef struct
 {
 	vec3_t	pos;
-	vec3_t	color;
 	float	texcoord;	// Y texture coordinate
 	float	width;
 } beamseg_t;
@@ -1129,6 +1128,7 @@ void R_BeamDraw( BEAM *pbeam, float frametime )
 
 		// compute segments from the new endpoints
 		VectorSubtract( pbeam->target, pbeam->source, delta );
+		VectorClear( pbeam->delta );
 
 		if( VectorLength( delta ) > 0.0000001f )
 			VectorCopy( delta, pbeam->delta );
@@ -1214,7 +1214,7 @@ void R_BeamDraw( BEAM *pbeam, float frametime )
 		// HACKHACK: get brightness from head entity
 		pStart = R_BeamGetEntity( pbeam->startEntity ); 
 		if( pStart && pStart->curstate.rendermode != kRenderNormal )
-			pbeam->brightness = CL_FxBlend( pStart );
+			pbeam->brightness = CL_FxBlend( pStart ) / 255.0f;
 	}
 
 	if( FBitSet( pbeam->flags, FBEAM_FADEIN ))
@@ -1244,6 +1244,7 @@ void R_BeamDraw( BEAM *pbeam, float frametime )
 		TriEnd();
 		break;
 	case TE_BEAMPOINTS:
+	case TE_BEAMHOSE:
 		TriBegin( TRI_TRIANGLE_STRIP );
 		R_DrawSegs( pbeam->source, pbeam->delta, pbeam->width, pbeam->amplitude, pbeam->freq, pbeam->speed, pbeam->segments, pbeam->flags );
 		TriEnd();
@@ -1818,8 +1819,8 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 	vec3_t	start, end;
 	int	modelIndex, startFrame;
 	float	frameRate, life, width;
-	float	noise, speed;
 	int	startEnt, endEnt;
+	float	noise, speed;
 	float	r, g, b, a;
 
 	switch( beamType )

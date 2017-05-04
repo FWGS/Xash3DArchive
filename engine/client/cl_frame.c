@@ -1143,9 +1143,6 @@ void CL_LinkPacketEntities( frame_t *frame )
 			// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
 			if( !ent->curstate.rendercolor.r && !ent->curstate.rendercolor.g && !ent->curstate.rendercolor.b )
 				ent->curstate.rendercolor.r = ent->curstate.rendercolor.g = ent->curstate.rendercolor.b = 255;
-
-			// apply scale to studiomodels and sprites only
-			if( !ent->curstate.scale ) ent->curstate.scale = 1.0f;
 		}
 
 		if( ent->curstate.aiment != 0 && ent->curstate.movetype != MOVETYPE_COMPOUND )

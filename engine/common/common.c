@@ -745,6 +745,7 @@ int COM_CompareFileTime( const char *filename1, const char *filename2, int *iCom
 		*iCompare = Host_CompareFileTime( ft1,  ft2 );
 		bRet = 1;
 	}
+
 	return bRet;
 }
 
