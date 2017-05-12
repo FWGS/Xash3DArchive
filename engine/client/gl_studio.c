@@ -2293,15 +2293,15 @@ static void R_StudioDrawPoints( void )
 		g_studio.meshes[j].flags = g_nFaceFlags;
 		g_studio.meshes[j].mesh = &pmesh[j];
 
+		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED|STUDIO_NF_ADDITIVE ))
+			need_sort = true;
+
 		for( i = 0; i < pmesh[j].numnorms; i++, k++, pstudionorms++, pnormbone++ )
 		{
 			R_StudioLighting( &lv_tmp, *pnormbone, g_nFaceFlags, (float *)pstudionorms );
 			if( FBitSet( g_nFaceFlags, STUDIO_NF_CHROME ))
 				R_StudioSetupChrome( g_studio.chrome[k], *pnormbone, (float *)pstudionorms );
 			VectorScale( g_studio.lightcolor, lv_tmp, g_studio.lightvalues[k] );
-
-			if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED|STUDIO_NF_ADDITIVE ))
-				need_sort = true;
 		}
 	}
 
