@@ -50,10 +50,10 @@ GNU General Public License for more details.
 #define svc_soundindex		28	// [index][soundpath]
 #define svc_ambientsound		29	// <see code>
 #define svc_intermission		30	// empty message (event)
-#define svc_eventindex		31	// [index][eventname]
+#define svc_finale			31	// empty message (event)
 #define svc_cdtrack			32	// [string] trackname
 #define svc_restore			33	// [string] savename
-// reserved
+#define svc_cutscene		34	// empty message (event)
 #define svc_weaponanim		35	// [byte]iAnim [byte]body
 #define svc_bspdecal		36	// [float*3][short][short][short]
 #define svc_roomtype		37	// [short] room type
@@ -73,7 +73,7 @@ GNU General Public License for more details.
 #define svc_director		51	// <variable sized>
 #define svc_studiodecal		52	// [float*3][float*3][short][short][byte]
 #define svc_voicedata		53	// [byte][short][...]
-// reserved
+#define svc_eventindex		54	// [index][eventname]
 // reserved
 #define svc_resourcelocation		56	// [string]
 #define svc_querycvarvalue		57	// [string]

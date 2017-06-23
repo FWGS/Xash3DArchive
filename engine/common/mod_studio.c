@@ -514,33 +514,27 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAtt, float *origin, float *
 	if( mod_studiohdr->numattachments <= 0 )
 		return;
 
-	if( mod_studiohdr->numattachments > MAXSTUDIOATTACHMENTS )
-	{
-		mod_studiohdr->numattachments = MAXSTUDIOATTACHMENTS; // reduce it
-		MsgDev( D_WARN, "SV_StudioGetAttahment: too many attachments on %s\n", mod_studiohdr->name );
-	}
-
-	iAtt = bound( 0, iAtt, mod_studiohdr->numattachments );
+	iAtt = bound( 0, iAtt, mod_studiohdr->numattachments - 1 );
 
 	// calculate attachment origin and angles
-	pAtt = (mstudioattachment_t *)((byte *)mod_studiohdr + mod_studiohdr->attachmentindex);
+	pAtt = (mstudioattachment_t *)((byte *)mod_studiohdr + mod_studiohdr->attachmentindex) + iAtt;
 
 	VectorCopy( e->v.angles, angles2 );
 
 	if( !FBitSet( host.features, ENGINE_COMPENSATE_QUAKE_BUG ))
 		angles2[PITCH] = -angles2[PITCH];
 
-	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, angles2, e->v.origin, e->v.controller, e->v.blending, pAtt[iAtt].bone, e );
+	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, angles2, e->v.origin, e->v.controller, e->v.blending, pAtt->bone, e );
 
 	// compute pos and angles
 	if( origin != NULL )
-		Matrix3x4_VectorTransform( studio_bones[pAtt[iAtt].bone], pAtt[iAtt].org, origin );
+		Matrix3x4_VectorTransform( studio_bones[pAtt->bone], pAtt->org, origin );
 
 	if( sv_allow_studio_attachment_angles->value && origin != NULL && angles != NULL )
 	{
 		vec3_t	forward, bonepos;
 
-		Matrix3x4_OriginFromMatrix( studio_bones[pAtt[iAtt].bone], bonepos );
+		Matrix3x4_OriginFromMatrix( studio_bones[pAtt->bone], bonepos );
 		VectorSubtract( origin, bonepos, forward ); // make forward
 		VectorNormalizeFast( forward );
 		VectorAngles( forward, angles );

@@ -306,7 +306,7 @@ SCR_BeginLoadingPlaque
 */
 void SCR_BeginLoadingPlaque( qboolean is_background )
 {
-	S_StopAllSounds();
+	S_StopAllSounds( true );
 	cl.audio_prepped = false;			// don't play ambients
 
 	if( cls.disable_screen ) return;		// already set

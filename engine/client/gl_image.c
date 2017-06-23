@@ -1147,6 +1147,7 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 	}
 
 	tex->flags |= TF_IMG_UPLOADED; // done
+	tex->numMips /= numSides;
 
 	return true;
 }

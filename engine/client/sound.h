@@ -316,7 +316,7 @@ void S_RawSamples( uint samples, uint rate, word width, word channels, const byt
 void S_StopSound( int entnum, int channel, const char *soundname );
 uint S_GetRawSamplesLength( int entnum );
 void S_ClearRawChannel( int entnum );
-void S_StopAllSounds( void );
+void S_StopAllSounds( qboolean ambient );
 void S_FreeSounds( void );
 
 //

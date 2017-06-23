@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #include "mod_local.h"
 #include "sprite.h"
 #include "mathlib.h"
+#include "alias.h"
 #include "studio.h"
 #include "wadfile.h"
 #include "world.h"
@@ -592,6 +593,9 @@ static void Mod_FreeModel( model_t *mod )
 		break;
 	case mod_brush:
 		Mod_UnloadBrushModel( mod );
+		break;
+	case mod_alias:
+		Mod_UnloadAliasModel( mod );
 		break;
 	}
 }
@@ -1598,7 +1602,7 @@ static void Mod_LoadMarkSurfaces( const dlump_t *l )
 	int		i, j, count;
 	msurface_t	**out;
 	
-	in = (void *)( mod_base + l->fileofs );	
+	in = (void *)(mod_base + l->fileofs);	
 	if( l->filelen % sizeof( *in ))
 		Host_Error( "Mod_LoadMarkFaces: funny lump size in %s\n", loadmodel->name );
 
@@ -2455,6 +2459,9 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		break;
 	case IDSPRITEHEADER:
 		Mod_LoadSpriteModel( mod, buf, &loaded, 0 );
+		break;
+	case IDALIASHEADER:
+		Mod_LoadAliasModel( mod, buf, &loaded );
 		break;
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:

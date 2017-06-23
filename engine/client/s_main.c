@@ -29,6 +29,7 @@ channel_t   	channels[MAX_CHANNELS];
 sound_t		ambient_sfx[NUM_AMBIENTS];
 rawchan_t		*raw_channels[MAX_RAW_CHANNELS];
 qboolean		snd_ambient = false;
+qboolean		snd_fade_sequence = false;
 listener_t	s_listener;
 int		total_channels;
 int		soundtime;	// sample PAIRS
@@ -193,6 +194,16 @@ void S_UpdateSoundFade( void )
 	f = bound( 0.0f, f, 1.0f );
 
 	soundfade.percent = soundfade.initial_percent * f;
+
+	if( snd_fade_sequence )
+		S_FadeMusicVolume( soundfade.percent );
+
+	if( snd_fade_sequence && soundfade.percent == 100.0f )
+	{
+		S_StopAllSounds( false );
+		S_StopBackgroundTrack();
+		snd_fade_sequence = false;
+	}
 }
 
 /*
@@ -1774,7 +1785,7 @@ void S_StopSound( int entnum, int channel, const char *soundname )
 S_StopAllSounds
 ==================
 */
-void S_StopAllSounds( void )
+void S_StopAllSounds( qboolean ambient )
 {
 	int	i;
 
@@ -1793,7 +1804,7 @@ void S_StopAllSounds( void )
 	memset( channels, 0, sizeof( channels ));
 
 	// restart the ambient sounds
-	S_InitAmbientChannels ();
+	if( ambient ) S_InitAmbientChannels ();
 
 	S_ClearBuffer ();
 
@@ -2096,7 +2107,24 @@ S_StopSound_f
 */
 void S_StopSound_f( void )
 {
-	S_StopAllSounds();
+	S_StopAllSounds( true );
+}
+
+/*
+=================
+S_SoundFade_f
+=================
+*/
+void S_SoundFade_f( void )
+{
+	int	c = Cmd_Argc();
+	float	fadeTime = 5.0f;
+
+	if( c == 2 )
+		fadeTime = bound( 1.0f, atof( Cmd_Argv( 1 )), 60.0f );
+
+	S_FadeClientVolume( 100.0f, fadeTime, 1.0f, 0.0f );
+	snd_fade_sequence = true;
 }
 
 /*
@@ -2154,6 +2182,7 @@ qboolean S_Init( void )
 	Cmd_AddCommand( "music", S_Music_f, "starting a background track" );
 	Cmd_AddCommand( "soundlist", S_SoundList_f, "display loaded sounds" );
 	Cmd_AddCommand( "s_info", S_SoundInfo_f, "print sound system information" );
+	Cmd_AddCommand( "s_fade", S_SoundFade_f, "fade all sounds then stop all" );
 	Cmd_AddCommand( "+voicerecord", Cmd_Null_f, "start voice recording (non-implemented)" );
 	Cmd_AddCommand( "-voicerecord", Cmd_Null_f, "stop voice recording (non-implemented)" );
 	Cmd_AddCommand( "spk", S_SayReliable_f, "reliable play a specified sententce" );
@@ -2175,7 +2204,7 @@ qboolean S_Init( void )
 	MIX_InitAllPaintbuffers ();
 	SX_Init ();
 	S_InitScaletable ();
-	S_StopAllSounds ();
+	S_StopAllSounds ( true );
 	VOX_Init ();
 
 	return true;
@@ -2194,12 +2223,13 @@ void S_Shutdown( void )
 	Cmd_RemoveCommand( "music" );
 	Cmd_RemoveCommand( "soundlist" );
 	Cmd_RemoveCommand( "s_info" );
+	Cmd_RemoveCommand( "s_fade" );
 	Cmd_RemoveCommand( "+voicerecord" );
 	Cmd_RemoveCommand( "-voicerecord" );
 	Cmd_RemoveCommand( "speak" );
 	Cmd_RemoveCommand( "spk" );
 
-	S_StopAllSounds ();
+	S_StopAllSounds (false);
 	S_FreeRawChannels ();
 	S_FreeSounds ();
 	VOX_Shutdown ();

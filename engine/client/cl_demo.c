@@ -926,7 +926,7 @@ void CL_StopPlayback( void )
 
 	if( cls.changedemo )
 	{
-		S_StopAllSounds();
+		S_StopAllSounds( true );
 		S_StopBackgroundTrack();
 	}
 	else
@@ -1024,7 +1024,7 @@ qboolean CL_NextDemo( void )
 
 	if( cls.demonum == -1 )
 		return false; // don't play demos
-	S_StopAllSounds();
+	S_StopAllSounds( true );
 
 	if( !cls.demos[cls.demonum][0] || cls.demonum == MAX_DEMOS )
 	{
@@ -1203,9 +1203,7 @@ void CL_PlayDemo_f( void )
 	if( demo.header.id != IDEMOHEADER )
 	{
 		MsgDev( D_ERROR, "%s is not a demo file\n", filename );
-		FS_Close( cls.demofile );
-		cls.demofile = NULL;
-		cls.demonum = -1; // stop demo loop
+		CL_DemoCompleted();
 		return;
 	}
 
@@ -1216,10 +1214,7 @@ void CL_PlayDemo_f( void )
 
 		if( demo.header.net_protocol != PROTOCOL_VERSION )
 			MsgDev( D_ERROR, "playdemo: net protocol outdated (%i should be %i)\n", demo.header.net_protocol, PROTOCOL_VERSION );
-
-		FS_Close( cls.demofile );
-		cls.demofile = NULL;
-		cls.demonum = -1; // stop demo loop
+		CL_DemoCompleted();
 		return;
 	}
 
@@ -1230,16 +1225,13 @@ void CL_PlayDemo_f( void )
 	if( demo.directory.numentries < 1 || demo.directory.numentries > 1024 )
 	{
 		MsgDev( D_ERROR, "demo had bogus # of directory entries: %i\n", demo.directory.numentries );
-		FS_Close( cls.demofile );
-		cls.demofile = NULL;
-		cls.demonum = -1; // stop demo loop
-		cls.changedemo = false;
+		CL_DemoCompleted();
 		return;
 	}
 
 	if( cls.changedemo )
 	{
-		S_StopAllSounds();
+		S_StopAllSounds( true );
 		SCR_BeginLoadingPlaque( false );
 
 		CL_ClearState ();

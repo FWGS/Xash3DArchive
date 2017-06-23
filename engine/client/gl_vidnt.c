@@ -124,6 +124,7 @@ vidmode_t vidmode[] =
 { "2560 x 1440 (wide)",	2560,	1440,	true	},
 { "2560 x 1600 (wide)",	2560,	1600,	true	},
 { "1600 x 900 (wide)",	1600,	 900,	true	},
+{ "3840 x 2160 (wide)",	3840,	2160,	true	},
 };
 
 static dllfunc_t opengl_110funcs[] =

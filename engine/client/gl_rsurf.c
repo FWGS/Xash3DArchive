@@ -544,9 +544,9 @@ void R_AddDynamicLights( msurface_t *surf )
 
 				if( dist < minlight )
 				{
-					bl[0] += ((int)((rad - dist) * 256) * dl->color.r) / 256;
-					bl[1] += ((int)((rad - dist) * 256) * dl->color.g) / 256;
-					bl[2] += ((int)((rad - dist) * 256) * dl->color.b) / 256;
+					bl[0] += ((int)((rad - dist) * 256) * LightToTexGamma( dl->color.r )) / 256;
+					bl[1] += ((int)((rad - dist) * 256) * LightToTexGamma( dl->color.g )) / 256;
+					bl[2] += ((int)((rad - dist) * 256) * LightToTexGamma( dl->color.b )) / 256;
 				}
 			}
 		}

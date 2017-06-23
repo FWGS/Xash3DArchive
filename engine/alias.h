@@ -93,20 +93,20 @@ typedef struct
 {
 	byte		v[3];
 	byte		lightnormalindex;
-} trivertex_t;
+} dtrivertex_t;
 
 typedef struct
 {
-	trivertex_t	bboxmin;	// lightnormal isn't used
-	trivertex_t	bboxmax;	// lightnormal isn't used
+	dtrivertex_t	bboxmin;	// lightnormal isn't used
+	dtrivertex_t	bboxmax;	// lightnormal isn't used
 	char		name[16];	// frame name from grabbing
 } daliasframe_t;
 
 typedef struct
 {
 	int		numframes;
-	trivertx_t	bboxmin;	// lightnormal isn't used
-	trivertx_t	bboxmax;	// lightnormal isn't used
+	dtrivertex_t	bboxmin;	// lightnormal isn't used
+	dtrivertex_t	bboxmax;	// lightnormal isn't used
 } daliasgroup_t;
 
 typedef struct

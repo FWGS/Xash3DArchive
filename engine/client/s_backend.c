@@ -423,7 +423,7 @@ int SNDDMA_GetSoundtime( void )
 			// time to chop things off to avoid 32 bit limits
 			buffers = 0;
 			paintedtime = fullsamples;
-			S_StopAllSounds();
+			S_StopAllSounds( true );
 		}
 	}
 

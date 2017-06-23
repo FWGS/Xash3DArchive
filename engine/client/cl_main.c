@@ -1005,7 +1005,7 @@ CL_ClearState
 */
 void CL_ClearState( void )
 {
-	S_StopAllSounds ();
+	S_StopAllSounds ( true );
 	CL_ClearEffects ();
 	CL_FreeEdicts ();
 
@@ -1228,7 +1228,7 @@ void CL_Reconnect_f( void )
 	if( cls.state == ca_disconnected )
 		return;
 
-	S_StopAllSounds ();
+	S_StopAllSounds ( true );
 
 	if( cls.state == ca_connected )
 	{

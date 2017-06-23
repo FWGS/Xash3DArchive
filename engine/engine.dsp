@@ -247,6 +247,10 @@ SOURCE=.\common\gamma.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\gl_alias.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\gl_backend.c
 # End Source File
 # Begin Source File

@@ -965,10 +965,12 @@ void CL_DrawHUD( int state )
 	switch( state )
 	{
 	case CL_ACTIVE:
-		CL_DrawScreenFade ();
+		if( !cl.intermission )
+			CL_DrawScreenFade ();
 		CL_DrawCrosshair ();
 		CL_DrawCenterPrint ();
 		clgame.dllFuncs.pfnRedraw( cl.time, cl.intermission );
+		if( cl.intermission ) CL_DrawScreenFade ();
 		break;
 	case CL_PAUSED:
 		CL_DrawScreenFade ();

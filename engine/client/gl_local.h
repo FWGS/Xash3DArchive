@@ -223,6 +223,7 @@ typedef struct
 	uint		c_brush_polys;
 	uint		c_studio_polys;
 	uint		c_sprite_polys;
+	uint		c_alias_polys;
 	uint		c_world_leafs;
 
 	uint		c_view_beams_count;
@@ -427,6 +428,12 @@ float CL_GetStudioEstimatedFrame( cl_entity_t *ent );
 void R_DrawStudioModel( cl_entity_t *e );
 
 //
+// gl_alias.c
+//
+void Mod_LoadAliasModel( model_t *mod, const void *buffer, qboolean *loaded );
+void R_DrawAliasModel( cl_entity_t *e );
+
+//
 // gl_warp.c
 //
 void R_InitSky( struct mip_s *mt, struct texture_s *tx );
@@ -479,6 +486,7 @@ void Mod_LoadMapSprite( struct model_s *mod, const void *buffer, size_t size, qb
 void Mod_UnloadSpriteModel( struct model_s *mod );
 void Mod_UnloadStudioModel( struct model_s *mod );
 void Mod_UnloadBrushModel( struct model_s *mod );
+void Mod_UnloadAliasModel( struct model_s *mod );
 void GL_SetRenderMode( int mode );
 void R_RunViewmodelEvents( void );
 void R_DrawViewModel( void );

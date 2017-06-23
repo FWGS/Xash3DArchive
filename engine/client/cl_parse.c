@@ -60,10 +60,10 @@ const char *svc_strings[256] =
 	"svc_soundindex",
 	"svc_ambientsound",
 	"svc_intermission",
-	"svc_eventindex",
+	"svc_finale",
 	"svc_cdtrack",
 	"svc_restore",
-	"svc_unused34",
+	"svc_cutscene",
 	"svc_weaponanim",
 	"svc_bspdecal",
 	"svc_roomtype",
@@ -83,7 +83,7 @@ const char *svc_strings[256] =
 	"svc_director",
 	"svc_studiodecal",
 	"svc_voicedata",
-	"svc_unused54",
+	"svc_eventindex",
 	"svc_unused55",
 	"svc_resourcelocation",
 	"svc_querycvarvalue",
@@ -1682,7 +1682,7 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			if( MSG_ReadOneBit( msg ))
 			{
 				cls.changelevel = true;
-				S_StopAllSounds();
+				S_StopAllSounds( true );
 
 				if( cls.demoplayback )
 				{
@@ -1803,7 +1803,13 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			CL_UpdateUserinfo( msg );
 			break;
 		case svc_intermission:
-			cl.intermission = true;
+			cl.intermission = 1;
+			break;
+		case svc_finale:
+			cl.intermission = 2;
+			break;
+		case svc_cutscene:
+			cl.intermission = 3;
 			break;
 		case svc_modelindex:
 			CL_PrecacheModel( msg );

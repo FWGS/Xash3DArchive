@@ -1517,10 +1517,7 @@ Create a streaks + richochet sprite
 */
 void R_SparkEffect( const vec3_t pos, int count, int velocityMin, int velocityMax )
 {
-	model_t	*pmodel;
-
-	pmodel = Mod_Handle( CL_FindModelIndex( "sprites/richo1.spr" ));
-	R_RicochetSprite( pos, pmodel, 0.1f, COM_RandomFloat( 0.5f, 1.0f ));
+	R_RicochetSprite( pos, cl_sprite_ricochet, 0.1f, COM_RandomFloat( 0.5f, 1.0f ));
 	R_SparkStreaks( pos, count, velocityMin, velocityMax );
 }
 
@@ -2282,8 +2279,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos[1] = MSG_ReadCoord( &buf );
 		pos[2] = MSG_ReadCoord( &buf );
 		scale = (float)(MSG_ReadByte( &buf ) * 0.1f);
-		modelIndex = CL_FindModelIndex( "sprites/richo1.spr" );
-		R_RicochetSprite( pos, Mod_Handle( modelIndex ), 0.1f, scale );
+		R_RicochetSprite( pos, cl_sprite_ricochet, 0.1f, scale );
 		R_RicochetSound( pos );
 		break;
 	case TE_PLAYERDECAL:

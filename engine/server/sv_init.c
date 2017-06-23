@@ -718,7 +718,7 @@ qboolean SV_NewGame( const char *mapName, qboolean loadGame )
 	}
 	else
 	{
-		S_StopAllSounds ();
+		S_StopAllSounds (true);
 		SV_DeactivateServer ();
 	}
 

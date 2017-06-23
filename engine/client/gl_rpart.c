@@ -24,7 +24,7 @@ GNU General Public License for more details.
 #include "cl_tent.h"
 #include "studio.h"
 
-#define PART_SIZE	0.5f	// because original particle of Quake1 was smaller than this
+#define PART_SIZE	Q_max( 0.5f, (cl_draw_particles->value - 0.5f))	// because original particle of Quake1 was smaller than this
 
 // particle velocities
 static const float cl_avertexnormals[NUMVERTEXNORMALS][3] =
@@ -400,7 +400,7 @@ void CL_DrawParticles( double frametime )
 			// FIXME: should we pass color through lightgamma table?
 
 			alpha = 255 * (p->die - cl.time) * 2;
-			if( alpha > 255 || cl_draw_particles->value < 2.0f || p->type == pt_static )
+			if( alpha > 255 || p->type == pt_static )
 				alpha = 255;
 
 			pglColor4ub( pColor->r, pColor->g, pColor->b, alpha );

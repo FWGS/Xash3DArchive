@@ -46,14 +46,14 @@ qboolean SCR_NextMovie( void )
 
 	if( cls.movienum == -1 )
 	{
-		S_StopAllSounds();
+		S_StopAllSounds( true );
 		SCR_StopCinematic();
 		return false; // don't play movies
 	}
 
 	if( !cls.movies[cls.movienum][0] || cls.movienum == MAX_MOVIES )
 	{
-		S_StopAllSounds();
+		S_StopAllSounds( true );
 		SCR_StopCinematic();
 		cls.movienum = -1;
 		return false;
@@ -230,7 +230,7 @@ qboolean SCR_PlayCinematic( const char *arg )
 	if( AVI_GetAudioInfo( cin_state, &cin_audio ))
 	{
 		// begin streaming
-		S_StopAllSounds();
+		S_StopAllSounds( true );
 		S_StartStreaming();
 	}
 

@@ -1502,16 +1502,11 @@ static void R_StudioCalcAttachments( void )
 			VectorClear( RI.currententity->attachment[i] );
 		return;
 	}
-	else if( m_pStudioHeader->numattachments > MAXSTUDIOATTACHMENTS )
-	{
-		m_pStudioHeader->numattachments = MAXSTUDIOATTACHMENTS; // reduce it
-		MsgDev( D_WARN, "R_StudioCalcAttahments: too many attachments on %s\n", RI.currentmodel->name );
-	}
 
 	// calculate attachment points
 	pAtt = (mstudioattachment_t *)((byte *)m_pStudioHeader + m_pStudioHeader->attachmentindex);
 
-	for( i = 0; i < m_pStudioHeader->numattachments; i++ )
+	for( i = 0; i < Q_min( MAXSTUDIOATTACHMENTS, m_pStudioHeader->numattachments ); i++ )
 	{
 		Matrix3x4_VectorTransform( g_studio.lighttransform[pAtt[i].bone], pAtt[i].org, RI.currententity->attachment[i] );
 		VectorSubtract( RI.currententity->attachment[i], RI.currententity->origin, localOrg );
@@ -2865,8 +2860,8 @@ void GL_StudioSetRenderMode( int rendermode )
 	switch( rendermode )
 	{
 	case kRenderNormal:
-//		pglDepthMask( GL_TRUE );
-//		pglDisable( GL_BLEND );
+		pglDepthMask( GL_TRUE );
+		pglDisable( GL_BLEND );
 		break;
 	case kRenderTransColor:
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -3593,7 +3588,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		filter = R_FindTexFilter( va( "%s.mdl/%s", mdlname, name )); // grab texture filter
 
 	if( FBitSet( ptexture->flags, STUDIO_NF_NOMIPS ))
-		SetBits( flags, STUDIO_NF_NOMIPS );
+		SetBits( flags, TF_NOMIPMAP );
 
 	// NOTE: colormaps must have the palette for properly work. Ignore it.
 	if( Mod_AllowMaterials( ) && !FBitSet( ptexture->flags, STUDIO_NF_COLORMAP ))
