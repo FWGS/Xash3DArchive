@@ -2767,11 +2767,24 @@ qboolean Mod_RegisterModel( const char *name, int index )
 
 /*
 ===============
-Mod_Extradata
+Mod_AliasExtradata
 
 ===============
 */
-void *Mod_Extradata( model_t *mod )
+void *Mod_AliasExtradata( model_t *mod )
+{
+	if( mod && mod->type == mod_alias )
+		return mod->cache.data;
+	return NULL;
+}
+
+/*
+===============
+Mod_StudioExtradata
+
+===============
+*/
+void *Mod_StudioExtradata( model_t *mod )
 {
 	if( mod && mod->type == mod_studio )
 		return mod->cache.data;

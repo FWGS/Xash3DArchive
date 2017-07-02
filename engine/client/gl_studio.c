@@ -176,7 +176,7 @@ static int R_StudioBodyVariations( model_t *mod )
 	mstudiobodyparts_t	*pbodypart;
 	int		i, count = 1;
 
-	pstudiohdr = (studiohdr_t *)Mod_Extradata( mod );
+	pstudiohdr = (studiohdr_t *)Mod_StudioExtradata( mod );
 	if( !pstudiohdr ) return 0;
 
 	pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
@@ -615,7 +615,7 @@ float CL_GetStudioEstimatedFrame( cl_entity_t *ent )
 
 	if( ent->model != NULL && ent->model->type == mod_studio )
 	{
-		pstudiohdr = (studiohdr_t *)Mod_Extradata( ent->model );
+		pstudiohdr = (studiohdr_t *)Mod_StudioExtradata( ent->model );
 
 		if( pstudiohdr )
 		{
@@ -641,7 +641,7 @@ float CL_GetSequenceDuration( cl_entity_t *ent, int sequence )
 
 	if( ent->model != NULL && ent->model->type == mod_studio )
 	{
-		pstudiohdr = (studiohdr_t *)Mod_Extradata( ent->model );
+		pstudiohdr = (studiohdr_t *)Mod_StudioExtradata( ent->model );
 
 		if( pstudiohdr )
 		{
@@ -2027,7 +2027,7 @@ mstudiotexture_t *R_StudioGetTexture( cl_entity_t *e )
 	mstudiotexture_t	*ptexture;
 	studiohdr_t	*phdr, *thdr;
 
-	if(( phdr = Mod_Extradata( e->model )) == NULL )
+	if(( phdr = Mod_StudioExtradata( e->model )) == NULL )
 		return NULL;
 
 	thdr = m_pStudioHeader;
@@ -3150,7 +3150,7 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 	if( RI.currentmodel == NULL )
 		return 0;
 
-	R_StudioSetHeader((studiohdr_t *)Mod_Extradata( RI.currentmodel ));
+	R_StudioSetHeader((studiohdr_t *)Mod_StudioExtradata( RI.currentmodel ));
 
 	if( pplayer->gaitsequence )
 	{
@@ -3259,7 +3259,7 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 			cl_entity_t	saveent = *RI.currententity;
 			model_t		*pweaponmodel = Mod_Handle( pplayer->weaponmodel );
 
-			m_pStudioHeader = (studiohdr_t *)Mod_Extradata( pweaponmodel );
+			m_pStudioHeader = (studiohdr_t *)Mod_StudioExtradata( pweaponmodel );
 
 			R_StudioMergeBones( RI.currententity, pweaponmodel );
 			R_StudioSetupLighting( &lighting );
@@ -3311,7 +3311,7 @@ static int R_StudioDrawModel( int flags )
 		return result;
 	}
 
-	R_StudioSetHeader((studiohdr_t *)Mod_Extradata( RI.currentmodel ));
+	R_StudioSetHeader((studiohdr_t *)Mod_StudioExtradata( RI.currentmodel ));
 
 	R_StudioSetUpTransform( RI.currententity );
 
@@ -3798,7 +3798,7 @@ static engine_studio_api_t gStudioAPI =
 	Mod_CacheCheck,
 	Mod_LoadCacheFile,
 	Mod_ForName,
-	Mod_Extradata,
+	Mod_StudioExtradata,
 	Mod_Handle,
 	pfnGetCurrentEntity,
 	pfnPlayerInfo,

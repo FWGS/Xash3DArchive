@@ -26,12 +26,6 @@ GNU General Public License for more details.
 
 #define PART_SIZE	Q_max( 0.5f, (cl_draw_particles->value - 0.5f))	// because original particle of Quake1 was smaller than this
 
-// particle velocities
-static const float cl_avertexnormals[NUMVERTEXNORMALS][3] =
-{
-#include "anorms.h"
-};
-
 /*
 ==============================================================
 
@@ -399,7 +393,7 @@ void CL_DrawParticles( double frametime )
 			pColor = &clgame.palette[p->color];
 			// FIXME: should we pass color through lightgamma table?
 
-			alpha = 255 * (p->die - cl.time) * 2;
+			alpha = 255 * (p->die - cl.time) * 16.0f;
 			if( alpha > 255 || p->type == pt_static )
 				alpha = 255;
 
@@ -715,7 +709,7 @@ void R_EntityParticles( cl_entity_t *ent )
 		p->die = cl.time + 0.001f;
 		p->color = 111; // yellow
 
-		VectorMAMAM( 1.0f, ent->origin, 64.0f, cl_avertexnormals[i], 16.0f, forward, p->org );
+		VectorMAMAM( 1.0f, ent->origin, 64.0f, m_bytenormals[i], 16.0f, forward, p->org );
 	}
 }
 

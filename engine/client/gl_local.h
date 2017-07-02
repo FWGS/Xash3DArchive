@@ -36,7 +36,6 @@ extern byte	*r_temppool;
 #define SUBDIVIDE_SIZE	64
 #define MAX_MIRRORS		32	// per one frame!
 
-#define NUMVERTEXNORMALS	162
 #define SHADEDOT_QUANT 	16	// precalculated dot products for quantized angles
 
 // refparams
@@ -220,7 +219,6 @@ typedef struct
 typedef struct
 {
 	uint		c_world_polys;
-	uint		c_brush_polys;
 	uint		c_studio_polys;
 	uint		c_sprite_polys;
 	uint		c_alias_polys;
@@ -664,6 +662,7 @@ extern convar_t	*r_norefresh;
 extern convar_t	*r_lighting_extended;
 extern convar_t	*r_lighting_modulate;
 extern convar_t	*r_lighting_ambient;
+extern convar_t	*r_studio_lambert;
 extern convar_t	*r_detailtextures;
 extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;

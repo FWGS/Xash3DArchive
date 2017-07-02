@@ -150,6 +150,7 @@ void SV_SetModel( edict_t *ent, const char *name )
 	// studio models set to zero sizes as default
 	switch( mod_type )
 	{
+	case mod_alias:
 	case mod_brush:
 	case mod_sprite:
 		Mod_GetBounds( ent->v.modelindex, mins, maxs );
@@ -3069,7 +3070,7 @@ static void *pfnGetModelPtr( edict_t *pEdict )
 		return NULL;
 
 	mod = Mod_Handle( pEdict->v.modelindex );
-	return Mod_Extradata( mod );
+	return Mod_StudioExtradata( mod );
 }
 
 /*

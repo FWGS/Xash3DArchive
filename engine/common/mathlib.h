@@ -39,6 +39,8 @@ GNU General Public License for more details.
 #define RAD2DEG( x )	((float)(x) * (float)(180.f / M_PI))
 #define DEG2RAD( x )	((float)(x) * (float)(M_PI / 180.f))
 
+#define NUMVERTEXNORMALS	162
+
 #define SIDE_FRONT		0
 #define SIDE_BACK		1
 #define SIDE_ON		2
@@ -189,5 +191,6 @@ extern vec3_t		vec3_origin;
 extern int		boxpnt[6][4];
 extern const matrix3x4	matrix3x4_identity;
 extern const matrix4x4	matrix4x4_identity;
+extern const float		m_bytenormals[NUMVERTEXNORMALS][3];
 
 #endif//MATHLIB_H

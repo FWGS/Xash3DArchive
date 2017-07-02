@@ -129,7 +129,7 @@ qboolean SV_CheckSphereIntersection( edict_t *ent, const vec3_t start, const vec
 	if(( mod = Mod_Handle( ent->v.modelindex )) == NULL )
 		return true;
 
-	if(( pstudiohdr = (studiohdr_t *)Mod_Extradata( mod )) == NULL )
+	if(( pstudiohdr = (studiohdr_t *)Mod_StudioExtradata( mod )) == NULL )
 		return true;
 
 	sequence = ent->v.sequence;
@@ -369,7 +369,7 @@ hull_t *SV_HullForStudioModel( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t of
 			vec3_t		angles;
 			int		iBlend;
 
-			pstudio = Mod_Extradata( mod );
+			pstudio = Mod_StudioExtradata( mod );
 			pseqdesc = (mstudioseqdesc_t *)((byte *)pstudio + pstudio->seqindex) + ent->v.sequence;
 			VectorCopy( ent->v.angles, angles );
 

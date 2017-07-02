@@ -1095,9 +1095,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	qboolean	is_dynamic = false;
 	qboolean	is_mirror = false;
 	
-	if( RI.currententity == clgame.entities )
-		r_stats.c_world_polys++;
-	else r_stats.c_brush_polys++; 
+	r_stats.c_world_polys++;
 
 	if( fa->flags & SURF_DRAWSKY )
 		return; // already handled

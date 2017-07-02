@@ -34,6 +34,12 @@ int boxpnt[6][4] =
 { 7, 6, 4, 5 }, // -Z
 };	
 
+// pre-quantized table normals from Quake1
+const float m_bytenormals[NUMVERTEXNORMALS][3] =
+{
+#include "anorms.h"
+};
+
 /*
 =================
 anglemod

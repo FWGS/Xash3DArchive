@@ -253,7 +253,7 @@ hull_t *Mod_HullForStudio( model_t *model, float frame, int sequence, vec3_t ang
 		}
 	}
 
-	mod_studiohdr = Mod_Extradata( model );
+	mod_studiohdr = Mod_StudioExtradata( model );
 	if( !mod_studiohdr ) return NULL; // probably not a studiomodel
 
 	VectorCopy( angles, angles2 );
@@ -508,7 +508,7 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAtt, float *origin, float *
 	model_t			*mod;
 
 	mod = Mod_Handle( e->v.modelindex );
-	mod_studiohdr = (studiohdr_t *)Mod_Extradata( mod );
+	mod_studiohdr = (studiohdr_t *)Mod_StudioExtradata( mod );
 	if( !mod_studiohdr ) return;
 
 	if( mod_studiohdr->numattachments <= 0 )
@@ -551,7 +551,7 @@ void Mod_GetBonePosition( const edict_t *e, int iBone, float *origin, float *ang
 	model_t	*mod;
 
 	mod = Mod_Handle( e->v.modelindex );
-	mod_studiohdr = (studiohdr_t *)Mod_Extradata( mod );
+	mod_studiohdr = (studiohdr_t *)Mod_StudioExtradata( mod );
 	if( !mod_studiohdr ) return;
 
 	pBlendAPI->SV_StudioSetupBones( mod, e->v.frame, e->v.sequence, e->v.angles, e->v.origin, e->v.controller, e->v.blending, iBone, e );
@@ -723,7 +723,7 @@ static server_studio_api_t gStudioAPI =
 	Mod_Calloc,
 	Mod_CacheCheck,
 	Mod_LoadCacheFile,
-	Mod_Extradata,
+	Mod_StudioExtradata,
 };
    
 /*
