@@ -2146,7 +2146,8 @@ void Con_VidInit( void )
 		{
 			if( FS_FileExists( "cached/conback640", false ))
 				con.background = GL_LoadTexture( "cached/conback640", NULL, 0, TF_IMAGE, NULL );
-			else con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE, NULL );
+			else if( FS_FileExists( "cached/conback", false ))
+				con.background = GL_LoadTexture( "cached/conback", NULL, 0, TF_IMAGE, NULL );
 		}
 	}
 	else
@@ -2159,7 +2160,8 @@ void Con_VidInit( void )
 		{
 			if( FS_FileExists( "cached/loading640", false ))
 				con.background = GL_LoadTexture( "cached/loading640", NULL, 0, TF_IMAGE, NULL );
-			else con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE, NULL );
+			else if( FS_FileExists( "cached/loading", false ))
+				con.background = GL_LoadTexture( "cached/loading", NULL, 0, TF_IMAGE, NULL );
 		}
 	}
 

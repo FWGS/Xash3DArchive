@@ -545,10 +545,25 @@ void SCR_InstallParticlePalette( void )
 void SCR_RegisterTextures( void )
 {
 	// register gfx.wad images
-	cls.pauseIcon = GL_LoadTexture( "gfx/paused.lmp", NULL, 0, TF_IMAGE, NULL );
-	if( cl_allow_levelshots->value )
-		cls.loadingBar = GL_LoadTexture( "gfx/lambda.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE, NULL );
-	else cls.loadingBar = GL_LoadTexture( "gfx/lambda.lmp", NULL, 0, TF_IMAGE, NULL ); 
+
+	if( FS_FileExists( "gfx/paused.lmp", false ))
+		cls.pauseIcon = GL_LoadTexture( "gfx/paused.lmp", NULL, 0, TF_IMAGE, NULL );
+	else if( FS_FileExists( "gfx/pause.lmp", false ))
+		cls.pauseIcon = GL_LoadTexture( "gfx/pause.lmp", NULL, 0, TF_IMAGE, NULL );
+
+	if( FS_FileExists( "gfx/lambda.lmp", false ))
+	{
+		if( cl_allow_levelshots->value )
+			cls.loadingBar = GL_LoadTexture( "gfx/lambda.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE, NULL );
+		else cls.loadingBar = GL_LoadTexture( "gfx/lambda.lmp", NULL, 0, TF_IMAGE, NULL ); 
+	}
+	else if( FS_FileExists( "gfx/loading.lmp", false ))
+	{
+		if( cl_allow_levelshots->value )
+			cls.loadingBar = GL_LoadTexture( "gfx/loading.lmp", NULL, 0, TF_IMAGE|TF_LUMINANCE, NULL );
+		else cls.loadingBar = GL_LoadTexture( "gfx/loading.lmp", NULL, 0, TF_IMAGE, NULL ); 
+	}
+	
 	cls.tileImage = GL_LoadTexture( "gfx/backtile.lmp", NULL, 0, TF_IMAGE, NULL );
 }
 

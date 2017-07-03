@@ -134,7 +134,7 @@ static const loadpixformat_t load_game[] =
 { "%s%s.%s", "mip", Image_LoadMIP, IL_HINT_NO },	// hl textures from wad or buffer
 { "%s%s.%s", "mdl", Image_LoadMDL, IL_HINT_HL },	// hl studio model skins
 { "%s%s.%s", "spr", Image_LoadSPR, IL_HINT_HL },	// hl sprite frames
-{ "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_HL },	// hl menu images (cached.wad etc)
+{ "%s%s.%s", "lmp", Image_LoadLMP, IL_HINT_NO },	// hl menu images (cached.wad etc)
 { "%s%s.%s", "fnt", Image_LoadFNT, IL_HINT_HL },	// hl console font (fonts.wad etc)
 { "%s%s.%s", "pal", Image_LoadPAL, IL_HINT_NO },	// install studio\sprite palette
 { NULL, NULL, NULL, IL_HINT_NO }

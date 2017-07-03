@@ -286,6 +286,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	}
 	else if( image.hint != IL_HINT_HL )
 	{
+		rendermode = LUMP_QUAKE1;
 		pal = NULL;
 	}
 	else

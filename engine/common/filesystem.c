@@ -3324,9 +3324,9 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 			return NULL;
 		}
 
-		if( header.ident != IDWAD3HEADER )
+		if( header.ident != IDWAD2HEADER && header.ident != IDWAD3HEADER )
 		{
-			MsgDev( D_ERROR, "W_Open: %s is not a WAD3 file\n", filename );
+			MsgDev( D_ERROR, "W_Open: %s is not a WAD2 or WAD3 file\n", filename );
 			if( error ) *error = WAD_LOAD_BAD_HEADER;
 			W_Close( wad );
 			return NULL;
