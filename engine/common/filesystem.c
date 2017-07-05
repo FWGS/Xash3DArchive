@@ -79,7 +79,7 @@ typedef struct wfile_s
 	byte		*mempool;	// W_ReadLump temp buffers
 	int		numlumps;
 	int		mode;
-	int		handle;
+	file_t		*handle;
 	dlumpinfo_t	*lumps;
 	time_t		filetime;
 };
@@ -513,7 +513,6 @@ pack_t *FS_LoadPackPAK( const char *packfile, int *error )
 	for( i = 0; i < numpackfiles; i++ )
 		FS_AddFileToPack( info[i].name, pack, info[i].filepos, info[i].filelen );
 
-	MsgDev( D_NOTE, "Adding packfile: %s (%i files)\n", packfile, numpackfiles );
 	if( error ) *error = PAK_LOAD_OK;
 	Mem_Free( info );
 
@@ -521,101 +520,11 @@ pack_t *FS_LoadPackPAK( const char *packfile, int *error )
 }
 
 /*
-================
-FS_AddPak_Fullpath
-
-Adds the given pack to the search path.
-The pack type is autodetected by the file extension.
-
-Returns true if the file was successfully added to the
-search path or if it was already included.
-
-If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
-plain directories.
-================
-*/
-static qboolean FS_AddPak_Fullpath( const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs, int flags )
-{
-	searchpath_t	*search;
-	pack_t		*pak = NULL;
-	const char	*ext = FS_FileExtension( pakfile );
-	int		errorcode = PAK_LOAD_COULDNT_OPEN;
-	
-	for( search = fs_searchpaths; search; search = search->next )
-	{
-		if( search->pack && !Q_stricmp( search->pack->filename, pakfile ))
-		{
-			if( already_loaded ) *already_loaded = true;
-			return true; // already loaded
-		}
-	}
-
-	if( already_loaded ) *already_loaded = false;
-
-	if( !Q_stricmp( ext, "pak" )) pak = FS_LoadPackPAK( pakfile, &errorcode );
-	else MsgDev( D_ERROR, "\"%s\" does not have a pack extension\n", pakfile );
-
-	if( pak )
-	{
-		if( keep_plain_dirs )
-		{
-			// find the first item whose next one is a pack or NULL
-			searchpath_t *insertion_point = NULL;
-			if( fs_searchpaths && !fs_searchpaths->pack )
-			{
-				insertion_point = fs_searchpaths;
-				while( 1 )
-				{
-					if( !insertion_point->next ) break;
-					if( insertion_point->next->pack ) break;
-					insertion_point = insertion_point->next;
-				}
-			}
-
-			// if insertion_point is NULL, this means that either there is no
-			// item in the list yet, or that the very first item is a pack. In
-			// that case, we want to insert at the beginning...
-			if( !insertion_point )
-			{
-				search = (searchpath_t *)Mem_Alloc( fs_mempool, sizeof( searchpath_t ));
-				search->pack = pak;
-				search->next = fs_searchpaths;
-				search->flags |= flags;
-				fs_searchpaths = search;
-			}
-			else // otherwise we want to append directly after insertion_point.
-			{
-				search = (searchpath_t *)Mem_Alloc( fs_mempool, sizeof( searchpath_t ));
-				search->pack = pak;
-				search->next = insertion_point->next;
-				search->flags |= flags;
-				insertion_point->next = search;
-			}
-		}
-		else
-		{
-			search = (searchpath_t *)Mem_Alloc( fs_mempool, sizeof( searchpath_t ));
-			search->pack = pak;
-			search->next = fs_searchpaths;
-			search->flags |= flags;
-			fs_searchpaths = search;
-		}
-		return true;
-	}
-	else
-	{
-		if( errorcode != PAK_LOAD_NO_FILES )
-			MsgDev( D_ERROR, "FS_AddPak_Fullpath: unable to load pak \"%s\"\n", pakfile );
-		return false;
-	}
-}
-
-/*
 ====================
 FS_AddWad_Fullpath
 ====================
 */
-static qboolean FS_AddWad_Fullpath( const char *wadfile, qboolean *already_loaded, qboolean keep_plain_dirs, int flags )
+static qboolean FS_AddWad_Fullpath( const char *wadfile, qboolean *already_loaded, int flags )
 {
 	searchpath_t	*search;
 	wfile_t		*wad = NULL;
@@ -637,56 +546,86 @@ static qboolean FS_AddWad_Fullpath( const char *wadfile, qboolean *already_loade
 
 	if( wad )
 	{
-		if( keep_plain_dirs )
-		{
-			// find the first item whose next one is a wad or NULL
-			searchpath_t *insertion_point = NULL;
-			if( fs_searchpaths && !fs_searchpaths->wad )
-			{
-				insertion_point = fs_searchpaths;
-				while( 1 )
-				{
-					if( !insertion_point->next ) break;
-					if( insertion_point->next->wad ) break;
-					insertion_point = insertion_point->next;
-				}
-			}
-			// if insertion_point is NULL, this means that either there is no
-			// item in the list yet, or that the very first item is a wad. In
-			// that case, we want to insert at the beginning...
-			if( !insertion_point )
-			{
-				search = (searchpath_t *)Mem_Alloc( fs_mempool, sizeof( searchpath_t ));
-				search->wad = wad;
-				search->next = fs_searchpaths;
-				search->flags |= flags;
-				fs_searchpaths = search;
-			}
-			else // otherwise we want to append directly after insertion_point.
-			{
-				search = (searchpath_t *)Mem_Alloc( fs_mempool, sizeof( searchpath_t ));
-				search->wad = wad;
-				search->next = insertion_point->next;
-				search->flags |= flags;
-				insertion_point->next = search;
-			}
-		}
-		else
-		{
-			search = (searchpath_t *)Mem_Alloc( fs_mempool, sizeof( searchpath_t ));
-			search->wad = wad;
-			search->next = fs_searchpaths;
-			search->flags |= flags;
-			fs_searchpaths = search;
-		}
+		search = (searchpath_t *)Mem_Alloc( fs_mempool, sizeof( searchpath_t ));
+		search->wad = wad;
+		search->next = fs_searchpaths;
+		search->flags |= flags;
+		fs_searchpaths = search;
 
-		MsgDev( D_NOTE, "Adding wadfile %s (%i files)\n", wadfile, wad->numlumps );
+		MsgDev( D_REPORT, "Adding wadfile: %s (%i files)\n", wadfile, wad->numlumps );
 		return true;
 	}
 	else
 	{
 		if( errorcode != WAD_LOAD_NO_FILES )
 			MsgDev( D_ERROR, "FS_AddWad_Fullpath: unable to load wad \"%s\"\n", wadfile );
+		return false;
+	}
+}
+
+/*
+================
+FS_AddPak_Fullpath
+
+Adds the given pack to the search path.
+The pack type is autodetected by the file extension.
+
+Returns true if the file was successfully added to the
+search path or if it was already included.
+
+If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
+plain directories.
+================
+*/
+static qboolean FS_AddPak_Fullpath( const char *pakfile, qboolean *already_loaded, int flags )
+{
+	searchpath_t	*search;
+	pack_t		*pak = NULL;
+	const char	*ext = FS_FileExtension( pakfile );
+	int		i, errorcode = PAK_LOAD_COULDNT_OPEN;
+	
+	for( search = fs_searchpaths; search; search = search->next )
+	{
+		if( search->pack && !Q_stricmp( search->pack->filename, pakfile ))
+		{
+			if( already_loaded ) *already_loaded = true;
+			return true; // already loaded
+		}
+	}
+
+	if( already_loaded ) *already_loaded = false;
+
+	if( !Q_stricmp( ext, "pak" )) pak = FS_LoadPackPAK( pakfile, &errorcode );
+	else MsgDev( D_ERROR, "\"%s\" does not have a pack extension\n", pakfile );
+
+	if( pak )
+	{
+		string	fullpath;
+
+		search = (searchpath_t *)Mem_Alloc( fs_mempool, sizeof( searchpath_t ));
+		search->pack = pak;
+		search->next = fs_searchpaths;
+		search->flags |= flags;
+		fs_searchpaths = search;
+
+		MsgDev( D_REPORT, "Adding pakfile: %s (%i files)\n", pakfile, pak->numfiles );
+
+		// time to add in search list all the wads that contains in current pakfile (if do)
+		for( i = 0; i < pak->numfiles; i++ )
+		{
+			if( !Q_stricmp( FS_FileExtension( pak->files[i].name ), "wad" ))
+			{
+				Q_sprintf( fullpath, "%s/%s", pakfile, pak->files[i].name );
+				FS_AddWad_Fullpath( fullpath, NULL, flags );
+			}
+		}
+
+		return true;
+	}
+	else
+	{
+		if( errorcode != PAK_LOAD_NO_FILES )
+			MsgDev( D_ERROR, "FS_AddPak_Fullpath: unable to load pak \"%s\"\n", pakfile );
 		return false;
 	}
 }
@@ -719,9 +658,11 @@ void FS_AddGameDirectory( const char *dir, int flags )
 		if( !Q_stricmp( FS_FileExtension( list.strings[i] ), "pak" ))
 		{
 			Q_sprintf( fullpath, "%s%s", dir, list.strings[i] );
-			FS_AddPak_Fullpath( fullpath, NULL, false, flags );
+			FS_AddPak_Fullpath( fullpath, NULL, flags );
 		}
 	}
+
+	FS_AllowDirectPaths( true );
 
 	// add any WAD package in the directory
 	for( i = 0; i < list.numstrings; i++ )
@@ -729,11 +670,12 @@ void FS_AddGameDirectory( const char *dir, int flags )
 		if( !Q_stricmp( FS_FileExtension( list.strings[i] ), "wad" ))
 		{
 			Q_sprintf( fullpath, "%s%s", dir, list.strings[i] );
-			FS_AddWad_Fullpath( fullpath, NULL, false, flags );
+			FS_AddWad_Fullpath( fullpath, NULL, flags );
 		}
 	}
 
 	stringlistfreecontents( &list );
+	FS_AllowDirectPaths( false );
 
 	// add the directory to the search path
 	// (unpacked files have the priority over packed files)
@@ -742,8 +684,6 @@ void FS_AddGameDirectory( const char *dir, int flags )
 	search->next = fs_searchpaths;
 	search->flags = flags;
 	fs_searchpaths = search;
-
-
 }
 
 /*
@@ -3160,28 +3100,28 @@ byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, long *lumpsizeptr )
 	// no wads loaded
 	if( !wad || !lump ) return NULL;
 
-	oldpos = tell( wad->handle ); // don't forget restore original position
+	oldpos = FS_Tell( wad->handle ); // don't forget restore original position
 
-	if( lseek( wad->handle, lump->filepos, SEEK_SET ) == -1 )
+	if( FS_Seek( wad->handle, lump->filepos, SEEK_SET ) == -1 )
 	{
 		MsgDev( D_ERROR, "W_ReadLump: %s is corrupted\n", lump->name );
-		lseek( wad->handle, oldpos, SEEK_SET );
+		FS_Seek( wad->handle, oldpos, SEEK_SET );
 		return NULL;
 	}
 
 	buf = (byte *)Mem_Alloc( wad->mempool, lump->disksize );
-	size = read( wad->handle, buf, lump->disksize );
+	size = FS_Read( wad->handle, buf, lump->disksize );
 	if( size < lump->disksize )
 	{
 		MsgDev( D_WARN, "W_ReadLump: %s is probably corrupted\n", lump->name );
-		lseek( wad->handle, oldpos, SEEK_SET );
+		FS_Seek( wad->handle, oldpos, SEEK_SET );
 		Mem_Free( buf );
 		return NULL;
 	}
 
 
 	if( lumpsizeptr ) *lumpsizeptr = lump->size;
-	lseek( wad->handle, oldpos, SEEK_SET );
+	FS_Seek( wad->handle, oldpos, SEEK_SET );
 
 	return buf;
 }
@@ -3211,7 +3151,7 @@ qboolean W_WriteLump( wfile_t *wad, dlumpinfo_t *lump, const void *data, size_t 
 
 	lump->size = lump->disksize = datasize;
 
-	if( write( wad->handle, data, datasize ) == datasize )
+	if( FS_Write( wad->handle, data, datasize ) == datasize )
 		return true;		
 	return false;
 }
@@ -3275,9 +3215,11 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 		}
 	}
 
-	wad->handle = open( filename, mod|opt, 0666 );
+	// NOTE: FS_Open is load wad file from the first pak in the list (while fs_ext_path is false)
+	if( fs_ext_path ) wad->handle = FS_Open( filename, mode, false );
+	else wad->handle = FS_Open( FS_FileWithoutPath( filename ), mode, false );
 
-	if( wad->handle < 0 )
+	if( wad->handle == NULL )
 	{
 		MsgDev( D_ERROR, "W_Open: couldn't open %s\n", filename );
 		if( error ) *error = WAD_LOAD_COULDNT_OPEN;
@@ -3290,8 +3232,7 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 	wad->filetime = FS_SysFileTime( filename );
 	wad->mempool = Mem_AllocPool( filename );
 
-	wadsize = lseek( wad->handle, 0, SEEK_END );
-	lseek( wad->handle, 0, SEEK_SET );
+	wadsize = FS_FileLength( wad->handle );
 
 	// if the file is opened in "write", "append", or "read/write" mode
 	if( mod == O_WRONLY || !wadsize )
@@ -3306,9 +3247,9 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 		hdr.ident = IDWAD3HEADER;
 		hdr.numlumps = wad->numlumps;
 		hdr.infotableofs = sizeof( dwadinfo_t );
-		write( wad->handle, &hdr, sizeof( hdr ));
-		write( wad->handle, comment, Q_strlen( comment ) + 1 );
-		wad->infotableofs = tell( wad->handle );
+		FS_Write( wad->handle, &hdr, sizeof( hdr ));
+		FS_Write( wad->handle, comment, Q_strlen( comment ) + 1 );
+		wad->infotableofs = FS_Tell( wad->handle );
 	}
 	else if( mod == O_RDWR || mod == O_RDONLY )
 	{
@@ -3316,7 +3257,7 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 			wad->mode = O_APPEND;
 		else wad->mode = O_RDONLY;
 
-		if( read( wad->handle, &header, sizeof( dwadinfo_t )) != sizeof( dwadinfo_t ))
+		if( FS_Read( wad->handle, &header, sizeof( dwadinfo_t )) != sizeof( dwadinfo_t ))
 		{
 			MsgDev( D_ERROR, "W_Open: %s can't read header\n", filename );
 			if( error ) *error = WAD_LOAD_BAD_HEADER;
@@ -3351,7 +3292,7 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 
 		wad->infotableofs = header.infotableofs; // save infotableofs position
 
-		if( lseek( wad->handle, wad->infotableofs, SEEK_SET ) == -1 )
+		if( FS_Seek( wad->handle, wad->infotableofs, SEEK_SET ) == -1 )
 		{
 			MsgDev( D_ERROR, "W_Open: %s can't find lump allocation table\n", filename );
 			if( error ) *error = WAD_LOAD_BAD_FOLDERS;
@@ -3364,7 +3305,7 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 		// NOTE: lumps table can be reallocated for O_APPEND mode
 		srclumps = (dlumpinfo_t *)Mem_Alloc( wad->mempool, lat_size );
 
-		if( read( wad->handle, srclumps, lat_size ) != lat_size )
+		if( FS_Read( wad->handle, srclumps, lat_size ) != lat_size )
 		{
 			MsgDev( D_ERROR, "W_ReadLumpTable: %s has corrupted lump allocation table\n", wad->filename );
 			if( error ) *error = WAD_LOAD_CORRUPTED;
@@ -3390,6 +3331,10 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 			k = Q_strlen( Q_strrchr( name, '*' ));
 			if( k ) name[Q_strlen( name ) - k] = '!';
 
+			// check for Quake 'conchars' issues (only lmp loader really allows to read this lame pic)
+			if( srclumps[i].type == 68 && !Q_stricmp( srclumps[i].name, "conchars" ))
+				srclumps[i].type = TYP_GFXPIC; 
+
 			W_AddFileToWad( name, wad, &srclumps[i] );
 		}
 
@@ -3399,7 +3344,7 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 		// if we are in append mode - we need started from infotableofs poisition
 		// overwrite lumptable as well, we have her copy in wad->lumps
 		if( wad->mode == O_APPEND )
-			lseek( wad->handle, wad->infotableofs, SEEK_SET );
+			FS_Seek( wad->handle, wad->infotableofs, SEEK_SET );
 	}
 
 	// and leave the file open
@@ -3417,27 +3362,27 @@ void W_Close( wfile_t *wad )
 {
 	if( !wad ) return;
 
-	if( wad->handle >= 0 && ( wad->mode == O_APPEND || wad->mode == O_WRONLY ))
+	if( wad->handle != NULL && ( wad->mode == O_APPEND || wad->mode == O_WRONLY ))
 	{
 		dwadinfo_t	hdr;
 		long		ofs;
 
 		// write the lumpinfo
-		ofs = tell( wad->handle );
-		write( wad->handle, wad->lumps, wad->numlumps * sizeof( dlumpinfo_t ));
+		ofs = FS_Tell( wad->handle );
+		FS_Write( wad->handle, wad->lumps, wad->numlumps * sizeof( dlumpinfo_t ));
 
 		// write the header
 		hdr.ident = IDWAD3HEADER;
 		hdr.numlumps = wad->numlumps;
 		hdr.infotableofs = ofs;
 
-		lseek( wad->handle, 0, SEEK_SET );
-		write( wad->handle, &hdr, sizeof( hdr ));
+		FS_Seek( wad->handle, 0, SEEK_SET );
+		FS_Write( wad->handle, &hdr, sizeof( hdr ));
 	}
 
 	Mem_FreePool( &wad->mempool );
-	if( wad->handle >= 0 )
-		close( wad->handle );	
+	if( wad->handle != NULL )
+		FS_Close( wad->handle );	
 
 	Mem_Free( wad ); // free himself
 }
@@ -3500,20 +3445,20 @@ size_t W_SaveFile( wfile_t *wad, const char *lump, const void *data, size_t data
 			return -1;
 		}
 
-		oldpos = tell( wad->handle ); // don't forget restore original position
+		oldpos = FS_Tell( wad->handle ); // don't forget restore original position
 
-		if( lseek( wad->handle, find->filepos, SEEK_SET ) == -1 )
+		if( FS_Seek( wad->handle, find->filepos, SEEK_SET ) == -1 )
 		{
 			MsgDev( D_ERROR, "W_ReplaceLump: %s is corrupted\n", find->name );
-			lseek( wad->handle, oldpos, SEEK_SET );
+			FS_Seek( wad->handle, oldpos, SEEK_SET );
 			return -1;
 		}
 
-		if( write( wad->handle, data, datasize ) != find->disksize )
+		if( FS_Write( wad->handle, data, datasize ) != find->disksize )
 			MsgDev( D_WARN, "W_ReplaceLump: %s probably replaced with errors\n", find->name );
 
 		// restore old position
-		lseek( wad->handle, oldpos, SEEK_SET );
+		FS_Seek( wad->handle, oldpos, SEEK_SET );
 
 		return wad->numlumps;
 	}
@@ -3548,7 +3493,7 @@ size_t W_SaveFile( wfile_t *wad, const char *lump, const void *data, size_t data
 
 	// write header
 	Q_strnupr( lumpname, newlump.name, WAD3_NAMELEN );
-	newlump.filepos = tell( wad->handle );
+	newlump.filepos = FS_Tell( wad->handle );
 	newlump.attribs = ATTR_NONE;
 	newlump.img_type = hint;
 	newlump.type = type;

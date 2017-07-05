@@ -245,7 +245,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	lmp_t	lmp;
 	byte	*fin, *pal;
 	int	rendermode;
-	int	pixels;
+	int	i, pixels;
 
 	if( filesize < sizeof( lmp ))
 	{
@@ -257,12 +257,26 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	if( Q_stristr( name, "palette.lmp" ))
 		return Image_LoadPAL( name, buffer, filesize );
 
-	fin = (byte *)buffer;
-	memcpy( &lmp, fin, sizeof( lmp ));
-	image.width = lmp.width;
-	image.height = lmp.height;
-	rendermode = LUMP_MASKED;
-	fin += sizeof( lmp );
+	// greatest hack from id software (image without header)
+	if( image.hint != IL_HINT_HL && Q_stristr( name, "conchars" ))
+	{
+		image.width = image.height = 128;
+		rendermode = LUMP_MASKED;
+		filesize += sizeof( lmp );
+		fin = (byte *)buffer;
+
+		// need to remap transparent color from first to last entry
+		for( i = 0; i < 16384; i++ ) if( !fin[i] ) fin[i] = 0xFF;
+	}
+	else
+	{
+		fin = (byte *)buffer;
+		memcpy( &lmp, fin, sizeof( lmp ));
+		image.width = lmp.width;
+		image.height = lmp.height;
+		rendermode = LUMP_MASKED;
+		fin += sizeof( lmp );
+	}
 
 	pixels = image.width * image.height;
 

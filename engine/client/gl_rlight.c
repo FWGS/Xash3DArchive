@@ -498,7 +498,7 @@ colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot )
 	int	i, maxEnts = 1;
 	colorVec	light, cv;
 
-	if( cl.worldmodel->lightdata )
+	if( cl.worldmodel && cl.worldmodel->lightdata )
 	{
 		light.r = light.g = light.b = light.a = 0;
 		last_fraction = 1.0f;

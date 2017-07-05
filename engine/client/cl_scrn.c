@@ -467,44 +467,82 @@ void SCR_UpdateScreen( void )
 	V_PostRender();
 }
 
-void SCR_LoadCreditsFont( void )
+qboolean SCR_LoadFixedWidthFont( const char *fontname )
 {
-	int	fontWidth;
+	int	i, fontWidth;
 
-	if( cls.creditsFont.valid ) return; // already loaded
+	if( cls.creditsFont.valid )
+		return true; // already loaded
 
-	cls.creditsFont.hFontTexture = GL_LoadTexture( "gfx.wad/creditsfont.fnt", NULL, 0, TF_IMAGE, NULL );
+	if( !FS_FileExists( fontname, false ))
+		return false;
+
+	cls.creditsFont.hFontTexture = GL_LoadTexture( fontname, NULL, 0, TF_IMAGE, NULL );
+	R_GetTextureParms( &fontWidth, NULL, cls.creditsFont.hFontTexture );
+	cls.creditsFont.charHeight = clgame.scrInfo.iCharHeight = fontWidth / 16;
+	cls.creditsFont.valid = true;
+
+	// build fixed rectangles
+	for( i = 0; i < 256; i++ )
+	{
+		cls.creditsFont.fontRc[i].left = (i * (fontWidth / 16)) % fontWidth;
+		cls.creditsFont.fontRc[i].right = cls.creditsFont.fontRc[i].left + fontWidth / 16;
+		cls.creditsFont.fontRc[i].top = (i / 16) * (fontWidth / 16);
+		cls.creditsFont.fontRc[i].bottom = cls.creditsFont.fontRc[i].top + fontWidth / 16;
+		cls.creditsFont.charWidths[i] = clgame.scrInfo.charWidths[i] = fontWidth / 16;
+	}
+
+	return true;
+}
+
+qboolean SCR_LoadVariableWidthFont( const char *fontname )
+{
+	int	i, fontWidth;
+	byte	*buffer;
+	size_t	length;
+	qfont_t	*src;
+
+	if( cls.creditsFont.valid )
+		return true; // already loaded
+
+	if( !FS_FileExists( fontname, false ))
+		return false;
+
+	cls.creditsFont.hFontTexture = GL_LoadTexture( fontname, NULL, 0, TF_IMAGE, NULL );
 	R_GetTextureParms( &fontWidth, NULL, cls.creditsFont.hFontTexture );
 
-	// setup creditsfont
-	if( FS_FileExists( "gfx/creditsfont.fnt", false ))
+	// half-life font with variable chars witdh
+	buffer = FS_LoadFile( fontname, &length, false );
+
+	// setup creditsfont	
+	if( buffer && length >= sizeof( qfont_t ))
 	{
-		byte	*buffer;
-		size_t	length;
-		qfont_t	*src;
+		src = (qfont_t *)buffer;
+		cls.creditsFont.charHeight = clgame.scrInfo.iCharHeight = src->rowheight;
 
-		// half-life font with variable chars witdh
-		buffer = FS_LoadFile( "gfx/creditsfont.fnt", &length, false );
-	
-		if( buffer && length >= sizeof( qfont_t ))
+		// build rectangles
+		for( i = 0; i < 256; i++ )
 		{
-			int	i;
-	
-			src = (qfont_t *)buffer;
-			cls.creditsFont.charHeight = clgame.scrInfo.iCharHeight = src->rowheight;
-
-			// build rectangles
-			for( i = 0; i < 256; i++ )
-			{
-				cls.creditsFont.fontRc[i].left = (word)src->fontinfo[i].startoffset % fontWidth;
-				cls.creditsFont.fontRc[i].right = cls.creditsFont.fontRc[i].left + src->fontinfo[i].charwidth;
-				cls.creditsFont.fontRc[i].top = (word)src->fontinfo[i].startoffset / fontWidth;
-				cls.creditsFont.fontRc[i].bottom = cls.creditsFont.fontRc[i].top + src->rowheight;
-				cls.creditsFont.charWidths[i] = clgame.scrInfo.charWidths[i] = src->fontinfo[i].charwidth;
-			}
-			cls.creditsFont.valid = true;
+			cls.creditsFont.fontRc[i].left = (word)src->fontinfo[i].startoffset % fontWidth;
+			cls.creditsFont.fontRc[i].right = cls.creditsFont.fontRc[i].left + src->fontinfo[i].charwidth;
+			cls.creditsFont.fontRc[i].top = (word)src->fontinfo[i].startoffset / fontWidth;
+			cls.creditsFont.fontRc[i].bottom = cls.creditsFont.fontRc[i].top + src->rowheight;
+			cls.creditsFont.charWidths[i] = clgame.scrInfo.charWidths[i] = src->fontinfo[i].charwidth;
 		}
-		if( buffer ) Mem_Free( buffer );
+		cls.creditsFont.valid = true;
+	}
+	if( buffer ) Mem_Free( buffer );
+
+	return true;
+}
+
+
+void SCR_LoadCreditsFont( void )
+{
+	if( !SCR_LoadVariableWidthFont( "gfx.wad/creditsfont.fnt" ))
+	{
+		if( !SCR_LoadFixedWidthFont( "gfx/conchars" ))
+			MsgDev( D_ERROR, "failed to load HUD font\n" );
 	}
 }
 
@@ -564,7 +602,7 @@ void SCR_RegisterTextures( void )
 		else cls.loadingBar = GL_LoadTexture( "gfx/loading.lmp", NULL, 0, TF_IMAGE, NULL ); 
 	}
 	
-	cls.tileImage = GL_LoadTexture( "gfx/backtile.lmp", NULL, 0, TF_IMAGE, NULL );
+	cls.tileImage = GL_LoadTexture( "gfx/backtile.lmp", NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP, NULL );
 }
 
 /*

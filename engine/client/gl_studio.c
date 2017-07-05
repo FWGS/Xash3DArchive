@@ -909,7 +909,7 @@ StudioCalcBonePosition
 
 ====================
 */
-void R_StudioCalcBonePosition( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, vec3_t adj, vec3_t pos )
+void R_StudioCalcBonePosition( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, vec3_t pos )
 {
 	vec3_t	origin1;
 	vec3_t	origin2;

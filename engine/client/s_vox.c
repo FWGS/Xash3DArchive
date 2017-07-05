@@ -610,12 +610,7 @@ void VOX_ReadSentenceFile( const char *psentenceFileName )
 
 	// load file
 	pFileData = (char *)FS_LoadFile( psentenceFileName, &fileSize, false );
-
-	if( !pFileData )
-	{
-		MsgDev( D_WARN, "couldn't load %s\n", psentenceFileName );
-		return;
-	} 
+	if( !pFileData ) return; // this game just doesn't used vox sound system
 
 	pch = pFileData;
 	pchlast = pch + fileSize;

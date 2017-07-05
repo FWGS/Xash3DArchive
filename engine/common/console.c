@@ -534,37 +534,62 @@ qboolean Con_Visible( void )
 	return (con.vislines > 0);
 }
 
-/*
-================
-Con_LoadConsoleFont
-================
-*/
-static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
+static qboolean Con_LoadFixedWidthFont( const char *fontname, cl_font_t *font )
 {
-	int	fontWidth;
+	int	i, fontWidth;
 
-	if( font->valid ) return; // already loaded
+	if( font->valid )
+		return true; // already loaded
 
-	// loading conchars
-	if( Sys_CheckParm( "-oldfont" )) font->hFontTexture = GL_LoadTexture( "gfx.wad/conchars", NULL, 0, TF_FONT|TF_NEAREST, NULL );
-	else font->hFontTexture = GL_LoadTexture( va( "fonts.wad/font%i", fontNumber ), NULL, 0, TF_FONT|TF_NEAREST, NULL );
+	if( !FS_FileExists( fontname, false ))
+		return false;
+
+	font->hFontTexture = GL_LoadTexture( fontname, NULL, 0, TF_FONT|TF_NEAREST, NULL );
 	R_GetTextureParms( &fontWidth, NULL, font->hFontTexture );
-		
-	// setup creditsfont
+
 	if( font->hFontTexture && fontWidth != 0 )
 	{
-		byte	*buffer;
-		size_t	length;
-		qfont_t	*src;
-	
+		font->charHeight = fontWidth / 16;
+
+		// build fixed rectangles
+		for( i = 0; i < 256; i++ )
+		{
+			font->fontRc[i].left = (i * (fontWidth / 16)) % fontWidth;
+			font->fontRc[i].right = font->fontRc[i].left + fontWidth / 16;
+			font->fontRc[i].top = (i / 16) * (fontWidth / 16);
+			font->fontRc[i].bottom = font->fontRc[i].top + fontWidth / 16;
+			font->charWidths[i] = fontWidth / 16;
+		}
+		font->valid = true;
+	}
+
+	return true;
+}
+
+static qboolean Con_LoadVariableWidthFont( const char *fontname, cl_font_t *font )
+{
+	int	i, fontWidth;
+	byte	*buffer;
+	size_t	length;
+	qfont_t	*src;
+
+	if( font->valid )
+		return true; // already loaded
+
+	if( !FS_FileExists( fontname, false ))
+		return false;
+
+	font->hFontTexture = GL_LoadTexture( fontname, NULL, 0, TF_FONT|TF_NEAREST, NULL );
+	R_GetTextureParms( &fontWidth, NULL, font->hFontTexture );
+
+	// setup consolefont
+	if( font->hFontTexture && fontWidth != 0 )
+	{
 		// half-life font with variable chars witdh
-		if( Sys_CheckParm( "-oldfont" )) buffer = FS_LoadFile( "gfx.wad/conchars", &length, false );
-		else buffer = FS_LoadFile( va( "fonts.wad/font%i", fontNumber ), &length, false );
+		buffer = FS_LoadFile( fontname, &length, false );
 
 		if( buffer && length >= sizeof( qfont_t ))
 		{
-			int	i;
-	
 			src = (qfont_t *)buffer;
 			font->charHeight = src->rowheight;
 
@@ -581,6 +606,26 @@ static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
 		}
 		if( buffer ) Mem_Free( buffer );
 	}
+
+	return true;
+}
+
+/*
+================
+Con_LoadConsoleFont
+================
+*/
+static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
+{
+	if( font->valid ) return; // already loaded
+
+	// loading conchars
+	if( Sys_CheckParm( "-oldfont" ))
+		Con_LoadVariableWidthFont( "gfx.wad/conchars.fnt", font );
+	else Con_LoadVariableWidthFont( va( "fonts.wad/font%i", fontNumber ), font );
+
+	// quake fixed font as fallback
+	if( !font->valid ) Con_LoadFixedWidthFont( "gfx/conchars", font );
 }
 
 /*
