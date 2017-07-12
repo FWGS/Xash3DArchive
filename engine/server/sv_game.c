@@ -164,7 +164,9 @@ float SV_AngleMod( float ideal, float current, float speed )
 {
 	float	move;
 
-	if( anglemod( current ) == ideal ) // already there?
+	current = anglemod( current );
+
+	if( current == ideal ) // already there?
 		return current; 
 
 	move = ideal - current;
@@ -2566,9 +2568,9 @@ void pfnMessageEnd( void )
 				MSG_Clear( &sv.multicast );
 				return;
 			}
-		}
 
-		sv.multicast.pData[svgame.msg_size_index] = svgame.msg_realsize;
+			sv.multicast.pData[svgame.msg_size_index] = svgame.msg_realsize;
+		}
 	}
 	else if( svgame.msg[svgame.msg_index].size != -1 )
 	{
@@ -2919,15 +2921,30 @@ SV_AllocString
 allocate new engine string
 =============
 */
-string_t SV_AllocString( const char *szValue )
+string_t SV_AllocString( const char *szString )
 {
-	const char *newString;
+	char	*out, *out_p;
+	int	i, l;
 
 	if( svgame.physFuncs.pfnAllocString != NULL )
-		return svgame.physFuncs.pfnAllocString( szValue );
+		return svgame.physFuncs.pfnAllocString( szString );
 
-	newString = _copystring( svgame.stringspool, szValue, __FILE__, __LINE__ );
-	return newString - svgame.globals->pStringBase;
+	l = Q_strlen( szString ) + 1;
+
+	out = out_p = Mem_Alloc( svgame.stringspool, l );
+	for( i = 0; i < l; i++ )
+	{
+		if( szString[i] == '\\' && i < l - 1 )
+		{
+			i++;
+			if( szString[i] == 'n')
+				*out_p++ = '\n';
+			else *out_p++ = '\\';
+		}
+		else *out_p++ = szString[i];
+	}
+
+	return out - svgame.globals->pStringBase;
 }		
 
 /*

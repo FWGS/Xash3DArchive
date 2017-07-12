@@ -1335,6 +1335,8 @@ pfnSPR_Draw
 */
 static void pfnSPR_Draw( int frame, int x, int y, const wrect_t *prc )
 {
+	pglDisable( GL_BLEND );
+
 	SPR_DrawGeneric( frame, x, y, -1, -1, prc );
 }
 

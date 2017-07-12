@@ -81,7 +81,7 @@ struct dlight_s *CL_AllocDlight( int key );
 struct dlight_s *CL_AllocElight( int key );
 void CL_UpdateFlashlight( cl_entity_t *pEnt );
 void CL_AddEntityEffects( cl_entity_t *ent );
-void CL_AddStudioEffects( cl_entity_t *ent );
+void CL_AddModelEffects( cl_entity_t *ent );
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_DecalRemoveAll( int textureIndex );
 int CL_DecalIndexFromName( const char *name );

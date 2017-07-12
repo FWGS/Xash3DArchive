@@ -413,42 +413,23 @@ Alias models are position independent, so the cache manager can move them.
 #define MAXALIASTRIS	4096
 #define MAX_SKINS		32
 
+// This mirrors trivert_t in trilib.h, is present so Quake knows how to
+// load this data
 typedef struct
 {
 	byte		v[3];
 	byte		lightnormalindex;
-} mtrivertex_t;
+} trivertex_t;
 
 typedef struct
 {
 	int		firstpose;
 	int		numposes;
+	trivertex_t	bboxmin;
+	trivertex_t	bboxmax;
 	float		interval;
-	mtrivertex_t	bboxmin;
-	mtrivertex_t	bboxmax;
-	int		frame;
 	char		name[16];
 } maliasframedesc_t;
-
-typedef struct
-{
-	mtrivertex_t	bboxmin;
-	mtrivertex_t	bboxmax;
-	int		frame;
-} maliasgroupdesc_t;
-
-typedef struct
-{
-	int		numframes;
-	int		intervals;
-	maliasgroupdesc_t	frames[1];
-} maliasgroup_t;
-
-typedef struct mtriangle_s
-{
-	int		facesfront;
-	int		vertindex[3];
-} mtriangle_t;
 
 typedef struct
 {
@@ -470,9 +451,10 @@ typedef struct
 
 	int		numposes;
 	int		poseverts;
-	mtrivertex_t	*posedata;	// numposes * poseverts trivert_t
+	trivertex_t	*posedata;	// numposes * poseverts trivert_t
 	int		*commands;	// gl command list with embedded s/t
-	int		gl_texturenum[MAX_SKINS][4];
+	unsigned short	gl_texturenum[MAX_SKINS][4];
+	unsigned short	fb_texturenum[MAX_SKINS][4];
 	int		*texels[MAX_SKINS];	// only for player skins
 	maliasframedesc_t	frames[1];	// variable sized
 } aliashdr_t;

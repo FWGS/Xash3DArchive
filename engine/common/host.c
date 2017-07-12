@@ -831,7 +831,7 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 
 	// we can specified custom name, from Sys_NewInstance
 	if( GetModuleFileName( NULL, szTemp, sizeof( szTemp )) && !host.change_game )
-		FS_FileBase( szTemp, SI.ModuleName );
+		FS_FileBase( szTemp, SI.exeName );
 
 	FS_ExtractFilePath( szTemp, szRootPath );
 	if( Q_stricmp( host.rootdir, szRootPath ))
@@ -840,15 +840,15 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 		SetCurrentDirectory( host.rootdir );
 	}
 
-	if( SI.ModuleName[0] == '#' ) host.type = HOST_DEDICATED; 
+	if( SI.exeName[0] == '#' ) host.type = HOST_DEDICATED; 
 
 	// determine host type
 	if( progname[0] == '#' )
 	{
-		Q_strncpy( SI.ModuleName, progname + 1, sizeof( SI.ModuleName ));
+		Q_strncpy( SI.basedirName, progname + 1, sizeof( SI.basedirName ));
 		host.type = HOST_DEDICATED;
 	}
-	else Q_strncpy( SI.ModuleName, progname, sizeof( SI.ModuleName )); 
+	else Q_strncpy( SI.basedirName, progname, sizeof( SI.basedirName )); 
 
 	if( Sys_CheckParm( "-dedicated" ))
 		host.type = HOST_DEDICATED;
@@ -996,7 +996,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	case HOST_NORMAL:
 		Con_ShowConsole( false ); // hide console
 		// execute startup config and cmdline
-		Cbuf_AddText( va( "exec %s.rc\n", SI.ModuleName ));
+		Cbuf_AddText( va( "exec %s.rc\n", SI.rcName ));
 		Cbuf_Execute();
 		if( !host.config_executed )
 		{

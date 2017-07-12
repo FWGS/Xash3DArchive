@@ -125,6 +125,21 @@ qboolean CL_CompareTimestamps( float t1, float t2 )
 
 /*
 ==================
+CL_EntityIgnoreLerp
+
+some ents will be ignore lerping
+==================
+*/
+qboolean CL_EntityIgnoreLerp( cl_entity_t *e )
+{
+	if( e->model && e->model->type == mod_alias )
+		return false;
+
+	return (e->curstate.movetype == MOVETYPE_NONE) ? true : false;
+}
+
+/*
+==================
 CL_EntityCustomLerp
 
 ==================
@@ -190,12 +205,14 @@ CL_UpdateLatchedVars
 */
 void CL_UpdateLatchedVars( cl_entity_t *ent )
 {
-	if( !ent->model || ent->model->type != mod_studio )
-		return; // below fields used only for studio interpolation
+	if( !ent->model || ( ent->model->type != mod_alias && ent->model->type != mod_studio ))
+		return; // below fields used only for alias and studio interpolation
 
 	VectorCopy( ent->prevstate.origin, ent->latched.prevorigin );
 	VectorCopy( ent->prevstate.angles, ent->latched.prevangles );
 
+	if( ent->model->type == mod_alias )
+		ent->latched.prevframe = ent->prevstate.frame;
 	ent->latched.prevanimtime = ent->prevstate.animtime;
 
 	if( ent->curstate.sequence != ent->prevstate.sequence )
@@ -217,8 +234,8 @@ CL_ResetLatchedVars
 */
 void CL_ResetLatchedVars( cl_entity_t *ent, qboolean full_reset )
 {
-	if( !ent->model || ent->model->type != mod_studio )
-		return; // below fields used only for studio interpolation
+	if( !ent->model || ( ent->model->type != mod_alias && ent->model->type != mod_studio ))
+		return; // below fields used only for alias and studio interpolation
 
 	if( full_reset )
 	{
@@ -226,7 +243,10 @@ void CL_ResetLatchedVars( cl_entity_t *ent, qboolean full_reset )
 		memcpy( ent->latched.prevblending, ent->curstate.blending, sizeof( ent->latched.prevblending ));
 		ent->latched.sequencetime = ent->curstate.animtime;
 		memcpy( ent->latched.prevcontroller, ent->curstate.controller, sizeof( ent->latched.prevcontroller ));
-		ent->latched.prevframe = CL_GetStudioEstimatedFrame( ent );
+		if( ent->model->type == mod_studio )
+			ent->latched.prevframe = CL_GetStudioEstimatedFrame( ent );
+		else if( ent->model->type == mod_alias )
+			ent->latched.prevframe = ent->curstate.frame;
 		ent->prevstate = ent->curstate;
 	}
 
@@ -262,7 +282,7 @@ void CL_ProcessEntityUpdate( cl_entity_t *ent )
 	if( CL_EntityCustomLerp( ent ) && !parametric )
 		ent->curstate.animtime = ent->curstate.msg_time;
 
-	if( !CL_CompareTimestamps( ent->curstate.animtime, ent->prevstate.animtime ) || ent->curstate.movetype == MOVETYPE_NONE )
+	if( !CL_CompareTimestamps( ent->curstate.animtime, ent->prevstate.animtime ) || CL_EntityIgnoreLerp( ent ))
 	{
 		CL_UpdateLatchedVars( ent );
 		CL_UpdatePositions( ent );
@@ -679,7 +699,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		CL_WriteDemoJumpTime();
 
 	// sentinel count. save it for debug checking
-	count = MSG_ReadUBitLong( msg, MAX_VISIBLE_PACKET_BITS ) + 1;
+	count = ( MSG_ReadUBitLong( msg, MAX_VISIBLE_PACKET_BITS ) + 1 ) & 1023;
 	newframe = &cl.frames[cl.parsecountmod];
 
 	// allocate parse entities
@@ -912,8 +932,8 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		// apply client-side effects
 		CL_AddEntityEffects( ent );
 
-		// studiomodel efefcts only
-		CL_AddStudioEffects( ent );
+		// alias & studiomodel efefcts
+		CL_AddModelEffects( ent );
 	}
 
 	return true;

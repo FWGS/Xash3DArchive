@@ -44,6 +44,7 @@ extern "C" {
 #define BIT( n )		(1<<( n ))
 #define GAMMA		( 2.2 )		// Valve Software gamma
 #define INVGAMMA		( 1.0 / 2.2 )	// back to 1.0
+#define TEXGAMMA		( 0.9 )		// compensate dim textures
 #define SetBits( iBitVector, bits )	((iBitVector) = (iBitVector) | (bits))
 #define ClearBits( iBitVector, bits )	((iBitVector) = (iBitVector) & ~(bits))
 #define FBitSet( iBitVector, bit )	((iBitVector) & (bit))
@@ -211,7 +212,9 @@ typedef struct gameinfo_s
 
 typedef struct sysinfo_s
 {
-	string		ModuleName;	// exe.filename
+	string		exeName;		// exe.filename
+	string		rcName;		// .rc script name
+	string		basedirName;	// name of base directory
 	gameinfo_t	*GameInfo;	// current GameInfo
 	gameinfo_t	*games[MAX_MODS];	// environment games (founded at each engine start)
 	int		numgames;

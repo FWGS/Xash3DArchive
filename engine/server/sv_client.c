@@ -2289,7 +2289,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	cl->packet_loss = packet_loss;
 
 	// check for pause or frozen
-	if( sv.paused || sv.loadgame || sv.background || !CL_IsInGame() || ( player->v.flags & FL_FROZEN ))
+	if( sv.paused || sv.loadgame || sv.background || !CL_IsInGame() || SV_PlayerIsFrozen( player ))
 	{
 		for( i = 0; i < numcmds; i++ )
 		{
@@ -2299,7 +2299,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 			cmds[i].upmove = 0;
 			cmds[i].buttons = 0;
 
-			if( player->v.flags & FL_FROZEN || sv.background )
+			if( SV_PlayerIsFrozen( player ) || sv.background )
 				cmds[i].impulse = 0;
 
 			VectorCopy( cmds[i].viewangles, player->v.v_angle );
@@ -2345,8 +2345,11 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	frame->ping_time -= cl->lastcmd.msec * 0.5f / 1000.0f;
 	frame->ping_time = Q_max( 0.0f, frame->ping_time );
 
-	if( player->v.animtime > svgame.globals->time + sv.frametime )
-		player->v.animtime = svgame.globals->time + sv.frametime;
+	if( Mod_GetType( player->v.modelindex ) == mod_studio )
+	{
+		if( player->v.animtime > svgame.globals->time + sv.frametime )
+			player->v.animtime = svgame.globals->time + sv.frametime;
+	}
 }
 
 /*

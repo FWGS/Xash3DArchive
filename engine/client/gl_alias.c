@@ -31,10 +31,12 @@ typedef struct
 	double		time;
 	double		frametime;
 	int		framecount;	// alias framecount
+	qboolean		interpolate;
 
 	float		ambientlight;
 	float		shadelight;
 	vec3_t		lightvec;		// averaging light direction
+	vec3_t		lightvec_local;	// light direction in local space
 	vec3_t		lightspot;	// shadow spot
 	vec3_t		lightcolor;	// averaging lightcolor
 	int		oldpose;		// shadow used
@@ -52,8 +54,8 @@ ALIAS MODEL DISPLAY LIST GENERATION
 =================================================================
 */
 static aliashdr_t	*m_pAliasHeader;
-static mtrivertex_t	*g_poseverts[MAXALIASFRAMES];
-static mtriangle_t	g_triangles[MAXALIASTRIS];
+static trivertex_t	*g_poseverts[MAXALIASFRAMES];
+static dtriangle_t	g_triangles[MAXALIASTRIS];
 static stvert_t	g_stverts[MAXALIASVERTS];
 static qboolean	g_used[8192];
 
@@ -71,11 +73,20 @@ static int	g_numcommands;
 static int	g_vertexorder[8192];
 static int	g_numorder;
 
-static int	g_allverts, g_alltris;
-
 static int	g_stripverts[128];
 static int	g_striptris[128];
 static int	g_stripcount;
+
+/*
+====================
+R_StudioInit
+
+====================
+*/
+void R_AliasInit( void )
+{
+	g_alias.interpolate = true;
+}
 
 /*
 ================
@@ -85,7 +96,7 @@ StripLength
 static int StripLength( int starttri, int startv )
 {
 	int		m1, m2, j, k;
-	mtriangle_t	*last, *check;
+	dtriangle_t	*last, *check;
 
 	g_used[starttri] = 2;
 
@@ -151,7 +162,7 @@ FanLength
 static int FanLength( int starttri, int startv )
 {
 	int		m1, m2, j, k;
-	mtriangle_t	*last, *check;
+	dtriangle_t	*last, *check;
 
 	g_used[starttri] = 2;
 
@@ -290,9 +301,6 @@ void BuildTris( void )
 	g_commands[g_numcommands++] = 0; // end of list marker
 
 	MsgDev( D_REPORT, "%3i tri %3i vert %3i cmd\n", m_pAliasHeader->numtris, g_numorder, g_numcommands );
-
-	g_alltris += m_pAliasHeader->numtris;
-	g_allverts += g_numorder;
 }
 
 /*
@@ -300,12 +308,10 @@ void BuildTris( void )
 GL_MakeAliasModelDisplayLists
 ================
 */
-void GL_MakeAliasModelDisplayLists( model_t *m, aliashdr_t *hdr )
+void GL_MakeAliasModelDisplayLists( model_t *m )
 {
-	mtrivertex_t	*verts;
+	trivertex_t	*verts;
 	int		i, j;
-
-	m_pAliasHeader = hdr;	// (aliashdr_t *)Mod_AliasExtradata (m);
 
 	BuildTris( );
 
@@ -315,7 +321,8 @@ void GL_MakeAliasModelDisplayLists( model_t *m, aliashdr_t *hdr )
 	m_pAliasHeader->commands = Mem_Alloc( m->mempool, g_numcommands * 4 );
 	memcpy( m_pAliasHeader->commands, g_commands, g_numcommands * 4 );
 
-	m_pAliasHeader->posedata = verts = Mem_Alloc( m->mempool, m_pAliasHeader->numposes * m_pAliasHeader->poseverts * sizeof( mtrivertex_t ));
+	m_pAliasHeader->posedata = Mem_Alloc( m->mempool, m_pAliasHeader->numposes * m_pAliasHeader->poseverts * sizeof( trivertex_t ));
+	verts = m_pAliasHeader->posedata;
 
 	for( i = 0; i < m_pAliasHeader->numposes; i++ )
 	{
@@ -338,8 +345,8 @@ Mod_LoadAliasFrame
 */
 void *Mod_LoadAliasFrame( void *pin, maliasframedesc_t *frame )
 {
-	dtrivertex_t	*pinframe;
 	daliasframe_t	*pdaliasframe;
+	trivertex_t	*pinframe;
 	int		i;
 
 	pdaliasframe = (daliasframe_t *)pin;
@@ -354,12 +361,11 @@ void *Mod_LoadAliasFrame( void *pin, maliasframedesc_t *frame )
 		frame->bboxmax.v[i] = pdaliasframe->bboxmax.v[i];
 	}
 
-	pinframe = (dtrivertex_t *)(pdaliasframe + 1);
+	pinframe = (trivertex_t *)(pdaliasframe + 1);
 
-	g_poseverts[g_posenum] = (mtrivertex_t *)pinframe;
-	g_posenum++;
-
+	g_poseverts[g_posenum] = (trivertex_t *)pinframe;
 	pinframe += m_pAliasHeader->numverts;
+	g_posenum++;
 
 	return (void *)pinframe;
 }
@@ -390,16 +396,16 @@ void *Mod_LoadAliasGroup( void *pin, maliasframedesc_t *frame )
 
 	pin_intervals = (daliasinterval_t *)(pingroup + 1);
 
+	// all the intervals are always equal 0.1 so we don't care about them
 	frame->interval = pin_intervals->interval;
 	pin_intervals += numframes;
 	ptemp = (void *)pin_intervals;
 
 	for( i = 0; i < numframes; i++ )
 	{
-		g_poseverts[g_posenum] = (mtrivertex_t *)((daliasframe_t *)ptemp + 1);
+		g_poseverts[g_posenum] = (trivertex_t *)((daliasframe_t *)ptemp + 1);
+		ptemp = (trivertex_t *)((daliasframe_t *)ptemp + 1) + m_pAliasHeader->numverts;
 		g_posenum++;
-
-		ptemp = ((daliasframe_t *)ptemp + 1) + m_pAliasHeader->numverts;
 	}
 
 	return ptemp;
@@ -477,17 +483,27 @@ Mod_CreateSkinData
 rgbdata_t *Mod_CreateSkinData( byte *data, int width, int height )
 {
 	static rgbdata_t	skin;
+	int		i;
 
 	skin.width = width;
 	skin.height = height;
 	skin.depth = 1;
 	skin.type = PF_INDEXED_24;
-	SetBits( skin.flags, IMAGE_HAS_COLOR );
+	skin.flags = IMAGE_HAS_COLOR;
 	skin.encode = DXT_ENCODE_DEFAULT;
 	skin.numMips = 1;
 	skin.buffer = data;
 	skin.palette = (byte *)&clgame.palette;
 	skin.size = width * height;
+
+	for( i = 0; i < skin.width * skin.height; i++ )
+	{
+		if( data[i] > 224 && data[i] != 255 )
+		{
+			SetBits( skin.flags, IMAGE_HAS_LUMA );
+			break;
+		}
+	}
 
 	// make an copy
 	return FS_CopyImage( &skin );
@@ -500,10 +516,10 @@ Mod_LoadAllSkins
 */
 void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 {
-	char			name[32];
-	daliasskingroup_t		*pinskingroup;
 	daliasskininterval_t	*pinskinintervals;
 	int			size, groupskins;
+	string			name, lumaname;
+	daliasskingroup_t		*pinskingroup;
 	int			i, j, k;
 	byte			*skin;
 	rgbdata_t			*pic;
@@ -526,6 +542,7 @@ void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 			memcpy( m_pAliasHeader->texels[i], (byte *)(pskintype + 1), size );
 
 			Q_snprintf( name, sizeof( name ), "%s:frame%i", loadmodel->name, i );
+			Q_snprintf( lumaname, sizeof( lumaname ), "%s:luma%i", loadmodel->name, i );
 			pic = Mod_CreateSkinData( (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
 
 			m_pAliasHeader->gl_texturenum[i][0] =
@@ -533,6 +550,17 @@ void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 			m_pAliasHeader->gl_texturenum[i][2] =
 			m_pAliasHeader->gl_texturenum[i][3] = GL_LoadTextureInternal( name, pic, 0, false );
 			FS_FreeImage( pic );
+
+			if( R_GetTexture( m_pAliasHeader->gl_texturenum[i][0] )->flags & TF_HAS_LUMA )
+			{
+				pic = Mod_CreateSkinData( (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+				m_pAliasHeader->fb_texturenum[i][0] =
+				m_pAliasHeader->fb_texturenum[i][1] =
+				m_pAliasHeader->fb_texturenum[i][2] =
+				m_pAliasHeader->fb_texturenum[i][3] = GL_LoadTextureInternal( lumaname, pic, TF_MAKELUMA, false );
+				FS_FreeImage( pic );
+			}
+
 			pskintype = (daliasskintype_t *)((byte *)(pskintype + 1) + size);
 		}
 		else
@@ -555,12 +583,23 @@ void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 				Q_snprintf( name, sizeof( name ), "%s_%i_%i", loadmodel->name, i, j );
 				pic = Mod_CreateSkinData( (byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
 				m_pAliasHeader->gl_texturenum[i][j & 3] = GL_LoadTextureInternal( name, pic, 0, false );
-				pskintype = (daliasskintype_t *)((byte *)(pskintype) + size);
 				FS_FreeImage( pic );
+
+				if( R_GetTexture( m_pAliasHeader->gl_texturenum[i][j & 3] )->flags & TF_HAS_LUMA )
+				{
+					Q_snprintf( lumaname, sizeof( lumaname ), "%s_%i_%i_luma", loadmodel->name, i, j );
+					pic = Mod_CreateSkinData((byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+					m_pAliasHeader->fb_texturenum[i][j & 3] = GL_LoadTextureInternal( lumaname, pic, TF_MAKELUMA, false );
+					FS_FreeImage( pic );
+				}
+				pskintype = (daliasskintype_t *)((byte *)(pskintype) + size);
 			}
 
 			for( k = j; j < 4; j++ )
+			{
 				m_pAliasHeader->gl_texturenum[i][j & 3] = m_pAliasHeader->gl_texturenum[i][j - k]; 
+				m_pAliasHeader->fb_texturenum[i][j & 3] = m_pAliasHeader->fb_texturenum[i][j - k]; 
+			}
 		}
 	}
 
@@ -573,25 +612,25 @@ void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 Mod_CalcAliasBounds
 =================
 */
-void Mod_CalcAliasBounds( aliashdr_t *a )
+void Mod_CalcAliasBounds( model_t *mod )
 {
 	int	i, j, k;
 	float	radius;
 	float	dist;
 	vec3_t	v;
 
-	ClearBounds( loadmodel->mins, loadmodel->maxs );
+	ClearBounds( mod->mins, mod->maxs );
 	radius = 0.0f;
 
 	// process verts
-	for( i = 0; i < a->numposes; i++ )
+	for( i = 0; i < m_pAliasHeader->numposes; i++ )
 	{
-		for( j = 0; j < a->numverts; j++ )
+		for( j = 0; j < m_pAliasHeader->numverts; j++ )
 		{
 			for( k = 0; k < 3; k++ )
 				v[k] = g_poseverts[i][j].v[k] * m_pAliasHeader->scale[k] + m_pAliasHeader->scale_origin[k];
 
-			AddPointToBounds( v, loadmodel->mins, loadmodel->maxs );
+			AddPointToBounds( v, mod->mins, mod->maxs );
 			dist = DotProduct( v, v );
 
 			if( radius < dist )
@@ -599,7 +638,7 @@ void Mod_CalcAliasBounds( aliashdr_t *a )
 		}
 	}
 
-	loadmodel->radius = sqrt( radius );
+	mod->radius = sqrt( radius );
 }
 
 /*
@@ -631,7 +670,7 @@ void Mod_LoadAliasModel( model_t *mod, const void *buffer, qboolean *loaded )
 
 	// allocate space for a working header, plus all the data except the frames,
 	// skin and group info
-	size = sizeof( aliashdr_t ) + (pinmodel->numframes - 1) * sizeof( m_pAliasHeader->frames[0] );
+	size = sizeof( aliashdr_t ) + (pinmodel->numframes - 1) * sizeof( maliasframedesc_t );
 
 	m_pAliasHeader = Mem_Alloc( mod->mempool, size );
 	mod->flags = pinmodel->flags;	// share effects flags
@@ -722,11 +761,12 @@ void Mod_LoadAliasModel( model_t *mod, const void *buffer, qboolean *loaded )
 	}
 
 	m_pAliasHeader->numposes = g_posenum;
-	Mod_CalcAliasBounds( m_pAliasHeader );
+
+	Mod_CalcAliasBounds( mod );
 	mod->type = mod_alias;
 
 	// build the draw lists
-	GL_MakeAliasModelDisplayLists( mod, m_pAliasHeader );
+	GL_MakeAliasModelDisplayLists( mod );
 
 	// move the complete, relocatable alias model to the cache
 	loadmodel->cache.data = m_pAliasHeader;
@@ -742,7 +782,7 @@ Mod_UnloadAliasModel
 void Mod_UnloadAliasModel( model_t *mod )
 {
 	aliashdr_t	*palias;
-	int		i;
+	int		i, j;
 
 	ASSERT( mod != NULL );
 
@@ -752,12 +792,16 @@ void Mod_UnloadAliasModel( model_t *mod )
 	palias = mod->cache.data;
 	if( !palias ) return; // already freed
 
-	// FIXME: check animating groups too?
 	for( i = 0; i < MAX_SKINS; i++ )
 	{
 		if( !palias->gl_texturenum[i][0] )
-			continue;
-		GL_FreeTexture( palias->gl_texturenum[i][0] );
+			break;
+
+		for( j = 0; j < 4; j++ )
+		{
+			GL_FreeTexture( palias->gl_texturenum[i][j] );
+			GL_FreeTexture( palias->fb_texturenum[i][j] );
+		}
 	}
 
 	Mem_FreePool( &mod->mempool );
@@ -962,6 +1006,10 @@ void R_AliasSetupLighting( alight_t *plight )
 	g_alias.shadelight = plight->shadelight;
 	VectorCopy( plight->plightvec, g_alias.lightvec );
 	VectorCopy( plight->color, g_alias.lightcolor );
+
+	// transform back to local space
+	Matrix4x4_VectorIRotate( RI.objectMatrix, g_alias.lightvec, g_alias.lightvec_local );
+	VectorNormalize( g_alias.lightvec_local );
 }
 
 /*
@@ -975,7 +1023,7 @@ void R_AliasLighting( float *lv, const vec3_t normal )
 	float 	illum = g_alias.ambientlight;
 	float	r, lightcos;
 
-	lightcos = DotProduct( normal, g_alias.lightvec ); // -1 colinear, 1 opposite
+	lightcos = DotProduct( normal, g_alias.lightvec_local ); // -1 colinear, 1 opposite
 	if( lightcos > 1.0f ) lightcos = 1.0f;
 
 	illum += g_alias.shadelight;
@@ -1010,8 +1058,8 @@ GL_DrawAliasFrame
 void GL_DrawAliasFrame( aliashdr_t *paliashdr )
 {
 	float 		lv_tmp;
-	mtrivertex_t	*verts0;
-	mtrivertex_t	*verts1;
+	trivertex_t	*verts0;
+	trivertex_t	*verts1;
 	vec3_t		vert, norm;
 	int		*order;
 	int		count;
@@ -1040,7 +1088,15 @@ void GL_DrawAliasFrame( aliashdr_t *paliashdr )
 		do
 		{
 			// texture coordinates come from the draw list
-			pglTexCoord2f (((float *)order)[0], ((float *)order)[1]);
+			if( glState.activeTMU > 0 )
+			{
+				GL_MultiTexCoord2f( GL_TEXTURE0, ((float *)order)[0], ((float *)order)[1] );
+				GL_MultiTexCoord2f( GL_TEXTURE1, ((float *)order)[0], ((float *)order)[1] );
+			}
+			else
+			{
+				pglTexCoord2f (((float *)order)[0], ((float *)order)[1]);
+			}
 			order += 2;
 
 			VectorLerp( m_bytenormals[verts0->lightnormalindex], g_alias.lerpfrac, m_bytenormals[verts1->lightnormalindex], norm );
@@ -1063,8 +1119,8 @@ GL_DrawAliasShadow
 */
 void GL_DrawAliasShadow( aliashdr_t *paliashdr )
 {
-	mtrivertex_t	*verts0;
-	mtrivertex_t	*verts1;
+	trivertex_t	*verts0;
+	trivertex_t	*verts1;
 	float		vec_x, vec_y;
 	vec3_t		av, point;
 	int		*order;
@@ -1134,55 +1190,155 @@ void GL_DrawAliasShadow( aliashdr_t *paliashdr )
 }
 
 /*
+====================
+R_AliasLerpMovement
+
+====================
+*/
+void R_AliasLerpMovement( cl_entity_t *e )
+{
+	float	f = 1.0f;
+
+	// don't do it if the goalstarttime hasn't updated in a while.
+	// NOTE: Because we need to interpolate multiplayer characters, the interpolation time limit
+	// was increased to 1.0 s., which is 2x the max lag we are accounting for.
+	if( g_alias.interpolate && ( g_alias.time < e->curstate.animtime + 1.0f ) && ( e->curstate.animtime != e->latched.prevanimtime ))
+		f = ( g_alias.time - e->curstate.animtime ) / ( e->curstate.animtime - e->latched.prevanimtime );
+
+	g_alias.lerpfrac = bound( 0.0f, f, 1.0f );
+
+	if( e->player || e->curstate.movetype != MOVETYPE_STEP )
+		return; // monsters only
+
+	// Msg( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, g_studio.time );
+	VectorLerp( e->latched.prevorigin, f, e->curstate.origin, e->origin );
+
+	if( !VectorCompare( e->curstate.angles, e->latched.prevangles ))
+	{
+		vec4_t	q, q1, q2;
+
+		AngleQuaternion( e->curstate.angles, q1, false );
+		AngleQuaternion( e->latched.prevangles, q2, false );
+		QuaternionSlerp( q2, q1, f, q );
+		QuaternionAngle( q, e->angles );
+	}
+	else VectorCopy( e->curstate.angles, e->angles );
+
+	// NOTE: this completely over control about angles and don't broke interpolation
+	if( FBitSet( e->model->flags, ALIAS_ROTATE ))
+		e->angles[1] = anglemod( 100.0f * g_alias.time );
+}
+
+/*
 =================
 R_SetupAliasFrame
 
 =================
 */
-void R_SetupAliasFrame( aliashdr_t *paliashdr, float f )
+void R_SetupAliasFrame( cl_entity_t *e, aliashdr_t *paliashdr )
 {
 	int	newpose, oldpose;
 	int	newframe, oldframe;
-	int	oldnumposes;
-	int	newnumposes;
+	int	numposes, cycle;
 	float	interval;
 
-	oldframe = (int)Q_floor( f );
-	newframe = (int)Q_ceil( f );
-	g_alias.lerpfrac = ( cl.time * 10 );
-	g_alias.lerpfrac -= (int)g_alias.lerpfrac;
+	oldframe = e->latched.prevframe;
+	newframe = e->curstate.frame;
+
+	if(( newframe >= paliashdr->numframes ) || ( newframe < 0 ))
+	{
+		MsgDev( D_ERROR, "R_SetupAliasFrame: no such frame %d\n", newframe );
+		newframe = 0;
+	}
 
 	if(( oldframe >= paliashdr->numframes ) || ( oldframe < 0 ))
+		oldframe = newframe;
+
+	numposes = paliashdr->frames[newframe].numposes;
+
+	if( numposes > 1 )
 	{
-		MsgDev( D_ERROR, "R_SetupAliasFrame: no such frame %d\n", oldframe );
-		oldframe = 0;
+		oldpose = newpose = paliashdr->frames[newframe].firstpose;
+		interval = 1.0f / paliashdr->frames[newframe].interval;
+		cycle = (int)(g_alias.time * interval);
+		oldpose += (cycle + 0) % numposes; // lerpframe from
+		newpose += (cycle + 1) % numposes; // lerpframe to
+		g_alias.lerpfrac = ( g_alias.time * interval );
+		g_alias.lerpfrac -= (int)g_alias.lerpfrac;
 	}
-
-	if( newframe >= paliashdr->numframes )
-		newframe = oldframe;
-
-	oldpose = paliashdr->frames[oldframe].firstpose;
-	newpose = paliashdr->frames[newframe].firstpose;
-	oldnumposes = paliashdr->frames[oldframe].numposes;
-	newnumposes = paliashdr->frames[oldframe].numposes;
-
-	// FIXME: group framelerping is incorrect
-	if( oldnumposes > 1 )
+	else
 	{
-		interval = paliashdr->frames[oldframe].interval;
-		oldpose += (int)(cl.time / interval) % oldnumposes;
-	}
-
-	if( newnumposes > 1 )
-	{
-		interval = paliashdr->frames[newframe].interval;
-		newpose += (int)(cl.time / interval) % newnumposes;
+		oldpose = paliashdr->frames[oldframe].firstpose;
+		newpose = paliashdr->frames[newframe].firstpose;
 	}
 
 	g_alias.oldpose = oldpose;
 	g_alias.newpose = newpose;
 
 	GL_DrawAliasFrame( paliashdr );
+}
+
+/*
+===============
+R_StudioDrawAbsBBox
+
+===============
+*/
+static void R_AliasDrawAbsBBox( cl_entity_t *e, const vec3_t absmin, const vec3_t absmax )
+{
+	vec3_t	p[8];
+	int	i;
+
+	// looks ugly, skip
+	if( r_drawentities->value != 5 || e == &clgame.viewent )
+		return;
+
+	// compute a full bounding box
+	for( i = 0; i < 8; i++ )
+	{
+		p[i][0] = ( i & 1 ) ? absmin[0] : absmax[0];
+		p[i][1] = ( i & 2 ) ? absmin[1] : absmax[1];
+		p[i][2] = ( i & 4 ) ? absmin[2] : absmax[2];
+	}
+
+	GL_Bind( GL_TEXTURE0, tr.whiteTexture );
+	TriColor4f( 0.5f, 0.5f, 1.0f, 0.5f );
+	TriRenderMode( kRenderTransAdd );
+	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+	TriBegin( TRI_QUADS );
+	for( i = 0; i < 6; i++ )
+	{
+		TriBrightness( g_alias.shadelight / 255.0f );
+		TriVertex3fv( p[boxpnt[i][0]] );
+		TriVertex3fv( p[boxpnt[i][1]] );
+		TriVertex3fv( p[boxpnt[i][2]] );
+		TriVertex3fv( p[boxpnt[i][3]] );
+	}
+	TriEnd();
+
+	TriRenderMode( kRenderNormal );
+}
+
+/*
+================
+R_AliasSetupTimings
+
+init current time for a given model
+================
+*/
+static void R_AliasSetupTimings( void )
+{
+	if( RI.drawWorld )
+	{
+		// synchronize with server time
+		g_alias.time = cl.time;
+	}
+	else
+	{
+		// menu stuff
+		g_alias.time = host.realtime;
+	}
 }
 
 /*
@@ -1197,13 +1353,12 @@ void R_DrawAliasModel( cl_entity_t *e )
 	vec3_t		absmin, absmax;
 	int		anim, skin;
 	alight_t		lighting;
-	float		frame;
-	vec3_t		dir;
+	vec3_t		dir, angles;
 
 	clmodel = RI.currententity->model;
 
-	VectorAdd( RI.currententity->origin, clmodel->mins, absmin );
-	VectorAdd( RI.currententity->origin, clmodel->maxs, absmax );
+	VectorAdd( e->origin, clmodel->mins, absmin );
+	VectorAdd( e->origin, clmodel->maxs, absmax );
 
 	if( R_CullModel( e, absmin, absmax ))
 		return;
@@ -1214,14 +1369,25 @@ void R_DrawAliasModel( cl_entity_t *e )
 	m_pAliasHeader = (aliashdr_t *)Mod_AliasExtradata( RI.currententity->model );
 	if( !m_pAliasHeader ) return;
 
+	// init time
+	R_AliasSetupTimings();
+
+	// HACKHACK: keep the angles unchanged
+	VectorCopy( e->angles, angles );
+
+	R_AliasLerpMovement( e );
+
+	if( !FBitSet( host.features, ENGINE_COMPENSATE_QUAKE_BUG ))
+		e->angles[PITCH] = -e->angles[PITCH]; // stupid quake bug
+
+	// don't rotate clients, only aim
+	if( e->player ) e->angles[PITCH] = 0.0f;
+
 	//
 	// get lighting information
 	//
 	lighting.plightvec = dir;
 	R_AliasDynamicLight( e, &lighting );
-
-	// model and frame independant
-	R_AliasSetupLighting( &lighting );
 
 	r_stats.c_alias_polys += m_pAliasHeader->numtris;
 
@@ -1231,27 +1397,46 @@ void R_DrawAliasModel( cl_entity_t *e )
 
 	R_RotateForEntity( e );
 
-	pglTranslatef( m_pAliasHeader->scale_origin[0], m_pAliasHeader->scale_origin[1], m_pAliasHeader->scale_origin[2] );
-	pglScalef( m_pAliasHeader->scale[0], m_pAliasHeader->scale[1], m_pAliasHeader->scale[2] );
+	// model and frame independant
+	R_AliasSetupLighting( &lighting );
 
-	anim = (int)(cl.time * 10) & 3;
+	pglTranslatef( m_pAliasHeader->scale_origin[0], m_pAliasHeader->scale_origin[1], m_pAliasHeader->scale_origin[2] );
+
+	if( tr.fFlipViewModel )
+		pglScalef( m_pAliasHeader->scale[0], -m_pAliasHeader->scale[1], m_pAliasHeader->scale[2] );
+	else pglScalef( m_pAliasHeader->scale[0], m_pAliasHeader->scale[1], m_pAliasHeader->scale[2] );
+
+	anim = (int)(g_alias.time * 10) & 3;
 	skin = bound( 0, RI.currententity->curstate.skin, m_pAliasHeader->numskins - 1 );
 
 	if( r_lightmap->value && !r_fullbright->value )
 		GL_Bind( GL_TEXTURE0, tr.whiteTexture );
 	else GL_Bind( GL_TEXTURE0, m_pAliasHeader->gl_texturenum[skin][anim] );
-
-	pglShadeModel( GL_SMOOTH );
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
-	frame = RI.currententity->curstate.frame;
-	frame = fmod( cl.time * 10, m_pAliasHeader->numframes );
-	R_SetupAliasFrame( m_pAliasHeader, frame );
+	if( m_pAliasHeader->fb_texturenum[skin][anim] )
+	{
+		GL_Bind( GL_TEXTURE1, m_pAliasHeader->fb_texturenum[skin][anim] );
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ADD );
+	}
 
-	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	pglShadeModel( GL_SMOOTH );
+
+	R_SetupAliasFrame( e, m_pAliasHeader );
+
+	if( m_pAliasHeader->fb_texturenum[skin][anim] )
+		GL_CleanUpTextureUnits( 1 );
 
 	pglShadeModel( GL_FLAT );
 	R_LoadIdentity();
+
+	// get lerped origin
+	VectorAdd( e->origin, clmodel->mins, absmin );
+	VectorAdd( e->origin, clmodel->maxs, absmax );
+
+	R_AliasDrawAbsBBox( e, absmin, absmax );
+
+	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 
 	if( r_shadows.value )
 	{
@@ -1272,6 +1457,8 @@ void R_DrawAliasModel( cl_entity_t *e )
 		R_LoadIdentity();
 	}
 
+	// HACKHACK: keep the angles unchanged
+	VectorCopy( angles, e->angles );
 }
 
 //==================================================================================

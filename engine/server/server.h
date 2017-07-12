@@ -621,6 +621,7 @@ void SV_InitSaveRestore( void );
 //
 void SV_GetTrueOrigin( sv_client_t *cl, int edictnum, vec3_t origin );
 void SV_GetTrueMinMax( sv_client_t *cl, int edictnum, vec3_t mins, vec3_t maxs );
+qboolean SV_PlayerIsFrozen( edict_t *pClient );
 
 //
 // sv_world.c

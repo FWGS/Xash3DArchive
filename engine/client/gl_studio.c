@@ -55,7 +55,6 @@ typedef struct
 	int		framecount;		// studio framecount
 	qboolean		interpolate;
 	int		rendermode;
-	qboolean		flipmodel;		// viewmodel is flipped
 	float		blend;			// blend value
 
 	// bones
@@ -214,12 +213,12 @@ static void R_StudioSetupTimings( void )
 
 /*
 ================
-R_StudioFlipViewModel
+R_AllowFlipViewModel
 
 should a flip the viewmodel if cl_righthand is set to 1
 ================
 */
-static qboolean R_StudioFlipViewModel( cl_entity_t *e )
+static qboolean R_AllowFlipViewModel( cl_entity_t *e )
 {
 	if( cl_righthand && cl_righthand->value > 0 )
 	{
@@ -537,7 +536,7 @@ void R_StudioSetUpTransform( cl_entity_t *e )
 
 	Matrix3x4_CreateFromEntity( g_studio.rotationmatrix, angles, origin, 1.0f );
 
-	if( g_studio.flipmodel )
+	if( tr.fFlipViewModel )
 	{
 		g_studio.rotationmatrix[0][1] = -g_studio.rotationmatrix[0][1];
 		g_studio.rotationmatrix[1][1] = -g_studio.rotationmatrix[1][1];
@@ -1933,7 +1932,7 @@ void R_LightLambert( vec4_t light[MAX_LOCALLIGHTS], vec3_t normal, vec3_t color 
 	{
 		float	r, r2;
 
-		if( g_studio.flipmodel )
+		if( tr.fFlipViewModel )
 			r = DotProduct( normal, light[i] );
 		else r = -DotProduct( normal, light[i] );
 
@@ -2329,7 +2328,7 @@ static void R_StudioDrawPoints( void )
 			pglAlphaFunc( GL_GREATER, 0.5f );
 			pglDepthMask( GL_TRUE );
 		}
-		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_StudioOpaque( RI.currententity->curstate.rendermode ))
+		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_ModelOpaque( RI.currententity->curstate.rendermode ))
 		{
 			pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 			pglDepthMask( GL_FALSE );
@@ -2349,7 +2348,7 @@ static void R_StudioDrawPoints( void )
 			pglAlphaFunc( GL_NOTEQUAL, 0.0f );
 			pglDisable( GL_ALPHA_TEST );
 		}
-		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_StudioOpaque( RI.currententity->curstate.rendermode ))
+		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_ModelOpaque( RI.currententity->curstate.rendermode ))
 		{
 			pglDepthMask( GL_TRUE );
 			pglDisable( GL_BLEND );
@@ -3443,7 +3442,7 @@ void R_RunViewmodelEvents( void )
 
 	RI.currententity = &clgame.viewent;
 
-	if( !RI.currententity->model )
+	if( !RI.currententity->model || RI.currententity->model->type != mod_studio )
 		return;
 
 	R_StudioSetupTimings();
@@ -3478,7 +3477,7 @@ void R_DrawViewModel( void )
 		return;
 
 	tr.blend = CL_FxBlend( view ) / 255.0f;
-	if( !R_StudioOpaque( view->curstate.rendermode ) && tr.blend <= 0.0f )
+	if( !R_ModelOpaque( view->curstate.rendermode ) && tr.blend <= 0.0f )
 		return; // invisible ?
 
 	RI.currententity = view;
@@ -3486,29 +3485,36 @@ void R_DrawViewModel( void )
 	if( !RI.currententity->model )
 		return;
 
-	R_StudioSetupTimings();
-
 	// hack the depth range to prevent view model from poking into walls
 	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
 	RI.currentmodel = RI.currententity->model;
 
 	// backface culling for left-handed weapons
-	if( R_StudioFlipViewModel( RI.currententity ) || g_iBackFaceCull )
+	if( R_AllowFlipViewModel( RI.currententity ) || g_iBackFaceCull )
 	{
 		GL_FrontFace( !glState.frontFace );
-		g_studio.flipmodel = true;
+		tr.fFlipViewModel = true;
 	}
 
-	R_StudioDrawModelInternal( RI.currententity, STUDIO_RENDER );
+	switch( RI.currententity->model->type )
+	{
+	case mod_alias:
+		R_DrawAliasModel( RI.currententity );
+		break;
+	case mod_studio:
+		R_StudioSetupTimings();
+		R_StudioDrawModelInternal( RI.currententity, STUDIO_RENDER );
+		break;
+	}
 
 	// restore depth range
 	pglDepthRange( gldepthmin, gldepthmax );
 
 	// backface culling for left-handed weapons
-	if( R_StudioFlipViewModel( RI.currententity ) || g_iBackFaceCull )
+	if( R_AllowFlipViewModel( RI.currententity ) || g_iBackFaceCull )
 	{
 		GL_FrontFace( !glState.frontFace );
-		g_studio.flipmodel = false;
+		tr.fFlipViewModel = false;
 	}
 }
 

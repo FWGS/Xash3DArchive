@@ -1321,6 +1321,11 @@ void CL_PredictMovement( qboolean repredicting )
 
 	if( !CL_IsPredicted( ))
 	{
+		// keep onground actual
+		if( FBitSet( frame->clientdata.flags, FL_ONGROUND ))
+			cl.local.onground = frame->playerstate[cl.playernum].onground;
+		else cl.local.onground = -1;
+
 		cl.local.viewmodel = to->client.viewmodel;
 		cl.local.repredicting = false;
 		cl.local.moving = false;

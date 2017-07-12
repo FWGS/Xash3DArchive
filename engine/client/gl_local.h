@@ -47,7 +47,7 @@ extern byte	*r_temppool;
 #define RP_FLIPFRONTFACE	BIT( 4 )	// e.g. for mirrors drawing
 
 #define RP_NONVIEWERREF	(RP_MIRRORVIEW|RP_ENVVIEW)
-#define R_StudioOpaque( rm )	( rm == kRenderNormal || rm == kRenderTransAlpha )
+#define R_ModelOpaque( rm )	( rm == kRenderNormal || rm == kRenderTransAlpha )
 #define RP_LOCALCLIENT( e )	((e) != NULL && (e)->index == ( cl.playernum + 1 ) && e->player )
 #define RP_NORMALPASS()	((RI.params & RP_NONVIEWERREF) == 0 )
 
@@ -205,6 +205,7 @@ typedef struct
 	qboolean		ignore_lightgamma;
 	qboolean		fCustomRendering;
 	qboolean		fResetVis;
+	qboolean		fFlipViewModel;
 
 	byte		visbytes[(MAX_MAP_LEAFS+7)/8];	// member custom PVS
 	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
@@ -430,6 +431,7 @@ void R_DrawStudioModel( cl_entity_t *e );
 //
 void Mod_LoadAliasModel( model_t *mod, const void *buffer, qboolean *loaded );
 void R_DrawAliasModel( cl_entity_t *e );
+void R_AliasInit( void );
 
 //
 // gl_warp.c

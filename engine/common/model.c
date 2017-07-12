@@ -956,7 +956,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 				if( bmodel_version >= HLBSP_VERSION ) size += sizeof( short ) + 768;
 
-				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_NOMIPMAP|TF_MAKELUMA, NULL );
+				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA, NULL );
 			}
 			else
 			{
@@ -982,7 +982,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 				}
 
 				// okay, loading it from wad or hi-res version
-				tx->fb_texturenum = GL_LoadTexture( texname, src, srcSize, TF_NOMIPMAP|TF_MAKELUMA, NULL );
+				tx->fb_texturenum = GL_LoadTexture( texname, src, srcSize, TF_MAKELUMA, NULL );
 				if( src ) Mem_Free( src );
 
 				if( !tx->fb_texturenum && load_external_luma )

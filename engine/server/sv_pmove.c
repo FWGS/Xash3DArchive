@@ -37,6 +37,16 @@ void SV_ConvertPMTrace( trace_t *out, pmtrace_t *in, edict_t *ent )
 	out->ent = ent;
 }
 
+qboolean SV_PlayerIsFrozen( edict_t *pClient )
+{
+	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		return false;
+
+	if( FBitSet( pClient->v.flags, FL_FROZEN ))
+		return true;
+	return false;
+}
+
 void SV_ClipPMoveToEntity( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *tr )
 {
 	ASSERT( tr != NULL );
@@ -728,14 +738,14 @@ static void SV_FinishPMove( playermove_t *pmove, sv_client_t *cl )
 	VectorCopy( pmove->vuser3, clent->v.vuser3 );
 	VectorCopy( pmove->vuser4, clent->v.vuser4 );
 
-	if( svgame.pmove->onground == -1 )
+	if( pmove->onground == -1 )
 	{
 		clent->v.flags &= ~FL_ONGROUND;
 	}
 	else if( pmove->onground >= 0 && pmove->onground < pmove->numphysent )
 	{
 		clent->v.flags |= FL_ONGROUND;
-		clent->v.groundentity = EDICT_NUM( svgame.pmove->physents[svgame.pmove->onground].info );
+		clent->v.groundentity = EDICT_NUM( pmove->physents[pmove->onground].info );
 	}
 
 	// angles

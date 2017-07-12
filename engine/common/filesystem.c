@@ -863,6 +863,10 @@ void FS_Rescan( void )
 	if( Q_stricmp( GI->basedir, GI->falldir ) && Q_stricmp( GI->gamedir, GI->falldir ))
 		FS_AddGameHierarchy( GI->falldir, 0 );
 	FS_AddGameHierarchy( GI->gamedir, FS_GAMEDIR_PATH );
+
+	if( FS_FileExists( va( "%s.rc", SI.basedirName ), false ))
+		Q_strncpy( SI.rcName, SI.basedirName, sizeof( SI.rcName ));	// e.g. valve.rc
+	else Q_strncpy( SI.rcName, SI.exeName, sizeof( SI.rcName ));	// e.g. quake.rc
 }
 
 /*
@@ -989,7 +993,7 @@ void FS_CreateDefaultGameInfo( const char *filename )
 
 	Q_strncpy( defGI.title, "New Game", sizeof( defGI.title ));
 	Q_strncpy( defGI.gamedir, gs_basedir, sizeof( defGI.gamedir ));
-	Q_strncpy( defGI.basedir, SI.ModuleName, sizeof( defGI.basedir ));
+	Q_strncpy( defGI.basedir, SI.basedirName, sizeof( defGI.basedir ));
 	Q_strncpy( defGI.sp_entity, "info_player_start", sizeof( defGI.sp_entity ));
 	Q_strncpy( defGI.mp_entity, "info_player_deathmatch", sizeof( defGI.mp_entity ));
 	Q_strncpy( defGI.dll_path, "cl_dlls", sizeof( defGI.dll_path ));
@@ -1025,7 +1029,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 	
 	Q_strncpy( GameInfo->title, "New Game", sizeof( GameInfo->title ));
 	Q_strncpy( GameInfo->gamedir, gamedir, sizeof( GameInfo->gamedir ));
-	Q_strncpy( GameInfo->basedir, SI.ModuleName, sizeof( GameInfo->basedir ));
+	Q_strncpy( GameInfo->basedir, SI.basedirName, sizeof( GameInfo->basedir ));
 	Q_strncpy( GameInfo->sp_entity, "info_player_start", sizeof( GameInfo->sp_entity ));
 	Q_strncpy( GameInfo->mp_entity, "info_player_deathmatch", sizeof( GameInfo->mp_entity ));
 	Q_strncpy( GameInfo->game_dll, "dlls/hl.dll", sizeof( GameInfo->game_dll ));
@@ -1409,18 +1413,18 @@ void FS_Init( void )
 		SI.numgames = 0;
 	
 		if( !Sys_GetParmFromCmdLine( "-game", gs_basedir ))
-			Q_strcpy( gs_basedir, SI.ModuleName ); // default dir
+			Q_strcpy( gs_basedir, SI.basedirName ); // default dir
 
 		if( FS_CheckNastyPath( gs_basedir, true ))
 		{
 			MsgDev( D_ERROR, "FS_Init: invalid game directory \"%s\"\n", gs_basedir );		
-			Q_strcpy( gs_basedir, SI.ModuleName ); // default dir
+			Q_strcpy( gs_basedir, SI.basedirName ); // default dir
 		}
 
 		// validate directories
 		for( i = 0; i < dirs.numstrings; i++ )
 		{
-			if( !Q_stricmp( SI.ModuleName, dirs.strings[i] ))
+			if( !Q_stricmp( SI.basedirName, dirs.strings[i] ))
 				hasDefaultDir = true;
 
 			if( !Q_stricmp( gs_basedir, dirs.strings[i] ))
@@ -1430,7 +1434,7 @@ void FS_Init( void )
 		if( i == dirs.numstrings )
 		{ 
 			MsgDev( D_INFO, "FS_Init: game directory \"%s\" not exist\n", gs_basedir );		
-			if( hasDefaultDir ) Q_strncpy( gs_basedir, SI.ModuleName, sizeof( gs_basedir )); // default dir
+			if( hasDefaultDir ) Q_strncpy( gs_basedir, SI.basedirName, sizeof( gs_basedir )); // default dir
 		}
 
 		// build list of game directories here

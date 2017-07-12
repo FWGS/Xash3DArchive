@@ -2689,7 +2689,7 @@ void CL_AddEntityEffects( cl_entity_t *ent )
 
 	if( FBitSet( ent->curstate.effects, EF_DIMLIGHT ))
 	{
-		if( ent->player )
+		if( ent->player && !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 		{
 			CL_UpdateFlashlight( ent );
 		}
@@ -2728,17 +2728,24 @@ void CL_AddEntityEffects( cl_entity_t *ent )
 
 /*
 ================
-CL_AddStudioEffects
+CL_AddModelEffects
 
 these effects will be enable by flag in model header
 ================
 */
-void CL_AddStudioEffects( cl_entity_t *ent )
+void CL_AddModelEffects( cl_entity_t *ent )
 {
 	vec3_t	oldorigin;
 
-	if( !ent->model || ent->model->type != mod_studio )
-		return;
+	if( !ent->model ) return;
+
+	switch( ent->model->type )
+	{
+	case mod_alias:
+	case mod_studio:
+		break;
+	default:	return;
+	}
 
 	VectorCopy( ent->latched.prevorigin, oldorigin );
 

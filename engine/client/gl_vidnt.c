@@ -1880,6 +1880,7 @@ qboolean R_Init( void )
 	R_InitImages();
 	R_SpriteInit();
 	R_StudioInit();
+	R_AliasInit();
 	R_ClearDecals();
 	R_ClearScene();
 

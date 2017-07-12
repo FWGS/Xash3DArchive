@@ -89,11 +89,16 @@ void V_SetupViewModel( void )
 	view->curstate.colormap = (info->topcolor & 0xFFFF)|((info->bottomcolor << 8) & 0xFFFF);
 	view->curstate.number = cl.playernum + 1;
 	view->index = cl.playernum + 1;
-	view->curstate.frame = 0.0f;
 	view->model = Mod_Handle( cl.local.viewmodel );
 	view->curstate.modelindex = cl.local.viewmodel;
-	view->curstate.animtime = cl.local.weaponstarttime;
 	view->curstate.sequence = cl.local.weaponsequence;
+
+	// alias models has another animation methods
+	if( view->model && view->model->type == mod_studio )
+	{
+		view->curstate.animtime = cl.local.weaponstarttime;
+		view->curstate.frame = 0.0f;
+	}
 }
 
 /*

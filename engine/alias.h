@@ -29,6 +29,16 @@ Alias models are position independent, so the cache manager can move them.
 
 #define ALIAS_VERSION	6
 
+// client-side model flags
+#define ALIAS_ROCKET		0x0001	// leave a trail
+#define ALIAS_GRENADE		0x0002	// leave a trail
+#define ALIAS_GIB			0x0004	// leave a trail
+#define ALIAS_ROTATE		0x0008	// rotate (bonus items)
+#define ALIAS_TRACER		0x0010	// green split trail
+#define ALIAS_ZOMGIB		0x0020	// small blood trail
+#define ALIAS_TRACER2		0x0040	// orange split trail + rotate
+#define ALIAS_TRACER3		0x0080	// purple trail
+
 // must match definition in sprite.h
 #ifndef SYNCTYPE_T
 #define SYNCTYPE_T
@@ -87,26 +97,18 @@ typedef struct dtriangle_s
 #define DT_FACES_FRONT	0x0010
 #define ALIAS_ONSEAM	0x0020
 
-// This mirrors trivert_t in trilib.h, is present so Quake knows how to
-// load this data
 typedef struct
 {
-	byte		v[3];
-	byte		lightnormalindex;
-} dtrivertex_t;
-
-typedef struct
-{
-	dtrivertex_t	bboxmin;	// lightnormal isn't used
-	dtrivertex_t	bboxmax;	// lightnormal isn't used
+	trivertex_t	bboxmin;	// lightnormal isn't used
+	trivertex_t	bboxmax;	// lightnormal isn't used
 	char		name[16];	// frame name from grabbing
 } daliasframe_t;
 
 typedef struct
 {
 	int		numframes;
-	dtrivertex_t	bboxmin;	// lightnormal isn't used
-	dtrivertex_t	bboxmax;	// lightnormal isn't used
+	trivertex_t	bboxmin;	// lightnormal isn't used
+	trivertex_t	bboxmax;	// lightnormal isn't used
 } daliasgroup_t;
 
 typedef struct
