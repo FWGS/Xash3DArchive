@@ -1089,7 +1089,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 			if( FBitSet( ent->curstate.eflags, EFLAG_SLERP ))
 			{
-				if( ent->curstate.animtime != 0.0f && ent->model->type == mod_studio )
+				if( ent->curstate.animtime != 0.0f && ( ent->model->type == mod_alias || ent->model->type == mod_studio ))
 				{
 #ifdef STUDIO_INTERPOLATION_FIX
 					if( ent->lastmove >= cl.time )

@@ -119,7 +119,7 @@ GNU General Public License for more details.
 #define bound( min, num, max ) ((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 
 float rsqrt( float number );
-float anglemod( const float a );
+float anglemod( float a );
 word FloatToHalf( float v );
 float HalfToFloat( word h );
 void RoundUpHullSize( vec3_t size );

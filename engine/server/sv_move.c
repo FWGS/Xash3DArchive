@@ -61,7 +61,10 @@ qboolean SV_CheckBottom( edict_t *ent, int iMode )
 	return true; // we got out easy
 realcheck:
 	// check it for real...
-	start[2] = mins[2] + svgame.movevars.stepsize;
+	start[2] = mins[2];
+
+	if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		start[2] += svgame.movevars.stepsize;
 
 	// the midpoint must be within 16 of the bottom
 	start[0] = stop[0] = (mins[0] + maxs[0]) * 0.5f;

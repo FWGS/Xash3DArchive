@@ -89,7 +89,7 @@ char *SV_Localinfo( void )
 	return svs.localinfo;
 }
 
-void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
+void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max, qboolean relink )
 {
 	int	i;
 
@@ -112,7 +112,7 @@ void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max )
 	VectorCopy( max, e->v.maxs );
 	VectorSubtract( max, min, e->v.size );
 
-	SV_LinkEdict( e, false );
+	if( relink ) SV_LinkEdict( e, false );
 }
 
 void SV_CopyTraceToGlobal( trace_t *trace )
@@ -157,7 +157,7 @@ void SV_SetModel( edict_t *ent, const char *name )
 		break;
 	}
 
-	SV_SetMinMaxSize( ent, mins, maxs );
+	SV_SetMinMaxSize( ent, mins, maxs, true );
 }
 
 float SV_AngleMod( float ideal, float current, float speed )
@@ -1165,7 +1165,7 @@ void pfnSetSize( edict_t *e, const float *rgflMin, const float *rgflMax )
 		return;
 	}
 
-	SV_SetMinMaxSize( e, rgflMin, rgflMax );
+	SV_SetMinMaxSize( e, rgflMin, rgflMax, true );
 }
 
 /*

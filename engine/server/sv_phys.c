@@ -233,6 +233,9 @@ qboolean SV_PlayerRunThink( edict_t *ent, float frametime, double time )
 {
 	float	thinktime;
 
+	if( svgame.physFuncs.SV_PlayerThink )
+		return svgame.physFuncs.SV_PlayerThink( ent, frametime, time );
+
 	if( !FBitSet( ent->v.flags, FL_KILLME|FL_DORMANT ))
 	{
 		thinktime = ent->v.nextthink;
@@ -1688,7 +1691,7 @@ static void SV_Physics_Entity( edict_t *ent )
 
 	SV_UpdateBaseVelocity( ent );
 
-	if(!( ent->v.flags & FL_BASEVELOCITY ) && !VectorIsNull( ent->v.basevelocity ))
+	if( !FBitSet( ent->v.flags, FL_BASEVELOCITY ) && !VectorIsNull( ent->v.basevelocity ))
 	{
 		// Apply momentum (add in half of the previous frame of velocity first)
 		VectorMA( ent->v.velocity, 1.0f + (sv.frametime * 0.5f), ent->v.basevelocity, ent->v.velocity );
@@ -1774,6 +1777,9 @@ void SV_Physics( void )
 		SV_Physics_Entity( ent );
 	}
 
+	if( svgame.globals->force_retouch != 0.0f )
+		svgame.globals->force_retouch--;
+
 	if( svgame.physFuncs.SV_EndFrame != NULL )
 		svgame.physFuncs.SV_EndFrame();
 
@@ -1789,9 +1795,6 @@ void SV_Physics( void )
 
 	// decrement svgame.numEntities if the highest number entities died
 	for( ; EDICT_NUM( svgame.numEntities - 1 )->free; svgame.numEntities-- );
-
-	if( svgame.globals->force_retouch != 0.0f )
-		svgame.globals->force_retouch--;
 }
 
 /*
@@ -1972,6 +1975,13 @@ const byte *pfnLoadImagePixels( const char *filename, int *width, int *height )
 	return buffer;
 }
 
+const char* pfnGetModelName( int modelindex )
+{
+	if( modelindex < 0 || modelindex >= MAX_MODELS )
+		return NULL;
+	return sv.model_precache[modelindex];
+}
+
 static server_physics_api_t gPhysicsAPI =
 {
 	SV_LinkEdict,
@@ -2004,6 +2014,7 @@ static server_physics_api_t gPhysicsAPI =
 	Mod_SaveLump,
 	COM_SaveFile,
 	pfnLoadImagePixels,
+	pfnGetModelName,
 };
 
 /*

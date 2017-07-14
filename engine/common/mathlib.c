@@ -45,9 +45,10 @@ const float m_bytenormals[NUMVERTEXNORMALS][3] =
 anglemod
 =================
 */
-float anglemod( const float a )
+float anglemod( float a )
 {
-	return (360.0f/65536) * ((int)(a*(65536/360.0f)) & 65535);
+	a = (360.0 / 65536) * ((int)(a*(65536/360.0)) & 65535);
+	return a;
 }
 
 word FloatToHalf( float v )

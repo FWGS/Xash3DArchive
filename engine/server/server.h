@@ -563,7 +563,7 @@ const char *SV_ClassName( const edict_t *e );
 void SV_SetModel( edict_t *ent, const char *name );
 void SV_FreePrivateData( edict_t *pEdict );
 void SV_CopyTraceToGlobal( trace_t *trace );
-void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max );
+void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max, qboolean relink );
 edict_t* SV_FindEntityByString( edict_t *pStartEdict, const char *pszField, const char *pszValue );
 void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );

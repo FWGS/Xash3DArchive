@@ -240,7 +240,6 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 	// author: The FiEctro
 	hull = &model->hulls[COM_RandomLong( 0, 0 )];
 #endif
-
 	if( world.sky_sphere || world.version == Q1BSP_VERSION )
 	{
 		// alternate hull select for quake maps
@@ -815,8 +814,8 @@ qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker )
 	{
 		// to avoid falling through tracktrain update client mins\maxs here
 		if( ent->v.flags & FL_DUCKING ) 
-			SV_SetMinMaxSize( ent, svgame.pmove->player_mins[1], svgame.pmove->player_maxs[1] );
-		else SV_SetMinMaxSize( ent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0] );
+			SV_SetMinMaxSize( ent, svgame.pmove->player_mins[1], svgame.pmove->player_maxs[1], true );
+		else SV_SetMinMaxSize( ent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0], true );
 	}
 
 	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL|FMOVE_SIMPLEBOX, ent );

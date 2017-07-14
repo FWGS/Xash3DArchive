@@ -103,6 +103,8 @@ typedef struct server_physics_api_s
 	// FS tools
 	int		(*pfnSaveFile)( const char *filename, const void *data, long len );
 	const byte	*(*pfnLoadImagePixels)( const char *filename, int *width, int *height );
+
+	const char*	(*pfnGetModelName)( int modelindex );
 } server_physics_api_t;
 
 // physic callbacks
@@ -154,6 +156,8 @@ typedef struct physics_interface_s
 	void		(*Mod_ProcessUserData)( struct model_s *mod, qboolean create, const byte *buffer );
 	// select BSP-hull for trace with specified mins\maxs
 	void		*(*SV_HullForBsp)( edict_t *ent, const float *mins, const float *maxs, float *offset );
+	// handle player custom think function
+	int		(*SV_PlayerThink)( edict_t *ent, float frametime, double time );
 } physics_interface_t;
 
 #endif//PHYSINT_H
