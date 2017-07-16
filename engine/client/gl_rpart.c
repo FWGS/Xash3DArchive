@@ -69,6 +69,7 @@ particle_t	*cl_active_tracers;
 particle_t	*cl_free_particles;
 particle_t	*cl_particles = NULL;	// particle pool
 static vec3_t	cl_avelocities[NUMVERTEXNORMALS];
+static float	cl_lasttimewarn = 0.0f;
 
 /*
 ================
@@ -221,7 +222,12 @@ particle_t *R_AllocParticle( void (*callback)( particle_t*, float ))
 
 	if( !cl_free_particles )
 	{
-		MsgDev( D_ERROR, "Overflow %d particles\n", GI->max_particles );
+		if( cl_lasttimewarn < host.realtime )
+		{
+			// don't spam about overflow
+			MsgDev( D_ERROR, "Overflow %d particles\n", GI->max_particles );
+			cl_lasttimewarn = host.realtime + 1.0f;
+		}
 		return NULL;
 	}
 
@@ -267,7 +273,12 @@ particle_t *R_AllocTracer( const vec3_t org, const vec3_t vel, float life )
 
 	if( !cl_free_particles )
 	{
-		MsgDev( D_ERROR, "Overflow %d tracers\n", GI->max_particles );
+		if( cl_lasttimewarn < host.realtime )
+		{
+			// don't spam about overflow
+			MsgDev( D_ERROR, "Overflow %d tracers\n", GI->max_particles );
+			cl_lasttimewarn = host.realtime + 1.0f;
+		}
 		return NULL;
 	}
 

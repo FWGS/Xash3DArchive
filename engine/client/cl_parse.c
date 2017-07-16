@@ -692,6 +692,13 @@ void CL_ParseServerData( sizebuf_t *msg )
 	Q_strncpy( gamefolder, MSG_ReadString( msg ), MAX_STRING );
 	host.features = (uint)MSG_ReadLong( msg );
 
+	if( Con_FixedFont( ))
+	{
+		// seperate the printfs so the server message can have a color
+		Con_Print( "\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n" );
+		Con_Print( va( "%c%s\n\n", 2, clgame.maptitle ));
+	}
+
 	// receive the player hulls
 	for( i = 0; i < MAX_MAP_HULLS * 3; i++ )
 	{
@@ -789,6 +796,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	memset( &clgame.movevars, 0, sizeof( clgame.movevars ));
 	memset( &clgame.oldmovevars, 0, sizeof( clgame.oldmovevars ));
+	memset( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
 }
 
 /*

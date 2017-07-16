@@ -582,6 +582,8 @@ void Sys_Print( const char *pMsg )
 		}
 		else
 		{
+			if( msg[i] == '\1' || msg[i] == '\2' )
+				i++;
 			*b = *c = msg[i];
 			b++, c++;
 		}

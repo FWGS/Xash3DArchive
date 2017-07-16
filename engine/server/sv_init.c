@@ -58,6 +58,8 @@ int SV_ModelIndex( const char *filename )
 
 	if( sv.state != ss_loading )
 	{	
+		MsgDev( D_WARN, "late precache of %s\n", name );
+
 		// send the update to everyone
 		MSG_BeginServerCmd( &sv.reliable_datagram, svc_modelindex );
 		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_MODEL_BITS );
@@ -103,6 +105,8 @@ int SV_SoundIndex( const char *filename )
 
 	if( sv.state != ss_loading )
 	{	
+		MsgDev( D_WARN, "late precache of %s\n", name );
+
 		// send the update to everyone
 		MSG_BeginServerCmd( &sv.reliable_datagram, svc_soundindex );
 		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_SOUND_BITS );

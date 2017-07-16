@@ -2035,7 +2035,7 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	return 1;
 }
 
-int SV_SaveReadHeader( file_t *pFile, GAME_HEADER *pHeader, int readGlobalState )
+int SV_SaveReadHeader( file_t *pFile, GAME_HEADER *pHeader )
 {
 	int		i, tag, size, tokenCount, tokenSize;
 	char		*pszTokenList;
@@ -2092,13 +2092,11 @@ int SV_SaveReadHeader( file_t *pFile, GAME_HEADER *pHeader, int readGlobalState 
 	SaveRestore_Init( pSaveData, (char *)(pszTokenList), size );
 	FS_Read( pFile, SaveRestore_GetBuffer( pSaveData ), size );
 
-	if( readGlobalState )
-		svgame.dllFuncs.pfnResetGlobalState();
+	svgame.dllFuncs.pfnResetGlobalState();
 
 	svgame.dllFuncs.pfnSaveReadFields( pSaveData, "GameHeader", pHeader, gGameHeader, ARRAYSIZE( gGameHeader ));	
 
-	if( readGlobalState )
-		svgame.dllFuncs.pfnRestoreGlobalState( pSaveData );
+	svgame.dllFuncs.pfnRestoreGlobalState( pSaveData );
 
 	SV_SaveFinish( pSaveData );
 	
@@ -2141,7 +2139,7 @@ qboolean SV_LoadGame( const char *pName )
 
 	if( pFile )
 	{
-		if( SV_SaveReadHeader( pFile, &gameHeader, 1 ))
+		if( SV_SaveReadHeader( pFile, &gameHeader ))
 		{
 			SV_DirectoryExtract( pFile, gameHeader.mapCount );
 			validload = true;

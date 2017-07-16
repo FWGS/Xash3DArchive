@@ -534,6 +534,18 @@ qboolean Con_Visible( void )
 	return (con.vislines > 0);
 }
 
+/*
+================
+Con_FixedFont
+================
+*/
+qboolean Con_FixedFont( void )
+{
+	if( con.curFont && con.curFont->valid && con.curFont->type == FONT_FIXED )
+		return true;
+	return false;
+}
+
 static qboolean Con_LoadFixedWidthFont( const char *fontname, cl_font_t *font )
 {
 	int	i, fontWidth;
@@ -550,6 +562,7 @@ static qboolean Con_LoadFixedWidthFont( const char *fontname, cl_font_t *font )
 	if( font->hFontTexture && fontWidth != 0 )
 	{
 		font->charHeight = fontWidth / 16;
+		font->type = FONT_FIXED;
 
 		// build fixed rectangles
 		for( i = 0; i < 256; i++ )
@@ -592,6 +605,7 @@ static qboolean Con_LoadVariableWidthFont( const char *fontname, cl_font_t *font
 		{
 			src = (qfont_t *)buffer;
 			font->charHeight = src->rowheight;
+			font->type = FONT_VARIABLE;
 
 			// build rectangles
 			for( i = 0; i < 256; i++ )
@@ -694,7 +708,7 @@ static int Con_DrawGenericChar( int x, int y, int number, rgba_t color )
 	if( !con.curFont || !con.curFont->valid )
 		return 0;
 
-	if( number < 32 ) return 0;
+//	if( number < 32 ) return 0;
 	if( y < -con.curFont->charHeight )
 		return 0;
 
@@ -966,10 +980,18 @@ void Con_Print( const char *txt )
 	static int	cr_pending = 0;
 	static char	buf[MAX_PRINT_MSG];
 	static int	bufpos = 0;
+	int		c, mask;
 
 	// client not running
 	if( !con.initialized || !con.buffer || host.type == HOST_DEDICATED )
 		return;
+
+	if( txt[0] == 2 )
+	{
+		mask = 128;		// go to colored text
+		txt++;
+	}
+	else mask = 0;
 
 	for( ; *txt; txt++ )
 	{
@@ -979,7 +1001,9 @@ void Con_Print( const char *txt )
 			cr_pending = 0;
 		}
 
-		switch( *txt )
+		c = *txt;
+
+		switch( c )
 		{
 		case '\0':
 			break;
@@ -993,7 +1017,7 @@ void Con_Print( const char *txt )
 			bufpos = 0;
 			break;
 		default:
-			buf[bufpos++] = *txt;
+			buf[bufpos++] = c | mask;
 			if(( bufpos >= sizeof( buf ) - 1 ) || bufpos >= ( con.linewidth - 1 ))
 			{
 				Con_AddLine( buf, bufpos );

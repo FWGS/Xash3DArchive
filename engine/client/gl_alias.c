@@ -535,7 +535,7 @@ void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 	{
 		if( pskintype->type == ALIAS_SKIN_SINGLE )
 		{
-			Mod_FloodFillSkin( skin, m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+//			Mod_FloodFillSkin( skin, m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
 
 			// save 8 bit texels for the player model to remap
 			m_pAliasHeader->texels[i] = Mem_Alloc( loadmodel->mempool, size );
@@ -574,7 +574,7 @@ void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 
 			for( j = 0; j < groupskins; j++ )
 			{
-				Mod_FloodFillSkin( skin, m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+//				Mod_FloodFillSkin( skin, m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
 				if( j == 0 )
 				{
 					m_pAliasHeader->texels[i] = Mem_Alloc( loadmodel->mempool, size );

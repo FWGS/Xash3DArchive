@@ -480,6 +480,7 @@ qboolean SCR_LoadFixedWidthFont( const char *fontname )
 	cls.creditsFont.hFontTexture = GL_LoadTexture( fontname, NULL, 0, TF_IMAGE, NULL );
 	R_GetTextureParms( &fontWidth, NULL, cls.creditsFont.hFontTexture );
 	cls.creditsFont.charHeight = clgame.scrInfo.iCharHeight = fontWidth / 16;
+	cls.creditsFont.type = FONT_FIXED;
 	cls.creditsFont.valid = true;
 
 	// build fixed rectangles
@@ -519,6 +520,7 @@ qboolean SCR_LoadVariableWidthFont( const char *fontname )
 	{
 		src = (qfont_t *)buffer;
 		cls.creditsFont.charHeight = clgame.scrInfo.iCharHeight = src->rowheight;
+		cls.creditsFont.type = FONT_VARIABLE;
 
 		// build rectangles
 		for( i = 0; i < 256; i++ )

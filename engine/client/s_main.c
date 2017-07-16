@@ -1294,7 +1294,7 @@ int S_GetCurrentDynamicSounds( soundlist_t *pout, int size )
 
 		looped = ( channels[i].use_loop && channels[i].sfx->cache->loopStart != -1 );
 
-		if( channels[i].entchannel == CHAN_STATIC && looped )
+		if( channels[i].entchannel == CHAN_STATIC && looped && !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 			continue;	// never serialize static looped sounds. It will be restoring in game code 
 
 		if( channels[i].isSentence && channels[i].name[0] )

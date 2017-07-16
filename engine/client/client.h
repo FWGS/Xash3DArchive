@@ -294,12 +294,16 @@ typedef struct
 	pfnEventHook	func;	// user-defined function
 } cl_user_event_t;
 
+#define FONT_FIXED		0
+#define FONT_VARIABLE	1
+
 typedef struct
 {
 	int		hFontTexture;		// handle to texture
 	wrect_t		fontRc[256];		// rectangles
 	byte		charWidths[256];
 	int		charHeight;
+	int		type;
 	qboolean		valid;			// all rectangles are valid
 } cl_font_t;
 
@@ -732,6 +736,7 @@ int pfnDecalIndexFromName( const char *szDecalName );
 int pfnIndexFromTrace( struct pmtrace_s *pTrace );
 void NetAPI_CancelAllRequests( void );
 int CL_FindModelIndex( const char *m );
+cl_entity_t *CL_GetLocalPlayer( void );
 model_t *CL_LoadClientSprite( const char *filename );
 HSPRITE pfnSPR_Load( const char *szPicName );
 HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags );
@@ -885,6 +890,7 @@ void CL_RunLightStyles( void );
 //
 extern convar_t *con_fontsize;
 qboolean Con_Visible( void );
+qboolean Con_FixedFont( void );
 void Con_VidInit( void );
 void Con_Shutdown( void );
 void Con_ToggleConsole_f( void );

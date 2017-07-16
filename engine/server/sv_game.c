@@ -1928,6 +1928,8 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		msg_dest = MSG_INIT;
 	else if( chan == CHAN_STATIC )
 		msg_dest = MSG_ALL;
+	else if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		msg_dest = MSG_ALL;
 	else msg_dest = MSG_PAS_R;
 
 	// always sending stop sound command
@@ -2726,9 +2728,10 @@ void pfnWriteString( const char *src )
 	int	len = Q_strlen( src ) + 1;
 	int	rem = (255 - svgame.msg_realsize);
 
-	if( len >= rem )
+	if( len == 1 || len >= rem )
 	{
-		MsgDev( D_ERROR, "pfnWriteString: exceeds %i symbols\n", rem );
+		if( len >= rem )
+			MsgDev( D_ERROR, "pfnWriteString: exceeds %i symbols\n", rem );
 		MSG_WriteChar( &sv.multicast, 0 );
 		svgame.msg_realsize += 1; 
 		return;

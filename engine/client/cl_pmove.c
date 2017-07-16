@@ -88,7 +88,7 @@ CL_IsPredicted
 */
 qboolean CL_IsPredicted( void )
 {
-	if( cl_nopred->value )
+	if( cl_nopred->value || cl.intermission )
 		return false;
 	return true;
 }
@@ -100,6 +100,8 @@ CL_LocalWeapons
 */
 qboolean CL_LocalWeapons( void )
 {
+	if( cl.intermission )
+		return false;
 	if( cl_lw && cl_lw->value )
 		return true;
 	return false;
@@ -1238,7 +1240,7 @@ void CL_PredictMovement( qboolean repredicting )
 
 	CL_SetUpPlayerPrediction( false, false );
 
-	if( !cl.validsequence || cl.intermission )
+	if( !cl.validsequence )
 		return;
 
 	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CL_UPDATE_MASK )
