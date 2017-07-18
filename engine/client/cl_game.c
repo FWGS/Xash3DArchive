@@ -34,7 +34,7 @@ GNU General Public License for more details.
 #define MAX_TEXTCHANNELS	8		// must be power of two (GoldSrc uses 4 channels)
 #define TEXT_MSGNAME	"TextMessage%i"
 
-char			cl_textbuffer[MAX_TEXTCHANNELS][512];
+char			cl_textbuffer[MAX_TEXTCHANNELS][2048];
 client_textmessage_t	cl_textmessage[MAX_TEXTCHANNELS];
 
 static dllfunc_t cdll_exports[] =
@@ -719,7 +719,54 @@ void CL_ParseTextMessage( sizebuf_t *msg )
 	else text->fxtime = 0.0f;
 
 	// to prevent grab too long messages
-	Q_strncpy( (char *)text->pMessage, MSG_ReadString( msg ), 512 ); 		
+	Q_strncpy( (char *)text->pMessage, MSG_ReadString( msg ), 2048 ); 		
+
+	// NOTE: a "HudText" message contain only 'string' with message name, so we
+	// don't needs to use MSG_ routines here, just directly write msgname into netbuffer
+	CL_DispatchUserMessage( "HudText", Q_strlen( text->pName ) + 1, (void *)text->pName );
+}
+
+/*
+================
+CL_ParseFinaleCutscene
+
+show display finale or cutscene message
+================
+*/
+void CL_ParseFinaleCutscene( sizebuf_t *msg, int level )
+{
+	static int		msgindex = 0;
+	client_textmessage_t	*text;
+	int			channel;
+
+	cl.intermission = level;
+
+	channel = msgindex;
+	msgindex = (msgindex + 1) & (MAX_TEXTCHANNELS - 1);
+
+	// grab message channel
+	text = &cl_textmessage[channel];
+
+	// NOTE: svc_finale and svc_cutscene has a
+	// predefined settings like Quake-style
+	text->x = -1.0f;
+	text->y = 0.15f;
+	text->effect = 2;	// scan out effect
+	text->r1 = 245;
+	text->g1 = 245;
+	text->b1 = 245;
+	text->a1 = 0;	// unused
+	text->r2 = 0;
+	text->g2 = 0;
+	text->b2 = 0;
+	text->a2 = 0;
+	text->fadein = 0.15f;
+	text->fadeout = 0.0f;
+	text->holdtime = 99999.0f;
+	text->fxtime = 0.0f;
+
+	// to prevent grab too long messages
+	Q_strncpy( (char *)text->pMessage, MSG_ReadString( msg ), 2048 ); 		
 
 	// NOTE: a "HudText" message contain only 'string' with message name, so we
 	// don't needs to use MSG_ routines here, just directly write msgname into netbuffer
@@ -1744,8 +1791,12 @@ int pfnDrawConsoleString( int x, int y, char *string )
 
 	if( !string || !*string ) return 0; // silent ignore
 	Con_SetFont( con_fontsize->value );
+
+	clgame.ds.adjust_size = true;
 	drawLen = Con_DrawString( x, y, string, clgame.ds.textColor );
 	MakeRGBA( clgame.ds.textColor, 255, 255, 255, 255 );
+	clgame.ds.adjust_size = false;
+
 	Con_RestoreFont();
 
 	return (x + drawLen); // exclude color prexfixes

@@ -1814,10 +1814,10 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			cl.intermission = 1;
 			break;
 		case svc_finale:
-			cl.intermission = 2;
+			CL_ParseFinaleCutscene( msg, 2 );
 			break;
 		case svc_cutscene:
-			cl.intermission = 3;
+			CL_ParseFinaleCutscene( msg, 3 );
 			break;
 		case svc_modelindex:
 			CL_PrecacheModel( msg );

@@ -1,2 +1,2 @@
-makefont.exe -font "Terminal" fonts.wad
+makefont.exe -font "Quake_pixel" -pointsizes 11 13 15 fonts.wad
 pause

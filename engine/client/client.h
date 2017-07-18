@@ -722,6 +722,7 @@ void CL_UnloadProgs( void );
 qboolean CL_LoadProgs( const char *name );
 void CL_ParseUserMessage( sizebuf_t *msg, int svc_num );
 void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize );
+void CL_ParseFinaleCutscene( sizebuf_t *msg, int level );
 void CL_ParseTextMessage( sizebuf_t *msg );
 void CL_DrawHUD( int state );
 void CL_InitEdicts( void );

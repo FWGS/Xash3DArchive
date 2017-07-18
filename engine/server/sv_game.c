@@ -2613,13 +2613,23 @@ void pfnMessageEnd( void )
 		return;
 	}
 
-	if( svgame.msg_index < 0 && abs( svgame.msg_index ) == svc_studiodecal && svgame.msg_realsize == 27 )
+	// update some messages in case their was format was changed and we want to keep backward compatibility
+	if( svgame.msg_index < 0 )
 	{
-		// oldstyle message for svc_studiodecal has missed four additional bytes:
-		// modelIndex, skin and body. Write it here for backward compatibility
-		MSG_WriteWord( &sv.multicast, 0 );
-		MSG_WriteByte( &sv.multicast, 0 );
-		MSG_WriteByte( &sv.multicast, 0 );
+		int svc_msg = abs( svgame.msg_index );
+
+		if( svc_msg == svc_studiodecal && svgame.msg_realsize == 27 )
+		{
+			// oldstyle message for svc_studiodecal has missed four additional bytes:
+			// modelIndex, skin and body. Write it here for backward compatibility
+			MSG_WriteWord( &sv.multicast, 0 );
+			MSG_WriteByte( &sv.multicast, 0 );
+			MSG_WriteByte( &sv.multicast, 0 );
+		}
+		else if(( svc_msg == svc_finale || svc_msg == svc_cutscene ) && svgame.msg_realsize == 0 )
+		{
+			MSG_WriteChar( &sv.multicast, 0 ); // write null string
+		}
 	}
 
 	if( !VectorIsNull( svgame.msg_org )) org = svgame.msg_org;
@@ -2724,11 +2734,14 @@ pfnWriteString
 */
 void pfnWriteString( const char *src )
 {
-	char	*dst, string[MAX_SYSPATH];
-	int	len = Q_strlen( src ) + 1;
-	int	rem = (255 - svgame.msg_realsize);
+	static char	string[2048];
+	int		len = Q_strlen( src ) + 1;
+	int		rem = (255 - svgame.msg_realsize);
+	char		*dst;
 
-	if( len == 1 || len >= rem )
+	// user-message strings can't exceeds 255 symbols,
+	// but system message allow up to 2048 characters
+	if(( svgame.msg_index > 0 ) && ( len == 1 || len >= rem ))
 	{
 		if( len >= rem )
 			MsgDev( D_ERROR, "pfnWriteString: exceeds %i symbols\n", rem );

@@ -609,7 +609,7 @@ qboolean MSG_ReadBytes( sizebuf_t *sb, void *pOut, int nBytes )
 
 char *MSG_ReadStringExt( sizebuf_t *sb, qboolean bLine )
 {
-	static char	string[MAX_SYSPATH];
+	static char	string[2048];
 	int		l = 0, c;
 	
 	do
