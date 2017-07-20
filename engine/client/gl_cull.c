@@ -102,8 +102,11 @@ qboolean R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags 
 	if( !surf || !surf->texinfo || !surf->texinfo->texture )
 		return true;
 
-	if( surf->flags & SURF_WATERCSG && !( e->curstate.effects & EF_NOWATERCSG ))
-		return true;
+	if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+	{
+		if( surf->flags & SURF_WATERCSG && !( e->curstate.effects & EF_NOWATERCSG ))
+			return true;
+	}
 
 	// don't cull transparent surfaces because we should be draw decals on them
 	if( surf->pdecals && ( e->curstate.rendermode == kRenderTransTexture || e->curstate.rendermode == kRenderTransAdd ))

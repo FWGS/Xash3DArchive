@@ -242,6 +242,28 @@ void GL_SetupFogColorForSurfaces( void )
 	pglFogfv( GL_FOG_COLOR, fogColor );
 }
 
+void GL_SetupFogColorForModels( void )
+{
+	vec3_t	fogColor;
+	float	factor, div;
+
+	if(( !RI.fogEnabled && !RI.fogCustom ) || RI.onlyClientDraw || !RI.currententity )
+		return;
+
+	if( RI.currententity->curstate.rendermode == kRenderTransTexture )
+          {
+		pglFogfv( GL_FOG_COLOR, RI.fogColor );
+		return;
+	}
+
+	div = 2.0f;
+	factor = 1.0f;
+	fogColor[0] = pow( RI.fogColor[0] / div, ( 1.0f / factor ));
+	fogColor[1] = pow( RI.fogColor[1] / div, ( 1.0f / factor ));
+	fogColor[2] = pow( RI.fogColor[2] / div, ( 1.0f / factor ));
+	pglFogfv( GL_FOG_COLOR, fogColor );
+}
+
 void GL_ResetFogColor( void )
 {
 	// restore fog here
@@ -1395,6 +1417,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	qboolean		need_sort = false;
 	vec3_t		origin_l, oldorigin;
 	vec3_t		mins, maxs;
+	int		rendermode;
 	msurface_t	*psurf;
 	model_t		*clmodel;
 	qboolean		rotated;
@@ -1432,7 +1455,11 @@ void R_DrawBrushModel( cl_entity_t *e )
 		return;
 
 	memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
+	rendermode = e->curstate.rendermode;
 	gl_lms.dynamic_surfaces = NULL;
+
+	if( FBitSet( clmodel->flags, MODEL_TRANSPARENT ) && FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		rendermode = kRenderTransAlpha;
 
 	if( rotated ) R_RotateForEntity( e );
 	else R_TranslateForEntity( e );
@@ -1456,14 +1483,14 @@ void R_DrawBrushModel( cl_entity_t *e )
 	}
 
 	// setup the rendermode
-	GL_SetRenderMode( e->curstate.rendermode );
+	GL_SetRenderMode( rendermode );
 	GL_SetupFogColorForSurfaces ();
 
-	if( e->curstate.rendermode == kRenderTransTexture && r_lighting_extended->value >= 2.0f )
+	if( rendermode == kRenderTransTexture && r_lighting_extended->value >= 2.0f )
 		pglBlendFunc( GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA );
 
 	// setup the color and alpha
-	switch( e->curstate.rendermode )
+	switch( rendermode )
 	{
 	case kRenderTransAdd:
 		if( RI.fogCustom )
@@ -1514,7 +1541,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	for( i = 0; i < num_sorted; i++ )
 		R_RenderBrushPoly( world.draw_surfaces[i] );
 
-	if( e->curstate.rendermode == kRenderTransColor )
+	if( rendermode == kRenderTransColor )
 		pglEnable( GL_TEXTURE_2D );
 
 	GL_ResetFogColor();
@@ -1523,7 +1550,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	R_RenderDetails();
 
 	// restore fog here
-	if( e->curstate.rendermode == kRenderTransAdd )
+	if( rendermode == kRenderTransAdd )
 	{
 		if( RI.fogCustom )
 			pglEnable( GL_FOG );

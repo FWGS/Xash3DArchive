@@ -58,6 +58,7 @@ CVAR_DEFINE_AUTO( logsdir, "logs", 0, "place to store multiplayer logs" );
 CVAR_DEFINE_AUTO( bannedcfgfile, "banned.cfg", 0, "name of list of banned users" );
 CVAR_DEFINE_AUTO( deathmatch, "0", 0, "deathmatch mode in multiplayer game" );
 CVAR_DEFINE_AUTO( coop, "0", 0, "cooperative mode in multiplayer game" );
+CVAR_DEFINE_AUTO( teamplay, "0", 0, "team mode in multiplayer game" );
 CVAR_DEFINE_AUTO( skill, "1", 0, "skill level in singleplayer game" );
 
 // physic-related variables
@@ -732,6 +733,7 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&motdfile);
 	Cvar_RegisterVariable (&deathmatch);
 	Cvar_RegisterVariable (&coop);
+	Cvar_RegisterVariable (&teamplay);
 	Cvar_RegisterVariable (&skill);
 
 	Cvar_RegisterVariable (&rcon_password);

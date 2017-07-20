@@ -391,7 +391,7 @@ void R_DrawSkyBox( void )
 	RI.isSkyVisible = true;
 
 	// don't fogging skybox (this fix old Half-Life bug)
-	if( !RI.fogCustom )
+	if( !RI.fogCustom && !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 		pglDisable( GL_FOG );
 	pglDisable( GL_BLEND );
 	pglDisable( GL_ALPHA_TEST );

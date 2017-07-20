@@ -704,6 +704,20 @@ static void R_CheckFog( void )
 	gltexture_t	*tex;
 	int		i, cnt, count;
 
+	// quake global fog
+	if( clgame.movevars.fog_settings != 0 && FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+	{
+		// quake-style global fog
+		RI.fogColor[0] = ((clgame.movevars.fog_settings & 0xFF000000) >> 24) / 255.0f;
+		RI.fogColor[1] = ((clgame.movevars.fog_settings & 0xFF0000) >> 16) / 255.0f;
+		RI.fogColor[2] = ((clgame.movevars.fog_settings & 0xFF00) >> 8) / 255.0f;
+		RI.fogDensity = ((clgame.movevars.fog_settings & 0xFF) / 255.0f) * 0.015625f;
+		RI.fogStart = RI.fogEnd = 0.0f;
+		RI.fogCustom = false;
+		RI.fogEnabled = true;
+		return;
+	}
+
 	RI.fogEnabled = false;
 
 	if( cl.local.waterlevel < 2 || !RI.drawWorld || !RI.viewleaf )

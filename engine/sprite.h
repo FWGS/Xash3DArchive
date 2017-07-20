@@ -29,6 +29,7 @@ SPRITE MODELS
 
 #define SPRITE_VERSION_Q1	1				// Quake sprites
 #define SPRITE_VERSION_HL	2				// Half-Life sprites
+#define SPRITE_VERSION_32	32				// Captain Obvious mode on
 
 // must match definition in alias.h
 #ifndef SYNCTYPE_T

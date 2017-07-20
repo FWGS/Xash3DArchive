@@ -2318,6 +2318,9 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 			if( surf->flags & SURF_CONVEYOR )
 				mod->flags |= MODEL_CONVEYOR;
 
+			if( surf->flags & SURF_TRANSPARENT )
+				mod->flags |= MODEL_TRANSPARENT;
+
 			// kill water backplanes for submodels (half-life rules)
 			if( surf->flags & SURF_DRAWTURB )
 			{

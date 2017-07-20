@@ -188,6 +188,7 @@ Image_LoadSPR
 qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 {
 	dspriteframe_t	*pin;	// identical for q1\hl sprites
+	qboolean		truecolor = false;
 
 	if( image.hint == IL_HINT_HL )
 	{
@@ -217,9 +218,12 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
+	if( filesize == ( image.width * image.height * 4 ))
+		truecolor = true;
+
 	// sorry, can't validate palette rendermode
 	if( !Image_LumpValidSize( name )) return false;
-	image.type = PF_INDEXED_32;	// 32-bit palete
+	image.type = (truecolor) ? PF_RGBA_32 : PF_INDEXED_32;	// 32-bit palete
 	image.depth = 1;
 
 	// detect alpha-channel by palette type
@@ -230,6 +234,16 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	case LUMP_QUAKE1:
 		SetBits( image.flags, IMAGE_HAS_ALPHA );
 		break;
+	}
+
+	if( truecolor )
+	{
+		// spr32 support
+		image.size = image.width * image.height * 4;
+		image.rgba = Mem_Alloc( host.imagepool, image.size );
+		memcpy( image.rgba, (byte *)(pin + 1), image.size );
+		SetBits( image.flags, IMAGE_HAS_COLOR ); // Color. True Color!
+		return true;
 	}
 
 	return Image_AddIndexedImageToPack( (byte *)(pin + 1), image.width, image.height );
@@ -261,7 +275,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	if( image.hint != IL_HINT_HL && Q_stristr( name, "conchars" ))
 	{
 		image.width = image.height = 128;
-		rendermode = LUMP_MASKED;
+		rendermode = LUMP_QUAKE1;
 		filesize += sizeof( lmp );
 		fin = (byte *)buffer;
 
@@ -411,10 +425,10 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 
 		hl_texture = false;
 
-		// check for luma pixels
+		// check for luma and alpha pixels
 		for( i = 0; i < image.width * image.height; i++ )
 		{
-			if( fin[i] > 224 )
+			if( fin[i] > 224 && fin[i] != 255 )
 			{
 				// don't apply luma to water surfaces because
 				// we use glpoly->next for store luma chain each frame
@@ -424,6 +438,19 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 				if( mip.name[0] != '*' && mip.name[0] != '!' )
 					image.flags |= IMAGE_HAS_LUMA;
 				break;
+			}
+		}
+
+		// Arcane Dimensions has the transparent textures
+		if( Q_strrchr( name, '{' ))
+		{
+			for( i = 0; i < image.width * image.height; i++ )
+			{
+				if( fin[i] == 255 )
+				{
+					image.flags |= IMAGE_HAS_ALPHA;
+					break;
+				}
 			}
 		}
 

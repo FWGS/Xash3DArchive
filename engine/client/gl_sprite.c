@@ -30,6 +30,7 @@ convar_t		*r_sprite_lerping;
 convar_t		*r_sprite_lighting;
 char		group_suffix[8];
 static uint	r_texFlags = 0;
+static int	sprite_version;
 float		sprite_radius;
 
 /*
@@ -58,14 +59,17 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	char		texname[128], sprname[128];
 	qboolean		load_external = false;
 	int		gl_texturenum = 0;
+	int		bytes = 1;
 
 	pinframe = (dspriteframe_t *)pin;
+	if( sprite_version == SPRITE_VERSION_32 )
+		bytes = 4;
 
 	// build uinque frame name
 	if( FBitSet( mod->flags, MODEL_CLIENT )) // it's a HUD sprite
 	{
 		Q_snprintf( texname, sizeof( texname ), "#HUD/%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
-		gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags, NULL );
+		gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height * bytes, r_texFlags, NULL );
 	}
 	else
 	{
@@ -87,7 +91,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 		if( !load_external )
 		{
 			Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
-			gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height, r_texFlags, NULL );
+			gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height * bytes, r_texFlags, NULL );
 		}
 		else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
 	}	
@@ -103,7 +107,7 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	pspriteframe->gl_texturenum = gl_texturenum;
 	*ppframe = pspriteframe;
 
-	return (dframetype_t *)((byte *)(pinframe + 1) + pinframe->width * pinframe->height );
+	return (dframetype_t *)((byte *)(pinframe + 1) + pinframe->width * pinframe->height * bytes );
 }
 
 /*
@@ -181,15 +185,16 @@ void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, ui
 		return;
 	}
 		
-	if( i != SPRITE_VERSION_Q1 && i != SPRITE_VERSION_HL )
+	if( i != SPRITE_VERSION_Q1 && i != SPRITE_VERSION_HL && i != SPRITE_VERSION_32 )
 	{
 		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i or %i)\n", mod->name, i, SPRITE_VERSION_Q1, SPRITE_VERSION_HL );
 		return;
 	}
 
 	mod->mempool = Mem_AllocPool( va( "^2%s^7", mod->name ));
+	sprite_version = i;
 
-	if( i == SPRITE_VERSION_Q1 )
+	if( i == SPRITE_VERSION_Q1 || i == SPRITE_VERSION_32 )
 	{
 		pinq1 = (dsprite_q1_t *)buffer;
 		size = sizeof( msprite_t ) + ( pinq1->numframes - 1 ) * sizeof( psprite->frames );

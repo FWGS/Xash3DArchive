@@ -1102,7 +1102,7 @@ void GL_DrawAliasFrame( aliashdr_t *paliashdr )
 			VectorLerp( m_bytenormals[verts0->lightnormalindex], g_alias.lerpfrac, m_bytenormals[verts1->lightnormalindex], norm );
 			VectorNormalize( norm );
 			R_AliasLighting( &lv_tmp, norm );
-			pglColor3f( g_alias.lightcolor[0] * lv_tmp, g_alias.lightcolor[1] * lv_tmp, g_alias.lightcolor[2] * lv_tmp );
+			pglColor4f( g_alias.lightcolor[0] * lv_tmp, g_alias.lightcolor[1] * lv_tmp, g_alias.lightcolor[2] * lv_tmp, tr.blend );
 			VectorLerp( verts0->v, g_alias.lerpfrac, verts1->v, vert );
 			pglVertex3fv( vert );
 			verts0++, verts1++;
@@ -1369,6 +1369,8 @@ void R_DrawAliasModel( cl_entity_t *e )
 	m_pAliasHeader = (aliashdr_t *)Mod_AliasExtradata( RI.currententity->model );
 	if( !m_pAliasHeader ) return;
 
+	GL_SetupFogColorForModels();
+
 	// init time
 	R_AliasSetupTimings();
 
@@ -1399,6 +1401,7 @@ void R_DrawAliasModel( cl_entity_t *e )
 
 	// model and frame independant
 	R_AliasSetupLighting( &lighting );
+	GL_SetRenderMode( e->curstate.rendermode );
 
 	pglTranslatef( m_pAliasHeader->scale_origin[0], m_pAliasHeader->scale_origin[1], m_pAliasHeader->scale_origin[2] );
 
@@ -1421,7 +1424,6 @@ void R_DrawAliasModel( cl_entity_t *e )
 	}
 
 	pglShadeModel( GL_SMOOTH );
-
 	R_SetupAliasFrame( e, m_pAliasHeader );
 
 	if( m_pAliasHeader->fb_texturenum[skin][anim] )
@@ -1459,6 +1461,8 @@ void R_DrawAliasModel( cl_entity_t *e )
 
 	// HACKHACK: keep the angles unchanged
 	VectorCopy( angles, e->angles );
+
+	GL_ResetFogColor();
 }
 
 //==================================================================================
