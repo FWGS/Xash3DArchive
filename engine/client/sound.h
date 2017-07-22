@@ -242,7 +242,7 @@ void SNDDMA_Submit( void );
 //====================================================================
 
 #define MAX_DYNAMIC_CHANNELS	(28 + NUM_AMBIENTS)
-#define MAX_CHANNELS	(128 + MAX_DYNAMIC_CHANNELS)	// Scourge Of Armagon has too many static sounds on hip2m4.bsp
+#define MAX_CHANNELS	(224 + MAX_DYNAMIC_CHANNELS)	// Scourge Of Armagon has too many static sounds on hip2m4.bsp
 #define MAX_RAW_CHANNELS	16
 #define MAX_RAW_SAMPLES	8192
 

@@ -675,11 +675,6 @@ qboolean CL_ReadRawNetworkData( byte *buffer, size_t *length )
 		CL_DemoCompleted();
 		return false;
 	}
-	
-	if( msglen < 8 )
-	{
-		MsgDev( D_NOTE, "read runt demo message\n" );
-	}
 
 	if( msglen > NET_MAX_PAYLOAD )
 	{
