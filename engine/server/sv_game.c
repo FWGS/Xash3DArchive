@@ -857,7 +857,7 @@ edict_t *SV_AllocEdict( void )
 	}
 
 	if( i >= svgame.globals->maxEntities )
-		Sys_Error( "ED_AllocEdict: no free edicts\n" );
+		Sys_Error( "ED_AllocEdict: no free edicts (max is %d)\n", svgame.globals->maxEntities );
 
 	svgame.numEntities++;
 	pEdict = EDICT_NUM( i );

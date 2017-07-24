@@ -60,6 +60,7 @@ CVAR_DEFINE_AUTO( deathmatch, "0", 0, "deathmatch mode in multiplayer game" );
 CVAR_DEFINE_AUTO( coop, "0", 0, "cooperative mode in multiplayer game" );
 CVAR_DEFINE_AUTO( teamplay, "0", 0, "team mode in multiplayer game" );
 CVAR_DEFINE_AUTO( skill, "1", 0, "skill level in singleplayer game" );
+CVAR_DEFINE_AUTO( temp1, "0", 0, "temporary cvar that used by some mods" );
 
 // physic-related variables
 CVAR_DEFINE_AUTO( sv_gravity, "800", FCVAR_MOVEVARS, "world gravity value" );
@@ -735,6 +736,7 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&coop);
 	Cvar_RegisterVariable (&teamplay);
 	Cvar_RegisterVariable (&skill);
+	Cvar_RegisterVariable (&temp1);
 
 	Cvar_RegisterVariable (&rcon_password);
 	Cvar_RegisterVariable (&sv_stepsize);

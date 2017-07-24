@@ -306,7 +306,7 @@ void S_Activate( qboolean active, void *hInst );
 void S_SoundList_f( void );
 void S_SoundInfo_f( void );
 
-channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx );
+channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean *ignore );
 channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx );
 int S_GetCurrentStaticSounds( soundlist_t *pout, int size );
 int S_GetCurrentDynamicSounds( soundlist_t *pout, int size );

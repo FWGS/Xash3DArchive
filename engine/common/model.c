@@ -2251,9 +2251,12 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		Mod_LoadPlanes( &header->lumps[LUMP_PLANES] );
 	}
 
-	// Half-Life: alpha version has BSP version 29 and map version 220 (and lightdata is RGB)
-	if( world.version <= 29 && world.mapversion == 220 && (header->lumps[LUMP_LIGHTING].filelen % 3) == 0 )
-		world.version = bmodel_version = HLBSP_VERSION;
+	if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+	{
+		// Half-Life: alpha version has BSP version 29 and map version 220 (and lightdata is RGB)
+		if( world.version <= 29 && world.mapversion == 220 && (header->lumps[LUMP_LIGHTING].filelen % 3) == 0 )
+			world.version = bmodel_version = HLBSP_VERSION;
+	}
 
 	Mod_LoadSubmodels( &header->lumps[LUMP_MODELS] );
 	Mod_LoadVertexes( &header->lumps[LUMP_VERTEXES] );

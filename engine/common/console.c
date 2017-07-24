@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include "con_nprint.h"
 #include "gl_local.h"
 #include "qfont.h"
+#include "wadfile.h"
 
 convar_t	*con_notifytime;
 convar_t	*scr_conspeed;
@@ -556,7 +557,8 @@ static qboolean Con_LoadFixedWidthFont( const char *fontname, cl_font_t *font )
 	if( !FS_FileExists( fontname, false ))
 		return false;
 
-	font->hFontTexture = GL_LoadTexture( fontname, NULL, 0, TF_FONT|TF_NEAREST, NULL );
+	// keep source to print directly into conback image
+	font->hFontTexture = GL_LoadTexture( fontname, NULL, 0, TF_FONT|TF_KEEP_SOURCE, NULL );
 	R_GetTextureParms( &fontWidth, NULL, font->hFontTexture );
 
 	if( font->hFontTexture && fontWidth != 0 )
@@ -665,6 +667,30 @@ static void Con_LoadConchars( void )
 	// sets the current font
 	con.lastUsedFont = con.curFont = &con.chars[fontSize];
 	
+}
+
+static void Con_DrawCharToConback( int num, byte *conchars, byte *dest )
+{
+	int	row, col;
+	byte	*source;
+	int	drawline;
+	int	x;
+
+	row = num >> 4;
+	col = num & 15;
+	source = conchars + (row << 10) + (col << 3);
+
+	drawline = 8;
+
+	while( drawline-- )
+	{
+		for( x = 0; x < 8; x++ )
+			if( source[x] != 255 )
+				dest[x] = 0x60 + source[x];
+		source += 128;
+		dest += 320;
+	}
+
 }
 
 /*
@@ -2204,6 +2230,8 @@ void Con_VidInit( void )
 {
 	Con_CheckResize();
 
+	Con_LoadConchars();
+
 	// loading console image
 	if( host.developer )
 	{
@@ -2236,13 +2264,47 @@ void Con_VidInit( void )
 
 
 	if( !con.background ) // last chance - quake conback image
-		con.background = GL_LoadTexture( "gfx/conback.lmp", NULL, 0, TF_IMAGE, NULL );
+	{
+		qboolean		draw_to_console = false;
+		int		length = 0;
+		gltexture_t	*chars;
+
+		// FIXME: remove 'qwrap' folder check unitl wrapper has been moved into the "id1"
+		if( !Q_stricmp( FS_Gamedir(), "id1" ) || !Q_stricmp( FS_Gamedir(), "qwrap" ))
+			draw_to_console = true;
+
+		if( !Q_stricmp( FS_Gamedir(), "hipnotic" ))
+			draw_to_console = true;
+
+		if( !Q_stricmp( FS_Gamedir(), "rogue" ))
+			draw_to_console = true;
+
+		if( draw_to_console && con.curFont && ( chars = R_GetTexture( con.curFont->hFontTexture )) != NULL && chars->original )
+		{
+			lmp_t	*cb = (lmp_t *)FS_LoadFile( "gfx/conback.lmp", &length, false );
+			char	ver[64];
+			byte	*dest;
+			int	x, y;
+
+			if( cb && cb->width == 320 && cb->height == 200 )
+			{
+				Q_snprintf( ver, 64, "%i", Q_buildnum( )); // can store only buildnum
+				dest = (byte *)(cb + 1) + 320 * 186 + 320 - 11 - 8 * Q_strlen( ver );
+				y = Q_strlen( ver );
+				for( x = 0; x < y; x++ )
+					Con_DrawCharToConback( ver[x], chars->original->buffer, dest + (x << 3));
+				con.background = GL_LoadTexture( "#gfx/conback.lmp", (byte *)cb, length, TF_IMAGE, NULL );
+			}
+			if( cb ) Mem_Free( cb );
+		}
+
+		if( !con.background ) // trying the load unmodified conback
+			con.background = GL_LoadTexture( "gfx/conback.lmp", NULL, 0, TF_IMAGE, NULL );
+	}
 
 	// missed console image will be replaced as gray background like X-Ray or Crysis
 	if( con.background == tr.defaultTexture || con.background == 0 )
 		con.background = tr.grayTexture;
-
-	Con_LoadConchars();
 }
 
 /*

@@ -652,6 +652,8 @@ void R_DrawClouds( void )
 
 	RI.isSkyVisible = true;
 
+	if( RI.fogEnabled && !RI.fogCustom )
+		pglFogf( GL_FOG_DENSITY, RI.fogDensity * 0.25f );
 	pglDepthFunc( GL_GEQUAL );
 	pglDepthMask( 0 );
 
@@ -664,6 +666,9 @@ void R_DrawClouds( void )
 
 	pglDepthMask( GL_TRUE );
 	pglDepthFunc( GL_LEQUAL );
+
+	if( RI.fogEnabled && !RI.fogCustom  )
+		pglFogf( GL_FOG_DENSITY, RI.fogDensity );
 }
 
 /*

@@ -63,7 +63,13 @@ typedef struct
 
 typedef struct
 {
-	unsigned short	v[2];
+	int		planenum;
+	int		children[2];	// negative numbers are contents
+} mclipnode_t;
+
+typedef struct
+{
+	unsigned short	v[2];		// BSP2 incompatible !!!
 	unsigned int	cachededgeoffset;
 } medge_t;
 
@@ -126,8 +132,8 @@ typedef struct mnode_s
 	mplane_t		*plane;
 	struct mnode_s	*children[2];	
 
-	unsigned short	firstsurface;
-	unsigned short	numsurfaces;
+	unsigned short	firstsurface;	// BSP2 incompatible !!!
+	unsigned short	numsurfaces;	// BSP2 incompatible !!!
 } mnode_t;
 
 typedef struct msurface_s	msurface_t;
@@ -231,7 +237,7 @@ typedef struct msurface_s
 
 typedef struct hull_s
 {
-	dclipnode_t	*clipnodes;
+	dclipnode_t	*clipnodes;	// BSP2 incompatible !!!
 	mplane_t		*planes;
 	int		firstclipnode;
 	int		lastclipnode;

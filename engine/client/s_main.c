@@ -283,7 +283,7 @@ override any other sound playing on the same channel (see code comments below fo
 exceptions).
 =================
 */
-channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx )
+channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean *ignore )
 {
 	int	ch_idx;
 	int	first_to_die;
@@ -293,6 +293,7 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx )
 	// check for replacement sound, or find the best one to replace
 	first_to_die = -1;
 	life_left = 0x7fffffff;
+	if( ignore ) *ignore = false;
 
 	for( ch_idx = NUM_AMBIENTS; ch_idx < MAX_DYNAMIC_CHANNELS; ch_idx++ )
 	{
@@ -342,6 +343,7 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx )
 
 			if( ch->entnum == entnum && ch->entchannel == channel && ch->sfx == sfx )
 			{
+				if( ignore ) *ignore = true;
 				// same looping sound, same ent, same channel, don't restart the sound
 				return NULL;
 			}
@@ -386,9 +388,10 @@ channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx )
 		// no empty slots, alloc a new static sound channel
 		if( total_channels == MAX_CHANNELS )
 		{
-			MsgDev( D_ERROR, "S_PickChannel: no free channels\n" );
+			MsgDev( D_ERROR, "S_PickStaticChannel: no free channels\n" );
 			return NULL;
 		}
+
 		// get a channel for the static sound
 		ch = &channels[total_channels];
 		total_channels++;
@@ -868,6 +871,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	sfx_t	*sfx = NULL;
 	channel_t	*target_chan, *check;
 	int	vol, ch_idx;
+	qboolean	bIgnore = false;
 
 	if( !dma.initialized ) return;
 	sfx = S_GetSfxByHandle( handle );
@@ -896,11 +900,12 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 
 	// pick a channel to play on
 	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( ent, sfx );
-	else target_chan = SND_PickDynamicChannel( ent, chan, sfx );
+	else target_chan = SND_PickDynamicChannel( ent, chan, sfx, &bIgnore );
 
 	if( !target_chan )
 	{
-		MsgDev( D_NOTE, "^1Error: ^7dropped sound \"sound/%s\"\n", sfx->name );
+		if( !bIgnore )
+			MsgDev( D_NOTE, "^1Error: ^7dropped sound \"sound/%s\"\n", sfx->name );
 		return;
 	}
 
@@ -1003,6 +1008,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 	wavdata_t	*pSource;
 	sfx_t	*sfx = NULL;
 	channel_t	*target_chan;
+	qboolean	bIgnore = false;
 	int	vol;
 
 	if( !dma.initialized ) return;
@@ -1021,11 +1027,12 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 	// pick a channel to play on
 	if( chan == CHAN_STATIC )
 		target_chan = SND_PickStaticChannel( ent, sfx );
-	else target_chan = SND_PickDynamicChannel( ent, chan, sfx );
+	else target_chan = SND_PickDynamicChannel( ent, chan, sfx, &bIgnore );
 
 	if( !target_chan )
 	{
-		MsgDev( D_ERROR, "S_RestoreSound: dropped sound \"sound/%s\"\n", sfx->name );
+		if( !bIgnore )
+			MsgDev( D_ERROR, "S_RestoreSound: dropped sound \"sound/%s\"\n", sfx->name );
 		return;
 	}
 
