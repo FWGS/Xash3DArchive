@@ -162,10 +162,6 @@ hull_t *PM_HullForBsp( physent_t *pe, playermove_t *pmove, float *offset )
 
 	Assert( hull != NULL );
 
-	// force to use hull0 because other hulls doesn't exist for water
-	if( pe->model->flags & MODEL_LIQUID && pe->solid != SOLID_TRIGGER )
-		hull = &pe->model->hulls[0];
-
 	// calculate an offset value to center the origin
 	VectorSubtract( hull->clip_mins, pmove->player_mins[pmove->usehull], offset );
 	VectorAdd( offset, pe->origin, offset );

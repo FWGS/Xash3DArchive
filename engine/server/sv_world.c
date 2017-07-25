@@ -243,7 +243,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 	if( world.sky_sphere || world.version == Q1BSP_VERSION )
 	{
 		// alternate hull select for quake maps
-		if( size[0] < 3.0f || ( model->flags & MODEL_LIQUID && ent->v.solid != SOLID_TRIGGER ))
+		if( size[0] < 3.0f )
 			hull = &model->hulls[0];
 		else if( size[0] <= 32.0f )
 			hull = &model->hulls[1];
@@ -253,7 +253,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 	}
 	else
 	{
-		if( size[0] <= 8.0f || ( model->flags & MODEL_LIQUID && ent->v.solid != SOLID_TRIGGER ))
+		if( size[0] <= 8.0f )
 		{
 			hull = &model->hulls[0];
 			VectorCopy( hull->clip_mins, offset ); 

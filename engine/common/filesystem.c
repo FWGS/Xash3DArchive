@@ -3146,8 +3146,7 @@ byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, long *lumpsizeptr )
 		return NULL;
 	}
 
-
-	if( lumpsizeptr ) *lumpsizeptr = lump->size;
+	if( lumpsizeptr ) *lumpsizeptr = lump->disksize;
 	FS_Seek( wad->handle, oldpos, SEEK_SET );
 
 	return buf;
@@ -3362,6 +3361,10 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 			if( srclumps[i].type == 68 && !Q_stricmp( srclumps[i].name, "conchars" ))
 				srclumps[i].type = TYP_GFXPIC; 
 
+			// fixups bad image types (some quake wads)
+			if( srclumps[i].img_type < 0 || srclumps[i].img_type > IMG_DECAL_COLOR )
+				srclumps[i].img_type = IMG_DIFFUSE;
+
 			W_AddFileToWad( name, wad, &srclumps[i] );
 		}
 
@@ -3465,10 +3468,10 @@ size_t W_SaveFile( wfile_t *wad, const char *lump, const void *data, size_t data
 			return -1;
 		}
 
-		if( datasize != find->size )
+		if( datasize != find->disksize )
 		{
 			MsgDev( D_ERROR, "W_ReplaceLump: %s [%s] should be [%s]\n",
-			lumpname, Q_memprint( datasize ), Q_memprint( find->size )); 
+			lumpname, Q_memprint( datasize ), Q_memprint( find->disksize )); 
 			return -1;
 		}
 

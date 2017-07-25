@@ -1369,8 +1369,6 @@ void R_DrawAliasModel( cl_entity_t *e )
 	m_pAliasHeader = (aliashdr_t *)Mod_AliasExtradata( RI.currententity->model );
 	if( !m_pAliasHeader ) return;
 
-	GL_SetupFogColorForModels();
-
 	// init time
 	R_AliasSetupTimings();
 
@@ -1461,8 +1459,6 @@ void R_DrawAliasModel( cl_entity_t *e )
 
 	// HACKHACK: keep the angles unchanged
 	VectorCopy( angles, e->angles );
-
-	GL_ResetFogColor();
 }
 
 //==================================================================================

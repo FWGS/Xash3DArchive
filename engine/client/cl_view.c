@@ -117,7 +117,7 @@ void V_SetRefParams( ref_params_t *fd )
 	fd->frametime = host.frametime;
 	fd->time = cl.time;
 
-	fd->intermission = cl.intermission;	// Quake Remake compatibility
+	fd->intermission = cl.intermission;
 	fd->paused = (cl.paused != 0);
 	fd->spectator = (cls.spectator != 0);
 	fd->onground = (cl.local.onground != -1);
@@ -229,7 +229,6 @@ void V_GetRefParams( ref_params_t *fd, ref_viewpass_t *rvp )
 	// part2: really used updates
 	VectorCopy( fd->crosshairangle, cl.crosshairangle );
 	VectorCopy( fd->cl_viewangles, cl.viewangles );
-	cl.intermission = fd->intermission;	// Quake Remake compatibility
 
 	// setup ref_viewpass
 	rvp->viewport[0] = fd->viewport[0];

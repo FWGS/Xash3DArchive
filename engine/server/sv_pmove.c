@@ -81,7 +81,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 		Q_strncpy( pe->name, "player", sizeof( pe->name ));
 		pe->player = pe->info;
 	}
-	else if( ed->v.flags & FL_FAKECLIENT )
+	else if( ed->v.flags & FL_FAKECLIENT && ed->v.solid != MOVETYPE_PUSH )
 	{
 		// bot
 		Q_strncpy( pe->name, "bot", sizeof( pe->name ));
@@ -239,8 +239,12 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 
 		if( check == pl ) continue;	// himself
 
-		if(( FBitSet( check->v.flags, FL_CLIENT|FL_FAKECLIENT ) && check->v.health <= 0.0f ) || check->v.deadflag == DEAD_DEAD )
-			continue;	// dead body
+		// nehahra collision flags
+		if( check->v.movetype != MOVETYPE_PUSH )
+		{
+			if(( FBitSet( check->v.flags, FL_CLIENT|FL_FAKECLIENT ) && check->v.health <= 0.0f ) || check->v.deadflag == DEAD_DEAD )
+				continue;	// dead body
+		}
 
 		if( VectorIsNull( check->v.size ))
 			continue;

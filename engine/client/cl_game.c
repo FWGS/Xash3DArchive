@@ -768,6 +768,9 @@ void CL_ParseFinaleCutscene( sizebuf_t *msg, int level )
 	// to prevent grab too long messages
 	Q_strncpy( (char *)text->pMessage, MSG_ReadString( msg ), 2048 ); 		
 
+	if( *text->pMessage == '\0' )
+		return; // no real text
+
 	// NOTE: a "HudText" message contain only 'string' with message name, so we
 	// don't needs to use MSG_ routines here, just directly write msgname into netbuffer
 	CL_DispatchUserMessage( "HudText", Q_strlen( text->pName ) + 1, (void *)text->pName );
