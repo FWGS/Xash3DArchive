@@ -627,6 +627,8 @@ void CL_DemoCompleted( void )
 
 	if( !CL_NextDemo() && host.developer <= 2 )
 		UI_SetActiveMenu( true );
+
+	Cvar_SetValue( "v_dark", 0.0f );
 }
 
 /*
@@ -1184,6 +1186,7 @@ void CL_PlayDemo_f( void )
 	if( !FS_FileExists( filename, true ))
 	{
 		MsgDev( D_ERROR, "couldn't open %s\n", filename );
+		Cvar_SetValue( "v_dark", 0.0f );
 		cls.demonum = -1; // stop demo loop
 		return;
 	}
