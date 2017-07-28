@@ -559,6 +559,7 @@ void FS_FreeImage( rgbdata_t *pack );
 extern const bpc_desc_t PFDesc[];	// image get pixelformat
 qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags, imgfilter_t *filter );
 void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end );
+void Image_PaletteTranslate( byte *palSrc, int top, int bottom );
 void Image_SetForceFlags( uint flags );	// set image force flags on loading
 size_t Image_DXTGetLinearSize( int type, int width, int height, int depth );
 

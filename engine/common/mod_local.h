@@ -38,6 +38,11 @@ GNU General Public License for more details.
 #define PLATE_HUE_START		160
 #define PLATE_HUE_END		191
 
+#define SHIRT_HUE_START		16
+#define SHIRT_HUE_END		32
+#define PANTS_HUE_START		96
+#define PANTS_HUE_END		112
+
 #define LM_SAMPLE_SIZE		world.lm_sample_size	// lightmap resoultion
 
 #define CHECKVISBIT( vis, b )		((b) >= 0 ? (byte)((vis)[(b) >> 3] & (1 << ((b) & 7))) : (byte)false )

@@ -461,7 +461,6 @@ typedef struct
 	int		*commands;	// gl command list with embedded s/t
 	unsigned short	gl_texturenum[MAX_SKINS][4];
 	unsigned short	fb_texturenum[MAX_SKINS][4];
-	int		*texels[MAX_SKINS];	// only for player skins
 	maliasframedesc_t	frames[1];	// variable sized
 } aliashdr_t;
 

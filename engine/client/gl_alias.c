@@ -509,6 +509,75 @@ rgbdata_t *Mod_CreateSkinData( byte *data, int width, int height )
 	return FS_CopyImage( &skin );
 }
 
+void *Mod_LoadSignleSkin( daliasskintype_t *pskintype, int skinnum, int size )
+{
+	string	name, lumaname;
+	rgbdata_t	*pic;
+
+	Q_snprintf( name, sizeof( name ), "%s:frame%i", loadmodel->name, skinnum );
+	Q_snprintf( lumaname, sizeof( lumaname ), "%s:luma%i", loadmodel->name, skinnum );
+	pic = Mod_CreateSkinData( (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+
+	m_pAliasHeader->gl_texturenum[skinnum][0] =
+	m_pAliasHeader->gl_texturenum[skinnum][1] =
+	m_pAliasHeader->gl_texturenum[skinnum][2] =
+	m_pAliasHeader->gl_texturenum[skinnum][3] = GL_LoadTextureInternal( name, pic, 0, false );
+	FS_FreeImage( pic );
+
+	if( R_GetTexture( m_pAliasHeader->gl_texturenum[skinnum][0] )->flags & TF_HAS_LUMA )
+	{
+		pic = Mod_CreateSkinData( (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+		m_pAliasHeader->fb_texturenum[skinnum][0] =
+		m_pAliasHeader->fb_texturenum[skinnum][1] =
+		m_pAliasHeader->fb_texturenum[skinnum][2] =
+		m_pAliasHeader->fb_texturenum[skinnum][3] = GL_LoadTextureInternal( lumaname, pic, TF_MAKELUMA, false );
+		FS_FreeImage( pic );
+	}
+
+	return ((byte *)(pskintype + 1) + size);
+}
+
+void *Mod_LoadGroupSkin( daliasskintype_t *pskintype, int skinnum, int size )
+{
+	daliasskininterval_t	*pinskinintervals;
+	daliasskingroup_t		*pinskingroup;
+	string			name, lumaname;
+	rgbdata_t			*pic;
+	int			i, j;
+
+	// animating skin group.  yuck.
+	pskintype++;
+	pinskingroup = (daliasskingroup_t *)pskintype;
+	pinskinintervals = (daliasskininterval_t *)(pinskingroup + 1);
+	pskintype = (void *)(pinskinintervals + pinskingroup->numskins);
+
+	for( i = 0; i < pinskingroup->numskins; i++ )
+	{
+		Q_snprintf( name, sizeof( name ), "%s_%i_%i", loadmodel->name, skinnum, i );
+		pic = Mod_CreateSkinData( (byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+		m_pAliasHeader->gl_texturenum[skinnum][i & 3] = GL_LoadTextureInternal( name, pic, 0, false );
+		FS_FreeImage( pic );
+
+		if( R_GetTexture( m_pAliasHeader->gl_texturenum[skinnum][i & 3] )->flags & TF_HAS_LUMA )
+		{
+			Q_snprintf( lumaname, sizeof( lumaname ), "%s_%i_%i_luma", loadmodel->name, skinnum, i );
+			pic = Mod_CreateSkinData((byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+			m_pAliasHeader->fb_texturenum[skinnum][i & 3] = GL_LoadTextureInternal( lumaname, pic, TF_MAKELUMA, false );
+			FS_FreeImage( pic );
+		}
+
+		pskintype = (daliasskintype_t *)((byte *)(pskintype) + size);
+	}
+
+	for( j = i; i < 4; i++ )
+	{
+		m_pAliasHeader->gl_texturenum[skinnum][i & 3] = m_pAliasHeader->gl_texturenum[skinnum][i - j]; 
+		m_pAliasHeader->fb_texturenum[skinnum][i & 3] = m_pAliasHeader->fb_texturenum[skinnum][i - j]; 
+	}
+
+	return pskintype;
+}
+
 /*
 ===============
 Mod_LoadAllSkins
@@ -516,15 +585,7 @@ Mod_LoadAllSkins
 */
 void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 {
-	daliasskininterval_t	*pinskinintervals;
-	int			size, groupskins;
-	string			name, lumaname;
-	daliasskingroup_t		*pinskingroup;
-	int			i, j, k;
-	byte			*skin;
-	rgbdata_t			*pic;
-
-	skin = (byte *)(pskintype + 1);
+	int	i, size;
 
 	if( numskins < 1 || numskins > MAX_SKINS )
 		Host_Error( "Mod_LoadAliasModel: Invalid # of skins: %d\n", numskins );
@@ -535,71 +596,11 @@ void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 	{
 		if( pskintype->type == ALIAS_SKIN_SINGLE )
 		{
-//			Mod_FloodFillSkin( skin, m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
-
-			// save 8 bit texels for the player model to remap
-			m_pAliasHeader->texels[i] = Mem_Alloc( loadmodel->mempool, size );
-			memcpy( m_pAliasHeader->texels[i], (byte *)(pskintype + 1), size );
-
-			Q_snprintf( name, sizeof( name ), "%s:frame%i", loadmodel->name, i );
-			Q_snprintf( lumaname, sizeof( lumaname ), "%s:luma%i", loadmodel->name, i );
-			pic = Mod_CreateSkinData( (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
-
-			m_pAliasHeader->gl_texturenum[i][0] =
-			m_pAliasHeader->gl_texturenum[i][1] =
-			m_pAliasHeader->gl_texturenum[i][2] =
-			m_pAliasHeader->gl_texturenum[i][3] = GL_LoadTextureInternal( name, pic, 0, false );
-			FS_FreeImage( pic );
-
-			if( R_GetTexture( m_pAliasHeader->gl_texturenum[i][0] )->flags & TF_HAS_LUMA )
-			{
-				pic = Mod_CreateSkinData( (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
-				m_pAliasHeader->fb_texturenum[i][0] =
-				m_pAliasHeader->fb_texturenum[i][1] =
-				m_pAliasHeader->fb_texturenum[i][2] =
-				m_pAliasHeader->fb_texturenum[i][3] = GL_LoadTextureInternal( lumaname, pic, TF_MAKELUMA, false );
-				FS_FreeImage( pic );
-			}
-
-			pskintype = (daliasskintype_t *)((byte *)(pskintype + 1) + size);
+			pskintype = (daliasskintype_t *)Mod_LoadSignleSkin( pskintype, i, size );
 		}
 		else
 		{
-			// animating skin group.  yuck.
-			pskintype++;
-			pinskingroup = (daliasskingroup_t *)pskintype;
-			groupskins = pinskingroup->numskins;
-			pinskinintervals = (daliasskininterval_t *)(pinskingroup + 1);
-			pskintype = (void *)(pinskinintervals + groupskins);
-
-			for( j = 0; j < groupskins; j++ )
-			{
-//				Mod_FloodFillSkin( skin, m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
-				if( j == 0 )
-				{
-					m_pAliasHeader->texels[i] = Mem_Alloc( loadmodel->mempool, size );
-					memcpy( m_pAliasHeader->texels[i], (byte *)(pskintype), size );
-				}
-				Q_snprintf( name, sizeof( name ), "%s_%i_%i", loadmodel->name, i, j );
-				pic = Mod_CreateSkinData( (byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
-				m_pAliasHeader->gl_texturenum[i][j & 3] = GL_LoadTextureInternal( name, pic, 0, false );
-				FS_FreeImage( pic );
-
-				if( R_GetTexture( m_pAliasHeader->gl_texturenum[i][j & 3] )->flags & TF_HAS_LUMA )
-				{
-					Q_snprintf( lumaname, sizeof( lumaname ), "%s_%i_%i_luma", loadmodel->name, i, j );
-					pic = Mod_CreateSkinData((byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
-					m_pAliasHeader->fb_texturenum[i][j & 3] = GL_LoadTextureInternal( lumaname, pic, TF_MAKELUMA, false );
-					FS_FreeImage( pic );
-				}
-				pskintype = (daliasskintype_t *)((byte *)(pskintype) + size);
-			}
-
-			for( k = j; j < 4; j++ )
-			{
-				m_pAliasHeader->gl_texturenum[i][j & 3] = m_pAliasHeader->gl_texturenum[i][j - k]; 
-				m_pAliasHeader->fb_texturenum[i][j & 3] = m_pAliasHeader->fb_texturenum[i][j - k]; 
-			}
+			pskintype = (daliasskintype_t *)Mod_LoadGroupSkin( pskintype, i, size );
 		}
 	}
 

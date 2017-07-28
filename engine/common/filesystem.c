@@ -1337,25 +1337,27 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 {
 	string		liblist_path, gameinfo_path;
 	string		default_gameinfo_path;
+	string		config_path;
 	gameinfo_t	tmpGameInfo;
 
 	Q_snprintf( default_gameinfo_path, sizeof( default_gameinfo_path ), "%s/gameinfo.txt", fs_basedir );
 	Q_snprintf( gameinfo_path, sizeof( gameinfo_path ), "%s/gameinfo.txt", gamedir );
 	Q_snprintf( liblist_path, sizeof( liblist_path ), "%s/liblist.gam", gamedir );
+	Q_snprintf( config_path, sizeof( config_path ), "%s/config.cfg", gamedir );
 
 	// if user change liblist.gam update the gameinfo.txt
 	if( FS_FileTime( liblist_path, false ) > FS_FileTime( gameinfo_path, false ))
 		FS_ConvertGameInfo( gamedir, gameinfo_path, liblist_path );
 
 	// force to create gameinfo for specified game if missing
-	if( !Q_stricmp( fs_gamedir, gamedir ) && !FS_FileExists( gameinfo_path, false ))
+	if(( FS_FileExists( config_path, false ) || !Q_stricmp( fs_gamedir, gamedir )) && !FS_FileExists( gameinfo_path, false ))
 	{
 		memset( &tmpGameInfo, 0, sizeof( tmpGameInfo ));
 
 		if( FS_ReadGameInfo( default_gameinfo_path, gamedir, &tmpGameInfo ))
 		{
 			// now we have copy of game info from basedir but needs to change gamedir
-			MsgDev( D_INFO, "converting %s to %s\n", default_gameinfo_path, gameinfo_path );
+			MsgDev( D_INFO, "Convert %s to %s\n", default_gameinfo_path, gameinfo_path );
 			Q_strncpy( tmpGameInfo.gamedir, gamedir, sizeof( tmpGameInfo.gamedir ));
 			FS_WriteGameInfo( gameinfo_path, &tmpGameInfo );
 		}

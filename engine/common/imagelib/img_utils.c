@@ -281,9 +281,9 @@ int Image_ComparePalette( const byte *pal )
 {
 	if( pal == NULL )
 		return PAL_INVALID;
-	else if( !memcmp( palette_q1, pal, 768 ))
+	else if( !memcmp( palette_q1, pal, 765 )) // last color was changed
 		return PAL_QUAKE1;
-	else if( !memcmp( palette_hl, pal, 768 ))
+	else if( !memcmp( palette_hl, pal, 765 ))
 		return PAL_HALFLIFE;
 	return PAL_CUSTOM;		
 }
@@ -519,6 +519,45 @@ void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end )
 		palSrc[i*3+0] = (byte)(r * 255);
 		palSrc[i*3+1] = (byte)(g * 255);
 		palSrc[i*3+2] = (byte)(b * 255);
+	}
+}
+
+void Image_PaletteTranslate( byte *palSrc, int top, int bottom )
+{
+	byte	dst[256], src[256];
+	int	i;
+
+	for( i = 0; i < 256; i++ )
+		src[i] = i;
+	memcpy( dst, src, 256 );
+
+	if( top < 128 )
+	{
+		// the artists made some backwards ranges. sigh.
+		memcpy( dst + SHIRT_HUE_START, src + top, 16 );
+	}
+	else
+	{
+		for( i = 0; i < 16; i++ )
+			dst[SHIRT_HUE_START+i] = src[top + 15 - i];
+	}
+
+	if( bottom < 128 )
+	{
+		memcpy( dst + PANTS_HUE_START, src + bottom, 16 );
+	}
+	else
+	{
+		for( i = 0; i < 16; i++ )
+			dst[PANTS_HUE_START + i] = src[bottom + 15 - i];
+	}
+
+	// last color isn't changed
+	for( i = 0; i < 255; i++ )
+	{
+		palSrc[i*3+0] = palette_q1[dst[i]*3+0];
+		palSrc[i*3+1] = palette_q1[dst[i]*3+1];
+		palSrc[i*3+2] = palette_q1[dst[i]*3+2];
 	}
 }
 
@@ -1420,9 +1459,16 @@ qboolean Image_RemapInternal( rgbdata_t *pic, int topColor, int bottomColor )
 		return false;
 	}
 
-	// g-cont. preview images has a swapped top and bottom colors. I don't know why.
-	Image_PaletteHueReplace( pic->palette, topColor, SUIT_HUE_START, SUIT_HUE_END );
-	Image_PaletteHueReplace( pic->palette, bottomColor, PLATE_HUE_START, PLATE_HUE_END );
+	if( Image_ComparePalette( pic->palette ) == PAL_QUAKE1 )
+	{
+		Image_PaletteTranslate( pic->palette, topColor * 16, bottomColor * 16 );
+	}
+	else
+	{
+		// g-cont. preview images has a swapped top and bottom colors. I don't know why.
+		Image_PaletteHueReplace( pic->palette, topColor, SUIT_HUE_START, SUIT_HUE_END );
+		Image_PaletteHueReplace( pic->palette, bottomColor, PLATE_HUE_START, PLATE_HUE_END );
+	}
 
 	return true;
 }
