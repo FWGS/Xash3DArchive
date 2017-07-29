@@ -109,6 +109,13 @@ hull_t *PM_HullForBox( const vec3_t mins, const vec3_t maxs )
 	return &pm_boxhull;
 }
 
+void PM_ConvertTrace( trace_t *out, pmtrace_t *in, edict_t *ent )
+{
+	memcpy( out, in, 48 ); // matched
+	out->hitgroup = in->hitgroup;
+	out->ent = ent;
+}
+
 /*
 ==================
 PM_HullPointContents

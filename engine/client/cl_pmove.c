@@ -872,7 +872,7 @@ static float pfnTraceModel( physent_t *pe, float *start, float *end, trace_t *tr
  		VectorSubtract( end, offset, end_l );
  	}
 
-	SV_RecursiveHullCheck( hull, hull->firstclipnode, 0, 1, start_l, end_l, trace );
+	PM_RecursiveHullCheck( hull, hull->firstclipnode, 0, 1, start_l, end_l, (pmtrace_t *)trace );
 	trace->ent = NULL;
 
 	if( rotated )

@@ -30,13 +30,6 @@ void SV_ClearPhysEnts( void )
 	svgame.pmove->numphysent = 0;
 }
 
-void SV_ConvertPMTrace( trace_t *out, pmtrace_t *in, edict_t *ent )
-{
-	memcpy( out, in, 48 ); // matched
-	out->hitgroup = in->hitgroup;
-	out->ent = ent;
-}
-
 qboolean SV_PlayerIsFrozen( edict_t *pClient )
 {
 	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
@@ -439,7 +432,7 @@ static float pfnTraceModel( physent_t *pe, float *start, float *end, trace_t *tr
  		VectorSubtract( end, offset, end_l );
  	}
 
-	SV_RecursiveHullCheck( hull, hull->firstclipnode, 0, 1, start_l, end_l, trace );
+	PM_RecursiveHullCheck( hull, hull->firstclipnode, 0, 1, start_l, end_l, (pmtrace_t *)trace );
 	trace->ent = NULL;
 
 	if( rotated )
@@ -1111,7 +1104,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 			if( touch == clent ) continue;
 
 			VectorCopy( pmtrace->deltavelocity, clent->v.velocity );
-			SV_ConvertPMTrace( &trace, pmtrace, touch );
+			PM_ConvertTrace( &trace, pmtrace, touch );
 			SV_Impact( touch, clent, &trace );
 		}
 

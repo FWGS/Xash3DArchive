@@ -1330,6 +1330,26 @@ static qboolean FS_ReadGameInfo( const char *filepath, const char *gamedir, game
 
 /*
 ================
+FS_CheckForGameDir
+================
+*/
+static qboolean FS_CheckForGameDir( const char *gamedir )
+{
+	// if directoy contain config.cfg it's 100% gamedir
+	if( FS_FileExists( va( "%s/config.cfg", gamedir ), false ))
+		return true;
+
+	// quake mods probably always archived but can missed config.cfg before first running
+	if( FS_FileExists( va( "%s/pak0.pak", gamedir ), false ))
+		return true;
+
+	// NOTE; adds here some additional checks if you wished
+
+	return false;
+}
+
+/*
+================
 FS_ParseGameInfo
 ================
 */
@@ -1337,20 +1357,18 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 {
 	string		liblist_path, gameinfo_path;
 	string		default_gameinfo_path;
-	string		config_path;
 	gameinfo_t	tmpGameInfo;
 
 	Q_snprintf( default_gameinfo_path, sizeof( default_gameinfo_path ), "%s/gameinfo.txt", fs_basedir );
 	Q_snprintf( gameinfo_path, sizeof( gameinfo_path ), "%s/gameinfo.txt", gamedir );
 	Q_snprintf( liblist_path, sizeof( liblist_path ), "%s/liblist.gam", gamedir );
-	Q_snprintf( config_path, sizeof( config_path ), "%s/config.cfg", gamedir );
 
 	// if user change liblist.gam update the gameinfo.txt
 	if( FS_FileTime( liblist_path, false ) > FS_FileTime( gameinfo_path, false ))
 		FS_ConvertGameInfo( gamedir, gameinfo_path, liblist_path );
 
 	// force to create gameinfo for specified game if missing
-	if(( FS_FileExists( config_path, false ) || !Q_stricmp( fs_gamedir, gamedir )) && !FS_FileExists( gameinfo_path, false ))
+	if(( FS_CheckForGameDir( gamedir ) || !Q_stricmp( fs_gamedir, gamedir )) && !FS_FileExists( gameinfo_path, false ))
 	{
 		memset( &tmpGameInfo, 0, sizeof( tmpGameInfo ));
 
