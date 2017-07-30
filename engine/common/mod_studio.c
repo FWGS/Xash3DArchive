@@ -49,7 +49,7 @@ static matrix3x4			studio_bones[MAXSTUDIOBONES];
 static uint			studio_hull_hitgroup[MAXSTUDIOBONES];
 static uint			cache_hull_hitgroup[MAXSTUDIOBONES];
 static mstudiocache_t		cache_studio[STUDIO_CACHESIZE];
-static dclipnode_t			studio_clipnodes[6];
+static mclipnode_t			studio_clipnodes[6];
 static mplane_t			studio_planes[768];
 static mplane_t			cache_planes[768];
 

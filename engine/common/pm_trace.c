@@ -25,7 +25,7 @@ GNU General Public License for more details.
 #define PM_AllowHitBoxTrace( model, hull ) ( model && model->type == mod_studio && ( FBitSet( model->flags, STUDIO_TRACE_HITBOX ) || hull == 2 ))
 
 static mplane_t	pm_boxplanes[6];
-static dclipnode_t	pm_boxclipnodes[6];
+static mclipnode_t	pm_boxclipnodes[6];
 static hull_t	pm_boxhull;
 
 // default hullmins
@@ -200,7 +200,7 @@ PM_RecursiveHullCheck
 */
 qboolean PM_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, pmtrace_t *trace )
 {
-	dclipnode_t	*node;
+	mclipnode_t	*node;
 	mplane_t		*plane;
 	float		t1, t2;
 	float		frac, midf;

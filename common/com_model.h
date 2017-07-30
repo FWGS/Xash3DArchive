@@ -31,6 +31,7 @@ typedef vec_t		vec4_t[4];
 #define STUDIO_EVENTS	2
 
 #define ZISCALE		((float)0x8000)
+//#define SUPPORT_LARGE_CLIPNODES
 
 #define MIPLEVELS		4
 #define VERTEXSIZE		7
@@ -61,11 +62,19 @@ typedef struct
 	vec3_t		position;
 } mvertex_t;
 
+#ifdef SUPPORT_LARGE_CLIPNODES
 typedef struct
 {
 	int		planenum;
 	int		children[2];	// negative numbers are contents
 } mclipnode_t;
+#else
+typedef struct
+{
+	int		planenum;
+	short		children[2];	// negative numbers are contents
+} mclipnode_t;
+#endif
 
 typedef struct
 {
@@ -237,7 +246,7 @@ typedef struct msurface_s
 
 typedef struct hull_s
 {
-	dclipnode_t	*clipnodes;	// BSP2 incompatible !!!
+	mclipnode_t	*clipnodes;	// BSP2 incompatible !!!
 	mplane_t		*planes;
 	int		firstclipnode;
 	int		lastclipnode;
@@ -302,7 +311,7 @@ typedef struct model_s
 	int		*surfedges;
 
 	int		numclipnodes;
-	dclipnode_t	*clipnodes;
+	mclipnode_t	*clipnodes;
 
 	int		nummarksurfaces;
 	msurface_t	**marksurfaces;

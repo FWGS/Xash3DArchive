@@ -1915,7 +1915,8 @@ Mod_LoadClipnodes
 */
 static void Mod_LoadClipnodes( const dlump_t *l )
 {
-	dclipnode_t	*in, *out;
+	dclipnode_t	*in;
+	mclipnode_t	*out;
 	int		i, count;
 	hull_t		*hull;
 
@@ -1953,12 +1954,28 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 	VectorCopy( host.player_mins[1], hull->clip_mins ); // copy head hull
 	VectorCopy( host.player_maxs[1], hull->clip_maxs );
 
+#ifdef SUPPORT_LARGE_CLIPNODES
+	for( i = 0; i < count; i++, out++, in++ )
+	{
+		out->planenum = in->planenum;
+		out->children[0] = (unsigned short)in->children[0];
+		out->children[1] = (unsigned short)in->children[1];
+
+		// Arguire QBSP 'broken' clipnodes
+		if( out->children[0] >= count )
+			out->children[0] -= 65536;
+
+		if( out->children[1] >= count )
+			out->children[1] -= 65536;
+	}
+#else
 	for( i = 0; i < count; i++, out++, in++ )
 	{
 		out->planenum = in->planenum;
 		out->children[0] = in->children[0];
 		out->children[1] = in->children[1];
 	}
+#endif
 }
 
 /*
@@ -1968,7 +1985,8 @@ Mod_LoadClipnodes31
 */
 static void Mod_LoadClipnodes31( const dlump_t *l, const dlump_t *l2, const dlump_t *l3 )
 {
-	dclipnode_t	*in, *in2, *in3, *out, *out2, *out3;
+	dclipnode_t	*in, *in2, *in3;
+	mclipnode_t	*out, *out2, *out3;
 	int		i, count, count2, count3;
 	hull_t		*hull;
 
@@ -2106,7 +2124,7 @@ Duplicate the drawing hull structure as a clipping hull
 static void Mod_MakeHull0( void )
 {
 	mnode_t		*in, *child;
-	dclipnode_t	*out;
+	mclipnode_t	*out;
 	hull_t		*hull;
 	int		i, j, count;
 	
