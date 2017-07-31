@@ -31,7 +31,7 @@ typedef vec_t		vec4_t[4];
 #define STUDIO_EVENTS	2
 
 #define ZISCALE		((float)0x8000)
-//#define SUPPORT_LARGE_CLIPNODES
+//#define SUPPORT_BSP2_FORMAT
 
 #define MIPLEVELS		4
 #define VERTEXSIZE		7
@@ -62,24 +62,25 @@ typedef struct
 	vec3_t		position;
 } mvertex_t;
 
-#ifdef SUPPORT_LARGE_CLIPNODES
 typedef struct
 {
 	int		planenum;
+#ifdef SUPPORT_BSP2_FORMAT
 	int		children[2];	// negative numbers are contents
-} mclipnode_t;
 #else
-typedef struct
-{
-	int		planenum;
 	short		children[2];	// negative numbers are contents
-} mclipnode_t;
 #endif
+} mclipnode_t;
 
+// size is matched but representation is not
 typedef struct
 {
-	unsigned short	v[2];		// BSP2 incompatible !!!
+#ifdef SUPPORT_BSP2_FORMAT
+	unsigned int	v[2];
+#else
+	unsigned short	v[2];
 	unsigned int	cachededgeoffset;
+#endif
 } medge_t;
 
 typedef struct texture_s
@@ -140,9 +141,13 @@ typedef struct mnode_s
 // node specific
 	mplane_t		*plane;
 	struct mnode_s	*children[2];	
-
-	unsigned short	firstsurface;	// BSP2 incompatible !!!
-	unsigned short	numsurfaces;	// BSP2 incompatible !!!
+#ifdef SUPPORT_BSP2_FORMAT
+	int		firstsurface;
+	int		numsurfaces;
+#else
+	unsigned short	firstsurface;
+	unsigned short	numsurfaces;
+#endif
 } mnode_t;
 
 typedef struct msurface_s	msurface_t;
@@ -246,7 +251,7 @@ typedef struct msurface_s
 
 typedef struct hull_s
 {
-	mclipnode_t	*clipnodes;	// BSP2 incompatible !!!
+	mclipnode_t	*clipnodes;
 	mplane_t		*planes;
 	int		firstclipnode;
 	int		lastclipnode;

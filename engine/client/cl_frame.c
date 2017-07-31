@@ -699,7 +699,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		CL_WriteDemoJumpTime();
 
 	// sentinel count. save it for debug checking
-	count = ( MSG_ReadUBitLong( msg, MAX_VISIBLE_PACKET_BITS ) + 1 ) & 1023;
+	count = ( MSG_ReadUBitLong( msg, MAX_VISIBLE_PACKET_BITS ) + 1 );
 	newframe = &cl.frames[cl.parsecountmod];
 
 	// allocate parse entities
@@ -847,7 +847,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		}
 	}
 
-	if( newframe->num_entities != count )
+	if( newframe->num_entities != count && newframe->num_entities != 0 )
 		MsgDev( D_WARN, "CL_Parse%sPacketEntities: (%i should be %i)\n", delta ? "Delta" : "", newframe->num_entities, count );
 
 	if( !newframe->valid )
@@ -1078,6 +1078,13 @@ void CL_LinkPacketEntities( frame_t *frame )
 		{
 //			MsgDev( D_ERROR, "CL_LinkPacketEntity: entity %i without model\n", state->number );
 			continue;
+		}
+
+		if( ent->curstate.rendermode == kRenderNormal )
+		{
+			// auto 'solid' faces
+			if( FBitSet( ent->model->flags, MODEL_TRANSPARENT ) && FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+				ent->curstate.rendermode = kRenderTransAlpha;
 		}
 
 		parametric = ( ent->curstate.impacttime != 0.0f && ent->curstate.starttime != 0.0f );

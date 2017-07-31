@@ -464,7 +464,7 @@ texture_t *R_TextureAnimation( msurface_t *s )
 		int	speed;
 
 		// GoldSrc and Quake1 has different animating speed
-		if( world.sky_sphere || world.version == Q1BSP_VERSION )
+		if( world.sky_sphere || world.version == Q1BSP_VERSION || world.version == QBSP2_VERSION )
 			speed = 10;
 		else speed = 20;
 
@@ -673,7 +673,7 @@ static void LM_UploadBlock( qboolean dynamic )
 		r_lightmap.height = BLOCK_SIZE;
 		r_lightmap.type = PF_RGBA_32;
 		r_lightmap.size = r_lightmap.width * r_lightmap.height * 4;
-		r_lightmap.flags = ( world.version == Q1BSP_VERSION ) ? 0 : IMAGE_HAS_COLOR;
+		r_lightmap.flags = IMAGE_HAS_COLOR;
 		r_lightmap.buffer = gl_lms.lightmap_buffer;
 		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_FONT, false );
 
@@ -1457,9 +1457,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 	memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
 	rendermode = e->curstate.rendermode;
 	gl_lms.dynamic_surfaces = NULL;
-
-	if( FBitSet( clmodel->flags, MODEL_TRANSPARENT ) && FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
-		rendermode = kRenderTransAlpha;
 
 	if( rotated ) R_RotateForEntity( e );
 	else R_TranslateForEntity( e );

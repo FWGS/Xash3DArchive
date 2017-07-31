@@ -23,6 +23,7 @@ GNU General Public License for more details.
 #include "filesystem.h"
 #include "library.h"
 #include "mathlib.h"
+#include "protocol.h"
 
 #define FILE_COPY_SIZE		(1024 * 1024)
 #define FILE_BUFF_SIZE		(65535)
@@ -1264,7 +1265,7 @@ static qboolean FS_ReadGameInfo( const char *filepath, const char *gamedir, game
 		else if( !Q_stricmp( token, "max_edicts" ))
 		{
 			pfile = COM_ParseFile( pfile, token );
-			GameInfo->max_edicts = bound( 600, Q_atoi( token ), 4096 );
+			GameInfo->max_edicts = bound( 600, Q_atoi( token ), MAX_EDICTS );
 		}
 		else if( !Q_stricmp( token, "max_tempents" ))
 		{

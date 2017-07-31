@@ -240,7 +240,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 	// author: The FiEctro
 	hull = &model->hulls[COM_RandomLong( 0, 0 )];
 #endif
-	if( world.sky_sphere || world.version == Q1BSP_VERSION )
+	if( world.sky_sphere || world.version == Q1BSP_VERSION || world.version == QBSP2_VERSION )
 	{
 		// alternate hull select for quake maps
 		if( size[0] < 3.0f )

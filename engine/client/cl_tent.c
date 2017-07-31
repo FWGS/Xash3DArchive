@@ -2747,7 +2747,7 @@ void CL_AddModelEffects( cl_entity_t *ent )
 	default:	return;
 	}
 
-	VectorCopy( ent->latched.prevorigin, oldorigin );
+	VectorCopy( ent->prevstate.origin, oldorigin );
 
 	// NOTE: this completely over control about angles and don't broke interpolation
 	if( FBitSet( ent->model->flags, STUDIO_ROTATE ))

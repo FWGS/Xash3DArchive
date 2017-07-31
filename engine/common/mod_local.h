@@ -58,6 +58,7 @@ GNU General Public License for more details.
 #define MODEL_HAS_ORIGIN		BIT( 1 )
 #define MODEL_LIQUID		BIT( 2 )	// model has only point hull
 #define MODEL_TRANSPARENT		BIT( 3 )	// have transparent surfaces
+#define MODEL_COLORED_LIGHTING	BIT( 4 )	// lightmaps stored as RGB
 
 #define MODEL_CLIENT		BIT( 30 )	// client sprite
 

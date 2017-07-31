@@ -916,7 +916,8 @@ static void Mod_LoadTextures( const dlump_t *l )
 				// NOTE: imagelib detect miptex version by size
 				// 770 additional bytes is indicated custom palette
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-				if( bmodel_version >= HLBSP_VERSION ) size += sizeof( short ) + 768;
+				if( bmodel_version == HLBSP_VERSION || bmodel_version == XTBSP_VERSION )
+					size += sizeof( short ) + 768;
 
 				Q_snprintf( texname, sizeof( texname ), "#%s.mip", mt->name );
 				tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0, filter );
@@ -954,7 +955,8 @@ static void Mod_LoadTextures( const dlump_t *l )
 				// NOTE: imagelib detect miptex version by size
 				// 770 additional bytes is indicated custom palette
 				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-				if( bmodel_version >= HLBSP_VERSION ) size += sizeof( short ) + 768;
+				if( bmodel_version == HLBSP_VERSION || bmodel_version == XTBSP_VERSION )
+					size += sizeof( short ) + 768;
 
 				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA, NULL );
 			}
@@ -1290,6 +1292,7 @@ static void Mod_LoadLighting( const dlump_t *l, dextrahdr_t *extrahdr )
 	switch( bmodel_version )
 	{
 	case Q1BSP_VERSION:
+	case QBSP2_VERSION:
 		// expand the white lighting data
 		loadmodel->lightdata = (color24 *)Mem_Alloc( loadmodel->mempool, l->filelen * sizeof( color24 ));
 		out = loadmodel->lightdata;
@@ -1307,6 +1310,7 @@ static void Mod_LoadLighting( const dlump_t *l, dextrahdr_t *extrahdr )
 		// load colored lighting
 		loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, l->filelen );
 		memcpy( loadmodel->lightdata, in, l->filelen );
+		SetBits( loadmodel->flags, MODEL_COLORED_LIGHTING );
 		break;
 	}
 
@@ -1414,22 +1418,35 @@ Mod_LoadSurfaces
 */
 static void Mod_LoadSurfaces( const dlump_t *l )
 {
-	dface_t		*in;
+	dface_t		*in16;
+	dface2_t		*in32;
 	msurface_t	*out;
 	mextrasurf_t	*info;
-	int		i, j;
-	int		count;
+	int		i, j, count;
+	int		lightofs;
 
-	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in ))
-		Host_Error( "Mod_LoadSurfaces: funny lump size in '%s'\n", loadmodel->name );
-	count = l->filelen / sizeof( *in );
+	if( bmodel_version == QBSP2_VERSION )
+	{
+		in32 = (void *)(mod_base + l->fileofs);
+		if( l->filelen % sizeof( *in32 ))
+			Host_Error( "Mod_LoadSurfaces: funny lump size in '%s'\n", loadmodel->name );
+		count = l->filelen / sizeof( *in32 );
+		in16 = NULL;
+	}
+	else
+	{
+		in16 = (void *)(mod_base + l->fileofs);
+		if( l->filelen % sizeof( *in16 ))
+			Host_Error( "Mod_LoadSurfaces: funny lump size in '%s'\n", loadmodel->name );
+		count = l->filelen / sizeof( *in16 );
+		in32 = NULL;
+	}
 
 	loadmodel->numsurfaces = count;
 	loadmodel->surfaces = out = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t ));
 	info = Mem_Alloc( loadmodel->mempool, count * sizeof( mextrasurf_t ));
 
-	for( i = 0; i < count; i++, in++, out++, info++ )
+	for( i = 0; i < count; i++, out++, info++ )
 	{
 		texture_t	*tex;
 
@@ -1437,19 +1454,50 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		out->info = info;
 		info->surf = out;
 
-		if(( in->firstedge + in->numedges ) > loadmodel->numsurfedges )
+		if( bmodel_version == QBSP2_VERSION )
 		{
-			MsgDev( D_ERROR, "Bad surface %i from %i\n", i, count );
-			continue;
-		} 
+			if(( in32->firstedge + in32->numedges ) > loadmodel->numsurfedges )
+			{
+				MsgDev( D_ERROR, "Bad surface %i from %i\n", i, count );
+				continue;
+			}
 
-		out->firstedge = in->firstedge;
-		out->numedges = in->numedges;
-		out->flags = 0;
+			out->firstedge = in32->firstedge;
+			out->numedges = in32->numedges;
+			out->flags = 0;
 
-		if( in->side ) out->flags |= SURF_PLANEBACK;
-		out->plane = loadmodel->planes + in->planenum;
-		out->texinfo = loadmodel->texinfo + in->texinfo;
+			if( in32->side ) out->flags |= SURF_PLANEBACK;
+			out->plane = loadmodel->planes + in32->planenum;
+			out->texinfo = loadmodel->texinfo + in32->texinfo;
+
+			for( j = 0; j < MAXLIGHTMAPS; j++ )
+				out->styles[j] = in32->styles[j];
+
+			lightofs = in32->lightofs;
+			in32++;
+		}
+		else
+		{
+			if(( in16->firstedge + in16->numedges ) > loadmodel->numsurfedges )
+			{
+				MsgDev( D_ERROR, "Bad surface %i from %i\n", i, count );
+				continue;
+			}
+
+			out->firstedge = in16->firstedge;
+			out->numedges = in16->numedges;
+			out->flags = 0;
+
+			if( in16->side ) out->flags |= SURF_PLANEBACK;
+			out->plane = loadmodel->planes + in16->planenum;
+			out->texinfo = loadmodel->texinfo + in16->texinfo;
+
+			for( j = 0; j < MAXLIGHTMAPS; j++ )
+				out->styles[j] = in16->styles[j];
+
+			lightofs = in16->lightofs;
+			in16++;
+		}
 
 		tex = out->texinfo->texture;
 
@@ -1459,8 +1507,11 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		if(( tex->name[0] == '*' && Q_stricmp( tex->name, "*default" )) || tex->name[0] == '!' )
 			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
 
-		if( !Q_strncmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
-			out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
+		if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		{
+			if( !Q_strncmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
+				out->flags |= (SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL);
+		}
 
 		if( !Q_strncmp( tex->name, "scroll", 6 ))
 			out->flags |= SURF_CONVEYOR;
@@ -1486,19 +1537,16 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		Mod_CalcSurfaceBounds( out );
 		Mod_CalcSurfaceExtents( out );
 
-		if( loadmodel->lightdata && in->lightofs != -1 )
+		if( loadmodel->lightdata && lightofs != -1 )
 		{
-			if( bmodel_version >= HLBSP_VERSION )
-				out->samples = loadmodel->lightdata + (in->lightofs / 3);
-			else out->samples = loadmodel->lightdata + in->lightofs;
+			if( bmodel_version == HLBSP_VERSION || bmodel_version == XTBSP_VERSION )
+				out->samples = loadmodel->lightdata + (lightofs / 3);
+			else out->samples = loadmodel->lightdata + lightofs;
 
 			// if deluxemap is present setup it too
 			if( world.deluxedata )
-				out->info->deluxemap = world.deluxedata + (in->lightofs / 3);
+				out->info->deluxemap = world.deluxedata + (lightofs / 3);
 		}
-
-		for( j = 0; j < MAXLIGHTMAPS; j++ )
-			out->styles[j] = in->styles[j];
 
 		if( out->flags & SURF_DRAWTURB )
 			GL_SubdivideSurface( out ); // cut up polygon for warps
@@ -1551,22 +1599,42 @@ Mod_LoadEdges
 */
 static void Mod_LoadEdges( const dlump_t *l )
 {
-	dedge_t	*in;
 	medge_t	*out;
 	int	i, count;
 
-	in = (void *)( mod_base + l->fileofs );	
-	if( l->filelen % sizeof( *in ))
-		Host_Error( "Mod_LoadEdges: funny lump size in %s\n", loadmodel->name );
-
-	count = l->filelen / sizeof( *in );
-	loadmodel->edges = out = Mem_Alloc( loadmodel->mempool, count * sizeof( medge_t ));
-	loadmodel->numedges = count;
-
-	for( i = 0; i < count; i++, in++, out++ )
+	if( bmodel_version == QBSP2_VERSION )
 	{
-		out->v[0] = (word)in->v[0];
-		out->v[1] = (word)in->v[1];
+		dedge2_t	*in = (void *)( mod_base + l->fileofs );	
+
+		if( l->filelen % sizeof( *in ))
+			Host_Error( "Mod_LoadEdges: funny lump size in %s\n", loadmodel->name );
+
+		count = l->filelen / sizeof( *in );
+		loadmodel->edges = out = Mem_Alloc( loadmodel->mempool, count * sizeof( medge_t ));
+		loadmodel->numedges = count;
+
+		for( i = 0; i < count; i++, in++, out++ )
+		{
+			out->v[0] = in->v[0];
+			out->v[1] = in->v[1];
+		}
+	}
+	else
+	{
+		dedge_t	*in = (void *)( mod_base + l->fileofs );	
+
+		if( l->filelen % sizeof( *in ))
+			Host_Error( "Mod_LoadEdges: funny lump size in %s\n", loadmodel->name );
+
+		count = l->filelen / sizeof( *in );
+		loadmodel->edges = out = Mem_Alloc( loadmodel->mempool, count * sizeof( medge_t ));
+		loadmodel->numedges = count;
+
+		for( i = 0; i < count; i++, in++, out++ )
+		{
+			out->v[0] = (word)in->v[0];
+			out->v[1] = (word)in->v[1];
+		}
 	}
 }
 
@@ -1598,22 +1666,38 @@ Mod_LoadMarkSurfaces
 */
 static void Mod_LoadMarkSurfaces( const dlump_t *l )
 {
-	dmarkface_t	*in;
+	dmarkface_t	*in16;
+	dmarkface2_t	*in32;
 	int		i, j, count;
 	msurface_t	**out;
-	
-	in = (void *)(mod_base + l->fileofs);	
-	if( l->filelen % sizeof( *in ))
-		Host_Error( "Mod_LoadMarkFaces: funny lump size in %s\n", loadmodel->name );
 
-	count = l->filelen / sizeof( *in );
+	if( bmodel_version == QBSP2_VERSION )
+	{
+		in32 = (void *)(mod_base + l->fileofs);	
+		if( l->filelen % sizeof( *in32 ))
+			Host_Error( "Mod_LoadMarkFaces: funny lump size in %s\n", loadmodel->name );
+		count = l->filelen / sizeof( *in32 );
+		in16 = NULL;
+	}
+	else
+	{
+		in16 = (void *)(mod_base + l->fileofs);	
+		if( l->filelen % sizeof( *in16 ))
+			Host_Error( "Mod_LoadMarkFaces: funny lump size in %s\n", loadmodel->name );
+		count = l->filelen / sizeof( *in16 );
+		in32 = NULL;
+	}
+
 	loadmodel->marksurfaces = out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
 	loadmodel->nummarksurfaces = count;
 
 	for( i = 0; i < count; i++ )
 	{
-		j = in[i];
-		if( j < 0 ||  j >= loadmodel->numsurfaces )
+		if( bmodel_version == QBSP2_VERSION )
+			j = in32[i];
+		else j = in16[i];
+
+		if( j < 0 || j >= loadmodel->numsurfaces )
 			Host_Error( "Mod_LoadMarkFaces: bad surface number in '%s'\n", loadmodel->name );
 		out[i] = loadmodel->surfaces + j;
 	}
@@ -1640,35 +1724,72 @@ Mod_LoadNodes
 */
 static void Mod_LoadNodes( const dlump_t *l )
 {
-	dnode_t	*in;
+	dnode_t	*in16;
+	dnode2_t	*in32;
 	mnode_t	*out;
 	int	i, j, p;
-	
-	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadNodes: funny lump size\n" );
-	loadmodel->numnodes = l->filelen / sizeof( *in );
+
+	if( bmodel_version == QBSP2_VERSION )
+	{	
+		in32 = (void *)(mod_base + l->fileofs);
+		if( l->filelen % sizeof( *in32 )) Host_Error( "Mod_LoadNodes: funny lump size\n" );
+		loadmodel->numnodes = l->filelen / sizeof( *in32 );
+		in16 = NULL;
+	}
+	else
+	{
+		in16 = (void *)(mod_base + l->fileofs);
+		if( l->filelen % sizeof( *in16 )) Host_Error( "Mod_LoadNodes: funny lump size\n" );
+		loadmodel->numnodes = l->filelen / sizeof( *in16 );
+		in32 = NULL;
+	}
 
 	if( loadmodel->numnodes < 1 ) Host_Error( "Map %s has no nodes\n", loadmodel->name );
 	out = loadmodel->nodes = (mnode_t *)Mem_Alloc( loadmodel->mempool, loadmodel->numnodes * sizeof( *out ));
 
-	for( i = 0; i < loadmodel->numnodes; i++, out++, in++ )
+	for( i = 0; i < loadmodel->numnodes; i++, out++ )
 	{
-		for( j = 0; j < 3; j++ )
+		if( bmodel_version == QBSP2_VERSION )
 		{
-			out->minmaxs[j] = in->mins[j];
-			out->minmaxs[3+j] = in->maxs[j];
+			for( j = 0; j < 3; j++ )
+			{
+				out->minmaxs[j+0] = in32->mins[j];
+				out->minmaxs[j+3] = in32->maxs[j];
+			}
+
+			p = in32->planenum;
+			out->plane = loadmodel->planes + p;
+			out->firstsurface = in32->firstface;
+			out->numsurfaces = in32->numfaces;
+
+			for( j = 0; j < 2; j++ )
+			{
+				p = in32->children[j];
+				if( p >= 0 ) out->children[j] = loadmodel->nodes + p;
+				else out->children[j] = (mnode_t *)(loadmodel->leafs + ( -1 - p ));
+			}
+			in32++;
 		}
-
-		p = in->planenum;
-		out->plane = loadmodel->planes + p;
-		out->firstsurface = in->firstface;
-		out->numsurfaces = in->numfaces;
-
-		for( j = 0; j < 2; j++ )
+		else
 		{
-			p = in->children[j];
-			if( p >= 0 ) out->children[j] = loadmodel->nodes + p;
-			else out->children[j] = (mnode_t *)(loadmodel->leafs + ( -1 - p ));
+			for( j = 0; j < 3; j++ )
+			{
+				out->minmaxs[j+0] = in16->mins[j];
+				out->minmaxs[j+3] = in16->maxs[j];
+			}
+
+			p = in16->planenum;
+			out->plane = loadmodel->planes + p;
+			out->firstsurface = in16->firstface;
+			out->numsurfaces = in16->numfaces;
+
+			for( j = 0; j < 2; j++ )
+			{
+				p = in16->children[j];
+				if( p >= 0 ) out->children[j] = loadmodel->nodes + p;
+				else out->children[j] = (mnode_t *)(loadmodel->leafs + ( -1 - p ));
+			}
+			in16++;
 		}
 	}
 
@@ -1683,14 +1804,26 @@ Mod_LoadLeafs
 */
 static void Mod_LoadLeafs( const dlump_t *l )
 {
-	dleaf_t 	*in;
+	dleaf_t 	*in16;
+	dleaf2_t	*in32;
 	mleaf_t	*out;
 	int	i, j, p, count;
-		
-	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadLeafs: funny lump size\n" );
 
-	count = l->filelen / sizeof( *in );
+	if( bmodel_version == QBSP2_VERSION )
+	{		
+		in32 = (void *)(mod_base + l->fileofs);
+		if( l->filelen % sizeof( *in32 )) Host_Error( "Mod_LoadLeafs: funny lump size\n" );
+		count = l->filelen / sizeof( *in32 );
+		in16 = NULL;
+	}
+	else
+	{
+		in16 = (void *)(mod_base + l->fileofs);
+		if( l->filelen % sizeof( *in16 )) Host_Error( "Mod_LoadLeafs: funny lump size\n" );
+		count = l->filelen / sizeof( *in16 );
+		in32 = NULL;
+	}
+
 	if( count < 1 ) Host_Error( "Map %s has no leafs\n", loadmodel->name );
 	out = (mleaf_t *)Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));
 
@@ -1708,17 +1841,44 @@ static void Mod_LoadLeafs( const dlump_t *l )
 		memset( world.visdata, 0xFF, world.visclusters * world.visbytes );
 	}
 
-	for( i = 0; i < count; i++, in++, out++ )
+	for( i = 0; i < count; i++, out++ )
 	{
-		for( j = 0; j < 3; j++ )
+		if( bmodel_version == QBSP2_VERSION )
 		{
-			out->minmaxs[j] = in->mins[j];
-			out->minmaxs[3+j] = in->maxs[j];
-		}
+			for( j = 0; j < 3; j++ )
+			{
+				out->minmaxs[j+0] = in32->mins[j];
+				out->minmaxs[j+3] = in32->maxs[j];
+			}
 
-		out->contents = in->contents;
-	
-		p = in->visofs;
+			out->contents = in32->contents;
+			p = in32->visofs;
+
+			for( j = 0; j < 4; j++ )
+				out->ambient_sound_level[j] = in32->ambient_level[j];
+
+			out->firstmarksurface = loadmodel->marksurfaces + in32->firstmarksurface;
+			out->nummarksurfaces = in32->nummarksurfaces;
+			in32++;
+		}
+		else
+		{
+			for( j = 0; j < 3; j++ )
+			{
+				out->minmaxs[j+0] = in16->mins[j];
+				out->minmaxs[j+3] = in16->maxs[j];
+			}
+
+			out->contents = in16->contents;
+			p = in16->visofs;
+
+			for( j = 0; j < 4; j++ )
+				out->ambient_sound_level[j] = in16->ambient_level[j];
+
+			out->firstmarksurface = loadmodel->marksurfaces + in16->firstmarksurface;
+			out->nummarksurfaces = in16->nummarksurfaces;
+			in16++;
+		}
 
 		if( world.loading )
 		{
@@ -1745,12 +1905,6 @@ static void Mod_LoadLeafs( const dlump_t *l )
 
 		if( p == -1 ) out->compressed_vis = NULL;
 		else out->compressed_vis = loadmodel->visdata + p;
-
-		for( j = 0; j < 4; j++ )
-			out->ambient_sound_level[j] = in->ambient_level[j];
-
-		out->firstmarksurface = loadmodel->marksurfaces + in->firstmarksurface;
-		out->nummarksurfaces = in->nummarksurfaces;
 
 		// gl underwater warp
 		if( out->contents != CONTENTS_EMPTY )
@@ -1915,16 +2069,28 @@ Mod_LoadClipnodes
 */
 static void Mod_LoadClipnodes( const dlump_t *l )
 {
-	dclipnode_t	*in;
+	dclipnode_t	*in16;
+	dclipnode2_t	*in32;
 	mclipnode_t	*out;
 	int		i, count;
 	hull_t		*hull;
 
-	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadClipnodes: funny lump size\n" );
-	count = l->filelen / sizeof( *in );
-	out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));	
+	if( bmodel_version == QBSP2_VERSION )
+	{
+		in32 = (void *)(mod_base + l->fileofs);
+		if( l->filelen % sizeof( *in32 )) Host_Error( "Mod_LoadClipnodes: funny lump size\n" );
+		count = l->filelen / sizeof( *in32 );
+		in16 = NULL;
+	}
+	else
+	{
+		in16 = (void *)(mod_base + l->fileofs);
+		if( l->filelen % sizeof( *in16 )) Host_Error( "Mod_LoadClipnodes: funny lump size\n" );
+		count = l->filelen / sizeof( *in16 );
+		in32 = NULL;
+	}
 
+	out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));	
 	loadmodel->clipnodes = out;
 	loadmodel->numclipnodes = count;
 
@@ -1954,28 +2120,35 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 	VectorCopy( host.player_mins[1], hull->clip_mins ); // copy head hull
 	VectorCopy( host.player_maxs[1], hull->clip_maxs );
 
-#ifdef SUPPORT_LARGE_CLIPNODES
-	for( i = 0; i < count; i++, out++, in++ )
+	if( bmodel_version == QBSP2_VERSION )
 	{
-		out->planenum = in->planenum;
-		out->children[0] = (unsigned short)in->children[0];
-		out->children[1] = (unsigned short)in->children[1];
-
-		// Arguire QBSP 'broken' clipnodes
-		if( out->children[0] >= count )
-			out->children[0] -= 65536;
-
-		if( out->children[1] >= count )
-			out->children[1] -= 65536;
+		for( i = 0; i < count; i++, out++, in32++ )
+		{
+			out->planenum = in32->planenum;
+			out->children[0] = in32->children[0];
+			out->children[1] = in32->children[1];
+		}
 	}
+	else
+	{
+		for( i = 0; i < count; i++, out++, in16++ )
+		{
+			out->planenum = in16->planenum;
+#ifdef SUPPORT_BSP2_FORMAT
+			out->children[0] = (unsigned short)in16->children[0];
+			out->children[1] = (unsigned short)in16->children[1];
+
+			// Arguire QBSP 'broken' clipnodes
+			if( out->children[0] >= count )
+				out->children[0] -= 65536;
+			if( out->children[1] >= count )
+				out->children[1] -= 65536;
 #else
-	for( i = 0; i < count; i++, out++, in++ )
-	{
-		out->planenum = in->planenum;
-		out->children[0] = in->children[0];
-		out->children[1] = in->children[1];
-	}
+			out->children[0] = in16->children[0];
+			out->children[1] = in16->children[1];
 #endif
+		}
+	}
 }
 
 /*
@@ -2221,6 +2394,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		break;
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
+	case QBSP2_VERSION:
 		sample_size = 16;
 		break;
 	case XTBSP_VERSION:
@@ -2490,6 +2664,9 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 	case XTBSP_VERSION:
+#ifdef SUPPORT_BSP2_FORMAT
+	case QBSP2_VERSION:
+#endif
 		Mod_LoadBrushModel( mod, buf, &loaded );
 		break;
 	default:

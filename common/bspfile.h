@@ -29,6 +29,7 @@ BRUSH MODELS
 #define Q1BSP_VERSION	29	// quake1 regular version (beta is 28)
 #define HLBSP_VERSION	30	// half-life regular version
 #define XTBSP_VERSION	31	// extended lightmaps and expanded clipnodes limit
+#define QBSP2_VERSION	(('B' << 0) | ('S' << 8) | ('P' << 16) | ('2'<<24))
 
 #define IDEXTRAHEADER	(('H'<<24)+('S'<<16)+('A'<<8)+'X') // little-endian "XASH"
 #define EXTRA_VERSION	4	// ver. 1 was occupied by old versions of XashXT, ver. 2 was occupied by old vesrions of P2:savior
@@ -199,6 +200,16 @@ typedef struct
 	word	numfaces;			// counting both sides
 } dnode_t;
 
+typedef struct
+{
+	int	planenum;
+	int	children[2];		// negative numbers are -(leafs+1), not nodes
+	float	mins[3];			// for sphere culling
+	float	maxs[3];
+	int	firstface;
+	int	numfaces;			// counting both sides
+} dnode2_t;
+
 // leaf 0 is the generic CONTENTS_SOLID leaf, used for all solid areas
 // all other leafs need visibility info
 typedef struct
@@ -217,9 +228,29 @@ typedef struct
 
 typedef struct
 {
+	int	contents;
+	int	visofs;			// -1 = no visibility info
+
+	float	mins[3];			// for frustum culling
+	float	maxs[3];
+
+	int	firstmarksurface;
+	int	nummarksurfaces;
+
+	byte	ambient_level[NUM_AMBIENTS];
+} dleaf2_t;
+
+typedef struct
+{
 	int	planenum;
 	short	children[2];		// negative numbers are contents
 } dclipnode_t;
+
+typedef struct
+{
+	int	planenum;
+	int	children[2];		// negative numbers are contents
+} dclipnode2_t;
 
 typedef struct
 {
@@ -238,6 +269,8 @@ typedef struct
 } dfaceinfo_t;
 
 typedef word	dmarkface_t;		// leaf marksurfaces indexes
+typedef int	dmarkface2_t;		// leaf marksurfaces indexes
+
 typedef int	dsurfedge_t;		// map surfedges
 
 // NOTE: that edge 0 is never used, because negative edge nums
@@ -246,6 +279,11 @@ typedef struct
 {
 	word	v[2];			// vertex numbers
 } dedge_t;
+
+typedef struct
+{
+	int	v[2];			// vertex numbers
+} dedge2_t;
 
 typedef struct
 {
@@ -260,5 +298,19 @@ typedef struct
 	byte	styles[LM_STYLES];
 	int	lightofs;			// start of [numstyles*surfsize] samples
 } dface_t;
+
+typedef struct
+{
+	int	planenum;
+	int	side;
+
+	int	firstedge;		// we must support > 64k edges
+	int	numedges;
+	int	texinfo;
+
+	// lighting info
+	byte	styles[LM_STYLES];
+	int	lightofs;			// start of [numstyles*surfsize] samples
+} dface2_t;
 
 #endif//BSPFILE_H

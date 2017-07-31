@@ -96,6 +96,9 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
 			case XTBSP_VERSION:
+#ifdef SUPPORT_BSP2_FORMAT
+			case QBSP2_VERSION:
+#endif
 				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && !(header->lumps[LUMP_ENTITIES].filelen % sizeof(dplane_t)))
 				{
 					lumpofs = header->lumps[LUMP_PLANES].fileofs;
@@ -167,6 +170,11 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			if( mapver == 220 ) Q_strncpy( buf, "Half-Life Alpha", sizeof( buf ));
 			else Q_strncpy( buf, "Quake", sizeof( buf ));
 			break;
+#ifdef SUPPORT_BSP2_FORMAT
+		case QBSP2_VERSION:
+			Q_strncpy( buf, "Darkplaces BSP2", sizeof( buf ));
+			break;
+#endif
 		case HLBSP_VERSION:
 			if( gearbox ) Q_strncpy( buf, "Blue-Shift", sizeof( buf ));
 			else if( version == 1 ) Q_strncpy( buf, "XashXT old format", sizeof( buf ));
@@ -745,6 +753,9 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
 			case XTBSP_VERSION:
+#ifdef SUPPORT_BSP2_FORMAT
+			case QBSP2_VERSION:
+#endif
 				header = (dheader_t *)buf;
 				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
 				{
