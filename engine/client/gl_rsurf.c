@@ -36,6 +36,7 @@ static glpoly_t		*fullbright_polys[MAX_TEXTURES];
 static qboolean		draw_fullbrights = false;
 static mextrasurf_t		*detail_surfaces[MAX_TEXTURES];
 static int		rtable[MOD_FRAMES][MOD_FRAMES];
+static qboolean		draw_alpha_surfaces = false;
 static qboolean		draw_details = false;
 static msurface_t		*skychain = NULL;
 static gllightmapstate_t	gl_lms;
@@ -1308,12 +1309,69 @@ void R_DrawTextureChains( void )
 		if(( s->flags & SURF_DRAWTURB ) && clgame.movevars.wateralpha < 1.0f )
 			continue;	// draw translucent water later
 
+		if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ) && FBitSet( s->flags, SURF_TRANSPARENT ))
+		{
+			draw_alpha_surfaces = true;
+			continue;	// draw transparent surfaces later
+                    }
+
 		for( ; s != NULL; s = s->texturechain )
 			R_RenderBrushPoly( s );
 		t->texturechain = NULL;
 	}
 
 	GL_ResetFogColor();
+}
+
+/*
+================
+R_DrawAlphaTextureChains
+================
+*/
+void R_DrawAlphaTextureChains( void )
+{
+	int		i;
+	msurface_t	*s;
+	texture_t		*t;
+
+	if( !draw_alpha_surfaces )
+		return;
+
+	memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
+	gl_lms.dynamic_surfaces = NULL;
+
+	// make sure what color is reset
+	pglColor4ub( 255, 255, 255, 255 );
+	R_LoadIdentity();	// set identity matrix
+
+	pglDisable( GL_BLEND );
+	pglEnable( GL_ALPHA_TEST );
+	pglAlphaFunc( GL_GEQUAL, 0.5f );
+
+	GL_SetupFogColorForSurfaces();
+
+	// restore worldmodel
+	RI.currententity = clgame.entities;
+	RI.currentmodel = RI.currententity->model;
+	draw_alpha_surfaces = false;
+
+	for( i = 0; i < cl.worldmodel->numtextures; i++ )
+	{
+		t = cl.worldmodel->textures[i];
+		if( !t ) continue;
+
+		s = t->texturechain;
+
+		if( !s || !FBitSet( s->flags, SURF_TRANSPARENT ))
+			continue;
+
+		for( ; s != NULL; s = s->texturechain )
+			R_RenderBrushPoly( s );
+		t->texturechain = NULL;
+	}
+
+	GL_ResetFogColor();
+	R_BlendLightmaps();
 }
 
 /*
@@ -1553,6 +1611,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 			pglEnable( GL_FOG );
 	}
 
+	pglDisable( GL_BLEND );
 	R_LoadIdentity();	// restore worldmatrix
 }
 
@@ -2153,6 +2212,7 @@ void GL_BuildLightmaps( void )
 
 	tr.framecount = tr.visframecount = 1;	// no dlight cache
 	gl_lms.current_lightmap_texture = 0;
+	tr.modelviewIdentity = false;
 	tr.num_mirror_entities = 0;
 	tr.num_mirrors_used = 0;
 	tr.realframecount = 1;

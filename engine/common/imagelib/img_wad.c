@@ -288,7 +288,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 		memcpy( &lmp, fin, sizeof( lmp ));
 		image.width = lmp.width;
 		image.height = lmp.height;
-		rendermode = LUMP_MASKED;
+		rendermode = LUMP_NORMAL;
 		fin += sizeof( lmp );
 	}
 
@@ -307,6 +307,11 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	{
 		int	numcolors;
 
+		if( fin[0] == 255 )
+		{
+			image.flags |= IMAGE_HAS_ALPHA;
+			rendermode = LUMP_MASKED;
+		}
 		pal = fin + pixels;
 		numcolors = *(short *)pal;
 		if( numcolors != 256 ) pal = NULL; // corrupted lump ?
@@ -314,6 +319,7 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	}
 	else if( image.hint != IL_HINT_HL )
 	{
+		image.flags |= IMAGE_HAS_ALPHA;
 		rendermode = LUMP_QUAKE1;
 		pal = NULL;
 	}
@@ -324,7 +330,6 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 	}
 
 	Image_GetPaletteLMP( pal, rendermode );
-	image.flags |= IMAGE_HAS_ALPHA;	// FIXME: detect it properly
 	image.type = PF_INDEXED_32; // 32-bit palete
 	image.depth = 1;
 

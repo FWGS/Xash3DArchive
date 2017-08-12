@@ -77,8 +77,8 @@ void Host_PrintEngineFeatures( void )
 	if( FBitSet( host.features, ENGINE_LOAD_DELUXEDATA ))
 		MsgDev( D_REPORT, "^3EXT:^7 deluxemap support enabled\n" );
 
-	if( FBitSet( host.features, ENGINE_TRANSFORM_TRACE_AABB ))
-		MsgDev( D_REPORT, "^3EXT:^7 Transform trace AABB enabled\n" );
+	if( FBitSet( host.features, ENGINE_PHYSICS_PUSHER_EXT ))
+		MsgDev( D_REPORT, "^3EXT:^7 Improved MOVETYPE_PUSH is used\n" );
 
 	if( FBitSet( host.features, ENGINE_LARGE_LIGHTMAPS ))
 		MsgDev( D_REPORT, "^3EXT:^7 Large lightmaps enabled\n" );

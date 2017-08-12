@@ -257,15 +257,8 @@ void CL_PrepareTEnt( TEMPENTITY *pTemp, model_t *pmodel )
 	pTemp->flags = FTENT_NONE;		
 	pTemp->die = cl.time + 0.75f;
 
-	if( pmodel )
-	{
-		modelIndex = CL_FindModelIndex( pmodel->name );
-		Mod_GetFrames( modelIndex, &frameCount );
-	}
-	else
-	{
-		pTemp->flags |= FTENT_NOMODEL;
-	}
+	if( pmodel ) frameCount = Mod_FrameCount( pmodel );
+	else pTemp->flags |= FTENT_NOMODEL;
 
 	pTemp->entity.curstate.modelindex = modelIndex;
 	pTemp->entity.curstate.rendermode = kRenderNormal;
@@ -861,14 +854,10 @@ Create rocket flare
 void R_RocketFlare( const vec3_t pos )
 {
 	TEMPENTITY	*pTemp;
-	model_t		*pmodel;
-	int		modelIndex;
 
-	modelIndex = CL_FindModelIndex( "sprites/animglow01.spr" );
-	pmodel = Mod_Handle( modelIndex );
-	if( !pmodel ) return;
+	if( !cl_sprite_glow ) return;
 
-	pTemp = CL_TempEntAlloc( pos, pmodel );
+	pTemp = CL_TempEntAlloc( pos, cl_sprite_glow );
 	if ( !pTemp ) return;
 
 	pTemp->entity.curstate.rendermode = kRenderGlow;
@@ -2615,11 +2604,12 @@ update client flashlight
 */
 void CL_UpdateFlashlight( cl_entity_t *ent )
 {
-	vec3_t	forward, view_ofs;
-	vec3_t	vecSrc, vecEnd;
-	float	falloff;
-	pmtrace_t	*trace;
-	dlight_t	*dl;
+	vec3_t		forward, view_ofs;
+	vec3_t		vecSrc, vecEnd;
+	float		falloff;
+	pmtrace_t		*trace;
+	cl_entity_t	*hit;
+	dlight_t		*dl;
 
 	if( ent->index == ( cl.playernum + 1 ))
 	{
@@ -2652,10 +2642,10 @@ void CL_UpdateFlashlight( cl_entity_t *ent )
 
 	// update flashlight endpos
 	dl = CL_AllocDlight( ent->index );
-#if 0
-	// g-cont. disabled until studio lighting will be finished
-	if( trace->ent > 0 && clgame.pmove->visents[trace->ent].studiomodel )
-		VectorCopy( clgame.pmove->visents[trace->ent].origin, dl->origin );
+#if 1
+	hit = CL_GetEntityByIndex( clgame.pmove->visents[trace->ent].info );
+	if( hit && hit->model && ( hit->model->type == mod_alias || hit->model->type == mod_studio ))
+		VectorCopy( hit->origin, dl->origin );
 	else VectorCopy( trace->endpos, dl->origin );
 #else
 	VectorCopy( trace->endpos, dl->origin );

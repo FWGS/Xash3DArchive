@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define MAX_MOVIES		8
 #define MAX_CDTRACKS	32
 #define MAX_IMAGES		256	// SpriteTextures
-#define MAX_EFRAGS		4096
+#define MAX_EFRAGS		8192
 #define MAX_REQUESTS	64
 
 // screenshot types

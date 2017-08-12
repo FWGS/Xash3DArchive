@@ -235,7 +235,7 @@ mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node )
 	{
 		if( node->contents < 0 )
 			return (mleaf_t *)node;
-		node = node->children[PlaneDiff( p, node->plane ) < 0];
+		node = node->children[PlaneDiff( p, node->plane ) <= 0];
 	}
 
 	// never reached
@@ -266,7 +266,7 @@ byte *Mod_GetPVSForPoint( const vec3_t p )
 			leaf = (mleaf_t *)node;
 			break; // we found a leaf
 		}
-		node = node->children[PlaneDiff( p, node->plane ) < 0];
+		node = node->children[PlaneDiff( p, node->plane ) <= 0];
 	}
 
 	if( leaf && leaf->cluster >= 0 )
@@ -1265,6 +1265,50 @@ static void Mod_LoadLightVecs( const dlump_t *l )
 
 /*
 =================
+Mod_LoadColoredLighting
+=================
+*/
+static qboolean Mod_LoadColoredLighting( void )
+{
+	char	path[64];
+	int	iCompare;
+	size_t	litdatasize;
+	byte	*in;
+
+	Q_snprintf( path, sizeof( path ), "maps/%s.lit", modelname );
+
+	// make sure what deluxemap is actual
+	if( !COM_CompareFileTime( path, loadmodel->name, &iCompare ))
+		return false;
+
+	if( iCompare < 0 ) // this may happens if level-designer used -onlyents key for hlcsg
+		MsgDev( D_WARN, "Mod_LoadColoredLighting: %s probably is out of date\n", path );
+
+	in = FS_LoadFile( path, &litdatasize, false );
+
+	ASSERT( in != NULL );
+
+	if( *(uint *)in != IDDELUXEMAPHEADER || *((uint *)in + 1) != DELUXEMAP_VERSION )
+	{
+		MsgDev( D_ERROR, "Mod_LoadColoredLighting: %s is not a lightmap file\n", path );
+		Mem_Free( in );
+		return false;
+	}
+
+	// skip header bytes
+	litdatasize -= 8;
+
+	MsgDev( D_INFO, "Mod_LoadColoredLighting: %s loaded\n", path );
+	loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, litdatasize );
+	memcpy( loadmodel->lightdata, in + 8, litdatasize );
+	if( world.loading ) world.litdatasize = litdatasize;
+	Mem_Free( in );
+
+	return true;
+}
+
+/*
+=================
 Mod_LoadLighting
 =================
 */
@@ -1293,16 +1337,19 @@ static void Mod_LoadLighting( const dlump_t *l, dextrahdr_t *extrahdr )
 	{
 	case Q1BSP_VERSION:
 	case QBSP2_VERSION:
-		// expand the white lighting data
-		loadmodel->lightdata = (color24 *)Mem_Alloc( loadmodel->mempool, l->filelen * sizeof( color24 ));
-		out = loadmodel->lightdata;
-
-		for( i = 0; i < l->filelen; i++, out++ )
+		if( !Mod_LoadColoredLighting( ))
 		{
-			d = *in++;
-			out->r = d;
-			out->g = d;
-			out->b = d;
+			// expand the white lighting data
+			loadmodel->lightdata = (color24 *)Mem_Alloc( loadmodel->mempool, l->filelen * sizeof( color24 ));
+			out = loadmodel->lightdata;
+
+			for( i = 0; i < l->filelen; i++, out++ )
+			{
+				d = *in++;
+				out->r = d;
+				out->g = d;
+				out->b = d;
+			}
 		}
 		break;
 	case HLBSP_VERSION:

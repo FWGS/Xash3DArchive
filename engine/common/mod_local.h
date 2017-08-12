@@ -17,7 +17,6 @@ GNU General Public License for more details.
 #define MOD_LOCAL_H
 
 #include "common.h"
-#include "bspfile.h"
 #include "edict.h"
 #include "eiface.h"
 #include "com_model.h"

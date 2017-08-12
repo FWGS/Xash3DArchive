@@ -2263,7 +2263,7 @@ int CL_FindModelIndex( const char *m )
 	if( cls.state == ca_active )
 	{
 		// tell user about problem (but don't spam console about playermodel)
-		MsgDev( D_NOTE, "CL_ModelIndex: %s not precached\n", m );
+		MsgDev( D_ERROR, "CL_ModelIndex: %s not precached\n", m );
 	}
 
 	return 0;

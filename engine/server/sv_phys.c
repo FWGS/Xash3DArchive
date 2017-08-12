@@ -765,7 +765,7 @@ qboolean SV_AllowPushRotate( edict_t *ent )
 	if( !mod || mod->type != mod_brush )
 		return true;
 
-	if( !sv_allow_rotate_pushables->value )
+	if( !FBitSet( host.features, ENGINE_PHYSICS_PUSHER_EXT ))
 		return false;
 
 	return (mod->flags & MODEL_HAS_ORIGIN) ? true : false;
@@ -811,7 +811,13 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 
 	SV_LinkEdict( ent, true );
 
-	if( blocked ) *blocked = !VectorCompare( ent->v.origin, end ); // can't move full distance
+	if( blocked )
+	{
+		// more accuracy blocking code
+		if( FBitSet( host.features, ENGINE_PHYSICS_PUSHER_EXT ))
+			*blocked = !VectorCompare( ent->v.origin, end ); // can't move full distance
+		else *blocked = true;
+	}
 
 	// so we can run impact function afterwards.
 	if( SV_IsValidEdict( trace.ent ))

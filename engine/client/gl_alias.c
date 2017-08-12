@@ -299,8 +299,6 @@ void BuildTris( void )
 	}
 
 	g_commands[g_numcommands++] = 0; // end of list marker
-
-	MsgDev( D_REPORT, "%3i tri %3i vert %3i cmd\n", m_pAliasHeader->numtris, g_numorder, g_numcommands );
 }
 
 /*
@@ -1391,6 +1389,7 @@ void R_DrawAliasModel( cl_entity_t *e )
 	R_AliasDynamicLight( e, &lighting );
 
 	r_stats.c_alias_polys += m_pAliasHeader->numtris;
+	r_stats.c_alias_models_drawn++;
 
 	//
 	// draw all the triangles

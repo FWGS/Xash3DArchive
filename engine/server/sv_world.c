@@ -878,7 +878,7 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 		rotated = true;
 	else rotated = false;
 
-	if( host.features & ENGINE_TRANSFORM_TRACE_AABB )
+	if( FBitSet( host.features, ENGINE_PHYSICS_PUSHER_EXT ))
 	{
 		// keep untransformed bbox less than 45 degress or train on subtransit.bsp will stop working
 		if(( check_angles( ent->v.angles[0] ) || check_angles( ent->v.angles[2] )) && !VectorIsNull( mins ))

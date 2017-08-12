@@ -16,7 +16,6 @@ GNU General Public License for more details.
 #include "common.h"
 #include "client.h"
 #include "const.h"
-#include "bspfile.h"
 #include "../cl_dll/kbutton.h"
 
 extern convar_t	*con_gamemaps;

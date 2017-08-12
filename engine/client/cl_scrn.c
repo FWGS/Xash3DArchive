@@ -313,6 +313,9 @@ void SCR_BeginLoadingPlaque( qboolean is_background )
 	if( cls.state == ca_disconnected ) return;	// if at console, don't bring up the plaque
 	if( cls.key_dest == key_console ) return;
 
+	if( CL_IsInMenu( ) && !cls.changedemo && !is_background )
+		UI_SetActiveMenu( false );
+
 	cls.draw_changelevel = is_background ? false : true;
 	SCR_UpdateScreen();
 	cls.disable_screen = host.realtime;

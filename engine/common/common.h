@@ -125,7 +125,7 @@ typedef enum
 #define CS_TIME		16	// size of time string
 
 #define MAX_DECALS		512	// touching TE_DECAL messages, etc
-#define MAX_STATIC_ENTITIES	512	// static entities that moved on the client when level is spawn
+#define MAX_STATIC_ENTITIES	3072	// static entities that moved on the client when level is spawn
 
 // filesystem flags
 #define FS_STATIC_PATH	1	// FS_ClearSearchPath will be ignore this path
@@ -707,6 +707,7 @@ int pfnGetModelType( model_t *mod );
 int pfnIsMapValid( char *filename );
 void Con_DPrintf( char *fmt, ... );
 void Con_Printf( char *szFmt, ... );
+int pfnNumberOfEntities( void );
 int pfnIsInGame( void );
 
 // CS:CS engfuncs (stubs)

@@ -71,7 +71,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	if( bhdr.fileSize != filesize )
 	{
 		// Sweet Half-Life issues. splash.bmp have bogus filesize
-		MsgDev( D_WARN, "Image_LoadBMP: %s have incorrect file size %i should be %i\n", name, filesize, bhdr.fileSize );
+		MsgDev( D_REPORT, "Image_LoadBMP: %s have incorrect file size %i should be %i\n", name, filesize, bhdr.fileSize );
           }
           
 	// bogus compression?  Only non-compressed supported.

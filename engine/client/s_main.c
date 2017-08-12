@@ -376,6 +376,9 @@ channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx )
  	{
 		if( channels[i].sfx == NULL )
 			break;
+
+		if( channels[i].entnum == entnum && channels[i].sfx == sfx )
+			break;
 	}
 
 	if( i < total_channels ) 

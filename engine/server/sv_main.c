@@ -116,7 +116,6 @@ convar_t	*sv_check_errors;
 convar_t	*public_server;			// should heartbeats be sent
 convar_t	*sv_reconnect_limit;		// minimum seconds between connect messages
 convar_t	*sv_allow_studio_attachment_angles;
-convar_t	*sv_allow_rotate_pushables;
 convar_t	*sv_validate_changelevel;
 convar_t	*sv_sendvelocity;
 
@@ -746,7 +745,6 @@ void SV_Init( void )
 	zombietime = Cvar_Get( "zombietime", "2", FCVAR_SERVER, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", FCVAR_SERVER, "allow players to pause or not" );
 	sv_allow_studio_attachment_angles = Cvar_Get( "sv_allow_studio_attachment_angles", "0", FCVAR_ARCHIVE, "enable calc angles for attachment points (on studio models)" );
-	sv_allow_rotate_pushables = Cvar_Get( "sv_allow_rotate_pushables", "0", FCVAR_ARCHIVE, "let the pushers rotate pushables with included origin-brush" );
 	sv_validate_changelevel = Cvar_Get( "sv_validate_changelevel", "1", FCVAR_ARCHIVE, "test change level for level-designer errors" );
 	Cvar_RegisterVariable (&sv_clienttrace);
 	Cvar_RegisterVariable (&sv_bounce);

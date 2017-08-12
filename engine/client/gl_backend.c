@@ -74,12 +74,12 @@ void GL_BackendEndFrame( void )
 		r_stats.c_world_leafs, Mod_PointInLeaf( RI.pvsorigin, cl.worldmodel->nodes ) - cl.worldmodel->leafs );
 		break;
 	case 3:
-		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i studio models drawn\n%3i sprites drawn",
-		r_stats.c_studio_models_drawn, r_stats.c_sprite_models_drawn );
+		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i alias models drawn\n%3i studio models drawn\n%3i sprites drawn",
+		r_stats.c_alias_models_drawn, r_stats.c_studio_models_drawn, r_stats.c_sprite_models_drawn );
 		break;
 	case 4:
-		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i static entities\n%3i normal entities",
-		r_numStatics, r_numEntities - r_numStatics );
+		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i static entities\n%3i normal entities\n%3i server entities",
+		r_numStatics, r_numEntities - r_numStatics, pfnNumberOfEntities( ));
 		break;
 	case 5:
 		Q_snprintf( r_speeds_msg, sizeof( r_speeds_msg ), "%3i tempents\n%3i viewbeams\n%3i particles",

@@ -557,6 +557,16 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 	ent->curstate.framerate = 1.0f;
 	CL_ResetLatchedVars( ent, true );
 
+	if( ent->curstate.rendermode == kRenderNormal && ent->model != NULL )
+	{
+		// auto 'solid' faces
+		if( FBitSet( ent->model->flags, MODEL_TRANSPARENT ) && FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		{
+			ent->curstate.rendermode = kRenderTransAlpha;
+			ent->curstate.renderamt = 255;
+		}
+	}
+
 	R_AddEfrags( ent );	// add link
 }
 
@@ -685,7 +695,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.playernum = MSG_ReadByte( msg );
 	cl.maxclients = MSG_ReadByte( msg );
 	clgame.maxEntities = MSG_ReadWord( msg );
-	clgame.maxEntities = bound( 600, clgame.maxEntities, 4096 );
+	clgame.maxEntities = bound( 600, clgame.maxEntities, MAX_EDICTS );
 	Q_strncpy( clgame.mapname, MSG_ReadString( msg ), MAX_STRING );
 	Q_strncpy( clgame.maptitle, MSG_ReadString( msg ), MAX_STRING );
 	background = MSG_ReadOneBit( msg );

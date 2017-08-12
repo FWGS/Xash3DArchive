@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #define ENGINE_WRITE_LARGE_COORD	(1<<0)	// replace standard message WRITE_COORD with big message for support more than 8192 units in world	
 #define ENGINE_QUAKE_COMPATIBLE	(1<<1)	// make engine compatible with quake (flags and effects)
 #define ENGINE_LOAD_DELUXEDATA	(1<<2)	// loading deluxemap for map (if present)
-#define ENGINE_TRANSFORM_TRACE_AABB	(1<<3)	// transform trace bbox into local space of rotating bmodels
+#define ENGINE_PHYSICS_PUSHER_EXT	(1<<3)	// enable sets of improvements for MOVETYPE_PUSH physics
 #define ENGINE_LARGE_LIGHTMAPS	(1<<4)	// change lightmap sizes from 128x128 to 1024x1024
 #define ENGINE_COMPENSATE_QUAKE_BUG	(1<<5)	// compensate stupid quake bug (inverse pitch) for mods where this bug is fixed
 #define ENGINE_DISABLE_HDTEXTURES	(1<<6)	// disable support of HD-textures in case custom renderer have separate way to load them

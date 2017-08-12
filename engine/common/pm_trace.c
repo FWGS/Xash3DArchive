@@ -408,7 +408,7 @@ pmtrace_t PM_PlayerTraceExt( playermove_t *pmove, vec3_t start, vec3_t end, int 
 			rotated = true;
 		else rotated = false;
 
-		if( host.features & ENGINE_TRANSFORM_TRACE_AABB )
+		if( FBitSet( host.features, ENGINE_PHYSICS_PUSHER_EXT ))
 		{
 			if(( check_angles( pe->angles[0] ) || check_angles( pe->angles[2] )) && pmove->usehull != 2 )
 				transform_bbox = true;
@@ -586,7 +586,7 @@ int PM_TestPlayerPosition( playermove_t *pmove, vec3_t pos, pmtrace_t *ptrace, p
 			qboolean	transform_bbox = false;
 			matrix4x4	matrix;
 
-			if( host.features & ENGINE_TRANSFORM_TRACE_AABB )
+			if( FBitSet( host.features, ENGINE_PHYSICS_PUSHER_EXT ))
 			{
 				if(( check_angles( pe->angles[0] ) || check_angles( pe->angles[2] )) && pmove->usehull != 2 )
 					transform_bbox = true;

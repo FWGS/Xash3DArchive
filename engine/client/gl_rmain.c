@@ -100,28 +100,6 @@ static qboolean R_OpaqueEntity( cl_entity_t *ent )
 
 /*
 ===============
-R_SolidEntityCompare
-
-Sorting opaque entities by model type
-===============
-*/
-static int R_SolidEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
-{
-	cl_entity_t	*ent1, *ent2;
-
-	ent1 = (cl_entity_t *)*a;
-	ent2 = (cl_entity_t *)*b;
-
-	if( ent1->model->type > ent2->model->type )
-		return 1;
-	if( ent1->model->type < ent2->model->type )
-		return -1;
-
-	return 0;
-}
-
-/*
-===============
 R_TransEntityCompare
 
 Sorting translucent entities by rendermode then by distance
@@ -261,7 +239,7 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int type )
 	if( clent->curstate.effects & EF_NODRAW )
 		return false; // done
 
-	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0.0f )
+	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0 )
 		return true; // invisible
 
 	if( type == ET_FRAGMENTED )
@@ -362,6 +340,12 @@ R_SetupFrustum
 void R_SetupFrustum( void )
 {
 	ref_overview_t	*ov = &clgame.overView;
+
+	if( RP_NORMALPASS() && ( cl.local.waterlevel >= 3 ))
+	{
+		RI.fov_x = atan( tan( DEG2RAD( RI.fov_x ) / 2 ) * ( 0.97 + sin( cl.time * 1.5 ) * 0.03 )) * 2 / (M_PI / 180.0);
+		RI.fov_y = atan( tan( DEG2RAD( RI.fov_y ) / 2 ) * ( 1.03 - sin( cl.time * 1.5 ) * 0.03 )) * 2 / (M_PI / 180.0);
+	}
 
 	// build the transformation matrix for the given view angles
 	AngleVectors( RI.viewangles, RI.vforward, RI.vright, RI.vup );
@@ -519,9 +503,6 @@ static void R_SetupFrame( void )
 	// setup viewplane dist
 	RI.viewplanedist = DotProduct( RI.vieworg, RI.vforward );
 
-	// sort opaque entities by model type to avoid drawing model shadows under alpha-surfaces
-	qsort( tr.solid_entities, tr.num_solid_entities, sizeof( cl_entity_t* ), R_SolidEntityCompare );
-
 	if( !gl_nosort->value )
 	{
 		// sort translucents entities by rendermode and distance
@@ -543,12 +524,6 @@ R_SetupGL
 */
 void R_SetupGL( qboolean set_gl_state )
 {
-	if( RP_NORMALPASS() && ( cl.local.waterlevel >= 3 ))
-	{
-		RI.fov_x = atan( tan( DEG2RAD( RI.fov_x ) / 2 ) * ( 0.97 + sin( cl.time * 1.5 ) * 0.03 )) * 2 / (M_PI / 180.0);
-		RI.fov_y = atan( tan( DEG2RAD( RI.fov_y ) / 2 ) * ( 1.03 - sin( cl.time * 1.5 ) * 0.03 )) * 2 / (M_PI / 180.0);
-	}
-
 	R_SetupModelviewMatrix( RI.worldviewMatrix );
 	R_SetupProjectionMatrix( RI.projectionMatrix );
 
@@ -814,6 +789,8 @@ void R_DrawEntitiesOnList( void )
 	// draw the solid submodels fog
 	R_DrawFog ();
 
+	pglDepthMask( GL_TRUE );
+
 	// first draw solid entities
 	for( i = 0; i < tr.num_solid_entities && !RI.onlyClientDraw; i++ )
 	{
@@ -841,6 +818,8 @@ void R_DrawEntitiesOnList( void )
 			break;
 		}
 	}
+
+	R_DrawAlphaTextureChains();
 
 	if( !RI.onlyClientDraw )
           {

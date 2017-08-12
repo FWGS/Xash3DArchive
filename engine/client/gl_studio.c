@@ -1627,7 +1627,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 			vecEnd[2] = origin[2] - mv->skyvec_z * 8192.0f;
 		}
 
-		trace = CL_TraceLine( vecSrc, vecEnd, PM_STUDIO_IGNORE );
+		trace = CL_TraceLine( vecSrc, vecEnd, PM_WORLD_ONLY );
 		if( trace.ent > 0 ) psurf = PM_TraceSurface( &clgame.pmove->physents[trace.ent], vecSrc, vecEnd );
  		else psurf = PM_TraceSurface( clgame.pmove->physents, vecSrc, vecEnd );
  
@@ -1699,10 +1699,10 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		if( dl->die < g_studio.time || !r_dynamic->value )
 			continue;
 
-		VectorSubtract( origin, dl->origin, dist );
+		VectorSubtract( ent->origin, dl->origin, dist );
 
 		radius = VectorLength( dist );
-		add = dl->radius - radius;
+		add = (dl->radius - radius);
 
 		if( add > 0.0f )
 		{
@@ -1714,9 +1714,9 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 
 			VectorAdd( lightDir, dist, lightDir );
 
-			finalLight[0] += LightToTexGamma( dl->color.r ) * ( add / 256.0f );
-			finalLight[1] += LightToTexGamma( dl->color.g ) * ( add / 256.0f );
-			finalLight[2] += LightToTexGamma( dl->color.b ) * ( add / 256.0f );
+			finalLight[0] += LightToTexGamma( dl->color.r ) * ( add * 512.0f );
+			finalLight[1] += LightToTexGamma( dl->color.g ) * ( add * 512.0f );
+			finalLight[2] += LightToTexGamma( dl->color.b ) * ( add * 512.0f );
 		}
 	}
 
@@ -2345,7 +2345,7 @@ static void R_StudioDrawPoints( void )
 
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
-			pglAlphaFunc( GL_NOTEQUAL, 0.0f );
+			pglAlphaFunc( GL_GREATER, 0.0f );
 			pglDisable( GL_ALPHA_TEST );
 		}
 		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_ModelOpaque( RI.currententity->curstate.rendermode ))
@@ -2740,6 +2740,8 @@ static void R_StudioSetupRenderer( int rendermode )
 	// enable depthmask on studiomodels
 	if( glState.drawTrans && g_studio.rendermode != kRenderTransAdd )
 		pglDepthMask( GL_TRUE );
+
+	pglDisable( GL_ALPHA_TEST );
 	pglShadeModel( GL_SMOOTH );
 }
 
@@ -2870,7 +2872,7 @@ void GL_StudioSetRenderMode( int rendermode )
 	case kRenderTransAdd:
 		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		pglColor4f( tr.blend, tr.blend, tr.blend, 1.0f );
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+		pglBlendFunc( GL_ONE, GL_ONE );
 		pglDepthMask( GL_FALSE );
 		pglEnable( GL_BLEND );
 		break;

@@ -94,8 +94,12 @@ GNU General Public License for more details.
 #define clc_requestcvarvalue2		10
 #define clc_lastmsg			10	// end client messages
 
-#define MAX_VISIBLE_PACKET_BITS	10
-#define MAX_VISIBLE_PACKET		(1<<MAX_VISIBLE_PACKET_BITS)	// 1024 visible entities per frame (hl1 has 256)
+#ifdef SUPPORT_BSP2_FORMAT
+#define MAX_VISIBLE_PACKET_BITS	11	// 2048 visible entities per frame
+#else
+#define MAX_VISIBLE_PACKET_BITS	10	// 1024 visible entities per frame (hl1 has 256)
+#endif
+#define MAX_VISIBLE_PACKET		(1<<MAX_VISIBLE_PACKET_BITS)
 #define MAX_VISIBLE_PACKET_VIS_BYTES	((MAX_VISIBLE_PACKET + 7) / 8)
 
 // additional protocol data
@@ -108,14 +112,22 @@ GNU General Public License for more details.
 #define MAX_EVENT_BITS		10
 #define MAX_EVENTS			(1<<MAX_EVENT_BITS)	// 10 bits == 1024 events (the original Half-Life limit)
 
-#define MAX_MODEL_BITS		11
-#define MAX_MODELS			(1<<MAX_MODEL_BITS)	// 11 bits == 2048 models
+#ifdef SUPPORT_BSP2_FORMAT
+#define MAX_MODEL_BITS		12	// 12 bits == 4096 models
+#else
+#define MAX_MODEL_BITS		11	// 11 bits == 2048 models
+#endif
+#define MAX_MODELS			(1<<MAX_MODEL_BITS)
 
 #define MAX_SOUND_BITS		11
 #define MAX_SOUNDS			(1<<MAX_SOUND_BITS)	// 11 bits == 2048 sounds
 
-#define MAX_ENTITY_BITS		12
-#define MAX_EDICTS			(1<<MAX_ENTITY_BITS)// 12 bits = 4096 edicts
+#ifdef SUPPORT_BSP2_FORMAT
+#define MAX_ENTITY_BITS		13	// 13 bits = 8192 edicts
+#else
+#define MAX_ENTITY_BITS		12	// 12 bits = 4096 edicts
+#endif
+#define MAX_EDICTS			(1<<MAX_ENTITY_BITS)
 #define MAX_EDICTS_BYTES		((MAX_EDICTS + 7) / 8)
 
 #define MAX_CUSTOM			1024	// max custom resources per level

@@ -759,7 +759,7 @@ SAVERESTOREDATA *SV_SaveInit( int size )
 	const int		nTokens = 0xfff;	// Assume a maximum of 4K-1 symbol table entries(each of some length)
 	int		numents;
 
-	if( size <= 0 ) size = 0x200000;	// Reserve 2Mb for now
+	if( size <= 0 ) size = 0x400000;	// Reserve 4Mb for now
 	numents = svgame.numEntities;
 
 	pSaveData = Mem_Alloc( host.mempool, sizeof(SAVERESTOREDATA) + ( sizeof(ENTITYTABLE) * numents ) + size );
@@ -1367,7 +1367,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 
 		FS_Read( pFile, &soundCount, sizeof( int ));
 
-		for( i = 0; i < soundCount; i++ )
+		for( i = 0; i < Q_min( soundCount, MAX_CHANNELS ); i++ )
 		{
 			soundlist_t	*entry;
 			byte		nameSize;

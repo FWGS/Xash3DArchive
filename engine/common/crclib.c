@@ -14,7 +14,6 @@ GNU General Public License for more details.
 */
 
 #include "common.h"
-#include "bspfile.h"
 #include "client.h"
 
 #define NUM_BYTES		256

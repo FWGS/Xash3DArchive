@@ -483,7 +483,7 @@ void Mod_UnloadSpriteModel( model_t *mod )
 
 /*
 ================
-R_GetSpriteFrame
+R_SetSpriteRendermode
 
 assume pModel is valid
 ================
@@ -511,6 +511,25 @@ void R_SetSpriteRendermode( const model_t *pModel )
 		GL_SetRenderMode( kRenderTransAlpha );
 		break;
 	}
+}
+
+/*
+================
+R_SetSpriteRenderamt
+
+assume pModel is valid
+================
+*/
+void R_SetSpriteRenderamt( cl_entity_t *ent, const model_t *pModel )
+{
+	msprite_t		*psprite;
+
+	if( !pModel ) return;
+	psprite = (msprite_t *)pModel->cache.data;
+	if( !psprite ) return;
+
+	if( psprite->texFormat == SPR_NORMAL || psprite->texFormat == SPR_ALPHTEST )
+		ent->curstate.renderamt = 255;
 }
 
 /*

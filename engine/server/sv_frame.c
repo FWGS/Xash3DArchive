@@ -97,7 +97,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 
 		ent = EDICT_NUM( e );
 
-		if( !SV_IsValidEdict( ent ))
+		if( !SV_IsValidEdict( ent ) || FBitSet( ent->v.flags, FL_KILLME ))
 			continue;
 
 		// don't double add an entity through portals (in case this already added)
@@ -265,9 +265,10 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		if( newnum > oldnum )
 		{	
 			qboolean	force = false;
+			edict_t	*ed = EDICT_NUM( oldent->number );
 
 			// check if entity completely removed from server
-			if( EDICT_NUM( oldent->number )->free )
+			if( ed->free || FBitSet( ed->v.flags, FL_KILLME ))
 				force = true;
 
 			// remove from message

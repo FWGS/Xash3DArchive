@@ -429,7 +429,6 @@ extern	convar_t		*hostname;
 extern	convar_t		*sv_maxclients;
 extern	convar_t		*sv_novis;
 extern	convar_t		*sv_allow_studio_attachment_angles;
-extern	convar_t		*sv_allow_rotate_pushables;
 extern	convar_t		*sv_sendvelocity;
 extern	convar_t		*sv_validate_changelevel;
 extern	convar_t		*public_server;
@@ -592,7 +591,6 @@ byte *pfnSetFatPVS( const float *org );
 byte *pfnSetFatPAS( const float *org );
 int pfnPrecacheModel( const char *s );
 void pfnRemoveEntity( edict_t* e );
-int pfnNumberOfEntities( void );
 void SV_RestartStaticEnts( void );
 char *SV_Localinfo( void );
 

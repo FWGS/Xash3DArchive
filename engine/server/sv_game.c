@@ -1527,7 +1527,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 
 	// portals & monitors
 	// NOTE: this specific break "radiaton tick" in normal half-life. use only as feature
-	if( FBitSet( host.features, ENGINE_TRANSFORM_TRACE_AABB ) && mod && mod->type == mod_brush && !FBitSet( mod->flags, MODEL_HAS_ORIGIN ))
+	if( FBitSet( host.features, ENGINE_PHYSICS_PUSHER_EXT ) && mod && mod->type == mod_brush && !FBitSet( mod->flags, MODEL_HAS_ORIGIN ))
 	{
 		// handle PVS origin for bmodels
 		VectorAverage( pEdict->v.mins, pEdict->v.maxs, view );
@@ -2742,18 +2742,18 @@ void pfnWriteString( const char *src )
 {
 	static char	string[2048];
 	int		len = Q_strlen( src ) + 1;
-	int		rem = (255 - svgame.msg_realsize);
+	int		rem = (254 - svgame.msg_realsize);
 	char		*dst;
 
 	// user-message strings can't exceeds 255 symbols,
 	// but system message allow up to 2048 characters
-	if(( svgame.msg_index > 0 ) && ( len == 1 || len >= rem ))
+	if( svgame.msg_index < 0 ) rem = sizeof( string ) - 1;
+
+	if( len == 1 )
 	{
-		if( len >= rem )
-			MsgDev( D_ERROR, "pfnWriteString: exceeds %i symbols\n", rem );
 		MSG_WriteChar( &sv.multicast, 0 );
 		svgame.msg_realsize += 1; 
-		return;
+		return; // fast exit
 	}
 
 	// prepare string to sending
@@ -2782,6 +2782,14 @@ void pfnWriteString( const char *src )
 		}
 		else if(( *dst++ = *src++ ) == 0 )
 			break;
+
+		if( --rem <= 0 )
+		{
+			MsgDev( D_ERROR, "pfnWriteString: exceeds %i symbols\n", len );
+			*dst = '\0'; // string end (not included in count)
+			len = Q_strlen( string ) + 1;
+			break;
+		}
 	}
 
 	*dst = '\0'; // string end (not included in count)
