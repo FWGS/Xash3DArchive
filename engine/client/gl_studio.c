@@ -1635,9 +1635,9 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		{
 			VectorSet( lightDir, mv->skyvec_x, mv->skyvec_y, mv->skyvec_z );
 
-			light.r = mv->skycolor_r;
-			light.g = mv->skycolor_g;
-			light.b = mv->skycolor_b;
+			light.r = LightToTexGamma( bound( 0, mv->skycolor_r, 255 ));
+			light.g = LightToTexGamma( bound( 0, mv->skycolor_g, 255 ));
+			light.b = LightToTexGamma( bound( 0, mv->skycolor_b, 255 ));
 		}
 	}
 
@@ -2327,6 +2327,7 @@ static void R_StudioDrawPoints( void )
 			pglEnable( GL_ALPHA_TEST );
 			pglAlphaFunc( GL_GREATER, 0.5f );
 			pglDepthMask( GL_TRUE );
+			tr.blend = 1.0f;
 		}
 		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_ModelOpaque( RI.currententity->curstate.rendermode ))
 		{

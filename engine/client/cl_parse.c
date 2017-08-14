@@ -580,10 +580,7 @@ Set new weapon animation
 void CL_WeaponAnim( int iAnim, int body )
 {
 	cl_entity_t	*view = &clgame.viewent;
-#if 0
-	if( CL_LocalWeapons() && cl.local.repredicting )
-		return;
-#endif
+
 	cl.local.weaponstarttime = 0.0f;
 	cl.local.weaponsequence = iAnim;
 	view->curstate.framerate = 1.0f;

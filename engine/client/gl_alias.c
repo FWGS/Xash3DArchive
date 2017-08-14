@@ -881,9 +881,9 @@ void R_AliasDynamicLight( cl_entity_t *ent, alight_t *plight )
 		{
 			VectorSet( lightDir, mv->skyvec_x, mv->skyvec_y, mv->skyvec_z );
 
-			light.r = mv->skycolor_r;
-			light.g = mv->skycolor_g;
-			light.b = mv->skycolor_b;
+			light.r = LightToTexGamma( bound( 0, mv->skycolor_r, 255 ));
+			light.g = LightToTexGamma( bound( 0, mv->skycolor_g, 255 ));
+			light.b = LightToTexGamma( bound( 0, mv->skycolor_b, 255 ));
 		}
 	}
 
@@ -960,9 +960,9 @@ void R_AliasDynamicLight( cl_entity_t *ent, alight_t *plight )
 
 			VectorAdd( lightDir, dist, lightDir );
 
-			finalLight[0] += LightToTexGamma( dl->color.r ) * ( add / 256.0f );
-			finalLight[1] += LightToTexGamma( dl->color.g ) * ( add / 256.0f );
-			finalLight[2] += LightToTexGamma( dl->color.b ) * ( add / 256.0f );
+			finalLight[0] += LightToTexGamma( dl->color.r ) * ( add * 512.0f );
+			finalLight[1] += LightToTexGamma( dl->color.g ) * ( add * 512.0f );
+			finalLight[2] += LightToTexGamma( dl->color.b ) * ( add * 512.0f );
 		}
 	}
 

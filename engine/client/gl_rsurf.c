@@ -2040,7 +2040,10 @@ Mark the leaves and nodes that are in the PVS for the current leaf
 void R_MarkLeaves( void )
 {
 	qboolean	novis = false;
+	qboolean	force = false;
+	mleaf_t	*leaf = NULL;
 	mnode_t	*node;
+	vec3_t	test;
 	int	i;
 
 	if( !RI.drawWorld ) return;
@@ -2053,7 +2056,27 @@ void R_MarkLeaves( void )
 		RI.viewleaf = NULL;
 	}
 
-	if( RI.viewleaf == RI.oldviewleaf && RI.viewleaf != NULL )
+	VectorCopy( RI.pvsorigin, test );
+
+	if( RI.viewleaf != NULL )
+	{
+		// merge two leafs that can be a crossed-line contents
+		if( RI.viewleaf->contents == CONTENTS_EMPTY )
+		{
+			VectorSet( test, RI.pvsorigin[0], RI.pvsorigin[1], RI.pvsorigin[2] - 16.0f );
+			leaf = Mod_PointInLeaf( test, cl.worldmodel->nodes );
+		}
+		else
+		{
+			VectorSet( test, RI.pvsorigin[0], RI.pvsorigin[1], RI.pvsorigin[2] + 16.0f );
+			leaf = Mod_PointInLeaf( test, cl.worldmodel->nodes );
+		}
+
+		if(( leaf->contents != CONTENTS_SOLID ) && ( RI.viewleaf != leaf ))
+			force = true;
+	}
+
+	if( RI.viewleaf == RI.oldviewleaf && RI.viewleaf != NULL && !force )
 		return;
 
 	// development aid to let you run around
@@ -2067,6 +2090,7 @@ void R_MarkLeaves( void )
 		novis = true;
 
 	Mod_FatPVS( RI.pvsorigin, REFPVS_RADIUS, RI.visbytes, world.visbytes, FBitSet( RI.params, RP_OLDVIEWLEAF ), novis );
+	if( force && !novis ) Mod_FatPVS( test, REFPVS_RADIUS, RI.visbytes, world.visbytes, true, novis );
 
 	for( i = 0; i < cl.worldmodel->numleafs; i++ )
 	{

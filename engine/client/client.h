@@ -814,7 +814,6 @@ void CL_SetupPMove( playermove_t *pmove, local_state_t *from, usercmd_t *ucmd, q
 pmtrace_t *CL_VisTraceLine( vec3_t start, vec3_t end, int flags );
 pmtrace_t CL_TraceLine( vec3_t start, vec3_t end, int flags );
 void CL_MoveSpectatorCamera( void );
-qboolean CL_LocalWeapons( void );
 void CL_SetLastUpdate( void );
 void CL_RedoPrediction( void );
 void CL_ClearPhysEnts( void );

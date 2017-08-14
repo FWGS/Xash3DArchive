@@ -474,7 +474,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 		VectorCopy( entry->position, testend );
 		VectorMA( testend, -5.0f, entry->impactPlaneNormal, testend );
 
-		tr = SV_Move( testspot, vec3_origin, vec3_origin, testend, MOVE_NOMONSTERS, NULL );
+		tr = SV_Move( testspot, vec3_origin, vec3_origin, testend, MOVE_NOMONSTERS, NULL, false );
 
 		// NOTE: this code may does wrong result on moving brushes e.g. func_tracktrain
 		if( tr.fraction != 1.0f && !tr.allsolid )

@@ -79,12 +79,10 @@ void BuildGammaTable( float lightgamma, float brightness )
 
 byte LightToTexGamma( byte b )
 {
-	b = bound( 0, b, 255 );
 	return lightgammatable[b];
 }
 
 byte TextureToGamma( byte b )
 {
-	b = bound( 0, b, 255 );
 	return texgammatable[b];
 }

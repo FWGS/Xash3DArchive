@@ -158,6 +158,7 @@ typedef struct
 	int		whiteTexture;
 	int		grayTexture;
 	int		blackTexture;
+	int		particleTexture;
 	int		defaultTexture;   	// use for bad textures
 	int		solidskyTexture;	// quake1 solid-sky layer
 	int		alphaskyTexture;	// quake1 alpha-sky layer
@@ -415,7 +416,6 @@ void GL_ResetFogColor( void );
 void R_SpriteInit( void );
 void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, uint texFlags );
 mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw );
-void R_SetSpriteRenderamt( cl_entity_t *ent, const model_t *pModel );
 void R_SetSpriteRendermode( const model_t *pModel );
 void R_DrawSpriteModel( cl_entity_t *e );
 

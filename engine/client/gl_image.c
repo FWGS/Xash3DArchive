@@ -1858,6 +1858,40 @@ static rgbdata_t *R_InitDefaultTexture( texFlags_t *flags )
 
 /*
 ==================
+R_InitParticleTexture
+==================
+*/
+static rgbdata_t *R_InitParticleTexture( texFlags_t *flags )
+{
+	int	x, y;
+	int	dx2, dy, d;
+
+	// particle texture
+	r_image.width = r_image.height = 16;
+	r_image.buffer = data2D;
+	r_image.flags = (IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA);
+	r_image.type = PF_RGBA_32;
+	r_image.size = r_image.width * r_image.height * 4;
+
+	*flags = TF_UNCOMPRESSED|TF_CLAMP;
+
+	for( x = 0; x < 16; x++ )
+	{
+		dx2 = x - 8;
+		dx2 = dx2 * dx2;
+
+		for( y = 0; y < 16; y++ )
+		{
+			dy = y - 8;
+			d = 255 - 35 * sqrt( dx2 + dy * dy );
+			data2D[( y*16 + x ) * 4 + 3] = bound( 0, d, 255 );
+		}
+	}
+	return &r_image;
+}
+
+/*
+==================
 R_InitSkyTexture
 ==================
 */
@@ -2372,6 +2406,7 @@ static void R_InitBuiltinTextures( void )
 	{ "*white", &tr.whiteTexture, R_InitWhiteTexture },
 	{ "*gray", &tr.grayTexture, R_InitGrayTexture },
 	{ "*black", &tr.blackTexture, R_InitBlackTexture },
+	{ "*particle", &tr.particleTexture, R_InitParticleTexture },
 	{ "*cintexture", &tr.cinTexture, R_InitCinematicTexture },	// force linear filter
 	{ "*dlight", &tr.dlightTexture, R_InitDlightTexture },
 	{ "*dlight2", &tr.dlightTexture2, R_InitDlightTexture2 },

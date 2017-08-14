@@ -1,0 +1,33 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: engine - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\WINDOWS\TEMP\RSP2AD9.bat" with contents
+[
+@echo off
+copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Xash3D\xash.dll"
+copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Paranoia2\xash.dll"
+copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Area51\xash.dll"
+copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Quake\xash.dll"
+]
+Creating command line "C:\WINDOWS\TEMP\RSP2AD9.bat"
+<h3>Output Window</h3>
+Performing Custom Build Step on \Xash3D\src_main\temp\engine\!release\xash.dll
+Скопировано файлов:         1.
+Скопировано файлов:         1.
+Скопировано файлов:         1.
+Отказано в доступе.
+Скопировано файлов:         0.
+Error executing c:\windows\system32\cmd.exe.
+
+
+
+<h3>Results</h3>
+xash.dll - 1 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

@@ -24,7 +24,7 @@ GNU General Public License for more details.
 #include "cl_tent.h"
 #include "studio.h"
 
-#define PART_SIZE	Q_max( 0.5f, (cl_draw_particles->value - 0.5f))	// because original particle of Quake1 was smaller than this
+#define PART_SIZE	Q_max( 0.5f, cl_draw_particles->value )
 
 /*
 ==============================================================
@@ -376,10 +376,9 @@ void CL_DrawParticles( double frametime )
 	if( !cl_active_particles )
 		return;	// nothing to draw?
 
-	if( !TriSpriteTexture( cl_sprite_dot, 0 ))
-		return;
+	GL_SetRenderMode( kRenderTransTexture );
+	GL_Bind( GL_TEXTURE0, tr.particleTexture );
 
-	R_SetSpriteRendermode( cl_sprite_dot );
 	pglBegin( GL_QUADS );
 
 	for( p = cl_active_particles; p; p = p->next )
@@ -408,7 +407,7 @@ void CL_DrawParticles( double frametime )
 			if( alpha > 255 || p->type == pt_static )
 				alpha = 255;
 
-			pglColor4ub( pColor->r, pColor->g, pColor->b, alpha );
+			pglColor4ub( LightToTexGamma( pColor->r ), LightToTexGamma( pColor->g ), LightToTexGamma( pColor->b ), alpha );
 
 			pglTexCoord2f( 0.0f, 1.0f );
 			pglVertex3f( p->org[0] - right[0] + up[0], p->org[1] - right[1] + up[1], p->org[2] - right[2] + up[2] );

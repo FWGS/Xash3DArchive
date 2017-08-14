@@ -2075,7 +2075,7 @@ void Con_DrawConsole( void )
 	switch( cls.state )
 	{
 	case ca_disconnected:
-		if( cls.key_dest != key_menu && host.developer )
+		if( cls.key_dest != key_menu )
 		{
 			Con_DrawSolidConsole( glState.height );
 			Key_SetKeyDest( key_console );

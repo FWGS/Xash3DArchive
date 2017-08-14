@@ -1546,6 +1546,8 @@ void R_Projectile( const vec3_t origin, const vec3_t velocity, int modelIndex, i
 	pTemp = CL_TempEntAllocHigh( origin, Mod_Handle( modelIndex ));
 	if( !pTemp ) return;
 
+	VectorCopy( velocity, pTemp->entity.baseline.origin );
+
 	if( Mod_GetType( modelIndex ) == mod_sprite )
 	{
 		pTemp->flags |= FTENT_SPRANIMATE;
@@ -1563,13 +1565,11 @@ void R_Projectile( const vec3_t origin, const vec3_t velocity, int modelIndex, i
 	else
 	{
 		pTemp->frameMax = 0;
-
-		VectorCopy( velocity, pTemp->entity.baseline.origin );
 		VectorNormalize2( velocity, dir );
 		VectorAngles( dir, pTemp->entity.angles );
 	}
 
-	pTemp->flags = FTENT_COLLIDEALL|FTENT_PERSIST|FTENT_COLLIDEKILL;
+	pTemp->flags |= FTENT_COLLIDEALL|FTENT_PERSIST|FTENT_COLLIDEKILL;
 	pTemp->entity.baseline.renderamt = 255;
 	pTemp->hitcallback = hitcallback;
 	pTemp->die = cl.time + life;
@@ -2313,7 +2313,7 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos2[1] = MSG_ReadCoord( &buf );
 		pos2[2] = MSG_ReadCoord( &buf );
 		modelIndex = MSG_ReadShort( &buf );
-		life = (float)(MSG_ReadByte( &buf ) * 0.1f);
+		life = MSG_ReadByte( &buf );
 		color = MSG_ReadByte( &buf );	// playernum
 		R_Projectile( pos, pos2, modelIndex, life, color, NULL );
 		break;
@@ -2892,7 +2892,6 @@ int CL_DecalIndex( int id )
 {
 	id = bound( 0, id, MAX_DECALS - 1 );
 
-	host.decal_loading = true;
 	if( !cl.decal_index[id] )
 	{
 		qboolean	load_external = false;
@@ -2928,7 +2927,6 @@ int CL_DecalIndex( int id )
 
 		if( !load_external ) cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL, NULL );
 	}
-	host.decal_loading = false;
 
 	return cl.decal_index[id];
 }

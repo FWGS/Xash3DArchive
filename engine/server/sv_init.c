@@ -317,7 +317,7 @@ void SV_ActivateServer( void )
 	}
 	else if( svs.maxclients <= 1 )
 	{
-		sv.frametime = 0.1f;
+		sv.frametime = 0.8f;	// EXPERIMENTAL!!!
 		numFrames = 2;
 	}
 	else
@@ -729,6 +729,8 @@ qboolean SV_NewGame( const char *mapName, qboolean loadGame )
 	sv.loadgame = loadGame;
 	sv.background = false;
 	sv.changelevel = false;
+
+	SCR_BeginLoadingPlaque( false );
 
 	if( !SV_SpawnServer( mapName, NULL ))
 		return false;

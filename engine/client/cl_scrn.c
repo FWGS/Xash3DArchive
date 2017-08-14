@@ -309,12 +309,16 @@ void SCR_BeginLoadingPlaque( qboolean is_background )
 	S_StopAllSounds( true );
 	cl.audio_prepped = false;			// don't play ambients
 
+	if( CL_IsInMenu( ) && !cls.changedemo && !is_background )
+	{
+		UI_SetActiveMenu( false );
+		if( cls.state == ca_disconnected )
+			SCR_UpdateScreen();
+	}
+
 	if( cls.disable_screen ) return;		// already set
 	if( cls.state == ca_disconnected ) return;	// if at console, don't bring up the plaque
 	if( cls.key_dest == key_console ) return;
-
-	if( CL_IsInMenu( ) && !cls.changedemo && !is_background )
-		UI_SetActiveMenu( false );
 
 	cls.draw_changelevel = is_background ? false : true;
 	SCR_UpdateScreen();

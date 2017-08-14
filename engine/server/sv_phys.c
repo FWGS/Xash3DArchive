@@ -567,9 +567,11 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 	vec3_t	dir, end, planes[MAX_CLIP_PLANES];
 	vec3_t	primal_velocity, original_velocity, new_velocity;
 	float	d, time_left, allFraction;
+	qboolean	monsterClip;
 	trace_t	trace;
 
 	blocked = 0;
+	monsterClip = FBitSet( ent->v.flags, FL_MONSTERCLIP ) ? true : false;
 	VectorCopy( ent->v.velocity, original_velocity );
 	VectorCopy( ent->v.velocity, primal_velocity );
 	numplanes = 0;
@@ -583,7 +585,7 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 			break;
 
 		VectorMA( ent->v.origin, time_left, ent->v.velocity, end );
-		trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent );
+		trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent, monsterClip );
 
 		allFraction += trace.fraction;
 
@@ -781,9 +783,11 @@ Does not change the entities velocity at all
 trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int *blocked )
 {
 	trace_t	trace;
+	qboolean	monsterClip;
 	int	type;
 	vec3_t	end;
 
+	monsterClip = FBitSet( ent->v.flags, FL_MONSTERCLIP ) ? true : false;
 	VectorAdd( ent->v.origin, lpush, end );
 
 	if( ent->v.movetype == MOVETYPE_FLYMISSILE )
@@ -792,7 +796,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 		type = MOVE_NOMONSTERS; // only clip against bmodels
 	else type = MOVE_NORMAL;
 
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent );
+	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, end, type, ent, monsterClip );
 
 	if( trace.fraction != 0.0f )
 	{
@@ -1642,7 +1646,7 @@ void SV_Physics_Step( edict_t *ent )
 				point[0] = x ? maxs[0] : mins[0];
 				point[1] = y ? maxs[1] : mins[1];
 
-				trace = SV_Move( point, vec3_origin, vec3_origin, point, MOVE_NORMAL, ent );
+				trace = SV_Move( point, vec3_origin, vec3_origin, point, MOVE_NORMAL, ent, false );
 
 				if( trace.startsolid )
 				{
@@ -1660,7 +1664,8 @@ void SV_Physics_Step( edict_t *ent )
 	{
 		if( svgame.globals->force_retouch != 0 )
 		{
-			trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent );
+			qboolean monsterClip = FBitSet( ent->v.flags, FL_MONSTERCLIP ) ? true : false;
+			trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent, monsterClip );
 
 			// hentacle impact code
 			if(( trace.fraction < 1.0f || trace.startsolid ) && SV_IsValidEdict( trace.ent ))
@@ -2011,7 +2016,7 @@ static server_physics_api_t gPhysicsAPI =
 	pfnMem_Alloc,
 	pfnMem_Free,
 	pfnPointContents,
-	SV_Move,
+	SV_MoveNormal,
 	SV_MoveNoEnts,
 	SV_BoxInPVS,
 	pfnWriteBytes,

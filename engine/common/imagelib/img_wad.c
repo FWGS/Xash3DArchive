@@ -380,7 +380,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		// setup rendermode
 		if( Q_strrchr( name, '{' ))
 		{
-			if( !host.decal_loading )
+			if( pal[765] == 0 && pal[766] == 0 && pal[767] == 255 )
 			{
 				rendermode = LUMP_MASKED;
 			}
@@ -486,7 +486,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		// grab the fog density
 		image.fogParams[3] = pal[4*3+0];
           }
-          else if( hl_texture && host.decal_loading )
+          else if( hl_texture && ( rendermode == LUMP_GRADIENT ))
           {
 		// grab the decal color
 		image.fogParams[0] = pal[255*3+0];

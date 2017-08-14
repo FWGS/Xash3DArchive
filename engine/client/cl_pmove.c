@@ -95,20 +95,6 @@ qboolean CL_IsPredicted( void )
 
 /*
 ===============
-CL_LocalWeapons
-===============
-*/
-qboolean CL_LocalWeapons( void )
-{
-	if( cl.intermission )
-		return false;
-	if( cl_lw && cl_lw->value )
-		return true;
-	return false;
-}
-
-/*
-===============
 CL_SetLastUpdate
 ===============
 */
@@ -1153,14 +1139,14 @@ void CL_RunUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qboole
 
 	memset( &temp, 0, sizeof( temp ));
 
-	while( u->msec > 50 )
+	if( u->msec > 50 )
 	{
 		split = *u;
 		split.msec /= 2;
 		CL_RunUsercmd( from, &temp, &split, runfuncs, time, random_seed );
 		split.impulse = split.weaponselect = 0;
-		from = &temp;
-		u = &split;
+		CL_RunUsercmd( &temp, to, &split, runfuncs, time, random_seed );
+		return;
 	}
 
 	cmd = *u;	// deal with local copy
@@ -1182,8 +1168,7 @@ void CL_RunUsercmd( local_state_t *from, local_state_t *to, usercmd_t *u, qboole
 		else cl.local.lastground = clgame.pmove->onground; // world(0) or in air(-1)
 	}
 
-	if( CL_LocalWeapons( ))
-		clgame.dllFuncs.pfnPostRunCmd( from, to, &cmd, runfuncs, *time, random_seed );
+	clgame.dllFuncs.pfnPostRunCmd( from, to, &cmd, runfuncs, *time, random_seed );
 
 	*time += (double)cmd.msec / 1000.0;
 }
@@ -1261,15 +1246,6 @@ void CL_PredictMovement( qboolean repredicting )
 		if( FBitSet( frame->clientdata.flags, FL_ONGROUND ))
 			cl.local.onground = frame->playerstate[cl.playernum].onground;
 		else cl.local.onground = -1;
-
-		// we need to perform cl_lw prediction while cl_predict is disabled
-		// because cl_lw is enabled by default in Half-Life
-		if( !CL_LocalWeapons( ))
-		{
-			cl.local.viewmodel = frame->clientdata.viewmodel;
-			cl.local.moving = false;
-			return;
-		}
 	}
 
 	from = &cl.predicted_frames[cl.parsecountmod];
@@ -1328,7 +1304,8 @@ void CL_PredictMovement( qboolean repredicting )
 			cl.local.onground = frame->playerstate[cl.playernum].onground;
 		else cl.local.onground = -1;
 
-		cl.local.viewmodel = to->client.viewmodel;
+		if( !repredicting || !cl_lw->value )
+			cl.local.viewmodel = to->client.viewmodel;
 		cl.local.repredicting = false;
 		cl.local.moving = false;
 		return;
@@ -1367,7 +1344,8 @@ void CL_PredictMovement( qboolean repredicting )
 
 	cl.local.waterlevel = to->client.waterlevel;
 	cl.local.usehull = to->playerstate.usehull;
-	if( !repredicting ) cl.local.viewmodel = to->client.viewmodel;
+	if( !repredicting || !cl_lw->value )
+		cl.local.viewmodel = to->client.viewmodel;
 
 	if( FBitSet( to->client.flags, FL_ONGROUND ))
 	{

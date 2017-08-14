@@ -515,25 +515,6 @@ void R_SetSpriteRendermode( const model_t *pModel )
 
 /*
 ================
-R_SetSpriteRenderamt
-
-assume pModel is valid
-================
-*/
-void R_SetSpriteRenderamt( cl_entity_t *ent, const model_t *pModel )
-{
-	msprite_t		*psprite;
-
-	if( !pModel ) return;
-	psprite = (msprite_t *)pModel->cache.data;
-	if( !psprite ) return;
-
-	if( psprite->texFormat == SPR_NORMAL || psprite->texFormat == SPR_ALPHTEST )
-		ent->curstate.renderamt = 255;
-}
-
-/*
-================
 R_GetSpriteFrame
 
 assume pModel is valid

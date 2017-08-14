@@ -1722,6 +1722,7 @@ int pfnDropToFloor( edict_t* e )
 {
 	vec3_t	end;
 	trace_t	trace;
+	qboolean	monsterClip;
 
 	if( !SV_IsValidEdict( e ))
 	{
@@ -1729,10 +1730,11 @@ int pfnDropToFloor( edict_t* e )
 		return 0;
 	}
 
+	monsterClip = FBitSet( e->v.flags, FL_MONSTERCLIP ) ? true : false;
 	VectorCopy( e->v.origin, end );
 	end[2] -= 256;
 
-	trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e );
+	trace = SV_Move( e->v.origin, e->v.mins, e->v.maxs, end, MOVE_NORMAL, e, monsterClip );
 
 	if( trace.allsolid )
 		return -1;
@@ -2083,7 +2085,7 @@ static void pfnTraceLine( const float *v1, const float *v2, int fNoMonsters, edi
 
 	if( !ptr ) return;
 
-	trace = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip );
+	trace = SV_Move( v1, vec3_origin, vec3_origin, v2, fNoMonsters, pentToSkip, false );
 	if( !SV_IsValidEdict( trace.ent )) trace.ent = svgame.edicts;
 	SV_ConvertTrace( ptr, &trace );
 }
@@ -2129,7 +2131,7 @@ static void pfnTraceHull( const float *v1, const float *v2, int fNoMonsters, int
 	mins = sv.worldmodel->hulls[hullNumber].clip_mins;
 	maxs = sv.worldmodel->hulls[hullNumber].clip_maxs;
 
-	trace = SV_Move( v1, mins, maxs, v2, fNoMonsters, pentToSkip );
+	trace = SV_Move( v1, mins, maxs, v2, fNoMonsters, pentToSkip, false );
 	SV_ConvertTrace( ptr, &trace );
 }
 
@@ -2142,6 +2144,7 @@ pfnTraceMonsterHull
 static int pfnTraceMonsterHull( edict_t *pEdict, const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr )
 {
 	trace_t	trace;
+	qboolean	monsterClip;
 
 	if( !SV_IsValidEdict( pEdict ))
 	{
@@ -2149,10 +2152,8 @@ static int pfnTraceMonsterHull( edict_t *pEdict, const float *v1, const float *v
 		return 1;
 	}
 
-	if( pEdict != pentToSkip )
-		MsgDev( D_ERROR, "TRACE_MONSTER_HULL: pEdict != pentToSkip\n" ); 
-
-	trace = SV_Move( v1, pEdict->v.mins, pEdict->v.maxs, v2, fNoMonsters, pentToSkip );
+	monsterClip = FBitSet( pEdict->v.flags, FL_MONSTERCLIP ) ? true : false;
+	trace = SV_Move( v1, pEdict->v.mins, pEdict->v.maxs, v2, fNoMonsters, pentToSkip, monsterClip );
 	if( ptr ) SV_ConvertTrace( ptr, &trace );
 
 	if( trace.allsolid || trace.fraction != 1.0f )
@@ -2267,9 +2268,9 @@ void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 	// try sending a trace straight
 	VectorCopy( svgame.globals->v_forward, dir );
 	VectorMA( start, 2048, dir, end );
-	tr = SV_Move( start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent );
+	tr = SV_Move( start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent, false );
 
-	if( tr.ent && (tr.ent->v.takedamage == DAMAGE_AIM || ent->v.team <= 0 || ent->v.team != tr.ent->v.team ))
+	if( tr.ent && ( tr.ent->v.takedamage == DAMAGE_AIM || ent->v.team <= 0 || ent->v.team != tr.ent->v.team ))
 		return;
 
 	// try all possible entities
@@ -2289,7 +2290,7 @@ void pfnGetAimVector( edict_t* ent, float speed, float *rgflReturn )
 		VectorNormalize( dir );
 		dist = DotProduct( dir, svgame.globals->v_forward );
 		if( dist < bestdist ) continue; // to far to turn
-		tr = SV_Move( start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent );
+		tr = SV_Move( start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent, false );
 		if( tr.ent == check )
 		{	
 			bestdist = dist;

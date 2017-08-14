@@ -35,9 +35,11 @@ qboolean SV_CheckBottom( edict_t *ent, int iMode )
 {
 	vec3_t	mins, maxs, start, stop;
 	float	mid, bottom;
+	qboolean	monsterClip;
 	trace_t	trace;
 	int	x, y;
 
+	monsterClip = FBitSet( ent->v.flags, FL_MONSTERCLIP ) ? true : false;
 	VectorAdd( ent->v.origin, ent->v.mins, mins );
 	VectorAdd( ent->v.origin, ent->v.maxs, maxs );
 
@@ -73,7 +75,7 @@ realcheck:
 
 	if( iMode == WALKMOVE_WORLDONLY )
 		trace = SV_MoveNoEnts( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
-	else trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
+	else trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent, monsterClip );
 
 	if( trace.fraction == 1.0f )
 		return false;
@@ -90,7 +92,7 @@ realcheck:
 
 			if( iMode == WALKMOVE_WORLDONLY )
 				trace = SV_MoveNoEnts( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
-			else trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent );
+			else trace = SV_Move( start, vec3_origin, vec3_origin, stop, MOVE_NORMAL, ent, monsterClip );
 
 			if( trace.fraction != 1.0f && trace.endpos[2] > bottom )
 				bottom = trace.endpos[2];
@@ -252,11 +254,13 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 	int	i;
 	trace_t	trace;
 	vec3_t	oldorg, neworg, end;
+	qboolean	monsterClip;
 	edict_t	*enemy;
 	float	dz;
 
 	VectorCopy( ent->v.origin, oldorg );
 	VectorAdd( ent->v.origin, move, neworg );
+	monsterClip = FBitSet( ent->v.flags, FL_MONSTERCLIP ) ? true : false;
 
 	// well, try it.  Flying and swimming monsters are easiest.
 	if( ent->v.flags & ( FL_SWIM|FL_FLY ))
@@ -275,7 +279,7 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 				else if( dz < 30.0f ) neworg[2] += 8.0f;
 			}
 
-			trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, neworg, MOVE_NORMAL, ent );
+			trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, neworg, MOVE_NORMAL, ent, monsterClip );
 
 			if( trace.fraction == 1.0f )
 			{
@@ -306,14 +310,14 @@ qboolean SV_MoveStep( edict_t *ent, vec3_t move, qboolean relink )
 		VectorCopy( neworg, end );
 		end[2] -= dz * 2.0f;
 
-		trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent );
+		trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent, monsterClip );
 		if( trace.allsolid )
 			return 0;
 
 		if( trace.startsolid != 0 )
 		{
 			neworg[2] -= dz;
-			trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent );
+			trace = SV_Move( neworg, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent, monsterClip );
 
 			if( trace.allsolid != 0 || trace.startsolid != 0 )
 				return 0;

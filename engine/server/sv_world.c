@@ -809,6 +809,7 @@ returns true if the entity is in solid currently
 qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker )
 {
 	trace_t	trace;
+	qboolean	monsterClip = FBitSet( ent->v.flags, FL_MONSTERCLIP ) ? true : false;
 
 	if( ent->v.flags & (FL_CLIENT|FL_FAKECLIENT))
 	{
@@ -818,7 +819,7 @@ qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker )
 		else SV_SetMinMaxSize( ent, svgame.pmove->player_mins[0], svgame.pmove->player_maxs[0], true );
 	}
 
-	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL|FMOVE_SIMPLEBOX, ent );
+	trace = SV_Move( ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL|FMOVE_SIMPLEBOX, ent, monsterClip );
 
 	if( SV_IsValidEdict( blocker ) && SV_IsValidEdict( trace.ent ))
 	{
@@ -1044,10 +1045,10 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		// monsterclip filter (solid custom is a static or dynamic bodies)
 		if( touch->v.solid == SOLID_BSP || touch->v.solid == SOLID_CUSTOM )
 		{
-			if( touch->v.flags & FL_MONSTERCLIP )
+			if( FBitSet( touch->v.flags, FL_MONSTERCLIP ))
 			{
 				// func_monsterclip works only with monsters that have same flag!
-				if( !SV_IsValidEdict( clip->passedict ) || !( clip->passedict->v.flags & FL_MONSTERCLIP ))
+				if( !FBitSet( clip->flags, FMOVE_MONSTERCLIP ))
 					continue;
 			}
 		}
@@ -1061,7 +1062,7 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		if( Mod_GetType( touch->v.modelindex ) == mod_brush && clip->flags & FMOVE_IGNORE_GLASS )
 		{
 			// we ignore brushes with rendermode != kRenderNormal and without FL_WORLDBRUSH set
-			if( touch->v.rendermode != kRenderNormal && !( touch->v.flags & FL_WORLDBRUSH ))
+			if( touch->v.rendermode != kRenderNormal && !FBitSet( touch->v.flags, FL_WORLDBRUSH ))
 				continue;
 		}
 
@@ -1162,7 +1163,7 @@ void SV_ClipToWorldBrush( areanode_t *node, moveclip_t *clip )
 SV_Move
 ==================
 */
-trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e )
+trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e, qboolean monsterclip )
 {
 	moveclip_t	clip;
 	vec3_t		trace_endpos;
@@ -1183,6 +1184,9 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 		clip.passedict = (e) ? e : EDICT_NUM( 0 );
 		clip.mins = mins;
 		clip.maxs = maxs;
+
+		if( monsterclip )
+			SetBits( clip.flags, FMOVE_MONSTERCLIP );
 
 		if( clip.type == MOVE_MISSILE )
 		{
@@ -1205,6 +1209,11 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 	SV_CopyTraceToGlobal( &clip.trace );
 
 	return clip.trace;
+}
+
+trace_t SV_MoveNormal( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, int type, edict_t *e )
+{
+	return SV_Move( start, mins, maxs, end, type, e, false );
 }
 
 /*
@@ -1332,7 +1341,7 @@ trace_t SV_MoveToss( edict_t *tossent, edict_t *ignore )
 		VectorMA( tossent->v.angles, 0.05f, tossent->v.avelocity, tossent->v.angles );
 		VectorScale( tossent->v.velocity, 0.05f, move );
 		VectorAdd( tossent->v.origin, move, end );
-		trace = SV_Move( tossent->v.origin, tossent->v.mins, tossent->v.maxs, end, MOVE_NORMAL, tossent );
+		trace = SV_Move( tossent->v.origin, tossent->v.mins, tossent->v.maxs, end, MOVE_NORMAL, tossent, false );
 		VectorCopy( trace.endpos, tossent->v.origin );
 		if( trace.fraction < 1.0f ) break;
 	}
