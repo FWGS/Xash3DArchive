@@ -1922,6 +1922,8 @@ void R_Shutdown( void )
 /*
 =================
 GL_CheckForErrors
+
+obsolete
 =================
 */
 void GL_CheckForErrors_( const char *filename, const int fileline )

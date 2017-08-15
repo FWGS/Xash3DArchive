@@ -41,7 +41,7 @@ GNU General Public License for more details.
 #define MAX_UDP_PACKET		4010 // 9 bytes SPLITHEADER + 4000 payload?
 
 // Max length of a multicast message
-#define MAX_MULTICAST		1024
+#define MAX_MULTICAST		8192 // some mods spamming for rain effect
 
 // Max length of a reliable message
 #define MAX_MSGLEN			3990 // 10 reserved for fragheader?

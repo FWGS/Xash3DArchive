@@ -396,8 +396,8 @@ void R_DrawSkyBox( void )
 	RI.isSkyVisible = true;
 
 	// don't fogging skybox (this fix old Half-Life bug)
-	if( !RI.fogCustom && !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
-		pglDisable( GL_FOG );
+	if( !RI.fogSkybox ) R_AllowFog( false );
+
 	pglDisable( GL_BLEND );
 	pglDisable( GL_ALPHA_TEST );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
@@ -427,6 +427,8 @@ void R_DrawSkyBox( void )
 		pglEnd();
 	}
 
+	if( !RI.fogSkybox )
+		R_AllowFog( true );
 	R_LoadIdentity();
 }
 
@@ -654,7 +656,7 @@ void R_DrawClouds( void )
 
 	RI.isSkyVisible = true;
 
-	if( RI.fogEnabled && !RI.fogCustom )
+	if( RI.fogEnabled )
 		pglFogf( GL_FOG_DENSITY, RI.fogDensity * 0.25f );
 	pglDepthFunc( GL_GEQUAL );
 	pglDepthMask( 0 );
@@ -669,7 +671,7 @@ void R_DrawClouds( void )
 	pglDepthMask( GL_TRUE );
 	pglDepthFunc( GL_LEQUAL );
 
-	if( RI.fogEnabled && !RI.fogCustom  )
+	if( RI.fogEnabled )
 		pglFogf( GL_FOG_DENSITY, RI.fogDensity );
 }
 

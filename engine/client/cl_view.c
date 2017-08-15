@@ -350,6 +350,7 @@ void V_PostRender( void )
 	static double	oldtime;
 	qboolean		draw_2d = false;
 
+	R_AllowFog( false );
 	R_Set2DMode( true );
 
 	if( cls.state == ca_active && cls.scrshot_action != scrshot_mapshot )
@@ -386,5 +387,6 @@ void V_PostRender( void )
 	}
 
 	SCR_MakeScreenShot();
+	R_AllowFog( true );
 	R_EndFrame();
 }

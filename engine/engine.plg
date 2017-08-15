@@ -6,7 +6,7 @@
 --------------------Configuration: engine - Win32 Release--------------------
 </h3>
 <h3>Command Lines</h3>
-Creating temporary file "C:\WINDOWS\TEMP\RSP2AD9.bat" with contents
+Creating temporary file "C:\WINDOWS\TEMP\RSP33AA.bat" with contents
 [
 @echo off
 copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Xash3D\xash.dll"
@@ -14,7 +14,7 @@ copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Paranoia2\xash.dll"
 copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Area51\xash.dll"
 copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Quake\xash.dll"
 ]
-Creating command line "C:\WINDOWS\TEMP\RSP2AD9.bat"
+Creating command line "C:\WINDOWS\TEMP\RSP33AA.bat"
 <h3>Output Window</h3>
 Performing Custom Build Step on \Xash3D\src_main\temp\engine\!release\xash.dll
 Скопировано файлов:         1.

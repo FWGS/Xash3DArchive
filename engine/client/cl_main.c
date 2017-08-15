@@ -647,10 +647,6 @@ void CL_WritePacket( void )
 
 	// Check to see if we can actually send this command
 
-	// always reply at end of frame during the connection process
-	if( cls.state > ca_disconnected && cls.state < ca_active )
-		send_command = true;
-
 	// In single player, send commands as fast as possible
 	// Otherwise, only send when ready and when not choking bandwidth
 	if( cl.maxclients == 1 || ( NET_IsLocalAddress( cls.netchan.remote_address ) && !host_limitlocal->value ))
@@ -666,7 +662,11 @@ void CL_WritePacket( void )
 	}
 
 	// spectator is not sending cmds to server
-	if( cls.spectator ) return;
+	if( cls.spectator && cls.state == ca_active && cl.delta_sequence == cl.validsequence )
+	{
+		if( !( cls.demorecording && cls.demowaiting ) && cls.nextcmdtime + 1.0f > host.realtime )
+			return;
+	}
 
 	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CL_UPDATE_MASK )
 	{

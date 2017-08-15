@@ -842,24 +842,28 @@ Finangles latency and the like.
 void SV_EstablishTimeBase( sv_client_t *cl, usercmd_t *cmds, int dropped, int numbackup, int numcmds )
 {
 	double	runcmd_time = 0.0;
-	int	cmdnum = dropped;
+	int	i, cmdnum = dropped;
 
 	if( dropped < 24 )
 	{
-		if( dropped > numbackup )
+		while( dropped > numbackup )
 		{
-			cmdnum = dropped - (dropped - numbackup);
-			runcmd_time = (double)cl->lastcmd.msec * (dropped - numbackup) / 1000.0;
+			runcmd_time = (double)cl->lastcmd.msec / 1000.0;
+			dropped--;
 		}
-		
-		for( ; cmdnum > 0; cmdnum-- )
-			runcmd_time += cmds[cmdnum - 1 + numcmds].msec / 1000.0;
+
+		while( dropped > 0 )
+		{
+			cmdnum = dropped + numcmds - 1;
+			runcmd_time += (double)cmds[cmdnum].msec / 1000.0;
+			dropped--;
+		}		
 	}
 
-	for( ; numcmds > 0; numcmds-- )
-		runcmd_time += cmds[numcmds - 1].msec / 1000.0;
+	for( i = numcmds - 1; i >= 0; i-- )
+		runcmd_time += cmds[i].msec / 1000.0;
 
-	cl->timebase = sv.frametime + svgame.globals->time - runcmd_time;
+	cl->timebase = sv.time + sv.frametime - runcmd_time;
 }
 
 /*
@@ -2255,7 +2259,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	numcmds = MSG_ReadByte( msg );
 
 	totalcmds = numcmds + numbackup;
-	net_drop += 1 - numcmds;
+	net_drop -= (numcmds - 1);
 
 	if( totalcmds < 0 || totalcmds >= CMD_MASK )
 	{
@@ -2335,14 +2339,11 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 		SV_RunCmd( cl, &cmds[i], cl->netchan.incoming_sequence - i );
 	}
 
-	if( numcmds )
-		cl->lastcmd = cmds[numcmds - 1];
-	else if( numbackup )
-		cl->lastcmd = cmds[0];
+	cl->lastcmd = cmds[0];
 
 	// adjust latency time by 1/2 last client frame since
 	// the message probably arrived 1/2 through client's frame loop
-	frame->ping_time -= cl->lastcmd.msec * 0.5f / 1000.0f;
+	frame->ping_time -= ( cl->lastcmd.msec * 0.5f ) / 1000.0f;
 	frame->ping_time = Q_max( 0.0f, frame->ping_time );
 
 	if( Mod_GetType( player->v.modelindex ) == mod_studio )

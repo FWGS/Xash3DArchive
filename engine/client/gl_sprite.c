@@ -969,6 +969,9 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( e->curstate.rendermode == kRenderGlow )
 		pglDisable( GL_DEPTH_TEST );
 
+	if( e->curstate.rendermode == kRenderTransAdd )
+		R_AllowFog( false );
+
 	// select properly rendermode
 	switch( e->curstate.rendermode )
 	{
@@ -980,7 +983,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		break;
 	case kRenderGlow:
 	case kRenderTransAdd:
-		pglDisable( GL_FOG );
 		pglEnable( GL_BLEND );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		break;
@@ -1133,11 +1135,11 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
 		pglDisable( GL_ALPHA_TEST );
 
+	if( e->curstate.rendermode == kRenderTransAdd )
+		R_AllowFog( true );
+
 	pglDisable( GL_BLEND );
 	pglDepthFunc( GL_LEQUAL );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	pglColor4ub( 255, 255, 255, 255 );
-
-	if( RI.fogCustom || ( RI.fogEnabled && !glState.drawTrans ))
-		pglEnable( GL_FOG );
 }

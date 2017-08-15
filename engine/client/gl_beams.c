@@ -589,8 +589,6 @@ static void R_DrawSegs( vec3_t source, vec3_t delta, float width, float scale, f
 		vLast += vStep; // Advance texture scroll (v axis only)
 		noiseIndex += noiseStep;
 	}
-
-	pglEnd();
 }
 
 /*

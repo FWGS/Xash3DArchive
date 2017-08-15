@@ -2334,6 +2334,7 @@ static void R_StudioDrawPoints( void )
 			pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 			pglDepthMask( GL_FALSE );
 			pglEnable( GL_BLEND );
+			tr.blend = 1.0f;
 		}
 
 		R_StudioSetupSkin( m_pStudioHeader, pskinref[pmesh->skinref] );

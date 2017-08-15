@@ -1185,7 +1185,7 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 		clip.mins = mins;
 		clip.maxs = maxs;
 
-		if( monsterclip )
+		if( monsterclip && !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 			SetBits( clip.flags, FMOVE_MONSTERCLIP );
 
 		if( clip.type == MOVE_MISSILE )

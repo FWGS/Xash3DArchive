@@ -226,10 +226,10 @@ void GL_SetupFogColorForSurfaces( void )
 	vec3_t	fogColor;
 	float	factor, div;
 
-	if(( !RI.fogEnabled && !RI.fogCustom ) || RI.onlyClientDraw || !RI.currententity )
+	if( !pglIsEnabled( GL_FOG ))
 		return;
 
-	if( RI.currententity->curstate.rendermode == kRenderTransTexture )
+	if( RI.currententity && RI.currententity->curstate.rendermode == kRenderTransTexture )
           {
 		pglFogfv( GL_FOG_COLOR, RI.fogColor );
 		return;
@@ -243,32 +243,10 @@ void GL_SetupFogColorForSurfaces( void )
 	pglFogfv( GL_FOG_COLOR, fogColor );
 }
 
-void GL_SetupFogColorForModels( void )
-{
-	vec3_t	fogColor;
-	float	factor, div;
-
-	if(( !RI.fogEnabled && !RI.fogCustom ) || RI.onlyClientDraw || !RI.currententity )
-		return;
-
-	if( RI.currententity->curstate.rendermode == kRenderTransTexture )
-          {
-		pglFogfv( GL_FOG_COLOR, RI.fogColor );
-		return;
-	}
-
-	div = 2.0f;
-	factor = 1.0f;
-	fogColor[0] = pow( RI.fogColor[0] / div, ( 1.0f / factor ));
-	fogColor[1] = pow( RI.fogColor[1] / div, ( 1.0f / factor ));
-	fogColor[2] = pow( RI.fogColor[2] / div, ( 1.0f / factor ));
-	pglFogfv( GL_FOG_COLOR, fogColor );
-}
-
 void GL_ResetFogColor( void )
 {
 	// restore fog here
-	if(( RI.fogEnabled || RI.fogCustom ) && !RI.onlyClientDraw )
+	if( pglIsEnabled( GL_FOG ))
 		pglFogfv( GL_FOG_COLOR, RI.fogColor );
 }
 
@@ -1015,9 +993,7 @@ void R_RenderFullbrights( void )
 	if( !draw_fullbrights )
 		return;
 
-	if( RI.fogEnabled && !RI.onlyClientDraw )
-		pglDisable( GL_FOG );
-
+	R_AllowFog( false );
 	pglEnable( GL_BLEND );
 	pglDepthMask( GL_FALSE );
 	pglDisable( GL_ALPHA_TEST );
@@ -1046,10 +1022,7 @@ void R_RenderFullbrights( void )
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 
 	draw_fullbrights = false;
-
-	// restore for here
-	if( RI.fogEnabled && !RI.onlyClientDraw )
-		pglEnable( GL_FOG );
+	R_AllowFog( true );
 }
 
 /*
@@ -1166,7 +1139,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 
 	if( r_detailtextures->value )
 	{
-		if( RI.fogEnabled || RI.fogCustom )
+		if( pglIsEnabled( GL_FOG ))
 		{
 			// don't apply detail textures for windows in the fog
 			if( RI.currententity->curstate.rendermode != kRenderTransTexture )
@@ -1548,8 +1521,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	switch( rendermode )
 	{
 	case kRenderTransAdd:
-		if( RI.fogCustom )
-			pglDisable( GL_FOG );
+		R_AllowFog( false );
 	case kRenderTransTexture:
 		need_sort = true;
 	case kRenderGlow:
@@ -1606,11 +1578,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 
 	// restore fog here
 	if( rendermode == kRenderTransAdd )
-	{
-		if( RI.fogCustom )
-			pglEnable( GL_FOG );
-	}
-
+		R_AllowFog( true );
 	pglDisable( GL_BLEND );
 	R_LoadIdentity();	// restore worldmatrix
 }
@@ -2003,9 +1971,6 @@ void R_DrawWorld( void )
 	tr.blend = 1.0f;
 
 	R_ClearSkyBox ();
-
-	// draw the world fog
-	R_DrawFog ();
 
 	if( RI.drawOrtho )
 	{

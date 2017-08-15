@@ -130,7 +130,8 @@ typedef struct
 
 	qboolean		fogCustom;
 	qboolean		fogEnabled;
-	vec3_t		fogColor;
+	qboolean		fogSkybox;
+	vec4_t		fogColor;
 	float		fogDensity;
 	float		fogStart;
 	float		fogEnd;
@@ -362,6 +363,7 @@ void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
 void R_SetupGL( qboolean set_gl_state );
 qboolean R_InitRenderAPI( void );
+void R_AllowFog( int allowed );
 void R_SetupFrustum( void );
 void R_FindViewLeaf( void );
 void R_DrawFog( void );
@@ -403,7 +405,6 @@ void R_DrawBrushModel( cl_entity_t *e );
 void GL_SubdivideSurface( msurface_t *fa );
 void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa );
 void GL_SetupFogColorForSurfaces( void );
-void GL_SetupFogColorForModels( void );
 void R_DrawAlphaTextureChains( void );
 void GL_RebuildLightmaps( void );
 void GL_InitRandomTable( void );

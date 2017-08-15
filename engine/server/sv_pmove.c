@@ -1001,15 +1001,16 @@ SV_RunCmd
 */
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 {
-	usercmd_t lastcmd;
 	edict_t	*clent, *touch;
 	double	frametime;
 	int	i, oldmsec;
 	pmtrace_t	*pmtrace;
 	trace_t	trace;
 	vec3_t	oldvel;
+	usercmd_t cmd;
    
 	clent = cl->edict;
+	cmd = *ucmd;
 
 	if( cl->ignorecmdtime > host.realtime )
 	{
@@ -1020,17 +1021,14 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 	cl->ignorecmdtime = 0.0;
 
 	// chop up very long commands
-	if( ucmd->msec > 50 )
+	if( cmd.msec > 50 )
 	{
-		lastcmd = *ucmd;
 		oldmsec = ucmd->msec;
-		lastcmd.msec = oldmsec / 2;
-
-		SV_RunCmd( cl, &lastcmd, random_seed );
-
-		lastcmd.msec = oldmsec / 2 + (oldmsec & 1);	// give them back thier msec.
-		lastcmd.impulse = 0;
-		SV_RunCmd( cl, &lastcmd, random_seed );
+		cmd.msec = oldmsec / 2;
+		SV_RunCmd( cl, &cmd, random_seed );
+		cmd.msec = oldmsec / 2;
+		cmd.impulse = 0;
+		SV_RunCmd( cl, &cmd, random_seed );
 		return;
 	}
 
@@ -1039,7 +1037,6 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 		SV_SetupMoveInterpolant( cl );
 	}
 
-	lastcmd = *ucmd;
 	svgame.dllFuncs.pfnCmdStart( cl->edict, ucmd, random_seed );
 
 	frametime = ((double)ucmd->msec / 1000.0 );
@@ -1081,35 +1078,32 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 	// copy results back to client
 	SV_FinishPMove( svgame.pmove, cl );
 
-	if( svgame.physFuncs.PM_PlayerTouch != NULL )
+	if( clent->v.solid != SOLID_NOT && !FBitSet( sv.hostflags, SVF_PLAYERSONLY ))
 	{
-		// run custom impact function
-		svgame.physFuncs.PM_PlayerTouch( svgame.pmove, clent );
-	}
-	else
-	{
-		// link into place and touch triggers
-		SV_LinkEdict( clent, true );
-		VectorCopy( clent->v.velocity, oldvel ); // save velocity
-
-		// touch other objects
-		for( i = 0; i < svgame.pmove->numtouch; i++ )
+		if( svgame.physFuncs.PM_PlayerTouch != NULL )
 		{
-			// never touch the objects when "playersonly" is active
-			if( i == MAX_PHYSENTS || ( sv.hostflags & SVF_PLAYERSONLY ))
-				break;
-
-			pmtrace = &svgame.pmove->touchindex[i];
-			touch = EDICT_NUM( svgame.pmove->physents[pmtrace->ent].info );
-			if( touch == clent ) continue;
-
-			VectorCopy( pmtrace->deltavelocity, clent->v.velocity );
-			PM_ConvertTrace( &trace, pmtrace, touch );
-			SV_Impact( touch, clent, &trace );
+			// run custom impact function
+			svgame.physFuncs.PM_PlayerTouch( svgame.pmove, clent );
 		}
+		else
+		{
+			// link into place and touch triggers
+			SV_LinkEdict( clent, true );
+			VectorCopy( clent->v.velocity, oldvel ); // save velocity
 
-		// restore velocity
-		VectorCopy( oldvel, clent->v.velocity );
+			// touch other objects
+			for( i = 0; i < svgame.pmove->numtouch; i++ )
+			{
+				pmtrace = &svgame.pmove->touchindex[i];
+				touch = EDICT_NUM( svgame.pmove->physents[pmtrace->ent].info );
+				VectorCopy( pmtrace->deltavelocity, clent->v.velocity );
+				PM_ConvertTrace( &trace, pmtrace, touch );
+				SV_Impact( touch, clent, &trace );
+			}
+
+			// restore velocity
+			VectorCopy( oldvel, clent->v.velocity );
+		}
 	}
 
 	svgame.pmove->numtouch = 0;

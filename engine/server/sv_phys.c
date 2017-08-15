@@ -1142,6 +1142,7 @@ void SV_Physics_Pusher( edict_t *ent )
 	float	oldtime, oldtime2;
 	float	thinktime, movetime;
 	edict_t	*pBlocker;
+	int	i;
 
 	pBlocker = NULL;
 	oldtime = ent->v.ltime;
@@ -1187,6 +1188,12 @@ void SV_Physics_Pusher( edict_t *ent )
 	// if the pusher has a "blocked" function, call it
 	// otherwise, just stay in place until the obstacle is gone
 	if( pBlocker ) svgame.dllFuncs.pfnBlocked( ent, pBlocker );
+
+	for( i = 0; i < 3; i++ )
+	{
+		if( ent->v.angles[i] < -3600.0f || ent->v.angles[i] > 3600.0f )
+			ent->v.angles[i] = fmod( ent->v.angles[i], 3600.0f );
+	}
 
 	if( thinktime > oldtime && (( ent->v.flags & FL_ALWAYSTHINK ) || thinktime <= ent->v.ltime ))
 	{

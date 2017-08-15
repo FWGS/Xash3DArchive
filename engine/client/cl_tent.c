@@ -2892,6 +2892,7 @@ int CL_DecalIndex( int id )
 {
 	id = bound( 0, id, MAX_DECALS - 1 );
 
+	host.decal_loading = true;
 	if( !cl.decal_index[id] )
 	{
 		qboolean	load_external = false;
@@ -2927,6 +2928,7 @@ int CL_DecalIndex( int id )
 
 		if( !load_external ) cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL, NULL );
 	}
+	host.decal_loading = false;
 
 	return cl.decal_index[id];
 }

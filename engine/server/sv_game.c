@@ -840,6 +840,8 @@ void SV_FreeEdict( edict_t *pEdict )
 	pEdict->v.frame = 0;
 	pEdict->v.scale = 0;
 	pEdict->v.gravity = 0;
+	pEdict->v.skin = 0;
+
 	VectorClear( pEdict->v.angles );
 	VectorClear( pEdict->v.origin );
 	pEdict->free = true;

@@ -43,6 +43,24 @@ static int R_RankForRenderMode( cl_entity_t *ent )
 	return 0;
 }
 
+void R_AllowFog( int allowed )
+{
+	static int	isFogEnabled;
+
+	if( allowed )
+	{
+		if( isFogEnabled )
+			pglEnable( GL_FOG );
+	}
+	else
+	{
+		isFogEnabled = pglIsEnabled( GL_FOG );
+
+		if( isFogEnabled )
+			pglDisable( GL_FOG );
+	}
+}
+
 /*
 ===============
 R_StaticEntity
@@ -688,14 +706,23 @@ static void R_CheckFog( void )
 		RI.fogColor[2] = ((clgame.movevars.fog_settings & 0xFF00) >> 8) / 255.0f;
 		RI.fogDensity = ((clgame.movevars.fog_settings & 0xFF) / 255.0f) * 0.015625f;
 		RI.fogStart = RI.fogEnd = 0.0f;
+		RI.fogColor[3] = 1.0f;
 		RI.fogCustom = false;
 		RI.fogEnabled = true;
+		RI.fogSkybox = true;
 		return;
+	}
+
+	// special hack fog Spirit 1.9 that used direct calls of glFog-functions
+	if(( !RI.fogEnabled && !RI.fogCustom ) && pglIsEnabled( GL_FOG ) && VectorIsNull( RI.fogColor ))
+	{
+		pglGetFloatv( GL_FOG_COLOR, RI.fogColor );
+		RI.fogSkybox = true;
 	}
 
 	RI.fogEnabled = false;
 
-	if( cl.local.waterlevel < 2 || !RI.drawWorld || !RI.viewleaf )
+	if( RI.onlyClientDraw || cl.local.waterlevel < 2 || !RI.drawWorld || !RI.viewleaf )
 		return;
 
 	ent = CL_GetWaterEntity( RI.vieworg );
@@ -706,10 +733,15 @@ static void R_CheckFog( void )
 	if( IsLiquidContents( RI.cached_contents ) && !IsLiquidContents( cnt ))
 	{
 		RI.cached_contents = CONTENTS_EMPTY;
+		pglDisable( GL_FOG );
 		return;
 	}
 
-	if( cl.local.waterlevel < 3 ) return;
+	if( cl.local.waterlevel < 3 )
+	{
+		pglDisable( GL_FOG );
+		return;
+	}
 
 	if( !IsLiquidContents( RI.cached_contents ) && IsLiquidContents( cnt ))
 	{
@@ -746,13 +778,16 @@ static void R_CheckFog( void )
 		RI.fogColor[2] = tex->fogParams[2] / 255.0f;
 		RI.fogDensity = tex->fogParams[3] * 0.000025f;
 		RI.fogStart = RI.fogEnd = 0.0f;
+		RI.fogColor[3] = 1.0f;
 		RI.fogCustom = false;
 		RI.fogEnabled = true;
+		RI.fogSkybox = false;
 	}
 	else
 	{
 		RI.fogCustom = false;
 		RI.fogEnabled = true;
+		RI.fogSkybox = false;
 	}
 }
 
@@ -764,8 +799,7 @@ R_DrawFog
 */
 void R_DrawFog( void )
 {
-	if( !RI.fogEnabled || RI.onlyClientDraw )
-		return;
+	if( !RI.fogEnabled ) return;
 
 	pglEnable( GL_FOG );
 	pglFogi( GL_FOG_MODE, GL_EXP );
@@ -786,9 +820,6 @@ void R_DrawEntitiesOnList( void )
 	glState.drawTrans = false;
 	tr.blend = 1.0f;
 
-	// draw the solid submodels fog
-	R_DrawFog ();
-
 	pglDepthMask( GL_TRUE );
 
 	// first draw solid entities
@@ -796,7 +827,7 @@ void R_DrawEntitiesOnList( void )
 	{
 		RI.currententity = tr.solid_entities[i];
 		RI.currentmodel = RI.currententity->model;
-	
+
 		ASSERT( RI.currententity != NULL );
 		ASSERT( RI.currententity->model != NULL );
 
@@ -811,15 +842,30 @@ void R_DrawEntitiesOnList( void )
 		case mod_studio:
 			R_DrawStudioModel( RI.currententity );
 			break;
-		case mod_sprite:
-			R_DrawSpriteModel( RI.currententity );
-			break;
 		default:
 			break;
 		}
 	}
 
+	// quake-specific feature
 	R_DrawAlphaTextureChains();
+
+	// draw sprites seperately, because of alpha blending
+	for( i = 0; i < tr.num_solid_entities && !RI.onlyClientDraw; i++ )
+	{
+		RI.currententity = tr.solid_entities[i];
+		RI.currentmodel = RI.currententity->model;
+
+		ASSERT( RI.currententity != NULL );
+		ASSERT( RI.currententity->model != NULL );
+
+		switch( RI.currentmodel->type )
+		{
+		case mod_sprite:
+			R_DrawSpriteModel( RI.currententity );
+			break;
+		}
+	}
 
 	if( !RI.onlyClientDraw )
           {
@@ -829,13 +875,6 @@ void R_DrawEntitiesOnList( void )
 	if( RI.drawWorld )
 		clgame.dllFuncs.pfnDrawNormalTriangles();
 
-	// NOTE: some mods with custom renderer may generate glErrors
-	// so we clear it here
-	while( pglGetError() != GL_NO_ERROR );
-
-	// don't fogging translucent surfaces
-	if( !RI.fogCustom )
-		pglDisable( GL_FOG );
 	pglDepthMask( GL_FALSE );
 	glState.drawTrans = true;
 
@@ -877,14 +916,12 @@ void R_DrawEntitiesOnList( void )
 
 	if( !RI.onlyClientDraw )
 	{
+		R_AllowFog( false );
 		CL_DrawBeams( true );
 		CL_DrawParticles( tr.frametime );
 		CL_DrawTracers( tr.frametime );
+		R_AllowFog( true );
 	}
-
-	// NOTE: some mods with custom renderer may generate glErrors
-	// so we clear it here
-	while( pglGetError() != GL_NO_ERROR );
 
 	glState.drawTrans = false;
 	pglDepthMask( GL_TRUE );
@@ -924,6 +961,8 @@ void R_RenderScene( void )
 
 	R_MarkLeaves();
 	R_CheckFog();
+	R_DrawFog ();
+	
 	R_DrawWorld();
 
 	CL_ExtraUpdate ();	// don't let sound get messed up if going slow
