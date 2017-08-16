@@ -607,14 +607,13 @@ void CL_DrawTracers( double frametime )
 			VectorNormalize( tmp );
 
 			// build point along noraml line (normal is -y, x)
-			VectorScale( RI.cull_vup, tmp[0], normal );
-			VectorScale( RI.cull_vright, -tmp[1], tmp2 );
+			VectorScale( RI.cull_vup, tmp[0] * gTracerSize[p->type], normal );
+			VectorScale( RI.cull_vright, -tmp[1] * gTracerSize[p->type], tmp2 );
 			VectorSubtract( normal, tmp2, normal );
 
 			// compute four vertexes
-			VectorScale( normal, gTracerSize[p->type] * (texWidth / 16), tmp );
-			VectorSubtract( start, tmp, verts[0] ); 
-			VectorAdd( start, tmp, verts[1] ); 
+			VectorSubtract( start, normal, verts[0] ); 
+			VectorAdd( start, normal, verts[1] ); 
 			VectorAdd( verts[0], delta, verts[2] ); 
 			VectorAdd( verts[1], delta, verts[3] ); 
 
@@ -1557,10 +1556,11 @@ make implosion tracers
 */
 void R_Implosion( const vec3_t end, float radius, int count, float life )
 {
-	float	dist = ( radius / 100.0f );
-	vec3_t	start, temp, vel;
-	float	factor;
-	int	i;
+	float		dist = ( radius / 100.0f );
+	vec3_t		start, temp, vel;
+	float		factor;
+	particle_t	*p;
+	int		i;
 
 	if( life <= 0.0f ) life = 0.1f; // to avoid divide by zero
 	factor = -1.0 / life;
@@ -1573,8 +1573,10 @@ void R_Implosion( const vec3_t end, float radius, int count, float life )
 		VectorScale( temp, factor, vel );
 		VectorAdd( temp, end, start );
 
-		if( !R_AllocTracer( start, vel, life ))
+		if(( p = R_AllocTracer( start, vel, life )) == NULL )
 			return;
+
+		p->type = pt_explode;
 	}
 }
 
