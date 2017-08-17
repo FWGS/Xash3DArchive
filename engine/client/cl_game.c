@@ -3232,6 +3232,14 @@ void TriFog( float flFogColor[3], float flStart, float flEnd, int bOn )
 	if( RI.fogEnabled ) return;
 	RI.fogCustom = bOn;
 
+	// check for invalid parms
+	if( flEnd <= flStart )
+	{
+		RI.fogCustom = false;
+		pglDisable( GL_FOG );
+		return;
+	}
+
 	if( RI.fogCustom )
 		pglEnable( GL_FOG );
 	else pglDisable( GL_FOG );

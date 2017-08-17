@@ -1592,18 +1592,10 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 	{
 		int sequence = bound( 0, ent->curstate.sequence, m_pStudioHeader->numseq - 1 );
 		mstudioseqdesc_t *pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + sequence;
-		vec3_t size;
 
-		VectorSubtract( pseqdesc->bbmax, pseqdesc->bbmin, size );
-		total = Q_max( size[0], Q_max( size[1], size[2] ));
-
-		// don't use it for too big models (like dinosaurs in ganman)
-		if( total < 128.0f || total > 400.0f || RI.currententity == &clgame.viewent )
-			total = 0.0f; // ignore
-
-		if( !FBitSet( pseqdesc->flags, STUDIO_LOOPING ) && !pseqdesc->activity && m_pStudioHeader->numseq > 1 && total != 0.0f )
+		if( FBitSet( pseqdesc->flags, STUDIO_LIGHT_FROM_ROOT ))
 			Matrix3x4_OriginFromMatrix( g_studio.lighttransform[0], origin );
-		else Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, origin );
+		else VectorCopy( ent->origin, origin );
 	}
 	else VectorCopy( ent->origin, origin );
 

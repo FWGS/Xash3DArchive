@@ -312,7 +312,7 @@ void SV_ActivateServer( void )
 
 	if( sv.loadgame || svgame.globals->changelevel )
 	{
-		sv.frametime = 0.001;
+		sv.frametime = 0.001;	// change to 0.1 if you want to repair broken trains in SoHL 1.0
 		numFrames = 1;
 	}
 	else if( svs.maxclients <= 1 )

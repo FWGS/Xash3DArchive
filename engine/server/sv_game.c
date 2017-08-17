@@ -137,7 +137,7 @@ void SV_SetModel( edict_t *ent, const char *name )
 {
 	vec3_t	mins = { 0.0f, 0.0f, 0.0f };
 	vec3_t	maxs = { 0.0f, 0.0f, 0.0f };
-	int	i, mod_type;
+	int	i;
 
 	i = SV_ModelIndex( name );
 	if( i == 0 ) return;
@@ -145,19 +145,16 @@ void SV_SetModel( edict_t *ent, const char *name )
 	ent->v.model = MAKE_STRING( sv.model_precache[i] );
 	ent->v.modelindex = i;
 
-	mod_type = Mod_GetType( ent->v.modelindex );
-
-	// studio models set to zero sizes as default
-	switch( mod_type )
+	// studio models will be ignored here
+	switch( Mod_GetType( ent->v.modelindex ))
 	{
 	case mod_alias:
 	case mod_brush:
 	case mod_sprite:
 		Mod_GetBounds( ent->v.modelindex, mins, maxs );
+		SV_SetMinMaxSize( ent, mins, maxs, true );
 		break;
 	}
-
-	SV_SetMinMaxSize( ent, mins, maxs, true );
 }
 
 float SV_AngleMod( float ideal, float current, float speed )

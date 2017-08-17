@@ -969,7 +969,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( e->curstate.rendermode == kRenderGlow )
 		pglDisable( GL_DEPTH_TEST );
 
-	if( e->curstate.rendermode == kRenderTransAdd )
+	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderTransAdd )
 		R_AllowFog( false );
 
 	// select properly rendermode
@@ -1135,7 +1135,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
 		pglDisable( GL_ALPHA_TEST );
 
-	if( e->curstate.rendermode == kRenderTransAdd )
+	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderTransAdd )
 		R_AllowFog( true );
 
 	pglDisable( GL_BLEND );

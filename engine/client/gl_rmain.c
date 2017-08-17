@@ -107,7 +107,7 @@ static qboolean R_OpaqueEntity( cl_entity_t *ent )
 	if( ent->curstate.rendermode == kRenderNormal )
 		return true;
 
-	if( ent->model->type == mod_sprite )
+	if( ent->model->type != mod_brush )
 		return false;
 
 	if( ent->curstate.rendermode == kRenderTransAlpha )
@@ -132,12 +132,6 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 	ent1 = (cl_entity_t *)*a;
 	ent2 = (cl_entity_t *)*b;
 
-	// now sort by rendermode
-	if( R_RankForRenderMode( ent1 ) > R_RankForRenderMode( ent2 ))
-		return 1;
-	if( R_RankForRenderMode( ent1 ) < R_RankForRenderMode( ent2 ))
-		return -1;
-
 	// then by distance
 	if( ent1->model->type == mod_brush )
 	{
@@ -161,6 +155,12 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 		return -1;
 	if( len1 < len2 )
 		return 1;
+
+	// now sort by rendermode
+	if( R_RankForRenderMode( ent1 ) > R_RankForRenderMode( ent2 ))
+		return 1;
+	if( R_RankForRenderMode( ent1 ) < R_RankForRenderMode( ent2 ))
+		return -1;
 
 	return 0;
 }
