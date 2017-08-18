@@ -230,6 +230,8 @@ void SV_Map_f( void )
 	sv.loadgame = false; // set right state
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
 
+	Cvar_DirectSet( sv_hostmap, mapname );
+
 	SV_DeactivateServer();
 	SV_SpawnServer( mapname, NULL );
 	SV_LevelInit( mapname, NULL, NULL, false );
@@ -366,12 +368,16 @@ SV_Load_f
 */
 void SV_Load_f( void )
 {
+	string	path;
+
 	if( Cmd_Argc() != 2 )
 	{
 		Msg( "Usage: load <savename>\n" );
 		return;
 	}
-	SV_LoadGame( Cmd_Argv( 1 ));
+
+	Q_snprintf( path, sizeof( path ), "save/%s.sav", Cmd_Argv( 1 ));
+	SV_LoadGame( path );
 }
 
 /*
@@ -585,20 +591,15 @@ continue from latest savedgame
 */
 void SV_Reload_f( void )
 {
-	const char	*save;
-	string		loadname;
-	
+	const char	*savefile;
+
 	if( sv.state != ss_active || sv.background )
 		return;
 
-	save = SV_GetLatestSave();
+	savefile = SV_GetLatestSave();
 
-	if( save )
-	{
-		FS_FileBase( save, loadname );
-		Cbuf_AddText( va( "load %s\n", loadname ));
-	}
-	else Cbuf_AddText( "newgame\n" ); // begin new game
+	if( savefile ) SV_LoadGame( savefile );
+	else SV_NewGame( sv_hostmap->string, false );
 }
 
 /*

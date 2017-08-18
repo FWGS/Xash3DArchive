@@ -38,7 +38,6 @@ static byte	visdata[MAX_MAP_LEAFS/8];	// intermediate buffer
 int		bmodel_version;		// global stuff to detect bsp version
 char		modelname[64];		// short model name (without path and ext)
 convar_t		*mod_studiocache;
-convar_t		*mod_allow_materials;
 convar_t		*r_wadtextures;
 static wadlist_t	wadlist;
 		
@@ -613,10 +612,6 @@ void Mod_Init( void )
 	com_studiocache = Mem_AllocPool( "Studio Cache" );
 	mod_studiocache = Cvar_Get( "r_studiocache", "1", FCVAR_ARCHIVE, "enables studio cache for speedup tracing hitboxes" );
 	r_wadtextures = Cvar_Get( "r_wadtextures", "1", FCVAR_ARCHIVE, "completely ignore textures in the wad-files if disabled" );
- 
-	if( host.type == HOST_NORMAL )
-		mod_allow_materials = Cvar_Get( "host_allow_materials", "0", FCVAR_LATCH|FCVAR_ARCHIVE, "allow HD textures" );
-	else mod_allow_materials = NULL; // no reason to load HD-textures for dedicated server
 
 	Cmd_AddCommand( "mapstats", Mod_PrintBSPFileSizes_f, "show stats for currently loaded map" );
 	Cmd_AddCommand( "modellist", Mod_Modellist_f, "display loaded models list" );
@@ -765,9 +760,6 @@ static void Mod_LoadTextures( const dlump_t *l )
 
 	for( i = 0; i < loadmodel->numtextures; i++ )
 	{
-		qboolean	load_external = false;
-		qboolean	load_external_luma = false;
-
 		if( in->dataofs[i] == -1 )
 		{
 			// create default texture (some mods requires this)
@@ -802,60 +794,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 		// check for multi-layered sky texture
 		if( world.loading && !Q_strncmp( mt->name, "sky", 3 ) && mt->width == 256 && mt->height == 128 )
 		{	
-			if( Mod_AllowMaterials( ))
-			{
-				// build standard path: "materials/mapname/texname_solid.tga"
-				Q_snprintf( texname, sizeof( texname ), "materials/%s/%s_solid.tga", modelname, mt->name );
-
-				if( !FS_FileExists( texname, false ))
-				{
-					// build common path: "materials/mapname/texname_solid.tga"
-					Q_snprintf( texname, sizeof( texname ), "materials/common/%s_solid.tga", mt->name );
-
-					if( FS_FileExists( texname, false ))
-						load_external = true;
-				}
-				else load_external = true;
-
-				if( load_external )
-				{
-					tr.solidskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP, NULL );
-					load_external = false;
-				}
-
-				if( tr.solidskyTexture )
-				{
-					// build standard path: "materials/mapname/texname_alpha.tga"
-					Q_snprintf( texname, sizeof( texname ), "materials/%s/%s_alpha.tga", modelname, mt->name );
-
-					if( !FS_FileExists( texname, false ))
-					{
-						// build common path: "materials/mapname/texname_alpha.tga"
-						Q_snprintf( texname, sizeof( texname ), "materials/common/%s_alpha.tga", mt->name );
-
-						if( FS_FileExists( texname, false ))
-							load_external = true;
-					}
-					else load_external = true;
-
-					if( load_external )
-					{
-						tr.alphaskyTexture = GL_LoadTexture( texname, NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP, NULL );
-						load_external = false;
-					}
-				}
-
-				if( !tr.solidskyTexture || !tr.alphaskyTexture )
-				{
-					// couldn't find one of layer
-					GL_FreeTexture( tr.solidskyTexture );
-					GL_FreeTexture( tr.alphaskyTexture );
-					tr.solidskyTexture = tr.alphaskyTexture = 0;
-				}
-			}
-
-			if( !tr.solidskyTexture && !tr.alphaskyTexture )
-				R_InitSky( mt, tx ); // fallback to standard sky
+			R_InitSky( mt, tx ); // loadq quake sky
 
 			if( tr.solidskyTexture && tr.alphaskyTexture )
 				world.sky_sphere = true;
@@ -863,37 +802,11 @@ static void Mod_LoadTextures( const dlump_t *l )
 		else 
 		{
 			// texture loading order:
-			// 1. HQ from disk
-			// 2. from wad
-			// 3. internal from map
-
-			if( Mod_AllowMaterials( ))
-			{
-				if( mt->name[0] == '*' ) mt->name[0] = '!'; // replace unexpected symbol
-
-				// build standard path: "materials/mapname/texname.tga"
-				Q_snprintf( texname, sizeof( texname ), "materials/%s/%s.tga", modelname, mt->name );
-
-				if( !FS_FileExists( texname, false ))
-				{
-					// build common path: "materials/mapname/texname.tga"
-					Q_snprintf( texname, sizeof( texname ), "materials/common/%s.tga", mt->name );
-
-					if( FS_FileExists( texname, false ))
-						load_external = true;
-				}
-				else load_external = true;
-			}
-
-			if( load_external )
-			{
-				tx->gl_texturenum = GL_LoadTexture( texname, NULL, 0, 0, filter );
-				if( !tx->gl_texturenum ) load_external = false; // for some reasons we can't load HQ texture
-				else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
-			}
+			// 1. from wad
+			// 2. internal from map
 
 			// trying wad texture (force while r_wadtextures is 1)
-			if( !load_external && ( r_wadtextures->value || mt->offsets[0] <= 0 ))
+			if( r_wadtextures->value || mt->offsets[0] <= 0 )
 			{
 				Q_snprintf( texname, sizeof( texname ), "%s.mip", mt->name );
 
@@ -910,7 +823,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 				}
 			}
 
-			// HQ failed, wad failed, so use internal texture (if present)
+			// wad failed, so use internal texture (if present)
 			if( mt->offsets[0] > 0 && !tx->gl_texturenum )
 			{
 				// NOTE: imagelib detect miptex version by size
@@ -927,30 +840,12 @@ static void Mod_LoadTextures( const dlump_t *l )
 		// set the emo-texture for missed
 		if( !tx->gl_texturenum ) tx->gl_texturenum = tr.defaultTexture;
 
-		if( load_external )
-		{
-			// build standard luma path: "materials/mapname/texname_luma.tga"
-			Q_snprintf( texname, sizeof( texname ), "materials/%s/%s_luma.tga", modelname, mt->name );
-
-			if( !FS_FileExists( texname, false ))
-			{
-				// build common path: "materials/mapname/texname_luma.tga"
-				Q_snprintf( texname, sizeof( texname ), "materials/common/%s_luma.tga", mt->name );
-
-				if( FS_FileExists( texname, false ))
-					load_external_luma = true;
-			}
-			else load_external_luma = true;
-		}
-
 		// check for luma texture
-		if( R_GetTexture( tx->gl_texturenum )->flags & TF_HAS_LUMA || load_external_luma )
+		if( FBitSet( R_GetTexture( tx->gl_texturenum )->flags, TF_HAS_LUMA ))
 		{
-			if( !load_external_luma )
-				Q_snprintf( texname, sizeof( texname ), "#%s_luma.mip", mt->name );
-			else MsgDev( D_NOTE, "loading luma HQ: %s\n", texname );
+			Q_snprintf( texname, sizeof( texname ), "#%s_luma.mip", mt->name );
 
-			if( mt->offsets[0] > 0 && !load_external_luma )
+			if( mt->offsets[0] > 0 )
 			{
 				// NOTE: imagelib detect miptex version by size
 				// 770 additional bytes is indicated custom palette
@@ -968,30 +863,22 @@ static void Mod_LoadTextures( const dlump_t *l )
 				// NOTE: we can't loading it from wad as normal because _luma texture doesn't exist
 				// and not be loaded. But original texture is already loaded and can't be modified
 				// So load original texture manually and convert it to luma
-				if( !load_external_luma )
-				{
-					// check wads in reverse order
-					for( j = wadlist.count - 1; j >= 0; j-- )
-					{
-						char	*texpath = va( "%s.wad/%s.mip", wadlist.wadnames[j], tx->name );
 
-						if( FS_FileExists( texpath, false ))
-						{
-							src = FS_LoadFile( texpath, &srcSize, false );
-							break;
-						}
+				// check wads in reverse order
+				for( j = wadlist.count - 1; j >= 0; j-- )
+				{
+					char	*texpath = va( "%s.wad/%s.mip", wadlist.wadnames[j], tx->name );
+
+					if( FS_FileExists( texpath, false ))
+					{
+						src = FS_LoadFile( texpath, &srcSize, false );
+						break;
 					}
 				}
 
 				// okay, loading it from wad or hi-res version
 				tx->fb_texturenum = GL_LoadTexture( texname, src, srcSize, TF_MAKELUMA, NULL );
 				if( src ) Mem_Free( src );
-
-				if( !tx->fb_texturenum && load_external_luma )
-				{
-					// in case we failed to loading 32-bit luma texture
-					MsgDev( D_ERROR, "Couldn't load %s\n", texname );
-				} 
 			}
 		}
 	}

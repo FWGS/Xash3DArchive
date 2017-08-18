@@ -428,7 +428,7 @@ extern	convar_t		*sv_lighting_modulate;
 extern	convar_t		*hostname;
 extern	convar_t		*sv_maxclients;
 extern	convar_t		*sv_novis;
-extern	convar_t		*sv_allow_studio_attachment_angles;
+extern	convar_t		*sv_hostmap;
 extern	convar_t		*sv_sendvelocity;
 extern	convar_t		*sv_validate_changelevel;
 extern	convar_t		*public_server;

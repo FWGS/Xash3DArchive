@@ -141,6 +141,11 @@ inline void PIC_DrawTrans( int x, int y, int width, int height )
 	g_engfuncs.pfnPIC_DrawTrans( x, y, width, height, NULL );
 }
 
+inline void PIC_DrawTrans( int x, int y, int width, int height, const wrect_t *prc )
+{
+	g_engfuncs.pfnPIC_DrawTrans( x, y, width, height, prc );
+}
+
 inline void PIC_DrawHoles( int x, int y, const wrect_t *prc )
 {
 	g_engfuncs.pfnPIC_DrawHoles( x, y, -1, -1, prc );

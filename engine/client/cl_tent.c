@@ -2893,41 +2893,8 @@ int CL_DecalIndex( int id )
 	id = bound( 0, id, MAX_DECALS - 1 );
 
 	host.decal_loading = true;
-	if( !cl.decal_index[id] )
-	{
-		qboolean	load_external = false;
-
-		if( Mod_AllowMaterials( ))
-		{
-			char	decalname[64];
-			int	gl_texturenum = 0;
-
-			Q_snprintf( decalname, sizeof( decalname ), "materials/decals/%s.tga", host.draw_decals[id] );
-
-			if( FS_FileExists( decalname, false ))
-				gl_texturenum = GL_LoadTexture( decalname, NULL, 0, TF_DECAL, NULL );
-
-			if( gl_texturenum )
-			{
-				byte	*fin;
-				mip_t	*mip;
-
-				// find real decal dimensions and store it into texture srcWidth\srcHeight
-				if(( fin = FS_LoadFile( va( "decals.wad/%s", host.draw_decals[id] ), NULL, false )) != NULL )
-				{
-					mip = (mip_t *)fin;
-					R_GetTexture( gl_texturenum )->srcWidth = mip->width;
-					R_GetTexture( gl_texturenum )->srcHeight = mip->height;
-					Mem_Free( fin ); // release low-quality decal
-				}
-
-				cl.decal_index[id] = gl_texturenum;
-				load_external = true; // sucessfully loaded
-			}
-		}
-
-		if( !load_external ) cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL, NULL );
-	}
+	if( cl.decal_index[id] == 0 )
+		cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL, NULL );
 	host.decal_loading = false;
 
 	return cl.decal_index[id];

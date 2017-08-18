@@ -312,9 +312,6 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 	float	*v;
 	int	i;
 
-	if( r_fastsky->value )
-		return;
-
 	if( clgame.movevars.skyangle )
 	{
 		// HACK: force full sky to draw when it has angle
@@ -751,7 +748,7 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 	r_temp.size = r_temp.width * r_temp.height * 4;
 
 	// load it in
-	tr.solidskyTexture = GL_LoadTextureInternal( "solid_sky", &r_temp, TF_UNCOMPRESSED|TF_NOMIPMAP, false );
+	tr.solidskyTexture = GL_LoadTextureInternal( "solid_sky", &r_temp, TF_NOMIPMAP, false );
 
 	for( i = 0; i < r_sky->width >> 1; i++ )
 	{
@@ -773,7 +770,7 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 	r_temp.flags = IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA;
 
 	// load it in
-	tr.alphaskyTexture = GL_LoadTextureInternal( "alpha_sky", &r_temp, TF_UNCOMPRESSED|TF_NOMIPMAP, false );
+	tr.alphaskyTexture = GL_LoadTextureInternal( "alpha_sky", &r_temp, TF_NOMIPMAP, false );
 
 	// clean up
 	FS_FreeImage( r_sky );

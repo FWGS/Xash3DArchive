@@ -2249,7 +2249,8 @@ CL_FindModelIndex
 */
 int CL_FindModelIndex( const char *m )
 {
-	int	i;
+	static float	lasttimewarn;
+	int		i;
 
 	if( !m || !m[0] )
 		return 0;
@@ -2260,10 +2261,11 @@ int CL_FindModelIndex( const char *m )
 			return i;
 	}
 
-	if( cls.state == ca_active )
+	if( lasttimewarn < host.realtime )
 	{
-		// tell user about problem (but don't spam console about playermodel)
+		// tell user about problem (but don't spam console)
 		MsgDev( D_ERROR, "CL_ModelIndex: %s not precached\n", m );
+		lasttimewarn = host.realtime + 1.0f;
 	}
 
 	return 0;

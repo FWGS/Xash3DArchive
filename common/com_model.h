@@ -468,12 +468,18 @@ typedef struct
 	int		flags;
 	float		size;
 
+	int		reserved[8];		// VBO offsets
+
 	int		numposes;
 	int		poseverts;
 	trivertex_t	*posedata;	// numposes * poseverts trivert_t
 	int		*commands;	// gl command list with embedded s/t
 	unsigned short	gl_texturenum[MAX_SKINS][4];
 	unsigned short	fb_texturenum[MAX_SKINS][4];
+	unsigned short	gl_reserved0[MAX_SKINS][4];	// detail tex
+	unsigned short	gl_reserved1[MAX_SKINS][4];	// normalmap
+	unsigned short	gl_reserved2[MAX_SKINS][4];	// glossmap
+
 	maliasframedesc_t	frames[1];	// variable sized
 } aliashdr_t;
 

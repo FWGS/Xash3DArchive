@@ -47,14 +47,14 @@ extern byte	*r_temppool;
 #define RP_FLIPFRONTFACE	BIT( 4 )	// e.g. for mirrors drawing
 
 #define RP_NONVIEWERREF	(RP_MIRRORVIEW|RP_ENVVIEW)
-#define R_ModelOpaque( rm )	( rm == kRenderNormal || rm == kRenderTransAlpha )
+#define R_ModelOpaque( rm )	( rm == kRenderNormal )
 #define RP_LOCALCLIENT( e )	((e) != NULL && (e)->index == ( cl.playernum + 1 ) && e->player )
 #define RP_NORMALPASS()	((RI.params & RP_NONVIEWERREF) == 0 )
 
-#define TF_SKY		(TF_SKYSIDE|TF_UNCOMPRESSED|TF_NOMIPMAP)
-#define TF_FONT		(TF_UNCOMPRESSED|TF_NOMIPMAP|TF_CLAMP)
-#define TF_IMAGE		(TF_UNCOMPRESSED|TF_NOMIPMAP|TF_CLAMP)
-#define TF_DECAL		(TF_CLAMP|TF_UNCOMPRESSED)
+#define TF_SKY		(TF_SKYSIDE|TF_NOMIPMAP)
+#define TF_FONT		(TF_NOMIPMAP|TF_CLAMP)
+#define TF_IMAGE		(TF_NOMIPMAP|TF_CLAMP)
+#define TF_DECAL		(TF_CLAMP)
 
 typedef struct gltexture_s
 {
@@ -652,7 +652,6 @@ extern convar_t	*gl_extensions;
 extern convar_t	*gl_check_errors;
 extern convar_t	*gl_texture_lodbias;
 extern convar_t	*gl_texture_nearest;
-extern convar_t	*gl_compress_textures;
 extern convar_t	*gl_keeptjunctions;
 extern convar_t	*gl_detailscale;
 extern convar_t	*gl_wireframe;
@@ -682,7 +681,6 @@ extern convar_t	*r_lockfrustum;
 extern convar_t	*r_traceglow;
 extern convar_t	*r_dynamic;
 extern convar_t	*r_lightmap;
-extern convar_t	*r_fastsky;
 
 extern convar_t	*vid_displayfrequency;
 extern convar_t	*vid_fullscreen;

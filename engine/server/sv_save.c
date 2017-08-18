@@ -2103,7 +2103,7 @@ int SV_SaveReadHeader( file_t *pFile, GAME_HEADER *pHeader )
 	return 1;
 }
 
-qboolean SV_LoadGame( const char *pName )
+qboolean SV_LoadGame( const char *pPath )
 {
 	file_t		*pFile;
 	qboolean		validload = false;
@@ -2113,13 +2113,13 @@ qboolean SV_LoadGame( const char *pName )
 	if( host.type == HOST_DEDICATED )
 		return false;
 
-	if( !pName || !pName[0] )
+	if( !pPath || !pPath[0] )
 		return false;
 
-	Q_snprintf( name, sizeof( name ), "save/%s.sav", pName );
+	FS_FileBase( pPath, name );
 
 	// silently ignore if missed
-	if( !FS_FileExists( name, true ))
+	if( !FS_FileExists( pPath, true ))
 		return false;
 
 	if( sv.background || svs.maxclients > 1 )
@@ -2129,13 +2129,13 @@ qboolean SV_LoadGame( const char *pName )
 	SCR_BeginLoadingPlaque ( false );
 	S_StopBackgroundTrack();
 
-	MsgDev( D_INFO, "Loading game from %s...\n", name );
+	MsgDev( D_INFO, "Loading game from %s...\n", pPath );
 	SV_ClearSaveDir();
 
 	if( !svs.initialized ) SV_InitGame ();
 	if( !svs.initialized ) return false;
 
-	pFile = FS_Open( name, "rb", true );
+	pFile = FS_Open( pPath, "rb", true );
 
 	if( pFile )
 	{
@@ -2150,7 +2150,7 @@ qboolean SV_LoadGame( const char *pName )
 
 	if( !validload )
 	{
-		Q_snprintf( host.finalmsg, MAX_STRING, "Couldn't load %s.sav\n", pName );
+		Q_snprintf( host.finalmsg, MAX_STRING, "Couldn't load %s.sav\n", name );
 		SV_Shutdown( false );
 		return false;
 	}

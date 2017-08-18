@@ -280,7 +280,7 @@ convar_t *Cvar_Get( const char *name, const char *value, int flags, const char *
 		if( FBitSet( var->flags, FCVAR_ALLOCATED ) && Q_strcmp( var_desc, var->desc ))
 		{
 			if( !FBitSet( flags, FCVAR_GLCONFIG ))
-				MsgDev( D_INFO, "%s change description from %s to %s\n", var->name, var->desc, var_desc );
+				MsgDev( D_REPORT, "%s change description from %s to %s\n", var->name, var->desc, var_desc );
 			// update description if needs
 			freestring( var->desc );
 			var->desc = copystring( var_desc );
@@ -676,7 +676,7 @@ void Cvar_Toggle_f( void )
 ============
 Cvar_SetR_f
 
-As Cvar_Set, but also flags it as renderinfo
+keep for legacy configs
 ============
 */
 void Cvar_SetR_f( void )

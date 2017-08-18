@@ -512,7 +512,13 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAtt, float *origin, float *
 	if( !mod_studiohdr ) return;
 
 	if( mod_studiohdr->numattachments <= 0 )
+	{
+		if( origin ) VectorCopy( e->v.origin, origin );
+
+		if( FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP ) && angles )
+			VectorCopy( e->v.angles, angles );
 		return;
+	}
 
 	iAtt = bound( 0, iAtt, mod_studiohdr->numattachments - 1 );
 
@@ -530,7 +536,7 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAtt, float *origin, float *
 	if( origin != NULL )
 		Matrix3x4_VectorTransform( studio_bones[pAtt->bone], pAtt->org, origin );
 
-	if( sv_allow_studio_attachment_angles->value && origin != NULL && angles != NULL )
+	if( FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP ) && origin != NULL && angles != NULL )
 	{
 		vec3_t	forward, bonepos;
 

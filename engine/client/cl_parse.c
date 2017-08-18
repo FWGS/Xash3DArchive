@@ -976,6 +976,7 @@ void CL_ParseBaseline( sizebuf_t *msg )
 {
 	int		newnum;
 	float		timebase;
+	position_history_t	*ph;
 	cl_entity_t	*ent;
 
 	Delta_InitClient ();	// finalize client delta's
@@ -994,6 +995,12 @@ void CL_ParseBaseline( sizebuf_t *msg )
 	else timebase = 1.0f; // sv.state == ss_loading
 
 	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, CL_IsPlayerIndex( newnum ), timebase );
+
+	// EXPERIMENTAL
+	ph = &ent->ph[ent->current_position];
+	VectorCopy( ent->baseline.origin, ph->origin );
+	VectorCopy( ent->baseline.angles, ph->angles );
+	ph->animtime = ent->baseline.animtime;	// !!!
 }
 
 /*

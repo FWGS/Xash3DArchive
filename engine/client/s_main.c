@@ -42,7 +42,6 @@ convar_t		*s_volume;
 convar_t		*s_musicvolume;
 convar_t		*s_show;
 convar_t		*s_mixahead;
-convar_t		*s_primary;
 convar_t		*s_lerping;
 convar_t		*s_ambient_level;
 convar_t		*s_ambient_fade;
@@ -366,7 +365,7 @@ we're trying to allocate a channel for a stream sound that is
 already playing.
 =====================
 */
-channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx )
+channel_t *SND_PickStaticChannel( const vec3_t pos, sfx_t *sfx )
 {
 	channel_t	*ch = NULL;
 	int	i;
@@ -377,7 +376,7 @@ channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx )
 		if( channels[i].sfx == NULL )
 			break;
 
-		if( channels[i].entnum == entnum && channels[i].sfx == sfx )
+		if( VectorCompare( pos, channels[i].origin ) && channels[i].sfx == sfx )
 			break;
 	}
 
@@ -902,7 +901,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	if( !pos ) pos = RI.vieworg;
 
 	// pick a channel to play on
-	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( ent, sfx );
+	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( pos, sfx );
 	else target_chan = SND_PickDynamicChannel( ent, chan, sfx, &bIgnore );
 
 	if( !target_chan )
@@ -1029,7 +1028,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 
 	// pick a channel to play on
 	if( chan == CHAN_STATIC )
-		target_chan = SND_PickStaticChannel( ent, sfx );
+		target_chan = SND_PickStaticChannel( pos, sfx );
 	else target_chan = SND_PickDynamicChannel( ent, chan, sfx, &bIgnore );
 
 	if( !target_chan )
@@ -1165,11 +1164,10 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 	}
 
 	// pick a channel to play on from the static area
-	ch = SND_PickStaticChannel( ent, sfx );
+	ch = SND_PickStaticChannel( pos, sfx );
 	if( !ch ) return;
 
-	if( pos ) VectorCopy( pos, ch->origin );
-	else VectorClear( ch->origin );
+	VectorCopy( pos, ch->origin );
 	ch->entnum = ent;
 
 	CL_GetEntitySpatialization( ch );

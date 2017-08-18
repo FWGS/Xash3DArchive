@@ -87,7 +87,7 @@ typedef enum
 	TF_NOFLIP_TGA	= (1<<2),		// Steam background completely ignore tga attribute 0x20
 	TF_EXPAND_SOURCE	= (1<<3),		// Don't keep source as 8-bit expand to RGBA
 // reserved
-	TF_UNCOMPRESSED	= (1<<5),		// don't compress texture in video memory
+// reserved
 	TF_CUBEMAP	= (1<<6),		// it's cubemap texture
 	TF_DEPTHMAP	= (1<<7),		// custom texture filter used
 // reserved

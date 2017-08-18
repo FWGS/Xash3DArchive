@@ -56,9 +56,8 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 {
 	dspriteframe_t	*pinframe;
 	mspriteframe_t	*pspriteframe;
-	char		texname[128], sprname[128];
-	qboolean		load_external = false;
 	int		gl_texturenum = 0;
+	char		texname[128];
 	int		bytes = 1;
 
 	pinframe = (dspriteframe_t *)pin;
@@ -73,27 +72,8 @@ static dframetype_t *R_SpriteLoadFrame( model_t *mod, void *pin, mspriteframe_t 
 	}
 	else
 	{
-		// partially HD-textures support
-		if( Mod_AllowMaterials() && !Q_strcmp( group_suffix, "one" ))
-		{
-			Q_strncpy( sprname, mod->name, sizeof( sprname ));
-			FS_StripExtension( sprname );
-
-			Q_snprintf( texname, sizeof( texname ), "materials/%s/frame%i%i.tga", sprname, num / 10, num % 10 );
-
-			if( FS_FileExists( texname, false ))
-				gl_texturenum = GL_LoadTexture( texname, NULL, 0, r_texFlags, NULL );
-
-			if( gl_texturenum )
-				load_external = true; // sucessfully loaded
-		}
-
-		if( !load_external )
-		{
-			Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
-			gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height * bytes, r_texFlags, NULL );
-		}
-		else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
+		Q_snprintf( texname, sizeof( texname ), "#%s_%s_%i%i.spr", mod->name, group_suffix, num / 10, num % 10 );
+		gl_texturenum = GL_LoadTexture( texname, pin, pinframe->width * pinframe->height * bytes, r_texFlags, NULL );
 	}	
 
 	// setup frame description

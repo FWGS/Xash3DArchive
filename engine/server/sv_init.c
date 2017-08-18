@@ -317,7 +317,9 @@ void SV_ActivateServer( void )
 	}
 	else if( svs.maxclients <= 1 )
 	{
-		sv.frametime = 0.8f;	// EXPERIMENTAL!!!
+		if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+			sv.frametime = 0.1f;
+		else sv.frametime = 0.8f;	// EXPERIMENTAL!!!
 		numFrames = 2;
 	}
 	else

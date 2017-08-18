@@ -419,7 +419,7 @@ int CL_InterpolateModel( cl_entity_t *e )
 	if( cls.timedemo || !e->model )
 		return 1;
 
-	if( cl.maxclients <= 1 )
+	if( cl.maxclients <= 1 && !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
 		return 1;
 
 	if( e->model->type == mod_brush && !cl_bmodelinterp->value )
@@ -1074,11 +1074,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 		if( ent->curstate.rendermode == kRenderNormal && ent->curstate.renderfx == kRenderFxNone )
 			ent->curstate.renderamt = 255.0f;
 
-		if( !ent->model )
-		{
-//			MsgDev( D_ERROR, "CL_LinkPacketEntity: entity %i without model\n", state->number );
-			continue;
-		}
+		if( !ent->model ) continue;
 
 		if( ent->curstate.rendermode == kRenderNormal )
 		{

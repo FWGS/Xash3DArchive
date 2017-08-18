@@ -312,8 +312,6 @@ static void R_Clear( int bitMask )
 
 	bits = GL_DEPTH_BUFFER_BIT;
 
-	if( RI.drawWorld && r_fastsky->value )
-		bits |= GL_COLOR_BUFFER_BIT;
 	if( glState.stencilEnabled )
 		bits |= GL_STENCIL_BUFFER_BIT;
 

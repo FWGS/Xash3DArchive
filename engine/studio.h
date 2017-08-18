@@ -45,21 +45,26 @@ Studio models are position independent, so the cache manager can move them.
 #define MAXSTUDIOEVENTS		1024	// events per model
 #define MAXSTUDIOPIVOTS		256	// pivot points
 #define MAXSTUDIOBLENDS		16	// max anim blends
+#define MAXSTUDIOBONEWEIGHTS		4	// absolute hardware limit!
 #define MAXSTUDIOCONTROLLERS		8	// max controllers per model
 #define MAXSTUDIOATTACHMENTS		4	// max attachments per model
 
 // client-side model flags
-#define STUDIO_ROCKET		0x0001	// leave a trail
-#define STUDIO_GRENADE		0x0002	// leave a trail
-#define STUDIO_GIB			0x0004	// leave a trail
-#define STUDIO_ROTATE		0x0008	// rotate (bonus items)
-#define STUDIO_TRACER		0x0010	// green split trail
-#define STUDIO_ZOMGIB		0x0020	// small blood trail
-#define STUDIO_TRACER2		0x0040	// orange split trail + rotate
-#define STUDIO_TRACER3		0x0080	// purple trail
-#define STUDIO_AMBIENT_LIGHT		0x0100	// force to use ambient shading 
-#define STUDIO_TRACE_HITBOX		0x0200	// always use hitbox trace instead of bbox
-#define STUDIO_FORCE_SKYLIGHT		0x0400	// always grab lightvalues from the sky settings (even if sky is invisible)
+#define STUDIO_ROCKET		(1<<0)	// leave a trail
+#define STUDIO_GRENADE		(1<<1)	// leave a trail
+#define STUDIO_GIB			(1<<2)	// leave a trail
+#define STUDIO_ROTATE		(1<<3)	// rotate (bonus items)
+#define STUDIO_TRACER		(1<<4)	// green split trail
+#define STUDIO_ZOMGIB		(1<<5)	// small blood trail
+#define STUDIO_TRACER2		(1<<6)	// orange split trail + rotate
+#define STUDIO_TRACER3		(1<<7)	// purple trail
+#define STUDIO_AMBIENT_LIGHT		(1<<8)	// force to use ambient shading 
+#define STUDIO_TRACE_HITBOX		(1<<9)	// always use hitbox trace instead of bbox
+#define STUDIO_FORCE_SKYLIGHT		(1<<10)	// always grab lightvalues from the sky settings (even if sky is invisible)
+
+#define STUDIO_STATIC_PROP		(1<<29)	// hint for engine
+#define STUDIO_HAS_BONEINFO		(1<<30)	// extra info about bones (pose matrix, procedural index etc)
+#define STUDIO_HAS_BONEWEIGHTS	(1<<31)	// yes we got support of bone weighting
 
 // lighting & rendermode options
 #define STUDIO_NF_FLATSHADE		0x0001
@@ -152,14 +157,36 @@ typedef struct
 	int		numattachments;	// queryable attachable points
 	int		attachmentindex;
 
-	int		soundtable;
+	int		studiohdr2index;
 	int		soundindex;
+
 	int		soundgroups;
 	int		soundgroupindex;
 
 	int		numtransitions;	// animation node to animation node transition graph
 	int		transitionindex;
 } studiohdr_t;
+
+// extra header to hold more offsets
+typedef struct
+{
+	int		numposeparameters;
+	int		poseparamindex;
+
+	int		numikautoplaylocks;
+	int		ikautoplaylockindex;
+
+	int		numikchains;
+	int		ikchainindex;
+
+	int		keyvalueindex;
+	int		keyvaluesize;
+
+	int		numhitboxsets;
+	int		hitboxsetindex;
+
+	int		unused[6];	// for future expansions
+} studiohdr2_t;
 
 // header for demand loaded sequence group data
 typedef struct 
@@ -181,6 +208,17 @@ typedef struct
 	float		value[6];		// default DoF values
 	float		scale[6];		// scale for delta DoF values
 } mstudiobone_t;
+
+// extra info for bones
+typedef struct
+{
+	float		poseToBone[3][4];	// boneweighting reqiures
+	vec4_t		qAlignment;
+	int		proctype;
+	int		procindex;	// procedural rule
+	vec4_t		quat;		// aligned bone rotation
+	int		reserved[10];	// for future expansions
+} mstudioboneinfo_t;
 
 // bone controllers
 typedef struct 
@@ -321,6 +359,12 @@ typedef struct mstudiotex_s
 	int		index;
 } mstudiotexture_t;
 
+typedef struct
+{
+	byte		weight[4];
+	char		bone[4]; 
+} mstudioboneweight_t;
+
 // skin families
 // short	index[skinfamilies][skinref]
 
@@ -342,8 +386,8 @@ typedef struct
 	int		norminfoindex;	// normal bone info
 	int		normindex;	// normal vec3_t
 
-	int		numgroups;	// deformation groups
-	int		groupindex;
+	int		blendvertinfoindex;	// boneweighted vertex info
+	int		blendnorminfoindex;	// boneweighted normal info
 } mstudiomodel_t;
 
 // vec3_t	boundingbox[model][bone][2];		// complex intersection info

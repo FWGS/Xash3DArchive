@@ -115,9 +115,9 @@ convar_t	*sv_maxclients;
 convar_t	*sv_check_errors;
 convar_t	*public_server;			// should heartbeats be sent
 convar_t	*sv_reconnect_limit;		// minimum seconds between connect messages
-convar_t	*sv_allow_studio_attachment_angles;
 convar_t	*sv_validate_changelevel;
 convar_t	*sv_sendvelocity;
+convar_t	*sv_hostmap;
 
 void Master_Shutdown( void );
 
@@ -744,7 +744,6 @@ void SV_Init( void )
 	timeout = Cvar_Get( "timeout", "125", FCVAR_SERVER, "connection timeout" );
 	zombietime = Cvar_Get( "zombietime", "2", FCVAR_SERVER, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", FCVAR_SERVER, "allow players to pause or not" );
-	sv_allow_studio_attachment_angles = Cvar_Get( "sv_allow_studio_attachment_angles", "0", FCVAR_ARCHIVE, "enable calc angles for attachment points (on studio models)" );
 	sv_validate_changelevel = Cvar_Get( "sv_validate_changelevel", "1", FCVAR_ARCHIVE, "test change level for level-designer errors" );
 	Cvar_RegisterVariable (&sv_clienttrace);
 	Cvar_RegisterVariable (&sv_bounce);
@@ -778,6 +777,7 @@ void SV_Init( void )
 	sv_sendvelocity = Cvar_Get( "sv_sendvelocity", "1", FCVAR_ARCHIVE, "force to send velocity for event_t structure across network" );
 	Cvar_RegisterVariable (&sv_consistency);
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
+	sv_hostmap = Cvar_Get( "hostmap", GI->startmap, 0, "keep name of last entered map" );
 
 	Cvar_RegisterVariable (&violence_ablood);
 	Cvar_RegisterVariable (&violence_hblood);

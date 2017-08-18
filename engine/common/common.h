@@ -57,8 +57,6 @@ extern "C" {
 #define IsColorString( p )	( p && *( p ) == '^' && *(( p ) + 1) && *(( p ) + 1) >= '0' && *(( p ) + 1 ) <= '9' )
 #define ColorIndex( c )	((( c ) - '0' ) & 7 )
 
-#define Mod_AllowMaterials()	( mod_allow_materials != NULL && (int)mod_allow_materials->value && !( host.features & ENGINE_DISABLE_HDTEXTURES ))
-
 typedef unsigned long	dword;
 typedef unsigned int	uint;
 typedef char		string[MAX_STRING];
@@ -95,7 +93,7 @@ typedef enum
 #include "crtlib.h"
 #include "cvar.h"
 
-#define XASH_VERSION	0.98f		// engine current version
+#define XASH_VERSION	0.99f		// engine current version
 
 // PERFORMANCE INFO
 #define MIN_FPS         	20.0		// host minimum fps value for maxfps.
@@ -125,7 +123,7 @@ typedef enum
 #define CS_TIME		16	// size of time string
 
 #define MAX_DECALS		512	// touching TE_DECAL messages, etc
-#define MAX_STATIC_ENTITIES	3072	// static entities that moved on the client when level is spawn
+#define MAX_STATIC_ENTITIES	3096	// static entities that moved on the client when level is spawn
 
 // filesystem flags
 #define FS_STATIC_PATH	1	// FS_ClearSearchPath will be ignore this path
@@ -149,7 +147,6 @@ extern convar_t	*scr_download;
 extern convar_t	*cmd_scripting;
 extern convar_t	*cl_allow_levelshots;
 extern convar_t	*vid_displayfrequency;
-extern convar_t	*mod_allow_materials;
 extern convar_t	*host_limitlocal;
 extern convar_t	*host_framerate;
 extern convar_t	*host_maxfps;

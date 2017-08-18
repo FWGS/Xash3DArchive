@@ -242,7 +242,7 @@ void SNDDMA_Submit( void );
 //====================================================================
 
 #define MAX_DYNAMIC_CHANNELS	(60 + NUM_AMBIENTS)
-#define MAX_CHANNELS	(224 + MAX_DYNAMIC_CHANNELS)	// Scourge Of Armagon has too many static sounds on hip2m4.bsp
+#define MAX_CHANNELS	(256 + MAX_DYNAMIC_CHANNELS)	// Scourge Of Armagon has too many static sounds on hip2m4.bsp
 #define MAX_RAW_CHANNELS	16
 #define MAX_RAW_SAMPLES	8192
 
@@ -307,7 +307,7 @@ void S_SoundList_f( void );
 void S_SoundInfo_f( void );
 
 channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean *ignore );
-channel_t *SND_PickStaticChannel( int entnum, sfx_t *sfx );
+channel_t *SND_PickStaticChannel( const vec3_t pos, sfx_t *sfx );
 int S_GetCurrentStaticSounds( soundlist_t *pout, int size );
 int S_GetCurrentDynamicSounds( soundlist_t *pout, int size );
 sfx_t *S_GetSfxByHandle( sound_t handle );

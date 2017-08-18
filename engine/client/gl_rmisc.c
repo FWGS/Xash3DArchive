@@ -469,7 +469,7 @@ void R_NewMap( void )
 
 		tx = cl.worldmodel->textures[i];
 
-		if( !Q_strncmp( tx->name, "sky", 3 ) && tx->width == 256 && tx->height == 128)
+		if( !Q_strncmp( tx->name, "sky", 3 ) && tx->width == 256 && tx->height == 128 )
 			tr.skytexturenum = i;
 
  		tx->texturechain = NULL;

@@ -62,6 +62,9 @@ typedef struct
 	matrix3x4		bonestransform[MAXSTUDIOBONES];
 	matrix3x4		lighttransform[MAXSTUDIOBONES];
 
+	// boneweighting stuff
+	matrix3x4		worldtransform[MAXSTUDIOBONES];
+
 	// cached bones
 	matrix3x4		cached_bonestransform[MAXSTUDIOBONES];
 	matrix3x4		cached_lighttransform[MAXSTUDIOBONES];
@@ -130,13 +133,15 @@ R_StudioInit
 */
 void R_StudioInit( void )
 {
-	r_studio_lambert = Cvar_Get( "r_studio_lambert", "2", FCVAR_ARCHIVE, "bonelighting lambert value" );
+	r_studio_lambert = Cvar_Get( "r_studio_lambert", "1.5", FCVAR_ARCHIVE, "half-lambert value" );
 	cl_himodels = Cvar_Get( "cl_himodels", "1", FCVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
 	r_studio_sort_textures = Cvar_Get( "r_studio_sort_textures", "0", FCVAR_ARCHIVE, "change draw order for additive meshes" );
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
 
 	Matrix3x4_LoadIdentity( g_studio.rotationmatrix );
 	Cvar_RegisterVariable( &r_glowshellfreq );
+
+// g-cont. especially not registered
 //	Cvar_RegisterVariable( &r_shadows );
 
 	g_studio.interpolate = true;
@@ -285,6 +290,99 @@ static qboolean R_StudioComputeBBox( vec3_t bbox[8] )
 	if( !bbox && R_CullModel( e, studio_mins, studio_maxs ))
 		return false; // model culled
 	return true; // visible
+}
+
+void R_StudioComputeSkinMatrix( mstudioboneweight_t *boneweights, matrix3x4 result )
+{
+	float	flWeight0, flWeight1, flWeight2, flWeight3;
+	int	i, numbones = 0;
+	float	flTotal;
+
+	for( i = 0; i < MAXSTUDIOBONEWEIGHTS; i++ )
+	{
+		if( boneweights->bone[i] != -1 )
+			numbones++;
+	}
+
+	if( numbones == 4 )
+	{
+		vec4_t *boneMat0 = (vec4_t *)g_studio.worldtransform[boneweights->bone[0]];
+		vec4_t *boneMat1 = (vec4_t *)g_studio.worldtransform[boneweights->bone[1]];
+		vec4_t *boneMat2 = (vec4_t *)g_studio.worldtransform[boneweights->bone[2]];
+		vec4_t *boneMat3 = (vec4_t *)g_studio.worldtransform[boneweights->bone[3]];
+		flWeight0 = boneweights->weight[0] / 255.0f;
+		flWeight1 = boneweights->weight[1] / 255.0f;
+		flWeight2 = boneweights->weight[2] / 255.0f;
+		flWeight3 = boneweights->weight[3] / 255.0f;
+		flTotal = flWeight0 + flWeight1 + flWeight2 + flWeight3;
+
+		if( flTotal < 1.0f ) flWeight0 += 1.0f - flTotal;	// compensate rounding error
+
+		result[0][0] = boneMat0[0][0] * flWeight0 + boneMat1[0][0] * flWeight1 + boneMat2[0][0] * flWeight2 + boneMat3[0][0] * flWeight3;
+		result[0][1] = boneMat0[0][1] * flWeight0 + boneMat1[0][1] * flWeight1 + boneMat2[0][1] * flWeight2 + boneMat3[0][1] * flWeight3;
+		result[0][2] = boneMat0[0][2] * flWeight0 + boneMat1[0][2] * flWeight1 + boneMat2[0][2] * flWeight2 + boneMat3[0][2] * flWeight3;
+		result[0][3] = boneMat0[0][3] * flWeight0 + boneMat1[0][3] * flWeight1 + boneMat2[0][3] * flWeight2 + boneMat3[0][3] * flWeight3;
+		result[1][0] = boneMat0[1][0] * flWeight0 + boneMat1[1][0] * flWeight1 + boneMat2[1][0] * flWeight2 + boneMat3[1][0] * flWeight3;
+		result[1][1] = boneMat0[1][1] * flWeight0 + boneMat1[1][1] * flWeight1 + boneMat2[1][1] * flWeight2 + boneMat3[1][1] * flWeight3;
+		result[1][2] = boneMat0[1][2] * flWeight0 + boneMat1[1][2] * flWeight1 + boneMat2[1][2] * flWeight2 + boneMat3[1][2] * flWeight3;
+		result[1][3] = boneMat0[1][3] * flWeight0 + boneMat1[1][3] * flWeight1 + boneMat2[1][3] * flWeight2 + boneMat3[1][3] * flWeight3;
+		result[2][0] = boneMat0[2][0] * flWeight0 + boneMat1[2][0] * flWeight1 + boneMat2[2][0] * flWeight2 + boneMat3[2][0] * flWeight3;
+		result[2][1] = boneMat0[2][1] * flWeight0 + boneMat1[2][1] * flWeight1 + boneMat2[2][1] * flWeight2 + boneMat3[2][1] * flWeight3;
+		result[2][2] = boneMat0[2][2] * flWeight0 + boneMat1[2][2] * flWeight1 + boneMat2[2][2] * flWeight2 + boneMat3[2][2] * flWeight3;
+		result[2][3] = boneMat0[2][3] * flWeight0 + boneMat1[2][3] * flWeight1 + boneMat2[2][3] * flWeight2 + boneMat3[2][3] * flWeight3;
+	}
+	else if( numbones == 3 )
+	{
+		vec4_t *boneMat0 = (vec4_t *)g_studio.worldtransform[boneweights->bone[0]];
+		vec4_t *boneMat1 = (vec4_t *)g_studio.worldtransform[boneweights->bone[1]];
+		vec4_t *boneMat2 = (vec4_t *)g_studio.worldtransform[boneweights->bone[2]];
+		flWeight0 = boneweights->weight[0] / 255.0f;
+		flWeight1 = boneweights->weight[1] / 255.0f;
+		flWeight2 = boneweights->weight[2] / 255.0f;
+		flTotal = flWeight0 + flWeight1 + flWeight2;
+
+		if( flTotal < 1.0f ) flWeight0 += 1.0f - flTotal;	// compensate rounding error
+
+		result[0][0] = boneMat0[0][0] * flWeight0 + boneMat1[0][0] * flWeight1 + boneMat2[0][0] * flWeight2;
+		result[0][1] = boneMat0[0][1] * flWeight0 + boneMat1[0][1] * flWeight1 + boneMat2[0][1] * flWeight2;
+		result[0][2] = boneMat0[0][2] * flWeight0 + boneMat1[0][2] * flWeight1 + boneMat2[0][2] * flWeight2;
+		result[0][3] = boneMat0[0][3] * flWeight0 + boneMat1[0][3] * flWeight1 + boneMat2[0][3] * flWeight2;
+		result[1][0] = boneMat0[1][0] * flWeight0 + boneMat1[1][0] * flWeight1 + boneMat2[1][0] * flWeight2;
+		result[1][1] = boneMat0[1][1] * flWeight0 + boneMat1[1][1] * flWeight1 + boneMat2[1][1] * flWeight2;
+		result[1][2] = boneMat0[1][2] * flWeight0 + boneMat1[1][2] * flWeight1 + boneMat2[1][2] * flWeight2;
+		result[1][3] = boneMat0[1][3] * flWeight0 + boneMat1[1][3] * flWeight1 + boneMat2[1][3] * flWeight2;
+		result[2][0] = boneMat0[2][0] * flWeight0 + boneMat1[2][0] * flWeight1 + boneMat2[2][0] * flWeight2;
+		result[2][1] = boneMat0[2][1] * flWeight0 + boneMat1[2][1] * flWeight1 + boneMat2[2][1] * flWeight2;
+		result[2][2] = boneMat0[2][2] * flWeight0 + boneMat1[2][2] * flWeight1 + boneMat2[2][2] * flWeight2;
+		result[2][3] = boneMat0[2][3] * flWeight0 + boneMat1[2][3] * flWeight1 + boneMat2[2][3] * flWeight2;
+	}
+	else if( numbones == 2 )
+	{
+		vec4_t *boneMat0 = (vec4_t *)g_studio.worldtransform[boneweights->bone[0]];
+		vec4_t *boneMat1 = (vec4_t *)g_studio.worldtransform[boneweights->bone[1]];
+		flWeight0 = boneweights->weight[0] / 255.0f;
+		flWeight1 = boneweights->weight[1] / 255.0f;
+		flTotal = flWeight0 + flWeight1;
+
+		if( flTotal < 1.0f ) flWeight0 += 1.0f - flTotal;	// compensate rounding error
+
+		result[0][0] = boneMat0[0][0] * flWeight0 + boneMat1[0][0] * flWeight1;
+		result[0][1] = boneMat0[0][1] * flWeight0 + boneMat1[0][1] * flWeight1;
+		result[0][2] = boneMat0[0][2] * flWeight0 + boneMat1[0][2] * flWeight1;
+		result[0][3] = boneMat0[0][3] * flWeight0 + boneMat1[0][3] * flWeight1;
+		result[1][0] = boneMat0[1][0] * flWeight0 + boneMat1[1][0] * flWeight1;
+		result[1][1] = boneMat0[1][1] * flWeight0 + boneMat1[1][1] * flWeight1;
+		result[1][2] = boneMat0[1][2] * flWeight0 + boneMat1[1][2] * flWeight1;
+		result[1][3] = boneMat0[1][3] * flWeight0 + boneMat1[1][3] * flWeight1;
+		result[2][0] = boneMat0[2][0] * flWeight0 + boneMat1[2][0] * flWeight1;
+		result[2][1] = boneMat0[2][1] * flWeight0 + boneMat1[2][1] * flWeight1;
+		result[2][2] = boneMat0[2][2] * flWeight0 + boneMat1[2][2] * flWeight1;
+		result[2][3] = boneMat0[2][3] * flWeight0 + boneMat1[2][3] * flWeight1;
+	}
+	else
+	{
+		Matrix3x4_Copy( result, g_studio.worldtransform[boneweights->bone[0]] );
+	}
 }
 
 /*
@@ -1494,14 +1592,6 @@ static void R_StudioCalcAttachments( void )
 	vec3_t		localOrg, localAng;
 	int		i;
 
-	if( m_pStudioHeader->numattachments <= 0 )
-	{
-		// clear attachments
-		for( i = 0; i < MAXSTUDIOATTACHMENTS; i++ )
-			VectorClear( RI.currententity->attachment[i] );
-		return;
-	}
-
 	// calculate attachment points
 	pAtt = (mstudioattachment_t *)((byte *)m_pStudioHeader + m_pStudioHeader->attachmentindex);
 
@@ -2257,16 +2347,38 @@ static void R_StudioDrawPoints( void )
 	pskinref = (short *)((byte *)m_pStudioHeader + m_pStudioHeader->skinindex);
 	if( m_skinnum != 0 ) pskinref += (m_skinnum * m_pStudioHeader->numskinref);
 
-	for( i = 0; i < m_pSubModel->numverts; i++ )
+	if( FBitSet( m_pStudioHeader->flags, STUDIO_HAS_BONEWEIGHTS ) && m_pSubModel->blendvertinfoindex != 0 && m_pSubModel->blendnorminfoindex != 0 )
 	{
-		Matrix3x4_VectorTransform( g_studio.bonestransform[pvertbone[i]], pstudioverts[i], g_studio.verts[i] );
-		R_LightStrength( pvertbone[i], pstudioverts[i], g_studio.lightpos[i] );
+		mstudioboneweight_t	*pvertweight = (mstudioboneweight_t *)((byte *)m_pStudioHeader + m_pSubModel->blendvertinfoindex);
+		mstudioboneweight_t	*pnormweight = (mstudioboneweight_t *)((byte *)m_pStudioHeader + m_pSubModel->blendnorminfoindex);
+		matrix3x4		skinMat;
+
+		for( i = 0; i < m_pSubModel->numverts; i++ )
+		{
+			R_StudioComputeSkinMatrix( &pvertweight[i], skinMat );
+			Matrix3x4_VectorTransform( skinMat, pstudioverts[i], g_studio.verts[i] );
+			R_LightStrength( pvertbone[i], pstudioverts[i], g_studio.lightpos[i] );
+		}
+
+		for( i = 0; i < m_pSubModel->numnorms; i++ )
+		{
+			R_StudioComputeSkinMatrix( &pnormweight[i], skinMat );
+			Matrix3x4_VectorRotate( skinMat, pstudionorms[i], g_studio.norms[i] );
+		}
+	}
+	else
+	{
+		for( i = 0; i < m_pSubModel->numverts; i++ )
+		{
+			Matrix3x4_VectorTransform( g_studio.bonestransform[pvertbone[i]], pstudioverts[i], g_studio.verts[i] );
+			R_LightStrength( pvertbone[i], pstudioverts[i], g_studio.lightpos[i] );
+		}
 	}
 
 	// generate shared normals for properly scaling glowing shell
 	if( RI.currententity->curstate.renderfx == kRenderFxGlowShell )
 	{
-		float factor = (1.0f / 255.0f);
+		float factor = (1.0f / 128.0f);
 		shellscale = Q_max( factor, RI.currententity->curstate.renderamt * factor );
 		R_StudioBuildNormalTable();
 		R_StudioGenerateNormals();
@@ -2283,12 +2395,27 @@ static void R_StudioDrawPoints( void )
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED|STUDIO_NF_ADDITIVE ))
 			need_sort = true;
 
-		for( i = 0; i < pmesh[j].numnorms; i++, k++, pstudionorms++, pnormbone++ )
+		if( RI.currententity->curstate.rendermode == kRenderTransAdd )
 		{
-			R_StudioLighting( &lv_tmp, *pnormbone, g_nFaceFlags, (float *)pstudionorms );
-			if( FBitSet( g_nFaceFlags, STUDIO_NF_CHROME ))
-				R_StudioSetupChrome( g_studio.chrome[k], *pnormbone, (float *)pstudionorms );
-			VectorScale( g_studio.lightcolor, lv_tmp, g_studio.lightvalues[k] );
+			for( i = 0; i < pmesh[j].numnorms; i++, k++, pstudionorms++, pnormbone++ )
+			{
+				if( FBitSet( g_nFaceFlags, STUDIO_NF_CHROME ))
+					R_StudioSetupChrome( g_studio.chrome[k], *pnormbone, (float *)pstudionorms );
+				VectorSet( g_studio.lightvalues[k], tr.blend, tr.blend, tr.blend );
+			}
+		}
+		else
+		{
+			for( i = 0; i < pmesh[j].numnorms; i++, k++, pstudionorms++, pnormbone++ )
+			{
+				if( FBitSet( m_pStudioHeader->flags, STUDIO_HAS_BONEWEIGHTS ))
+					R_StudioLighting( &lv_tmp, -1, g_nFaceFlags, g_studio.norms[k] );
+				else R_StudioLighting( &lv_tmp, *pnormbone, g_nFaceFlags, (float *)pstudionorms );
+
+				if( FBitSet( g_nFaceFlags, STUDIO_NF_CHROME ))
+					R_StudioSetupChrome( g_studio.chrome[k], *pnormbone, (float *)pstudionorms );
+				VectorScale( g_studio.lightcolor, lv_tmp, g_studio.lightvalues[k] );
+			}
 		}
 	}
 
@@ -2318,16 +2445,20 @@ static void R_StudioDrawPoints( void )
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
 			pglEnable( GL_ALPHA_TEST );
-			pglAlphaFunc( GL_GREATER, 0.5f );
-			pglDepthMask( GL_TRUE );
-			tr.blend = 1.0f;
+			pglAlphaFunc( GL_GREATER, 0.0f );
+			if( !R_ModelOpaque( RI.currententity->curstate.rendermode ))
+				pglDepthMask( GL_TRUE );
+			else tr.blend = 1.0f;
 		}
-		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_ModelOpaque( RI.currententity->curstate.rendermode ))
+		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ))
 		{
-			pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
-			pglDepthMask( GL_FALSE );
-			pglEnable( GL_BLEND );
-			tr.blend = 1.0f;
+			if( R_ModelOpaque( RI.currententity->curstate.rendermode ))
+			{
+				pglBlendFunc( GL_ONE, GL_ONE );
+				pglDepthMask( GL_FALSE );
+				pglEnable( GL_BLEND );
+			}
+			else pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
 		}
 
 		R_StudioSetupSkin( m_pStudioHeader, pskinref[pmesh->skinref] );
@@ -2342,6 +2473,8 @@ static void R_StudioDrawPoints( void )
 		{
 			pglAlphaFunc( GL_GREATER, 0.0f );
 			pglDisable( GL_ALPHA_TEST );
+			if( !R_ModelOpaque( RI.currententity->curstate.rendermode ))
+				pglDepthMask( GL_FALSE );
 		}
 		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_ModelOpaque( RI.currententity->curstate.rendermode ))
 		{
@@ -2728,6 +2861,9 @@ R_StudioSetupRenderer
 */
 static void R_StudioSetupRenderer( int rendermode )
 {
+	studiohdr_t	*phdr = m_pStudioHeader;
+	int		i;
+
 	if( rendermode > kRenderTransAdd ) rendermode = 0;
 	g_studio.rendermode = bound( 0, rendermode, kRenderTransAdd );
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
@@ -2738,6 +2874,16 @@ static void R_StudioSetupRenderer( int rendermode )
 
 	pglDisable( GL_ALPHA_TEST );
 	pglShadeModel( GL_SMOOTH );
+
+	// a point to setup local to world transform for boneweighted models
+	if( phdr && FBitSet( phdr->flags, STUDIO_HAS_BONEINFO ))
+	{
+		// NOTE: extended boneinfo goes immediately after bones
+		mstudioboneinfo_t *boneinfo = (mstudioboneinfo_t *)((byte *)phdr + phdr->boneindex + phdr->numbones * sizeof( mstudiobone_t ));
+
+		for( i = 0; i < phdr->numbones; i++ )
+			Matrix3x4_ConcatTransforms( g_studio.worldtransform[i], g_studio.bonestransform[i], boneinfo[i].poseToBone );
+	}
 }
 
 /*
@@ -3526,7 +3672,6 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 {
 	size_t		size;
 	int		flags = 0;
-	qboolean		load_external = false;
 	char		texname[128], name[128], mdlname[128];
 	imgfilter_t	*filter = NULL;
 	texture_t		*tx = NULL;
@@ -3593,38 +3738,17 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	if( FBitSet( ptexture->flags, STUDIO_NF_NOMIPS ))
 		SetBits( flags, TF_NOMIPMAP );
 
-	// NOTE: colormaps must have the palette for properly work. Ignore it.
-	if( Mod_AllowMaterials( ) && !FBitSet( ptexture->flags, STUDIO_NF_COLORMAP ))
-	{
-		int	gl_texturenum = 0;
+	// NOTE: replace index with pointer to start of imagebuffer, ImageLib expected it
+	ptexture->index = (int)((byte *)phdr) + ptexture->index;
+	size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
 
-		Q_snprintf( texname, sizeof( texname ), "materials/%s/%s.tga", mdlname, name );
+	if( FBitSet( host.features, ENGINE_LOAD_DELUXEDATA ) && FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
+		flags |= TF_KEEP_SOURCE; // Paranoia2 texture alpha-tracing
 
-		if( FS_FileExists( texname, false ))
-			gl_texturenum = GL_LoadTexture( texname, NULL, 0, flags, filter );
+	// build the texname
+	Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
+	ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags, filter );
 
-		if( gl_texturenum )
-		{
-			ptexture->index = gl_texturenum;
-			load_external = true; // sucessfully loaded
-		}
-	}
-
-	if( !load_external )
-	{
-		// NOTE: replace index with pointer to start of imagebuffer, ImageLib expected it
-		ptexture->index = (int)((byte *)phdr) + ptexture->index;
-		size = sizeof( mstudiotexture_t ) + ptexture->width * ptexture->height + 768;
-
-		if( FBitSet( host.features, ENGINE_DISABLE_HDTEXTURES ) && FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
-			flags |= TF_KEEP_SOURCE; // Paranoia2 texture alpha-tracing
-
-		// build the texname
-		Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
-		ptexture->index = GL_LoadTexture( texname, (byte *)ptexture, size, flags, filter );
-          }
-          else MsgDev( D_NOTE, "loading HQ: %s\n", texname );
-  
 	if( !ptexture->index )
 	{
 		MsgDev( D_WARN, "%s has null texture %s\n", mod->name, ptexture->name );

@@ -611,7 +611,7 @@ void SCR_RegisterTextures( void )
 		else cls.loadingBar = GL_LoadTexture( "gfx/loading.lmp", NULL, 0, TF_IMAGE, NULL ); 
 	}
 	
-	cls.tileImage = GL_LoadTexture( "gfx/backtile.lmp", NULL, 0, TF_UNCOMPRESSED|TF_NOMIPMAP, NULL );
+	cls.tileImage = GL_LoadTexture( "gfx/backtile.lmp", NULL, 0, TF_NOMIPMAP, NULL );
 }
 
 /*
