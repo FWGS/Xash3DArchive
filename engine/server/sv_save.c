@@ -541,8 +541,14 @@ void RestoreSound( soundlist_t *entry )
 
 	if( !SV_IsValidEdict( ent ))
 	{
-		MsgDev( D_ERROR, "SV_RestoreSound: edict == NULL\n" );
-		return;
+		if( entry->channel != CHAN_STATIC )
+		{
+			MsgDev( D_ERROR, "SV_RestoreSound: edict == NULL\n" );
+			return;
+		}
+
+		// just get world for static channel
+		ent = EDICT_NUM( 0 );
 	}
 
 	if( entry->volume != VOL_NORM ) flags |= SND_VOLUME;

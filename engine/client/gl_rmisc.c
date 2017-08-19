@@ -43,9 +43,12 @@ static const dmaterial_t detail_table[] =
 { "crt",		"dt_conc",	'C', 0, 0 },	// concrete
 { "rock",		"dt_rock1",	'C', 0, 0 },
 { "conc", 	"dt_conc",	'C', 0, 0 },
+{ "brick", 	"dt_brick",	'C', 0, 0 },
 { "wall", 	"dt_brick",	'C', 0, 0 },
+{ "city", 	"dt_conc",	'C', 0, 0 },
 { "crete",	"dt_conc",	'C', 0, 0 },
 { "generic",	"dt_brick",	'C', 0, 0 },
+{ "floor", 	"dt_conc",	'C', 0, 0 },
 { "metal",	"dt_metal%i",	'M', 1, 2 },	// metal
 { "mtl",		"dt_metal%i",	'M', 1, 2 },
 { "pipe",		"dt_metal%i",	'M', 1, 2 },
@@ -53,9 +56,11 @@ static const dmaterial_t detail_table[] =
 { "sign",		"dt_metal%i",	'M', 1, 2 },
 { "barrel",	"dt_metal%i",	'M', 1, 2 },
 { "bath",		"dt_ssteel1",	'M', 1, 2 },
+{ "tech",		"dt_ssteel1",	'M', 1, 2 },
 { "refbridge",	"dt_metal%i",	'M', 1, 2 },
 { "panel",	"dt_ssteel1",	'M', 0, 0 },
 { "brass",	"dt_ssteel1",	'M', 0, 0 },
+{ "rune",		"dt_metal%i",	'M', 1, 2 },
 { "car",		"dt_metal%i",	'M', 1, 2 },
 { "circuit",	"dt_metal%i",	'M', 1, 2 },
 { "steel",	"dt_ssteel1",	'M', 0, 0 },
@@ -73,7 +78,9 @@ static const dmaterial_t detail_table[] =
 { "grate",	"dt_stone%i",	'G', 1, 4 },	// vent
 { "stone",	"dt_stone%i",	'G', 1, 4 },
 { "grt",		"dt_stone%i",	'G', 1, 4 },
+{ "wiz",		"dt_wood%i",	'W', 1, 3 },
 { "wood",		"dt_wood%i",	'W', 1, 3 },
+{ "wizwood",	"dt_wood%i",	'W', 1, 3 },
 { "wd",		"dt_wood%i",	'W', 1, 3 },
 { "table",	"dt_wood%i",	'W', 1, 3 },
 { "board",	"dt_wood%i",	'W', 1, 3 },
@@ -102,6 +109,7 @@ static const dmaterial_t detail_table[] =
 { "ground",	"dt_ground%i",	'D', 1, 5 },
 { "gnd",		"dt_ground%i",	'D', 1, 5 },
 { "snow",		"dt_snow%i",	'O', 1, 2 },	// snow
+{ "wswamp",	"dt_smooth1",	'W', 0, 0 },
 { NULL, NULL, 0, 0, 0 }
 };
 
@@ -197,8 +205,8 @@ void R_CreateDetailTexturesList( const char *filename )
 
 			if( pic )
 			{
-				xScale = (pic->width / tex->width) * gl_detailscale->value;
-				yScale = (pic->height / tex->height) * gl_detailscale->value;
+				xScale = (pic->width / (float)tex->width) * gl_detailscale->value;
+				yScale = (pic->height / (float)tex->height) * gl_detailscale->value;
 				FS_FreeImage( pic );
 			}
 			else xScale = yScale = 10.0f;

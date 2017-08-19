@@ -578,9 +578,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 	lerpFrac = 1.0f;
 
 	// misc info
-	if( r_sprite_lerping->value )
-		m_fDoInterp = (ent->curstate.effects & EF_NOINTERP) ? false : true;
-	else m_fDoInterp = false;
+	m_fDoInterp = (ent->curstate.effects & EF_NOINTERP) ? false : true;
 
 	if( frame < 0 )
 	{
@@ -614,7 +612,7 @@ float R_GetSpriteFrameInterpolant( cl_entity_t *ent, mspriteframe_t **oldframe, 
 					ent->latched.sequencetime = cl.time;
 					lerpFrac = 0.0f;
 				}
-				else lerpFrac = (cl.time - ent->latched.sequencetime) * 10;
+				else lerpFrac = (cl.time - ent->latched.sequencetime) * 11.0f;
 			}
 			else
 			{
@@ -893,6 +891,28 @@ static qboolean R_SpriteHasLightmap( cl_entity_t *e, int texFormat )
 
 /*
 =================
+R_SpriteAllowLerping
+=================
+*/
+static qboolean R_SpriteAllowLerping( cl_entity_t *e, msprite_t *psprite )
+{
+	if( !r_sprite_lerping->value )
+		return false;
+
+	if( psprite->numframes <= 1 )
+		return false;
+
+	if( psprite->texFormat != SPR_ADDITIVE )
+		return false;
+
+	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
+		return false;
+
+	return true;
+}
+
+/*
+=================
 R_DrawSpriteModel
 =================
 */
@@ -1012,9 +1032,12 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		pglAlphaFunc( GL_GEQUAL, 0.5f );
 	}
 
-	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
-		frame = oldframe = R_GetSpriteFrame( model, e->curstate.frame, e->angles[YAW] );
-	else lerp = R_GetSpriteFrameInterpolant( e, &oldframe, &frame );
+	if( R_SpriteAllowLerping( e, psprite ))
+	{
+		lerp = R_GetSpriteFrameInterpolant( e, &oldframe, &frame );
+Msg( "%s, lerp %g\n", e->model->name, lerp );
+	}
+	else frame = oldframe = R_GetSpriteFrame( model, e->curstate.frame, e->angles[YAW] );
 
 	type = psprite->type;
 

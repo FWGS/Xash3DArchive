@@ -894,7 +894,7 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 
 	// share developer level across all dlls
 	Q_snprintf( dev_level, sizeof( dev_level ), "%i", host.developer );
-	Cvar_Get( "developer", dev_level, FCVAR_READ_ONLY, "current developer level" );
+	Cvar_Get( "developer", dev_level, 0, "current developer level" );
 	Cmd_AddCommand( "exec", Host_Exec_f, "execute a script file" );
 	Cmd_AddCommand( "memlist", Host_MemStats_f, "prints memory pool information" );
 
