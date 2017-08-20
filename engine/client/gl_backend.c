@@ -366,17 +366,6 @@ void GL_Cull( GLenum cull )
 	glState.faceCull = cull;
 }
 
-/*
-=================
-GL_FrontFace
-=================
-*/
-void GL_FrontFace( GLenum front )
-{
-	pglFrontFace( front ? GL_CW : GL_CCW );
-	glState.frontFace = front;
-}
-
 void GL_SetRenderMode( int mode )
 {
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );

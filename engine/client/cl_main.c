@@ -1093,7 +1093,9 @@ void CL_Disconnect( void )
 	CL_ChangeGame( GI->gamefolder, true );
 
 	// back to menu if developer mode set to "player" or "mapper"
-	if( host.developer > 2 ) return;
+	if( host.developer > 2 || CL_IsInMenu( ))
+		return;
+
 	UI_SetActiveMenu( true );
 }
 
@@ -1872,8 +1874,6 @@ void CL_ReadPackets( void )
 		cls.demotime += host.frametime;
 
 	CL_ReadNetMessage();
-
-	cl.local.thirdperson = clgame.dllFuncs.CL_IsThirdPerson();
 #if 0
 	// keep cheat cvars are unchanged
 	if( cl.maxclients > 1 && cls.state == ca_active && host.developer <= 1 )

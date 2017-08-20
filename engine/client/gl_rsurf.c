@@ -837,10 +837,11 @@ void R_BlendLightmaps( void )
 	if( r_fullbright->value || !cl.worldmodel->lightdata )
 		return;
 
-	GL_SetupFogColorForSurfaces ();
-
 	if( RI.currententity )
 	{
+		if( RI.currententity->curstate.effects & EF_FULLBRIGHT )
+			return;	// disabled by user
+
 		// check for rendermode
 		switch( RI.currententity->curstate.rendermode )
 		{
@@ -850,26 +851,21 @@ void R_BlendLightmaps( void )
 		case kRenderGlow:
 			return; // no lightmaps
 		}
-
-		if( RI.currententity->curstate.effects & EF_FULLBRIGHT )
-			return;	// disabled by user
 	}
+
+	GL_SetupFogColorForSurfaces ();
 
 	if( !r_lightmap->value )
-	{
 		pglEnable( GL_BLEND );
+	else pglDisable( GL_BLEND );
 
-		if( !glState.drawTrans )
-		{
-			// lightmapped solid surfaces
-			pglDepthMask( GL_FALSE );
-			pglDepthFunc( GL_EQUAL );
-		}
+	// lightmapped solid surfaces
+	pglDepthMask( GL_FALSE );
+	pglDepthFunc( GL_EQUAL );
 
-		pglDisable( GL_ALPHA_TEST );
-		pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-	}
+	pglDisable( GL_ALPHA_TEST );
+	pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
 	// render static lightmaps first
 	for( i = 0; i < MAX_LIGHTMAPS; i++ )
@@ -961,20 +957,11 @@ void R_BlendLightmaps( void )
 		}
 	}
 
-	if( !r_lightmap->value )
-	{
-		pglDisable( GL_BLEND );
-
-		if( !glState.drawTrans )
-		{
-			// restore depth state
-			pglDepthMask( GL_TRUE );
-			pglDepthFunc( GL_LEQUAL );
-		}
-
-		pglDisable( GL_ALPHA_TEST );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-	}
+	pglDisable( GL_BLEND );
+	pglDepthMask( GL_TRUE );
+	pglDepthFunc( GL_LEQUAL );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 
 	// restore fog here
 	GL_ResetFogColor();
@@ -1169,10 +1156,15 @@ void R_RenderBrushPoly( msurface_t *fa )
 	if( is_mirror ) R_BeginDrawMirror( fa );
 	DrawGLPoly( fa->polys, 0.0f, 0.0f );
 	if( is_mirror ) R_EndDrawMirror();
-	DrawSurfaceDecals( fa );
+
+	if( tr.num_draw_decals < MAX_DECAL_SURFS )
+		tr.draw_decals[tr.num_draw_decals++] = fa;
+
+	if( RI.currententity->curstate.rendermode == kRenderTransTexture )
+		DrawSurfaceDecals();
 
 	// NOTE: draw mirror through in mirror show dummy lightmapped texture
-	if( fa->flags & SURF_REFLECT && RP_NORMALPASS() && r_lighting_extended->value )
+	if( fa->flags & SURF_REFLECT && RP_NORMALPASS( ))
 		return; // no lightmaps for mirror
 
 	if( fa->flags & SURF_DRAWTILED )
@@ -1263,7 +1255,6 @@ void R_DrawTextureChains( void )
 	if( world.sky_sphere && !world.custom_skybox )
 	{
 		pglEnable( GL_TEXTURE_2D );
-
 		if( skychain )
 			R_DrawClouds();
 		skychain = NULL;
@@ -1292,8 +1283,6 @@ void R_DrawTextureChains( void )
 			R_RenderBrushPoly( s );
 		t->texturechain = NULL;
 	}
-
-	GL_ResetFogColor();
 }
 
 /*
@@ -1319,7 +1308,7 @@ void R_DrawAlphaTextureChains( void )
 
 	pglDisable( GL_BLEND );
 	pglEnable( GL_ALPHA_TEST );
-	pglAlphaFunc( GL_GEQUAL, 0.5f );
+	pglAlphaFunc( GL_GREATER, 0.25f );
 
 	GL_SetupFogColorForSurfaces();
 
@@ -1343,8 +1332,10 @@ void R_DrawAlphaTextureChains( void )
 		t->texturechain = NULL;
 	}
 
+	DrawSurfaceDecals();
 	GL_ResetFogColor();
 	R_BlendLightmaps();
+	pglAlphaFunc( GL_GREATER, 0.0f );
 }
 
 /*
@@ -1437,6 +1428,44 @@ static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
 	return 0;
 }
 
+void R_SetRenderMode( cl_entity_t *e )
+{
+	switch( e->curstate.rendermode )
+	{
+	case kRenderNormal:
+		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+		break;
+	case kRenderTransColor:
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglColor4ub( e->curstate.rendercolor.r, e->curstate.rendercolor.g, e->curstate.rendercolor.b, e->curstate.renderamt );
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ALPHA );
+		pglDisable( GL_TEXTURE_2D );
+		pglEnable( GL_BLEND );
+		break;
+	case kRenderTransAdd:
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		pglColor4f( tr.blend, tr.blend, tr.blend, 1.0f );
+		pglBlendFunc( GL_ONE, GL_ONE );
+		pglDepthMask( GL_FALSE );
+		pglEnable( GL_BLEND );
+		break;
+	case kRenderTransAlpha:
+		pglEnable( GL_ALPHA_TEST );
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+		pglAlphaFunc( GL_GREATER, 0.25f );
+		pglDisable( GL_BLEND );
+		break;
+	default:
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglColor4f( 1.0f, 1.0f, 1.0f, tr.blend );
+		pglDepthMask( GL_FALSE );
+		pglEnable( GL_BLEND );
+		break;
+	}
+}
+
 /*
 =================
 R_DrawBrushModel
@@ -1445,10 +1474,8 @@ R_DrawBrushModel
 void R_DrawBrushModel( cl_entity_t *e )
 {
 	int		i, k, num_sorted;
-	qboolean		need_sort = false;
 	vec3_t		origin_l, oldorigin;
 	vec3_t		mins, maxs;
-	int		rendermode;
 	msurface_t	*psurf;
 	model_t		*clmodel;
 	qboolean		rotated;
@@ -1486,7 +1513,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 		return;
 
 	memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
-	rendermode = e->curstate.rendermode;
 	gl_lms.dynamic_surfaces = NULL;
 
 	if( rotated ) R_RotateForEntity( e );
@@ -1511,34 +1537,11 @@ void R_DrawBrushModel( cl_entity_t *e )
 	}
 
 	// setup the rendermode
-	GL_SetRenderMode( rendermode );
+	R_SetRenderMode( e );
 	GL_SetupFogColorForSurfaces ();
 
-	if( rendermode == kRenderTransTexture && r_lighting_extended->value >= 2.0f )
-		pglBlendFunc( GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA );
-
-	// setup the color and alpha
-	switch( rendermode )
-	{
-	case kRenderTransAdd:
+	if( e->curstate.rendermode == kRenderTransAdd )
 		R_AllowFog( false );
-	case kRenderTransTexture:
-		need_sort = true;
-	case kRenderGlow:
-		pglColor4f( 1.0f, 1.0f, 1.0f, tr.blend );
-		break;
-	case kRenderTransColor:
-		pglDisable( GL_TEXTURE_2D );
-		pglColor4ub( e->curstate.rendercolor.r, e->curstate.rendercolor.g,
-			e->curstate.rendercolor.b, e->curstate.renderamt );
-		break;
-	case kRenderTransAlpha:
-		// NOTE: brushes can't change renderamt for 'Solid' mode
-		pglAlphaFunc( GL_GEQUAL, 0.5f );
-	default:	
-		pglColor4ub( 255, 255, 255, 255 );
-		break;
-	}
 
 	num_sorted = 0;
 
@@ -1548,38 +1551,35 @@ void R_DrawBrushModel( cl_entity_t *e )
 		if( R_CullSurface( psurf, NULL, 0 )) // ignore frustum for bmodels
 			continue;
 
-		if( need_sort && !gl_nosort->value )
-		{
-			world.draw_surfaces[num_sorted] = psurf;
-			num_sorted++;
-			ASSERT( world.max_surfaces >= num_sorted );
-		}
-		else
-		{
-			// render unsorted (solid)
-			R_RenderBrushPoly( psurf );
-		}
+		if( num_sorted < world.max_surfaces )
+			world.draw_surfaces[num_sorted++] = psurf;
 	}
 
-	if( need_sort && !gl_nosort->value )
+	// sort faces if needs
+	if( e->curstate.rendermode == kRenderTransTexture && !gl_nosort->value )
 		qsort( world.draw_surfaces, num_sorted, sizeof( msurface_t* ), R_SurfaceCompare );
 
 	// draw sorted translucent surfaces
 	for( i = 0; i < num_sorted; i++ )
 		R_RenderBrushPoly( world.draw_surfaces[i] );
 
-	if( rendermode == kRenderTransColor )
+	if( e->curstate.rendermode == kRenderTransColor )
 		pglEnable( GL_TEXTURE_2D );
 
+	DrawSurfaceDecals();
 	GL_ResetFogColor();
 	R_BlendLightmaps();
 	R_RenderFullbrights();
 	R_RenderDetails();
 
 	// restore fog here
-	if( rendermode == kRenderTransAdd )
+	if( e->curstate.rendermode == kRenderTransAdd )
 		R_AllowFog( true );
+
+	pglDisable( GL_ALPHA_TEST );
+	pglAlphaFunc( GL_GREATER, 0.0f );
 	pglDisable( GL_BLEND );
+	pglDepthMask( GL_TRUE );
 	R_LoadIdentity();	// restore worldmatrix
 }
 
@@ -1966,8 +1966,9 @@ void R_DrawWorld( void )
 	memset( fullbright_polys, 0, sizeof( fullbright_polys ));
 	memset( detail_surfaces, 0, sizeof( detail_surfaces ));
 
-	GL_SetRenderMode( kRenderNormal );
 	gl_lms.dynamic_surfaces = NULL;
+	pglDisable( GL_ALPHA_TEST );
+	pglDisable( GL_BLEND );
 	tr.blend = 1.0f;
 
 	R_ClearSkyBox ();
@@ -1984,12 +1985,19 @@ void R_DrawWorld( void )
 	R_DrawStaticBrushes();
 	R_DrawTextureChains();
 
-	R_BlendLightmaps();
-	R_RenderFullbrights();
-	R_RenderDetails();
+	if( !CL_IsDevOverviewMode( ))
+	{
+		DrawSurfaceDecals();
+		GL_ResetFogColor();
+		R_BlendLightmaps();
+		R_RenderFullbrights();
+		R_RenderDetails();
 
-	if( skychain )
-		R_DrawSkyBox();
+		if( skychain )
+			R_DrawSkyBox();
+	}
+
+	tr.num_draw_decals = 0;
 	skychain = NULL;
 
 	R_DrawTriangleOutlines ();

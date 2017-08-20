@@ -254,12 +254,11 @@ void R_Set2DMode( qboolean enable )
 		pglMatrixMode( GL_MODELVIEW );
 		pglLoadIdentity();
 
-		GL_Cull( 0 );
+		GL_Cull( GL_NONE );
 
 		pglDepthMask( GL_FALSE );
 		pglDisable( GL_DEPTH_TEST );
 		pglEnable( GL_ALPHA_TEST );
-		pglAlphaFunc( GL_NOTEQUAL, 0.0f );
 		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 
 		glState.in2DMode = true;
@@ -278,5 +277,6 @@ void R_Set2DMode( qboolean enable )
 		pglMatrixMode( GL_MODELVIEW );
 		GL_LoadMatrix( RI.worldviewMatrix );
 
+		GL_Cull( GL_FRONT );
 	}
 }

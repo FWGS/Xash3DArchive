@@ -585,9 +585,6 @@ void R_SetupGL( qboolean set_gl_state )
 		pglEnable( GL_CLIP_PLANE0 );
 	}
 
-	if( RI.params & RP_FLIPFRONTFACE )
-		GL_FrontFace( !glState.frontFace );
-
 	GL_Cull( GL_FRONT );
 
 	pglDisable( GL_BLEND );
@@ -602,9 +599,6 @@ R_EndGL
 */
 static void R_EndGL( void )
 {
-	if( RI.params & RP_FLIPFRONTFACE )
-		GL_FrontFace( !glState.frontFace );
-
 	if( RI.params & RP_CLIPPLANE )
 		pglDisable( GL_CLIP_PLANE0 );
 }
@@ -818,8 +812,6 @@ void R_DrawEntitiesOnList( void )
 	glState.drawTrans = false;
 	tr.blend = 1.0f;
 
-	pglDepthMask( GL_TRUE );
-
 	// first draw solid entities
 	for( i = 0; i < tr.num_solid_entities && !RI.onlyClientDraw; i++ )
 	{
@@ -873,7 +865,6 @@ void R_DrawEntitiesOnList( void )
 	if( RI.drawWorld )
 		clgame.dllFuncs.pfnDrawNormalTriangles();
 
-	pglDepthMask( GL_FALSE );
 	glState.drawTrans = true;
 
 	// then draw translucent entities
@@ -922,11 +913,10 @@ void R_DrawEntitiesOnList( void )
 	}
 
 	glState.drawTrans = false;
-	pglDepthMask( GL_TRUE );
 	pglDisable( GL_BLEND );	// Trinity Render issues
 
-	R_DrawViewModel();
-
+	if( !RI.onlyClientDraw )
+		R_DrawViewModel();
 	CL_ExtraUpdate();
 }
 
@@ -1070,11 +1060,8 @@ void R_SetupRefParams( const ref_viewpass_t *rvp )
 	RI.farClip = 0;
 
 	if( !FBitSet( rvp->flags, RF_DRAW_CUBEMAP ))
-	{
 		RI.drawOrtho = FBitSet( rvp->flags, RF_DRAW_OVERVIEW );
-		RI.thirdPerson = cl.local.thirdperson;
-	}
-	else RI.thirdPerson = RI.drawOrtho = false;
+	else RI.drawOrtho = false;
 
 	// setup viewport
 	RI.viewport[0] = rvp->viewport[0];
@@ -1121,7 +1108,8 @@ void R_RenderFrame( const ref_viewpass_t *rvp )
 	}
 
 	tr.fCustomRendering = false;
-	R_RunViewmodelEvents();
+	if( !RI.onlyClientDraw )
+		R_RunViewmodelEvents();
 	tr.realframecount++; // right called after viewmodel events
 
 	if( gl_allow_mirrors->value )

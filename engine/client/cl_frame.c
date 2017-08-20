@@ -295,7 +295,7 @@ void CL_ProcessEntityUpdate( cl_entity_t *ent )
 		// but it's used to reduce player body pitch...
 		if( ent->player )
 		{
-			if( RP_LOCALCLIENT( ent ) && !cl.local.thirdperson && gl_allow_mirrors->value && world.has_mirrors )
+			if( world.has_mirrors && gl_allow_mirrors->value && RP_LOCALCLIENT( ent ) && !cl.local.thirdperson )
 				ent->curstate.angles[PITCH] /= 3.0f;
 			else ent->curstate.angles[PITCH] /= -3.0f;
 		}
@@ -905,17 +905,7 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, ent->model->name ))
 		return false;
 
-	// don't add himself on firstperson
-	if( RP_LOCALCLIENT( ent ) && !cl.local.thirdperson && cl.viewentity == ( cl.playernum + 1 ))
-	{
-		if( gl_allow_mirrors->value && world.has_mirrors )
-		{
-			if( !R_AddEntity( ent, entityType ))
-				return false;
-		}
-		// otherwise just pass to player effects like flashlight, particles etc
-	}
-	else if( entityType == ET_BEAM )
+	if( entityType == ET_BEAM )
 	{
 		CL_AddCustomBeam( ent );
 		return true;
@@ -971,6 +961,7 @@ for all current players
 */
 void CL_LinkPlayers( frame_t *frame )
 {
+	qboolean		local_added = false;
 	entity_state_t	*state;
 	cl_entity_t	*ent;
 	int		i;
@@ -987,6 +978,12 @@ void CL_LinkPlayers( frame_t *frame )
 		if( state->messagenum != cl.parsecount )
 			continue;	// not present this frame
 
+		if( !CL_IsThirdPerson() && ( i == cl.viewentity - 1 ))
+		{
+			if( !gl_allow_mirrors->value || !world.has_mirrors )
+				continue;
+		}
+
 		if( !state->modelindex || FBitSet( state->effects, EF_NODRAW ))
 			continue;
 
@@ -1001,6 +998,7 @@ void CL_LinkPlayers( frame_t *frame )
 			VectorCopy( state->origin, ent->prevstate.origin );
 			VectorCopy( state->origin, ent->curstate.origin );
 			VectorCopy( ent->curstate.angles, ent->angles );
+			local_added = true;
 		}
 
 		if( FBitSet( ent->curstate.effects, EF_NOINTERP ))
@@ -1033,6 +1031,9 @@ void CL_LinkPlayers( frame_t *frame )
 
 		CL_AddVisibleEntity( ent, ET_PLAYER );
 	}
+
+	// apply local player effects if entity is not added
+	if( !local_added ) CL_AddEntityEffects( ent );
 }
 
 /*

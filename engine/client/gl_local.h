@@ -35,6 +35,7 @@ extern byte	*r_temppool;
 #define MAX_LIGHTMAPS	256
 #define SUBDIVIDE_SIZE	64
 #define MAX_MIRRORS		32	// per one frame!
+#define MAX_DECAL_SURFS	4096
 
 #define SHADEDOT_QUANT 	16	// precalculated dot products for quantized angles
 
@@ -44,7 +45,6 @@ extern byte	*r_temppool;
 #define RP_ENVVIEW		BIT( 1 )	// used for cubemapshot
 #define RP_OLDVIEWLEAF	BIT( 2 )
 #define RP_CLIPPLANE	BIT( 3 )	// mirrors used
-#define RP_FLIPFRONTFACE	BIT( 4 )	// e.g. for mirrors drawing
 
 #define RP_NONVIEWERREF	(RP_MIRRORVIEW|RP_ENVVIEW)
 #define R_ModelOpaque( rm )	( rm == kRenderNormal )
@@ -98,7 +98,6 @@ typedef struct
 	int		params;		// rendering parameters
 
 	qboolean		drawWorld;	// ignore world for drawing PlayerModel
-	qboolean		thirdPerson;	// thirdperson camera is enabled
 	qboolean		isSkyVisible;	// sky is visible
 	qboolean		onlyClientDraw;	// disabled by client request
 	qboolean		drawOrtho;	// draw world as orthogonal projection	
@@ -195,6 +194,9 @@ typedef struct
 	uint		num_mirror_entities;
 	uint		num_solid_entities;
 	uint		num_trans_entities;
+
+	msurface_t	*draw_decals[MAX_DECAL_SURFS];
+	int		num_draw_decals;
          
 	// OpenGL matrix states
 	qboolean		modelviewIdentity;
@@ -273,7 +275,6 @@ void GL_CleanupAllTextureUnits( void );
 void GL_LoadIdentityTexMatrix( void );
 void GL_DisableAllTexGens( void );
 void GL_SetRenderMode( int mode );
-void GL_FrontFace( GLenum front );
 void GL_TextureTarget( uint target );
 void GL_Cull( GLenum cull );
 void R_ShowTextures( void );
@@ -289,7 +290,7 @@ qboolean R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags 
 //
 // gl_decals.c
 //
-void DrawSurfaceDecals( msurface_t *fa );
+void DrawSurfaceDecals( void );
 float *R_DecalSetupVerts( decal_t *pDecal, msurface_t *surf, int texture, int *outCount );
 void DrawSingleDecal( decal_t *pDecal, msurface_t *fa );
 void R_EntityRemoveDecals( model_t *mod );
@@ -404,6 +405,8 @@ void R_DrawWaterSurfaces( void );
 void R_DrawBrushModel( cl_entity_t *e );
 void GL_SubdivideSurface( msurface_t *fa );
 void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa );
+void DrawGLPoly( glpoly_t *p, float xScale, float yScale );
+texture_t *R_TextureAnimation( msurface_t *s );
 void GL_SetupFogColorForSurfaces( void );
 void R_DrawAlphaTextureChains( void );
 void GL_RebuildLightmaps( void );
@@ -417,7 +420,6 @@ void GL_ResetFogColor( void );
 void R_SpriteInit( void );
 void Mod_LoadSpriteModel( model_t *mod, const void *buffer, qboolean *loaded, uint texFlags );
 mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw );
-void R_SetSpriteRendermode( const model_t *pModel );
 void R_DrawSpriteModel( cl_entity_t *e );
 
 //
@@ -620,7 +622,6 @@ typedef struct
 	GLint		texCoordArrayMode[MAX_TEXTURE_UNITS];	// 0 - disabled, 1 - enabled, 2 - cubemap
 
 	int		faceCull;
-	int		frontFace;
 
 	qboolean		drawTrans;
 	qboolean		stencilEnabled;
@@ -657,6 +658,7 @@ extern convar_t	*gl_detailscale;
 extern convar_t	*gl_wireframe;
 extern convar_t	*gl_allow_static;
 extern convar_t	*gl_allow_mirrors;
+extern convar_t	*gl_polyoffset;
 extern convar_t	*gl_finish;
 extern convar_t	*gl_nosort;
 extern convar_t	*gl_clear;

@@ -656,7 +656,7 @@ void R_DrawClouds( void )
 	if( RI.fogEnabled )
 		pglFogf( GL_FOG_DENSITY, RI.fogDensity * 0.25f );
 	pglDepthFunc( GL_GEQUAL );
-	pglDepthMask( 0 );
+	pglDepthMask( GL_FALSE );
 
 	for( i = 0; i < 6; i++ )
 	{
@@ -665,8 +665,8 @@ void R_DrawClouds( void )
 		R_CloudRenderSide( i );
 	}
 
-	pglDepthMask( GL_TRUE );
 	pglDepthFunc( GL_LEQUAL );
+	pglDepthMask( GL_TRUE );
 
 	if( RI.fogEnabled )
 		pglFogf( GL_FOG_DENSITY, RI.fogDensity );

@@ -1521,6 +1521,7 @@ void CL_DrawBeams( int fTrans )
 		return;
 
 	pglShadeModel( GL_SMOOTH );
+	pglDepthMask( fTrans ? GL_FALSE : GL_TRUE );
 	
 	// server beams don't allocate beam chains
 	// all params are stored in cl_entity_t
@@ -1573,6 +1574,7 @@ void CL_DrawBeams( int fTrans )
 	}
 
 	pglShadeModel( GL_FLAT );
+	pglDepthMask( GL_TRUE );
 }
 
 /*

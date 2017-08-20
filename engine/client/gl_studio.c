@@ -2445,10 +2445,9 @@ static void R_StudioDrawPoints( void )
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
 			pglEnable( GL_ALPHA_TEST );
-			pglAlphaFunc( GL_GREATER, 0.0f );
-			if( !R_ModelOpaque( RI.currententity->curstate.rendermode ))
-				pglDepthMask( GL_TRUE );
-			else tr.blend = 1.0f;
+			pglDepthMask( GL_TRUE );
+			if( R_ModelOpaque( RI.currententity->curstate.rendermode ))
+				tr.blend = 1.0f;
 		}
 		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ))
 		{
@@ -2471,10 +2470,7 @@ static void R_StudioDrawPoints( void )
 
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
-			pglAlphaFunc( GL_GREATER, 0.0f );
 			pglDisable( GL_ALPHA_TEST );
-			if( !R_ModelOpaque( RI.currententity->curstate.rendermode ))
-				pglDepthMask( GL_FALSE );
 		}
 		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_ModelOpaque( RI.currententity->curstate.rendermode ))
 		{
@@ -2866,12 +2862,8 @@ static void R_StudioSetupRenderer( int rendermode )
 
 	if( rendermode > kRenderTransAdd ) rendermode = 0;
 	g_studio.rendermode = bound( 0, rendermode, kRenderTransAdd );
+
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-
-	// enable depthmask on studiomodels
-	if( glState.drawTrans && g_studio.rendermode != kRenderTransAdd )
-		pglDepthMask( GL_TRUE );
-
 	pglDisable( GL_ALPHA_TEST );
 	pglShadeModel( GL_SMOOTH );
 
@@ -2894,11 +2886,10 @@ R_StudioRestoreRenderer
 */
 static void R_StudioRestoreRenderer( void )
 {
-	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	if( g_studio.rendermode != kRenderNormal )
+		pglDisable( GL_BLEND );
 
-	// restore depthmask state for sprites etc
-	if( glState.drawTrans && g_studio.rendermode != kRenderTransAdd )
-		pglDepthMask( GL_FALSE );
+	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	pglShadeModel( GL_FLAT );
 	m_fDoRemap = false;
 }
@@ -3002,8 +2993,6 @@ void GL_StudioSetRenderMode( int rendermode )
 	switch( rendermode )
 	{
 	case kRenderNormal:
-		pglDepthMask( GL_TRUE );
-		pglDisable( GL_BLEND );
 		break;
 	case kRenderTransColor:
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -3576,7 +3565,10 @@ void R_RunViewmodelEvents( void )
 {
 	int	i;
 
-	if( cl.local.thirdperson || RI.onlyClientDraw || r_drawviewmodel->value == 0 )
+	if( r_drawviewmodel->value == 0 )
+		return;
+
+	if( CL_IsThirdPerson( ))
 		return;
 
 	// ignore in thirdperson, camera view or client is died
@@ -3612,7 +3604,10 @@ void R_DrawViewModel( void )
 	tr.ignore_lightgamma = false;
 	cl.local.light_level = (c.r + c.g + c.b) / 3;
 
-	if( cl.local.thirdperson || RI.onlyClientDraw || r_drawviewmodel->value == 0 )
+	if( r_drawviewmodel->value == 0 )
+		return;
+
+	if( CL_IsThirdPerson( ))
 		return;
 
 	// ignore in thirdperson, camera view or client is died
@@ -3635,8 +3630,8 @@ void R_DrawViewModel( void )
 	// backface culling for left-handed weapons
 	if( R_AllowFlipViewModel( RI.currententity ) || g_iBackFaceCull )
 	{
-		GL_FrontFace( !glState.frontFace );
 		tr.fFlipViewModel = true;
+		pglFrontFace( GL_CW );
 	}
 
 	switch( RI.currententity->model->type )
@@ -3656,8 +3651,8 @@ void R_DrawViewModel( void )
 	// backface culling for left-handed weapons
 	if( R_AllowFlipViewModel( RI.currententity ) || g_iBackFaceCull )
 	{
-		GL_FrontFace( !glState.frontFace );
 		tr.fFlipViewModel = false;
+		pglFrontFace( GL_CCW );
 	}
 }
 

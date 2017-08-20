@@ -37,6 +37,7 @@ convar_t	*gl_detailscale;
 convar_t	*gl_check_errors;
 convar_t	*gl_allow_static;
 convar_t	*gl_allow_mirrors;
+convar_t	*gl_polyoffset;
 convar_t	*gl_wireframe;
 convar_t	*gl_max_size;
 convar_t	*gl_finish;
@@ -1472,8 +1473,6 @@ static void GL_SetDefaults( void )
 	pglDisable( GL_CULL_FACE );
 	pglDisable( GL_SCISSOR_TEST );
 	pglDepthFunc( GL_LEQUAL );
-	pglDepthMask( GL_FALSE );
-
 	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 
 	if( glState.stencilEnabled )
@@ -1492,15 +1491,15 @@ static void GL_SetDefaults( void )
 	pglDisable( GL_BLEND );
 	pglDisable( GL_ALPHA_TEST );
 	pglDisable( GL_POLYGON_OFFSET_FILL );
-	pglAlphaFunc( GL_GEQUAL, 0.5f );
+	pglAlphaFunc( GL_GREATER, 0.0f );
 	pglEnable( GL_TEXTURE_2D );
 	pglShadeModel( GL_SMOOTH );
+	pglFrontFace( GL_CCW );
 
 	pglPointSize( 1.2f );
 	pglLineWidth( 1.2f );
 
 	GL_Cull( GL_NONE );
-	GL_FrontFace( 0 );
 }
 
 /*
@@ -1602,7 +1601,7 @@ void GL_InitCommands( void )
 	gl_wireframe = Cvar_Get( "gl_wireframe", "0", FCVAR_ARCHIVE|FCVAR_SPONLY, "show wireframe overlay" );
 
 	// these cvar not used by engine but some mods requires this
-	Cvar_Get( "gl_polyoffset", "-0.1", 0, "polygon offset for decals" );
+	gl_polyoffset = Cvar_Get( "gl_polyoffset", "2.0", FCVAR_ARCHIVE, "polygon offset for decals" );
  
 	// make sure gl_vsync is checked after vid_restart
 	SetBits( gl_vsync->flags, FCVAR_CHANGED );

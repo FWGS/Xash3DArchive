@@ -230,7 +230,8 @@ qboolean SV_CheckClientVisiblity( sv_client_t *cl, const byte *mask )
 	vec3_t	vieworg;
 	mleaf_t	*leaf;
 
-	if( !mask ) return true; // full visibility
+	if( !mask || svs.maxclients <= 1 )
+		return true; // GoldSrc rules
 
 	clientnum = cl - svs.clients;
 	VectorCopy( viewPoint[clientnum], vieworg );

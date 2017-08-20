@@ -376,8 +376,13 @@ void CL_DrawParticles( double frametime )
 	if( !cl_active_particles )
 		return;	// nothing to draw?
 
-	GL_SetRenderMode( kRenderTransTexture );
+	pglEnable( GL_BLEND );
+	pglDisable( GL_ALPHA_TEST );
+	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
 	GL_Bind( GL_TEXTURE0, tr.particleTexture );
+	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+	pglDepthMask( GL_FALSE );
 
 	pglBegin( GL_QUADS );
 
@@ -496,6 +501,7 @@ void CL_DrawParticles( double frametime )
 	}
 
 	pglEnd();
+	pglDepthMask( GL_TRUE );
 }
 
 /*
@@ -547,7 +553,6 @@ void CL_DrawTracers( double frametime )
 	float		scale, atten, gravity;
 	vec3_t		screenLast, screen;
 	vec3_t		start, end, delta;
-	int		texWidth = 32;
 	particle_t	*p;
 
 	if( !cl_draw_tracers->value )
@@ -573,8 +578,10 @@ void CL_DrawTracers( double frametime )
 	if( !TriSpriteTexture( cl_sprite_dot, 0 ))
 		return;
 
-	R_SetSpriteRendermode( cl_sprite_dot );
-	R_GetSpriteParms( &texWidth, NULL, NULL, 0, cl_sprite_dot );
+	pglEnable( GL_BLEND );
+	pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+	pglDisable( GL_ALPHA_TEST );
+	pglDepthMask( GL_FALSE );
 
 	gravity = frametime * clgame.movevars.gravity;
 	scale = 1.0 - (frametime * 0.9);
@@ -649,6 +656,8 @@ void CL_DrawTracers( double frametime )
 			p->vel[2] = gravity * 0.05;
 		}
 	}
+
+	pglDepthMask( GL_TRUE );
 }
 
 /*
@@ -866,7 +875,7 @@ particle spray
 void R_Blood( const vec3_t org, const vec3_t ndir, int pcolor, int speed )
 {
 	vec3_t		pos, dir, vec;
-	int		pspeed = speed * 3;
+	float		pspeed = speed * 3.0f;
 	int		i, j;
 	particle_t	*p;
 
@@ -904,8 +913,9 @@ void R_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 	particle_t	*p;
 	int		i, j;
 	float		arc;
+	float		accel = speed;
 
-	for( arc = 0.05f, i = 0; i < 100; i++, arc -= 0.005f )
+	for( arc = 0.05f, i = 0; i < 100; i++ )
 	{
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
@@ -918,12 +928,14 @@ void R_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 		VectorCopy( dir, p->vel );
 
 		p->vel[2] -= arc;
-		VectorScale( p->vel, speed, p->vel );
+		arc -= 0.005f;
+		VectorScale( p->vel, accel, p->vel );
+		accel -= 0.00001f; // so last few will drip
 	}
 
-	for( arc = 0.075f, i = 0; i < ( speed / 5 ); i++, arc -= 0.005f )
+	for( arc = 0.075f, i = 0; i < ( speed / 5 ); i++ )
 	{
-		float	num, spd;
+		float	num;
 
 		p = R_AllocParticle( NULL );
 		if( !p ) return;
@@ -936,13 +948,14 @@ void R_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 		VectorCopy( dir, p->vel );
 
 		p->vel[2] -= arc;
+		arc -= 0.005f;
 
 		num = COM_RandomFloat( 0.0f, 1.0f );
-		spd = speed * num;
+		accel = speed * num;
 		num *= 1.7f;
 
 		VectorScale( p->vel, num, p->vel );
-		VectorScale( p->vel, spd, p->vel );
+		VectorScale( p->vel, accel, p->vel );
 
 		for( j = 0; j < 2; j++ )
 		{
@@ -961,7 +974,7 @@ void R_BloodStream( const vec3_t org, const vec3_t dir, int pcolor, int speed )
 			p->vel[2] -= arc;
 
 			VectorScale( p->vel, num, p->vel );
-			VectorScale( p->vel, spd, p->vel );
+			VectorScale( p->vel, accel, p->vel );
 		}
 	}
 }
@@ -1459,7 +1472,7 @@ R_TracerEffect
 */
 void R_TracerEffect( const vec3_t start, const vec3_t end )
 {
-	vec3_t	tmp, vel, dir;
+	vec3_t	pos, vel, dir;
 	float	len, speed;
 
 	speed = Q_max( tracerspeed->value, 3.0f );
@@ -1469,11 +1482,11 @@ void R_TracerEffect( const vec3_t start, const vec3_t end )
 	if( len == 0.0f ) return;
 
 	VectorScale( dir, 1.0f / len, dir ); // normalize
-	VectorScale( dir, COM_RandomLong( -10.0f, 9.0f ) + traceroffset->value, tmp );
-	VectorScale( dir, tracerspeed->value, vel );
-	VectorAdd( tmp, start, tmp );
+	VectorScale( dir, COM_RandomFloat( -10.0f, 9.0f ) + traceroffset->value, vel );
+	VectorAdd( start, vel, pos );
+	VectorScale( dir, speed, vel );
 
-	R_AllocTracer( tmp, vel, len / speed );
+	R_AllocTracer( pos, vel, len / speed );
 }
 
 /*

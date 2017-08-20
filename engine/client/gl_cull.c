@@ -61,7 +61,7 @@ int R_CullModel( cl_entity_t *e, const vec3_t absmin, const vec3_t absmax )
 		if( CL_IsDevOverviewMode( ))
 			return 1;
 
-		if( RP_NORMALPASS() && !RI.thirdPerson && cl.viewentity == ( cl.playernum + 1 ))
+		if( RP_NORMALPASS() && !cl.local.thirdperson && cl.viewentity == ( cl.playernum + 1 ))
 			return 0;
 
 		return 1;
@@ -76,7 +76,7 @@ int R_CullModel( cl_entity_t *e, const vec3_t absmin, const vec3_t absmax )
 		return 1;
 
 	// local client can't view himself if camera or thirdperson is not active
-	if( RP_LOCALCLIENT( e ) && !RI.thirdPerson && cl.viewentity == ( cl.playernum + 1 ))
+	if( RP_LOCALCLIENT( e ) && !cl.local.thirdperson && cl.viewentity == ( cl.playernum + 1 ))
 	{
 		if( !FBitSet( RI.params, RP_MIRRORVIEW ))
 			return 1;

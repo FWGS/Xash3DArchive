@@ -906,7 +906,7 @@ void R_MuzzleFlash( const vec3_t pos, int type )
 	else pTemp->entity.angles[2] = COM_RandomLong( 0, 359 );
 
 	// play playermodel muzzleflashes only for mirror pass
-	if( RP_LOCALCLIENT( RI.currententity ) && !RI.thirdPerson && ( RI.params & RP_MIRRORVIEW ))
+	if( RP_LOCALCLIENT( RI.currententity ) && !cl.local.thirdperson && ( RI.params & RP_MIRRORVIEW ))
 		pTemp->entity.curstate.effects |= EF_REFLECTONLY;
 
 	CL_TempEntAddEntity( &pTemp->entity );
@@ -1570,10 +1570,10 @@ void R_Projectile( const vec3_t origin, const vec3_t velocity, int modelIndex, i
 	}
 
 	pTemp->flags |= FTENT_COLLIDEALL|FTENT_PERSIST|FTENT_COLLIDEKILL;
+	pTemp->clientIndex = bound( 1, owner, cl.maxclients );
 	pTemp->entity.baseline.renderamt = 255;
 	pTemp->hitcallback = hitcallback;
 	pTemp->die = cl.time + life;
-	pTemp->clientIndex = owner;
 }
 
 /*
@@ -1672,7 +1672,7 @@ void R_Explosion( vec3_t pos, int model, float scale, float framerate, int flags
 	if( !FBitSet( flags, TE_EXPLFLAG_NOSOUND ))
 	{
 		hSound = S_RegisterSound( va( "weapons/explode%i.wav", COM_RandomLong( 3, 5 )));
-		S_StartSound( pos, 0, CHAN_AUTO, hSound, VOL_NORM, 0.3f, PITCH_NORM, 0 );
+		S_StartSound( pos, 0, CHAN_STATIC, hSound, VOL_NORM, 0.3f, PITCH_NORM, 0 );
 	}
 }
 
@@ -2154,9 +2154,9 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		pos2[1] = MSG_ReadCoord( &buf );
 		pos2[2] = MSG_ReadCoord( &buf );
 		color = MSG_ReadByte( &buf );
-		vel = (float)MSG_ReadByte( &buf );
-		if( type == TE_BLOOD ) R_Blood( pos, pos2, color, vel );
-		else R_BloodStream( pos, pos2, color, vel );
+		count = MSG_ReadByte( &buf );
+		if( type == TE_BLOOD ) R_Blood( pos, pos2, color, count );
+		else R_BloodStream( pos, pos2, color, count );
 		break;
 	case TE_SHOWLINE:
 		pos[0] = MSG_ReadCoord( &buf );

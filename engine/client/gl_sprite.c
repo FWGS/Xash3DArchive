@@ -463,38 +463,6 @@ void Mod_UnloadSpriteModel( model_t *mod )
 
 /*
 ================
-R_SetSpriteRendermode
-
-assume pModel is valid
-================
-*/
-void R_SetSpriteRendermode( const model_t *pModel )
-{
-	msprite_t		*psprite;
-
-	if( !pModel ) return;
-	psprite = (msprite_t *)pModel->cache.data;
-	if( !psprite ) return;
-
-	switch( psprite->texFormat )
-	{
-	case SPR_NORMAL:
-		GL_SetRenderMode( kRenderNormal );
-		break;
-	case SPR_ADDITIVE:
-		GL_SetRenderMode( kRenderTransAdd );
-		break;
-	case SPR_INDEXALPHA:
-		GL_SetRenderMode( kRenderTransTexture );
-		break;
-	case SPR_ALPHTEST:
-		GL_SetRenderMode( kRenderTransAlpha );
-		break;
-	}
-}
-
-/*
-================
 R_GetSpriteFrame
 
 assume pModel is valid
@@ -960,15 +928,6 @@ void R_DrawSpriteModel( cl_entity_t *e )
 
 	r_stats.c_sprite_models_drawn++;
 
-	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
-	{
-		pglEnable( GL_ALPHA_TEST );
-		pglAlphaFunc( GL_GREATER, 0.0f );
-	}
-
-	if( e->curstate.rendermode == kRenderGlow )
-		pglDisable( GL_DEPTH_TEST );
-
 	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderTransAdd )
 		R_AllowFog( false );
 
@@ -976,29 +935,28 @@ void R_DrawSpriteModel( cl_entity_t *e )
 	switch( e->curstate.rendermode )
 	{
 	case kRenderTransAlpha:
+		pglDepthMask( GL_FALSE );
 	case kRenderTransColor:
 	case kRenderTransTexture:
 		pglEnable( GL_BLEND );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 		break;
 	case kRenderGlow:
+		pglDisable( GL_DEPTH_TEST );
 	case kRenderTransAdd:
 		pglEnable( GL_BLEND );
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+		pglDepthMask( GL_FALSE );
 		break;
 	case kRenderNormal:
 	default:
-		if( psprite->texFormat == SPR_INDEXALPHA )
-		{
-			pglEnable( GL_BLEND );
-			pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-		}
-		else pglDisable( GL_BLEND );
+		pglDisable( GL_BLEND );
 		break;
 	}
 
 	// all sprites can have color
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+	pglEnable( GL_ALPHA_TEST );
 
 	// NOTE: never pass sprites with rendercolor '0 0 0' it's a stupid Valve Hammer Editor bug
 	if( e->curstate.rendercolor.r || e->curstate.rendercolor.g || e->curstate.rendercolor.b )
@@ -1016,27 +974,17 @@ void R_DrawSpriteModel( cl_entity_t *e )
           
 	if( R_SpriteHasLightmap( e, psprite->texFormat ))
 	{
-		color24	lightColor;
-		qboolean	invLight;
-
-		invLight = (e->curstate.effects & EF_INVLIGHT) ? true : false;
-		R_LightForPoint( origin, &lightColor, invLight, true, sprite_radius );
+		colorVec lightColor = R_LightPoint( origin );
+		// FIXME: collect light from dlights?
 		color2[0] = (float)lightColor.r * ( 1.0f / 255.0f );
 		color2[1] = (float)lightColor.g * ( 1.0f / 255.0f );
 		color2[2] = (float)lightColor.b * ( 1.0f / 255.0f );
-
-		if( glState.drawTrans )
-			pglDepthMask( GL_TRUE );
-
 		// NOTE: sprites with 'lightmap' looks ugly when alpha func is GL_GREATER 0.0
-		pglAlphaFunc( GL_GEQUAL, 0.5f );
+		pglAlphaFunc( GL_GEQUAL, 0.25f );
 	}
 
 	if( R_SpriteAllowLerping( e, psprite ))
-	{
 		lerp = R_GetSpriteFrameInterpolant( e, &oldframe, &frame );
-Msg( "%s, lerp %g\n", e->model->name, lerp );
-	}
 	else frame = oldframe = R_GetSpriteFrame( model, e->curstate.frame, e->angles[YAW] );
 
 	type = psprite->type;
@@ -1115,7 +1063,9 @@ Msg( "%s, lerp %g\n", e->model->name, lerp );
 	// draw the sprite 'lightmap' :-)
 	if( R_SpriteHasLightmap( e, psprite->texFormat ))
 	{
-		pglEnable( GL_BLEND );
+		if( !r_lightmap->value )
+			pglEnable( GL_BLEND );
+		else pglDisable( GL_BLEND );
 		pglDepthFunc( GL_EQUAL );
 		pglDisable( GL_ALPHA_TEST );
 		pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
@@ -1124,25 +1074,23 @@ Msg( "%s, lerp %g\n", e->model->name, lerp );
 		pglColor4f( color2[0], color2[1], color2[2], tr.blend );
 		GL_Bind( GL_TEXTURE0, tr.whiteTexture );
 		R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
-
-		if( glState.drawTrans ) 
-			pglDepthMask( GL_FALSE );
+		pglAlphaFunc( GL_GREATER, 0.0f );
+		pglDepthFunc( GL_LEQUAL );
 	}
 
 	if( psprite->facecull == SPR_CULL_NONE )
 		GL_Cull( GL_FRONT );
 
-	if( e->curstate.rendermode == kRenderGlow )
-		pglEnable( GL_DEPTH_TEST );
-
-	if( psprite->texFormat == SPR_ALPHTEST && e->curstate.rendermode != kRenderTransAdd )
-		pglDisable( GL_ALPHA_TEST );
+	pglDisable( GL_ALPHA_TEST );
+	pglDepthMask( GL_TRUE );
 
 	if( e->curstate.rendermode == kRenderGlow || e->curstate.rendermode == kRenderTransAdd )
 		R_AllowFog( true );
 
-	pglDisable( GL_BLEND );
-	pglDepthFunc( GL_LEQUAL );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-	pglColor4ub( 255, 255, 255, 255 );
+	if( e->curstate.rendermode != kRenderNormal )
+	{
+		pglDisable( GL_BLEND );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+		pglEnable( GL_DEPTH_TEST );
+	}
 }

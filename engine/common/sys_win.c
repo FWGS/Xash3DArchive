@@ -542,6 +542,9 @@ void Sys_Print( const char *pMsg )
 	char		*c = logbuf;	
 	int		i = 0;
 
+	if( pMsg[0] == '0' && pMsg[1] == '\n' && pMsg[2] == '\0' )
+		return; // hlrally spam
+
 	if( host.type == HOST_NORMAL )
 		Con_Print( pMsg );
 

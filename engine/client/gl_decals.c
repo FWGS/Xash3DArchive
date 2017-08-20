@@ -878,133 +878,140 @@ void DrawSingleDecal( decal_t *pDecal, msurface_t *fa )
 	pglEnd();
 }
 
-void DrawSurfaceDecals( msurface_t *fa )
-{
-	decal_t		*p;
+void DrawSurfaceDecals( void )
+{	
 	cl_entity_t	*e;
+	msurface_t 	*fa;
+	decal_t		*p;
+	int		i;
 
-	if( !fa->pdecals ) return;
+	if( !tr.num_draw_decals )
+		return;
 
 	e = RI.currententity;
 	ASSERT( e != NULL );
 
-	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
+	if( e->curstate.rendermode != kRenderTransTexture )
 	{
-		pglDepthMask( GL_FALSE );
 		pglEnable( GL_BLEND );
-
-		if( e->curstate.rendermode == kRenderTransAlpha )
-			pglDisable( GL_ALPHA_TEST );
+		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		pglDepthMask( GL_FALSE );
 	}
-
-	if( e->curstate.rendermode == kRenderTransColor )
-		pglEnable( GL_TEXTURE_2D );
 
 	if( e->curstate.rendermode == kRenderTransTexture || e->curstate.rendermode == kRenderTransAdd )
 		GL_Cull( GL_NONE );
 
-	pglEnable( GL_POLYGON_OFFSET_FILL );
-	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-
-	if( fa->flags & SURF_TRANSPARENT && glState.stencilEnabled )
+	if( gl_polyoffset->value )
 	{
-		mtexinfo_t	*tex = fa->texinfo;
+		pglEnable( GL_POLYGON_OFFSET_FILL );
+		pglPolygonOffset( -1.0f, -gl_polyoffset->value );
+	}
+
+	for( i = 0; i < tr.num_draw_decals; i++ )
+	{
+		fa = tr.draw_decals[i];
+
+		if( fa->flags & SURF_TRANSPARENT && glState.stencilEnabled )
+		{
+			mtexinfo_t	*tex = fa->texinfo;
+			texture_t		*t = R_TextureAnimation( fa );
+
+			// sigh! we need to draw poly again here
+			pglEnable( GL_ALPHA_TEST );
+			GL_Bind( GL_TEXTURE0, t->gl_texturenum );
+			DrawGLPoly( fa->polys, 0.0f, 0.0f );
+			pglDisable( GL_ALPHA_TEST );
+
+			for( p = fa->pdecals; p; p = p->pnext )
+			{
+				if( p->texture )
+				{
+					float *o, *v;
+					int i, numVerts;
+					o = R_DecalSetupVerts( p, fa, p->texture, &numVerts );
+
+					pglEnable( GL_STENCIL_TEST );
+					pglStencilFunc( GL_ALWAYS, 1, 0xFFFFFFFF );
+					pglColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
+
+					pglStencilOp( GL_KEEP, GL_KEEP, GL_REPLACE );
+					pglBegin( GL_POLYGON );
+
+					for( i = 0, v = o; i < numVerts; i++, v += VERTEXSIZE )
+					{
+						v[5] = ( DotProduct( v, tex->vecs[0] ) + tex->vecs[0][3] ) / tex->texture->width;
+						v[6] = ( DotProduct( v, tex->vecs[1] ) + tex->vecs[1][3] ) / tex->texture->height;
+
+						pglTexCoord2f( v[5], v[6] );
+						pglVertex3fv( v );
+					}
+
+					pglEnd();
+					pglStencilOp( GL_KEEP, GL_KEEP, GL_DECR );
+
+					pglEnable( GL_ALPHA_TEST );
+					pglBegin( GL_POLYGON );
+
+					for( i = 0, v = o; i < numVerts; i++, v += VERTEXSIZE )
+					{
+						pglTexCoord2f( v[5], v[6] );
+						pglVertex3fv( v );
+					}
+
+					pglEnd();
+					pglDisable( GL_ALPHA_TEST );
+
+					pglColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
+					pglStencilFunc( GL_EQUAL, 0, 0xFFFFFFFF );
+					pglStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
+				}
+			}
+		}
 
 		for( p = fa->pdecals; p; p = p->pnext )
 		{
 			if( p->texture )
 			{
-				float *o, *v;
-				int i, numVerts;
-				o = R_DecalSetupVerts( p, fa, p->texture, &numVerts );
+				gltexture_t *glt = R_GetTexture( p->texture );
 
-				pglEnable( GL_STENCIL_TEST );
-				pglStencilFunc( GL_ALWAYS, 1, 0xFFFFFFFF );
-				pglColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
-
-				pglStencilOp( GL_KEEP, GL_KEEP, GL_REPLACE );
-				pglBegin( GL_POLYGON );
-
-				for( i = 0, v = o; i < numVerts; i++, v += VERTEXSIZE )
+				// normal HL decal with alpha-channel
+				if( glt->flags & TF_HAS_ALPHA )
 				{
-					v[5] = ( DotProduct( v, tex->vecs[0] ) + tex->vecs[0][3] ) / tex->texture->width;
-					v[6] = ( DotProduct( v, tex->vecs[1] ) + tex->vecs[1][3] ) / tex->texture->height;
-
-					pglTexCoord2f( v[5], v[6] );
-					pglVertex3fv( v );
+					// draw transparent decals with GL_MODULATE
+					if( glt->fogParams[3] > DECAL_TRANSPARENT_THRESHOLD )
+						pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+					else pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+					pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 				}
-
-				pglEnd();
-				pglStencilOp( GL_KEEP, GL_KEEP, GL_DECR );
-
-				pglEnable( GL_ALPHA_TEST );
-				pglBegin( GL_POLYGON );
-
-				for( i = 0, v = o; i < numVerts; i++, v += VERTEXSIZE )
+				else
 				{
-					pglTexCoord2f( v[5], v[6] );
-					pglVertex3fv( v );
-				}
+					// color decal like detail texture. Base color is 127 127 127
+					pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+					pglBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
+                              	}
 
-				pglEnd();
-				pglDisable( GL_ALPHA_TEST );
-
-				pglColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
-				pglStencilFunc( GL_EQUAL, 0, 0xFFFFFFFF );
-				pglStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
+				DrawSingleDecal( p, fa );
 			}
 		}
+
+		if( fa->flags & SURF_TRANSPARENT && glState.stencilEnabled )
+			pglDisable( GL_STENCIL_TEST );
 	}
 
-	for( p = fa->pdecals; p; p = p->pnext )
-	{
-		if( p->texture )
-		{
-			gltexture_t *glt = R_GetTexture( p->texture );
-
-			// normal HL decal with alpha-channel
-			if( glt->flags & TF_HAS_ALPHA )
-			{
-				// draw transparent decals with GL_MODULATE
-				if( glt->fogParams[3] > DECAL_TRANSPARENT_THRESHOLD )
-					pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-				else pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-			}
-			else
-			{
-				// color decal like detail texture. Base color is 127 127 127
-				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-				pglBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
-                              }
-
-			DrawSingleDecal( p, fa );
-		}
-	}
-
-	if( fa->flags & SURF_TRANSPARENT && glState.stencilEnabled )
-		pglDisable( GL_STENCIL_TEST );
-
-	if( e->curstate.rendermode == kRenderNormal || e->curstate.rendermode == kRenderTransAlpha )
+	if( e->curstate.rendermode != kRenderTransTexture )
 	{
 		pglDepthMask( GL_TRUE );
 		pglDisable( GL_BLEND );
-
-		if( e->curstate.rendermode == kRenderTransAlpha )
-			pglEnable( GL_ALPHA_TEST );
+		pglDisable( GL_ALPHA_TEST );
 	}
 
-	pglDisable( GL_POLYGON_OFFSET_FILL );
+	if( gl_polyoffset->value )
+		pglDisable( GL_POLYGON_OFFSET_FILL );
 
 	if( e->curstate.rendermode == kRenderTransTexture || e->curstate.rendermode == kRenderTransAdd )
 		GL_Cull( GL_FRONT );
 
-	if( e->curstate.rendermode == kRenderTransColor )
-		pglDisable( GL_TEXTURE_2D );
-
-	// restore blendfunc here
-	if( e->curstate.rendermode == kRenderTransAdd || e->curstate.rendermode == kRenderGlow )
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+	tr.num_draw_decals = 0;
 }
 
 /*
