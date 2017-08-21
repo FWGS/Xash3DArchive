@@ -106,13 +106,13 @@ static qboolean R_OpaqueEntity( cl_entity_t *ent )
 {
 	if( ent->curstate.rendermode == kRenderNormal )
 		return true;
-
+#if 0
 	if( ent->model->type != mod_brush )
 		return false;
 
 	if( ent->curstate.rendermode == kRenderTransAlpha )
 		return true;
-
+#endif
 	return false;
 }
 
@@ -127,36 +127,36 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 {
 	cl_entity_t	*ent1, *ent2;
 	vec3_t		vecLen, org;
-	float		len1, len2;
+	float		dist1, dist2;
 
 	ent1 = (cl_entity_t *)*a;
 	ent2 = (cl_entity_t *)*b;
 
-	// then by distance
-	if( ent1->model->type == mod_brush )
+	// sort by distance
+	if( ent1->curstate.rendermode != kRenderTransAlpha )
 	{
 		VectorAverage( ent1->model->mins, ent1->model->maxs, org );
 		VectorAdd( ent1->origin, org, org );
 		VectorSubtract( RI.vieworg, org, vecLen );
+		dist1 = DotProduct( vecLen, vecLen );
 	}
-	else VectorSubtract( RI.vieworg, ent1->origin, vecLen );
-	len1 = VectorLength( vecLen );
+	else dist1 = 1000000000;
 
-	if( ent2->model->type == mod_brush )
+	if( ent2->curstate.rendermode != kRenderTransAlpha )
 	{
 		VectorAverage( ent2->model->mins, ent2->model->maxs, org );
 		VectorAdd( ent2->origin, org, org );
 		VectorSubtract( RI.vieworg, org, vecLen );
+		dist2 = DotProduct( vecLen, vecLen );
 	}
-	else VectorSubtract( RI.vieworg, ent2->origin, vecLen );
-	len2 = VectorLength( vecLen );
+	else dist2 = 1000000000;
 
-	if( len1 > len2 )
+	if( dist1 > dist2 )
 		return -1;
-	if( len1 < len2 )
+	if( dist1 < dist2 )
 		return 1;
 
-	// now sort by rendermode
+	// then sort by rendermode
 	if( R_RankForRenderMode( ent1 ) > R_RankForRenderMode( ent2 ))
 		return 1;
 	if( R_RankForRenderMode( ent1 ) < R_RankForRenderMode( ent2 ))
@@ -809,8 +809,8 @@ void R_DrawEntitiesOnList( void )
 {
 	int	i;
 
-	glState.drawTrans = false;
 	tr.blend = 1.0f;
+	GL_CheckForErrors();
 
 	// first draw solid entities
 	for( i = 0; i < tr.num_solid_entities && !RI.onlyClientDraw; i++ )
@@ -837,8 +837,12 @@ void R_DrawEntitiesOnList( void )
 		}
 	}
 
+	GL_CheckForErrors();
+
 	// quake-specific feature
 	R_DrawAlphaTextureChains();
+
+	GL_CheckForErrors();
 
 	// draw sprites seperately, because of alpha blending
 	for( i = 0; i < tr.num_solid_entities && !RI.onlyClientDraw; i++ )
@@ -857,15 +861,19 @@ void R_DrawEntitiesOnList( void )
 		}
 	}
 
+	GL_CheckForErrors();
+
 	if( !RI.onlyClientDraw )
           {
 		CL_DrawBeams( false );
 	}
 
+	GL_CheckForErrors();
+
 	if( RI.drawWorld )
 		clgame.dllFuncs.pfnDrawNormalTriangles();
 
-	glState.drawTrans = true;
+	GL_CheckForErrors();
 
 	// then draw translucent entities
 	for( i = 0; i < tr.num_trans_entities && !RI.onlyClientDraw; i++ )
@@ -897,11 +905,15 @@ void R_DrawEntitiesOnList( void )
 		}
 	}
 
+	GL_CheckForErrors();
+
 	if( RI.drawWorld )
 	{
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		clgame.dllFuncs.pfnDrawTransparentTriangles ();
 	}
+
+	GL_CheckForErrors();
 
 	if( !RI.onlyClientDraw )
 	{
@@ -912,12 +924,15 @@ void R_DrawEntitiesOnList( void )
 		R_AllowFog( true );
 	}
 
-	glState.drawTrans = false;
+	GL_CheckForErrors();
+
 	pglDisable( GL_BLEND );	// Trinity Render issues
 
 	if( !RI.onlyClientDraw )
 		R_DrawViewModel();
 	CL_ExtraUpdate();
+
+	GL_CheckForErrors();
 }
 
 /*

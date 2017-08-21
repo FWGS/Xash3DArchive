@@ -1170,7 +1170,7 @@ void SV_Physics_Pusher( edict_t *ent )
 					// reset the local time to what it was before we rotated
 					ent->v.ltime = oldtime;
 					pBlocker = SV_PushMove( ent, movetime );
-					if( oldtime2 < ent->v.ltime )
+					if( ent->v.ltime < oldtime2 )
 						ent->v.ltime = oldtime2;
 				}
 			}
@@ -1200,7 +1200,6 @@ void SV_Physics_Pusher( edict_t *ent )
 		ent->v.nextthink = 0.0f;
 		svgame.globals->time = sv.time;
 		svgame.dllFuncs.pfnThink( ent );
-		if( ent->free ) return;
 	}
 }
 
@@ -1437,13 +1436,14 @@ void SV_Physics_Toss( edict_t *ent )
 
 	ground = ent->v.groundentity;
 
-	if( ent->v.velocity[2] > 0.0f || !SV_IsValidEdict( ground ) || ground->v.flags & (FL_MONSTER|FL_CLIENT) || svgame.globals->changelevel )
-	{
-		ent->v.flags &= ~FL_ONGROUND;
-          }
+	if( ent->v.velocity[2] > 0 )
+		ClearBits( ent->v.flags, FL_ONGROUND );
+
+	if( !SV_IsValidEdict( ground ) || FBitSet( ground->v.flags, FL_MONSTER|FL_CLIENT ))
+		ClearBits( ent->v.flags, FL_ONGROUND );
 
 	// if on ground and not moving, return.
-	if( ent->v.flags & FL_ONGROUND && VectorIsNull( ent->v.velocity ))
+	if( FBitSet( ent->v.flags, FL_ONGROUND ) && VectorIsNull( ent->v.velocity ))
 	{
 		VectorClear( ent->v.avelocity );
 
@@ -1593,37 +1593,46 @@ void SV_Physics_Step( edict_t *ent )
 		ent->v.velocity[2] += buoyancy;
 	}
 
-	if( !wasonground && !( ent->v.flags & FL_FLY ) && (!( ent->v.flags & FL_SWIM ) || ent->v.waterlevel <= 0 ))
+	if( !wasonground )
 	{
-		if( !inwater )
-			SV_AddGravity( ent );
+		if( !FBitSet( ent->v.flags, FL_FLY ))
+		{
+			if( !FBitSet( ent->v.flags, FL_SWIM ) && ( ent->v.waterlevel > 0 ))
+			{
+				if( !inwater )
+					SV_AddGravity( ent );
+			}
+		}
 	}
 
 	if( !VectorIsNull( ent->v.velocity ) || !VectorIsNull( ent->v.basevelocity ))
 	{
 		ent->v.flags &= ~FL_ONGROUND;
 
-		if(( wasonground || wasonmover ) && ( ent->v.health > 0 || SV_CheckBottom( ent, MOVE_NORMAL )))
+		if( wasonground || wasonmover )
 		{
-			float	*vel = ent->v.velocity;
-			float	control, speed, newspeed;
-			float	friction;
-
-			speed = sqrt(( vel[0] * vel[0] ) + ( vel[1] * vel[1] ));	// DotProduct2D
-
-			if( speed )
+			if(!( ent->v.health <= 0 && !SV_CheckBottom( ent, MOVE_NORMAL )))
 			{
-				friction = sv_friction.value * ent->v.friction;	// factor
-				ent->v.friction = 1.0f; // g-cont. ???
-				if( wasonmover ) friction *= 0.5f; // add a little friction
+				float	*vel = ent->v.velocity;
+				float	control, speed, newspeed;
+				float	friction;
 
-				control = (speed < sv_stopspeed.value) ? sv_stopspeed.value : speed;
-				newspeed = speed - (sv.frametime * control * friction);
-				if( newspeed < 0 ) newspeed = 0;
-				newspeed /= speed;
+				speed = sqrt(( vel[0] * vel[0] ) + ( vel[1] * vel[1] ));	// DotProduct2D
 
-				vel[0] = vel[0] * newspeed;
-				vel[1] = vel[1] * newspeed;
+				if( speed )
+				{
+					friction = sv_friction.value * ent->v.friction;	// factor
+					ent->v.friction = 1.0f; // g-cont. ???
+					if( wasonmover ) friction *= 0.5f; // add a little friction
+
+					control = (speed < sv_stopspeed.value) ? sv_stopspeed.value : speed;
+					newspeed = speed - (sv.frametime * control * friction);
+					if( newspeed < 0 ) newspeed = 0;
+					newspeed /= speed;
+
+					vel[0] = vel[0] * newspeed;
+					vel[1] = vel[1] * newspeed;
+				}
 			}
 		}
 
@@ -1635,7 +1644,6 @@ void SV_Physics_Step( edict_t *ent )
 
 		SV_CheckVelocity( ent );
 		VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
-
 		SV_CheckVelocity( ent );
 
 		VectorAdd( ent->v.origin, ent->v.mins, mins );

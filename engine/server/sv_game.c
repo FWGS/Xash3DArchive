@@ -152,9 +152,10 @@ void SV_SetModel( edict_t *ent, const char *name )
 	case mod_brush:
 	case mod_sprite:
 		Mod_GetBounds( ent->v.modelindex, mins, maxs );
-		SV_SetMinMaxSize( ent, mins, maxs, true );
 		break;
 	}
+
+	SV_SetMinMaxSize( ent, mins, maxs, true );
 }
 
 float SV_AngleMod( float ideal, float current, float speed )
@@ -230,8 +231,7 @@ qboolean SV_CheckClientVisiblity( sv_client_t *cl, const byte *mask )
 	vec3_t	vieworg;
 	mleaf_t	*leaf;
 
-	if( !mask || svs.maxclients <= 1 )
-		return true; // GoldSrc rules
+	if( !mask ) return true; // GoldSrc rules
 
 	clientnum = cl - svs.clients;
 	VectorCopy( viewPoint[clientnum], vieworg );
@@ -308,7 +308,8 @@ int SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, qboolean us
 		// intentional fallthrough
 	case MSG_PAS:
 		if( origin == NULL ) return false;
-		Mod_FatPVS( origin, FATPHS_RADIUS, fatphs, world.fatbytes, false, false );
+		// NOTE: GoldSource not using PHS for singleplayer
+		Mod_FatPVS( origin, FATPHS_RADIUS, fatphs, world.fatbytes, false, ( svs.maxclients == 1 ));
 		mask = fatphs; // using the FatPVS like a PHS
 		break;
 	case MSG_PVS_R:
@@ -3843,7 +3844,10 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 
 	// setup pvs cluster for invoker
 	if( !FBitSet( flags, FEV_GLOBAL ))
-		mask = Mod_GetPVSForPoint( pvspoint );
+	{
+		Mod_FatPVS( pvspoint, FATPHS_RADIUS, fatphs, world.fatbytes, false, ( svs.maxclients == 1 ));
+		mask = fatphs; // using the FatPVS like a PHS
+	}
 
 	// process all the clients
 	for( slot = 0, cl = svs.clients; slot < svs.maxclients; slot++, cl++ )

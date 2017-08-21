@@ -980,7 +980,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		color2[1] = (float)lightColor.g * ( 1.0f / 255.0f );
 		color2[2] = (float)lightColor.b * ( 1.0f / 255.0f );
 		// NOTE: sprites with 'lightmap' looks ugly when alpha func is GL_GREATER 0.0
-		pglAlphaFunc( GL_GEQUAL, 0.25f );
+		pglAlphaFunc( GL_GREATER, 0.25f );
 	}
 
 	if( R_SpriteAllowLerping( e, psprite ))

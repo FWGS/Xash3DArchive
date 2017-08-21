@@ -290,10 +290,11 @@ qboolean R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags 
 //
 // gl_decals.c
 //
-void DrawSurfaceDecals( void );
+void DrawSurfaceDecals( msurface_t *fa, qboolean single );
 float *R_DecalSetupVerts( decal_t *pDecal, msurface_t *surf, int texture, int *outCount );
 void DrawSingleDecal( decal_t *pDecal, msurface_t *fa );
 void R_EntityRemoveDecals( model_t *mod );
+void DrawDecalsBatch( void );
 void R_ClearDecals( void );
 
 //
@@ -623,7 +624,6 @@ typedef struct
 
 	int		faceCull;
 
-	qboolean		drawTrans;
 	qboolean		stencilEnabled;
 	qboolean		in2DMode;
 } glstate_t;

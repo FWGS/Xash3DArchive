@@ -780,6 +780,83 @@ byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int out
 	return scaledImage;
 }
 
+float GL_SimpleSpline( float value )
+{
+	float	valueSquared = value * value * value;
+
+	// nice little ease-in, ease-out spline-like curve
+	return (4.0f * valueSquared - 3.0f * valueSquared * value);
+}
+
+/*
+=================
+GL_BoxFilter3x3
+
+box filter 3x3
+=================
+*/
+void GL_BoxFilter3x3( byte *out, const byte *in, int w, int h, int x, int y )
+{
+	int		r = 0, g = 0, b = 0, a = 0;
+	int		count = 0, acount = 0;
+	int		i, j, u, v;
+	const byte	*pixel;
+
+	for( i = 0; i < 3; i++ )
+	{
+		u = ( i - 1 ) + x;
+
+		for( j = 0; j < 3; j++ )
+		{
+			v = ( j - 1 ) + y;
+
+			if( u >= 0 && u < w && v >= 0 && v < h )
+			{
+				pixel = &in[( u + v * w ) * 4];
+
+				if( pixel[3] != 0 )
+				{
+					r += pixel[0];
+					g += pixel[1];
+					b += pixel[2];
+					a += pixel[3];
+					acount++;
+				}
+			}
+		}
+	}
+
+	if(  acount == 0 )
+		acount = 1;
+
+	out[0] = r / acount;
+	out[1] = g / acount;
+	out[2] = b / acount;
+//	out[3] = (int)( SimpleSpline( ( a / 9.0f ) / 255.0f ) * 255 );
+}
+
+/*
+=================
+GL_ApplyFilter
+
+Apply box-filter to 1-bit alpha
+=================
+*/
+byte *GL_ApplyFilter( const byte *source, int width, int height )
+{
+	byte	*in = (byte *)source;
+	byte	*out = (byte *)source;
+	int	i;
+
+	for( i = 0; source && i < width * height; i++, in += 4 )
+	{
+		if( in[0] == 0 && in[1] == 0 && in[2] == 0 && in[3] == 0 )
+			GL_BoxFilter3x3( in, source, width, height, i % width, i / width );
+	}
+
+	return out;
+}
+
 /*
 =================
 GL_ApplyGamma
@@ -1105,6 +1182,9 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 
 			if( !ImageDXT( pic->type ) && !FBitSet( tex->flags, TF_NOMIPMAP|TF_SKYSIDE ))
 				data = GL_ApplyGamma( data, tex->width * tex->height * tex->depth, FBitSet( tex->flags, TF_NORMALMAP ));
+
+			if( !ImageDXT( pic->type ) && FBitSet( tex->flags, TF_HAS_ALPHA ))
+				data = GL_ApplyFilter( data, tex->width, tex->height );
 
 			// mips will be auto-generated if desired
 			for( j = 0; j < mipCount; j++ )

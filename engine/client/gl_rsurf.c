@@ -1157,11 +1157,17 @@ void R_RenderBrushPoly( msurface_t *fa )
 	DrawGLPoly( fa->polys, 0.0f, 0.0f );
 	if( is_mirror ) R_EndDrawMirror();
 
-	if( tr.num_draw_decals < MAX_DECAL_SURFS )
-		tr.draw_decals[tr.num_draw_decals++] = fa;
-
-	if( RI.currententity->curstate.rendermode == kRenderTransTexture )
-		DrawSurfaceDecals();
+	if( RI.currententity->curstate.rendermode == kRenderNormal )
+	{
+		// batch decals to draw later
+		if( tr.num_draw_decals < MAX_DECAL_SURFS && fa->pdecals )
+			tr.draw_decals[tr.num_draw_decals++] = fa;
+	}
+	else
+	{
+		// if rendermode != kRenderNormal draw decals sequentially
+		DrawSurfaceDecals( fa, true );
+	}
 
 	// NOTE: draw mirror through in mirror show dummy lightmapped texture
 	if( fa->flags & SURF_REFLECT && RP_NORMALPASS( ))
@@ -1315,6 +1321,7 @@ void R_DrawAlphaTextureChains( void )
 	// restore worldmodel
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
+	RI.currententity->curstate.rendermode = kRenderTransAlpha;
 	draw_alpha_surfaces = false;
 
 	for( i = 0; i < cl.worldmodel->numtextures; i++ )
@@ -1332,9 +1339,9 @@ void R_DrawAlphaTextureChains( void )
 		t->texturechain = NULL;
 	}
 
-	DrawSurfaceDecals();
 	GL_ResetFogColor();
 	R_BlendLightmaps();
+	RI.currententity->curstate.rendermode = kRenderNormal; // restore world rendermode
 	pglAlphaFunc( GL_GREATER, 0.0f );
 }
 
@@ -1438,7 +1445,7 @@ void R_SetRenderMode( cl_entity_t *e )
 	case kRenderTransColor:
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 		pglColor4ub( e->curstate.rendercolor.r, e->curstate.rendercolor.g, e->curstate.rendercolor.b, e->curstate.renderamt );
-		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ALPHA );
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		pglDisable( GL_TEXTURE_2D );
 		pglEnable( GL_BLEND );
 		break;
@@ -1566,7 +1573,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( e->curstate.rendermode == kRenderTransColor )
 		pglEnable( GL_TEXTURE_2D );
 
-	DrawSurfaceDecals();
+	DrawDecalsBatch();
 	GL_ResetFogColor();
 	R_BlendLightmaps();
 	R_RenderFullbrights();
@@ -1987,7 +1994,7 @@ void R_DrawWorld( void )
 
 	if( !CL_IsDevOverviewMode( ))
 	{
-		DrawSurfaceDecals();
+		DrawDecalsBatch();
 		GL_ResetFogColor();
 		R_BlendLightmaps();
 		R_RenderFullbrights();

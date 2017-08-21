@@ -998,7 +998,6 @@ void CL_LinkPlayers( frame_t *frame )
 			VectorCopy( state->origin, ent->prevstate.origin );
 			VectorCopy( state->origin, ent->curstate.origin );
 			VectorCopy( ent->curstate.angles, ent->angles );
-			local_added = true;
 		}
 
 		if( FBitSet( ent->curstate.effects, EF_NOINTERP ))
@@ -1029,7 +1028,11 @@ void CL_LinkPlayers( frame_t *frame )
 		VectorCopy( ent->origin, ent->attachment[2] );
 		VectorCopy( ent->origin, ent->attachment[3] );
 
-		CL_AddVisibleEntity( ent, ET_PLAYER );
+		if( CL_AddVisibleEntity( ent, ET_PLAYER ))
+		{
+			if( i == cl.playernum )
+				local_added = true;
+		}
 	}
 
 	// apply local player effects if entity is not added
@@ -1278,6 +1281,7 @@ qboolean CL_GetEntitySpatialization( channel_t *ch )
 	{
 		// entity is never has updates on the client
 		// so we should use static origin instead
+		ch->staticsound = true;
 		return valid_origin;
 	}
 #if 0
