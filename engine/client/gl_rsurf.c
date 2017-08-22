@@ -1165,8 +1165,12 @@ void R_RenderBrushPoly( msurface_t *fa )
 	}
 	else
 	{
+		float dist = PlaneDiff( tr.modelorg, fa->plane );
+		if( FBitSet( fa->flags, SURF_PLANEBACK ))
+			dist = -dist;
+
 		// if rendermode != kRenderNormal draw decals sequentially
-		DrawSurfaceDecals( fa, true );
+		DrawSurfaceDecals( fa, true, (dist < 0.0f) ? true : false );
 	}
 
 	// NOTE: draw mirror through in mirror show dummy lightmapped texture
@@ -1555,11 +1559,13 @@ void R_DrawBrushModel( cl_entity_t *e )
 	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		if( R_CullSurface( psurf, NULL, 0 )) // ignore frustum for bmodels
-			continue;
+		int result = R_CullSurface( psurf, NULL, 0 ); // ignore frustum for bmodels
 
-		if( num_sorted < world.max_surfaces )
-			world.draw_surfaces[num_sorted++] = psurf;
+		if(( result == CULL_VISIBLE ) || ( result == CULL_BACKSIDE && psurf->pdecals && e->curstate.rendermode == kRenderTransTexture ))
+                    {
+			if( num_sorted < world.max_surfaces )
+				world.draw_surfaces[num_sorted++] = psurf;
+		}
 	}
 
 	// sort faces if needs

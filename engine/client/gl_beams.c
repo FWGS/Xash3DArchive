@@ -766,8 +766,6 @@ void R_DrawCylinder( vec3_t source, vec3_t delta, float width, float scale, floa
 	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
 	vLast = fmod( freq * speed, 1 );
 	scale = scale * length;
-
-	TriCullFace( TRI_NONE );	// draw both sides
 	
 	for ( i = 0; i < segments; i++ )
 	{
@@ -794,8 +792,6 @@ void R_DrawCylinder( vec3_t source, vec3_t delta, float width, float scale, floa
 
 		vLast += vStep;	// Advance texture scroll (v axis only)
 	}
-
-	TriCullFace( TRI_FRONT );
 }
 
 /*

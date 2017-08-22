@@ -1585,7 +1585,7 @@ void SV_Physics_Step( edict_t *ent )
 	wasonmover = SV_CheckMover( ent );
 	inwater = SV_CheckWater( ent );
 
-	if( ent->v.flags & FL_FLOAT && ent->v.waterlevel > 0 )
+	if( FBitSet( ent->v.flags, FL_FLOAT ) && ent->v.waterlevel > 0 )
 	{
 		float buoyancy = SV_Submerged( ent ) * ent->v.skin * sv.frametime;
 
@@ -1597,7 +1597,7 @@ void SV_Physics_Step( edict_t *ent )
 	{
 		if( !FBitSet( ent->v.flags, FL_FLY ))
 		{
-			if( !FBitSet( ent->v.flags, FL_SWIM ) && ( ent->v.waterlevel > 0 ))
+			if( !FBitSet( ent->v.flags, FL_SWIM ) || ( ent->v.waterlevel <= 0 ))
 			{
 				if( !inwater )
 					SV_AddGravity( ent );
@@ -1609,30 +1609,27 @@ void SV_Physics_Step( edict_t *ent )
 	{
 		ent->v.flags &= ~FL_ONGROUND;
 
-		if( wasonground || wasonmover )
+		if(( wasonground || wasonmover ) && ( ent->v.health > 0 || SV_CheckBottom( ent, MOVE_NORMAL )))
 		{
-			if(!( ent->v.health <= 0 && !SV_CheckBottom( ent, MOVE_NORMAL )))
+			float	*vel = ent->v.velocity;
+			float	control, speed, newspeed;
+			float	friction;
+
+			speed = sqrt(( vel[0] * vel[0] ) + ( vel[1] * vel[1] ));	// DotProduct2D
+
+			if( speed )
 			{
-				float	*vel = ent->v.velocity;
-				float	control, speed, newspeed;
-				float	friction;
+				friction = sv_friction.value * ent->v.friction;	// factor
+				ent->v.friction = 1.0f; // g-cont. ???
+				if( wasonmover ) friction *= 0.5f; // add a little friction
 
-				speed = sqrt(( vel[0] * vel[0] ) + ( vel[1] * vel[1] ));	// DotProduct2D
+				control = (speed < sv_stopspeed.value) ? sv_stopspeed.value : speed;
+				newspeed = speed - (sv.frametime * control * friction);
+				if( newspeed < 0 ) newspeed = 0;
+				newspeed /= speed;
 
-				if( speed )
-				{
-					friction = sv_friction.value * ent->v.friction;	// factor
-					ent->v.friction = 1.0f; // g-cont. ???
-					if( wasonmover ) friction *= 0.5f; // add a little friction
-
-					control = (speed < sv_stopspeed.value) ? sv_stopspeed.value : speed;
-					newspeed = speed - (sv.frametime * control * friction);
-					if( newspeed < 0 ) newspeed = 0;
-					newspeed /= speed;
-
-					vel[0] = vel[0] * newspeed;
-					vel[1] = vel[1] * newspeed;
-				}
+				vel[0] = vel[0] * newspeed;
+				vel[1] = vel[1] * newspeed;
 			}
 		}
 

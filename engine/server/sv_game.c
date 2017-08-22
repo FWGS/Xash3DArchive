@@ -2961,6 +2961,9 @@ string_t SV_AllocString( const char *szString )
 	if( svgame.physFuncs.pfnAllocString != NULL )
 		return svgame.physFuncs.pfnAllocString( szString );
 
+	if( !szString || !*szString )
+		return 0;
+
 	l = Q_strlen( szString ) + 1;
 
 	out = out_p = Mem_Alloc( svgame.stringspool, l );

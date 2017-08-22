@@ -923,10 +923,19 @@ static void Cmd_WriteOpenGLCvar( const char *name, const char *string, const cha
 
 static void Cmd_WriteHelp(const char *name, const char *unused, const char *desc, void *f )
 {
-	if( !desc ) return;				// ignore fantom cmds
-	if( !Q_strcmp( desc, "" )) return;		// blank description
-	if( name[0] == '+' || name[0] == '-' ) return;	// key bindings	
-	FS_Printf( f, "%s\t\t\t\"%s\"\n", name, desc );
+	int	length;
+
+	if( !desc || !Q_strcmp( desc, "" ))
+		return; // ignore fantom cmds
+	if( name[0] == '+' || name[0] == '-' )
+		return; // key bindings	
+
+	length = 3 - (Q_strlen( name ) / 10); // Asm_Ed default tab stop is 10
+
+	if( length == 3 ) FS_Printf( f, "%s\t\t\t\"%s\"\n", name, desc );
+	if( length == 2 ) FS_Printf( f, "%s\t\t\"%s\"\n", name, desc );
+	if( length == 1 ) FS_Printf( f, "%s\t\"%s\"\n", name, desc );
+	if( length == 0 ) FS_Printf( f, "%s \"%s\"\n", name, desc );
 }
 
 void Cmd_WriteOpenGLVariables( file_t *f )

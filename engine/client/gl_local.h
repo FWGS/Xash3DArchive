@@ -56,6 +56,12 @@ extern byte	*r_temppool;
 #define TF_IMAGE		(TF_NOMIPMAP|TF_CLAMP)
 #define TF_DECAL		(TF_CLAMP)
 
+#define CULL_VISIBLE	0		// not culled
+#define CULL_BACKSIDE	1		// backside of transparent wall
+#define CULL_FRUSTUM	2		// culled by frustum
+#define CULL_VISFRAME	3		// culled by PVS
+#define CULL_OTHER		4		// culled by other reason
+
 typedef struct gltexture_s
 {
 	char		name[256];	// game path, including extension (can be store image programs)
@@ -285,12 +291,12 @@ void R_ShowTextures( void );
 int R_CullModel( cl_entity_t *e, const vec3_t absmin, const vec3_t absmax );
 qboolean R_CullBox( const vec3_t mins, const vec3_t maxs );
 qboolean R_CullSphere( const vec3_t centre, const float radius );
-qboolean R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags );
+int R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags );
 
 //
 // gl_decals.c
 //
-void DrawSurfaceDecals( msurface_t *fa, qboolean single );
+void DrawSurfaceDecals( msurface_t *fa, qboolean single, qboolean reverse );
 float *R_DecalSetupVerts( decal_t *pDecal, msurface_t *surf, int texture, int *outCount );
 void DrawSingleDecal( decal_t *pDecal, msurface_t *fa );
 void R_EntityRemoveDecals( model_t *mod );

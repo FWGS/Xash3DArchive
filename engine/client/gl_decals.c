@@ -878,7 +878,7 @@ void DrawSingleDecal( decal_t *pDecal, msurface_t *fa )
 	pglEnd();
 }
 
-void DrawSurfaceDecals( msurface_t *fa, qboolean single )
+void DrawSurfaceDecals( msurface_t *fa, qboolean single, qboolean reverse )
 {	
 	decal_t		*p;
 	cl_entity_t	*e;
@@ -964,28 +964,25 @@ void DrawSurfaceDecals( msurface_t *fa, qboolean single )
 		}
 	}
 
-	for( p = fa->pdecals; p; p = p->pnext )
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+	if( reverse && e->curstate.rendermode == kRenderTransTexture )
 	{
-		if( p->texture )
+		decal_t	*list[1024];
+		int	i, count;
+
+		for( p = fa->pdecals, count = 0; p && count < 1024; p = p->pnext )
+			if( p->texture ) list[count++] = p;
+
+		for( i = count - 1; i >= 0; i-- )
+			DrawSingleDecal( list[i], fa );
+	}
+	else
+	{
+		for( p = fa->pdecals; p; p = p->pnext )
 		{
-			gltexture_t *glt = R_GetTexture( p->texture );
-
-			// normal HL decal with alpha-channel
-			if( glt->flags & TF_HAS_ALPHA )
-			{
-				// draw transparent decals with GL_MODULATE
-				if( glt->fogParams[3] > DECAL_TRANSPARENT_THRESHOLD )
-					pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-				else pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-				pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-			}
-			else
-			{
-				// color decal like detail texture. Base color is 127 127 127
-				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-				pglBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
-                              }
-
+			if( !p->texture ) continue;
 			DrawSingleDecal( p, fa );
 		}
 	}
@@ -1048,7 +1045,7 @@ void DrawDecalsBatch( void )
 
 	for( i = 0; i < tr.num_draw_decals; i++ )
 	{
-		DrawSurfaceDecals( tr.draw_decals[i], false );
+		DrawSurfaceDecals( tr.draw_decals[i], false, false );
 	}
 
 	if( e->curstate.rendermode != kRenderTransTexture )

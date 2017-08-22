@@ -780,14 +780,6 @@ byte *GL_ResampleTexture( const byte *source, int inWidth, int inHeight, int out
 	return scaledImage;
 }
 
-float GL_SimpleSpline( float value )
-{
-	float	valueSquared = value * value * value;
-
-	// nice little ease-in, ease-out spline-like curve
-	return (4.0f * valueSquared - 3.0f * valueSquared * value);
-}
-
 /*
 =================
 GL_BoxFilter3x3
@@ -832,7 +824,7 @@ void GL_BoxFilter3x3( byte *out, const byte *in, int w, int h, int x, int y )
 	out[0] = r / acount;
 	out[1] = g / acount;
 	out[2] = b / acount;
-//	out[3] = (int)( SimpleSpline( ( a / 9.0f ) / 255.0f ) * 255 );
+//	out[3] = (int)( SimpleSpline( ( a / 12.0f ) / 255.0f ) * 255 );
 }
 
 /*
@@ -847,6 +839,9 @@ byte *GL_ApplyFilter( const byte *source, int width, int height )
 	byte	*in = (byte *)source;
 	byte	*out = (byte *)source;
 	int	i;
+
+	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		return in;
 
 	for( i = 0; source && i < width * height; i++, in += 4 )
 	{

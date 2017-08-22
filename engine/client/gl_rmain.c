@@ -133,7 +133,7 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 	ent2 = (cl_entity_t *)*b;
 
 	// sort by distance
-	if( ent1->curstate.rendermode != kRenderTransAlpha )
+	if( ent1->model->type != mod_brush || ent1->curstate.rendermode != kRenderTransAlpha )
 	{
 		VectorAverage( ent1->model->mins, ent1->model->maxs, org );
 		VectorAdd( ent1->origin, org, org );
@@ -142,7 +142,7 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 	}
 	else dist1 = 1000000000;
 
-	if( ent2->curstate.rendermode != kRenderTransAlpha )
+	if( ent2->model->type != mod_brush || ent2->curstate.rendermode != kRenderTransAlpha )
 	{
 		VectorAverage( ent2->model->mins, ent2->model->maxs, org );
 		VectorAdd( ent2->origin, org, org );

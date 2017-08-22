@@ -310,23 +310,14 @@ void SV_ActivateServer( void )
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
 
-	if( sv.loadgame || svgame.globals->changelevel )
-	{
-		sv.frametime = 0.001;	// change to 0.1 if you want to repair broken trains in SoHL 1.0
-		numFrames = 1;
-	}
-	else if( svs.maxclients <= 1 )
-	{
-		if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
-			sv.frametime = 0.1f;
-		else sv.frametime = 0.8f;	// EXPERIMENTAL!!!
-		numFrames = 2;
-	}
-	else
-	{
-		sv.frametime = 0.1f;
-		numFrames = 8;
-	}
+	numFrames = (sv.loadgame) ? 1 : 2;
+	if( !sv.loadgame || svgame.globals->changelevel )
+		sv.frametime = 0.1f;			
+
+	// GoldSrc rules
+	// NOTE: this stuff is breaking sound from func_rotating in multiplayer
+	// e.g. ambience\boomer.wav on snark_pit.bsp
+	numFrames *= Q_min( svs.maxclients, 8 );
 
 	// run some frames to allow everything to settle
 	for( i = 0; i < numFrames; i++ )
