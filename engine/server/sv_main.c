@@ -95,6 +95,9 @@ CVAR_DEFINE_AUTO( sv_skydir_z, "1", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "sky rotation
 CVAR_DEFINE_AUTO( sv_skyangle, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skybox rotational angle (in degrees)" );
 CVAR_DEFINE_AUTO( sv_skyspeed, "0", 0, "skybox rotational speed" );
 
+CVAR_DEFINE( sv_spawntime, "host_spawntime", "0.8", FCVAR_ARCHIVE, "host.frametime on spawn new map (force to 0.1 if have problems or crashes)" );
+CVAR_DEFINE( sv_changetime, "host_changetime", "0.001", FCVAR_ARCHIVE, "host.frametime on changelevel (force to 0.1 if have player stucks)" );
+
 // obsolete cvars which we should keep because game DLL's will be relies on it
 CVAR_DEFINE_AUTO( showtriggers, "0", FCVAR_LATCH, "debug cvar shows triggers" );
 CVAR_DEFINE_AUTO( sv_airmove, "1", FCVAR_SERVER, "obsolete, compatibility issues" );
@@ -778,6 +781,9 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_consistency);
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
 	sv_hostmap = Cvar_Get( "hostmap", GI->startmap, 0, "keep name of last entered map" );
+
+	Cvar_RegisterVariable (&sv_spawntime);
+	Cvar_RegisterVariable (&sv_changetime);
 
 	Cvar_RegisterVariable (&violence_ablood);
 	Cvar_RegisterVariable (&violence_hblood);

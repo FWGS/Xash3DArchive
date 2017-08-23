@@ -227,7 +227,6 @@ void Cbuf_ExecStuffCmds( void )
 	// no reason to run the commandline arguments twice
 	if( !host.stuffcmds_pending )
 		return;
-
 	build[0] = 0;
 
 	for( i = 0; i < host.argc; i++ )

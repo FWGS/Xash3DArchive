@@ -105,7 +105,6 @@ typedef struct
 } studio_draw_state_t;
 
 // studio-related cvars 
-convar_t			*r_studio_lambert;
 convar_t			*r_studio_sort_textures;
 convar_t			*r_drawviewmodel;
 convar_t			*cl_righthand = NULL;
@@ -133,7 +132,6 @@ R_StudioInit
 */
 void R_StudioInit( void )
 {
-	r_studio_lambert = Cvar_Get( "r_studio_lambert", "1.5", FCVAR_ARCHIVE, "half-lambert value" );
 	cl_himodels = Cvar_Get( "cl_himodels", "1", FCVAR_ARCHIVE, "draw high-resolution player models in multiplayer" );
 	r_studio_sort_textures = Cvar_Get( "r_studio_sort_textures", "0", FCVAR_ARCHIVE, "change draw order for additive meshes" );
 	r_drawviewmodel = Cvar_Get( "r_drawviewmodel", "1", 0, "draw firstperson weapon model" );
@@ -1973,7 +1971,7 @@ void R_StudioLighting( float *lv, int bone, int flags, vec3_t normal )
 
 		illum += g_studio.shadelight;
 
-		r = r_studio_lambert->value;
+		r = SHADE_LAMBERT;
 
  		// do modified hemispherical lighting
 		if( r <= 1.0f )

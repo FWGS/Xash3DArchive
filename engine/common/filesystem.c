@@ -77,7 +77,7 @@ typedef struct wfile_s
 {
 	string		filename;
 	int		infotableofs;
-	byte		*mempool;	// W_ReadLump temp buffers
+	byte		*mempool;			// W_ReadLump temp buffers
 	int		numlumps;
 	int		mode;
 	file_t		*handle;
@@ -90,7 +90,7 @@ typedef struct pack_s
 	string		filename;
 	int		handle;
 	int		numfiles;
-	time_t		filetime;	// common for all packed files
+	time_t		filetime;			// common for all packed files
 	dpackfile_t	*files;
 } pack_t;
 
@@ -117,7 +117,7 @@ static void FS_InitMemory( void );
 const char *FS_FileExtension( const char *in );
 static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedironly );
 static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char matchtype );
-static dpackfile_t* FS_AddFileToPack( const char* name, pack_t *pack, long offset, long size );
+static dpackfile_t *FS_AddFileToPack( const char* name, pack_t *pack, long offset, long size );
 static byte *W_LoadFile( const char *path, long *filesizeptr, qboolean gamedironly );
 static qboolean FS_SysFileExists( const char *path );
 static qboolean FS_SysFolderExists( const char *path );
@@ -261,6 +261,7 @@ void listdirectory( stringlist_t *list, const char *path )
 
 	// start a new chain with the the first name
 	stringlistappend( list, n_file.name );
+
 	// iterate through the directory
 	while( _findnext( hFile, &n_file ) == 0 )
 		stringlistappend( list, n_file.name );
@@ -288,7 +289,7 @@ FS_AddFileToPack
 Add a file to the list of files contained into a package
 ====================
 */
-static dpackfile_t* FS_AddFileToPack( const char* name, pack_t* pack, long offset, long size )
+static dpackfile_t *FS_AddFileToPack( const char *name, pack_t *pack, long offset, long size )
 {
 	int		left, right, middle;
 	dpackfile_t	*pfile;
@@ -296,6 +297,7 @@ static dpackfile_t* FS_AddFileToPack( const char* name, pack_t* pack, long offse
 	// look for the slot we should put that file into (binary search)
 	left = 0;
 	right = pack->numfiles - 1;
+
 	while( left <= right )
 	{
 		int diff;
@@ -332,9 +334,9 @@ Only used for FS_Open.
 */
 void FS_CreatePath( char *path )
 {
-	char *ofs, save;
+	char	*ofs, save;
 
-	for( ofs = path+1; *ofs; ofs++ )
+	for( ofs = path + 1; *ofs; ofs++ )
 	{
 		if( *ofs == '/' || *ofs == '\\' )
 		{
@@ -407,7 +409,6 @@ void FS_FileBase( const char *in, char *out )
 	if( in[end] != '.' )
 		end = len-1; // no '.', copy to end
 	else end--; // found ',', copy to left of '.'
-
 
 	// scan backward for '/'
 	start = len - 1;
@@ -797,6 +798,7 @@ void FS_ClearSearchPath( void )
 				Mem_Free( search->pack->files );
 			Mem_Free( search->pack );
 		}
+
 		if( search->wad )
 		{
 			W_Close( search->wad );
@@ -1461,12 +1463,12 @@ void FS_Init( void )
 		if( FS_CheckNastyPath( fs_basedir, true ))
 		{
 			// this is completely fatal...
-			Sys_Error( "FS_Init: invalid base directory \"%s\"\n", fs_basedir );		
+			Sys_Error( "FS_Init: invalid base directory \"%s\"\n", fs_basedir );
 		}
 
 		if( FS_CheckNastyPath( fs_gamedir, true ))
 		{
-			MsgDev( D_ERROR, "FS_Init: invalid game directory \"%s\"\n", fs_gamedir );		
+			MsgDev( D_ERROR, "FS_Init: invalid game directory \"%s\"\n", fs_gamedir );
 			Q_strncpy( fs_gamedir, fs_basedir, sizeof( fs_gamedir )); // default dir
 		}
 
@@ -1481,8 +1483,8 @@ void FS_Init( void )
 		}
 
 		if( !hasGameDir )
-		{ 
-			MsgDev( D_ERROR, "FS_Init: game directory \"%s\" not exist\n", fs_gamedir );		
+		{
+			MsgDev( D_ERROR, "FS_Init: game directory \"%s\" not exist\n", fs_gamedir );
 			if( hasBaseDir ) Q_strncpy( fs_gamedir, fs_basedir, sizeof( fs_gamedir ));
 		}
 
@@ -1555,7 +1557,7 @@ FS_SysOpen
 Internal function used to create a file_t and open the relevant non-packed file on disk
 ====================
 */
-static file_t* FS_SysOpen( const char* filepath, const char* mode )
+static file_t *FS_SysOpen( const char *filepath, const char *mode )
 {
 	file_t	*file;
 	int	mod, opt;
@@ -1606,6 +1608,7 @@ static file_t* FS_SysOpen( const char* filepath, const char* mode )
 	file->ungetc = EOF;
 
 	file->handle = open( filepath, mod|opt, 0666 );
+
 	if( file->handle < 0 )
 	{
 		Mem_Free( file );
@@ -1620,7 +1623,6 @@ static file_t* FS_SysOpen( const char* filepath, const char* mode )
 
 	return file;
 }
-
 
 /*
 ===========
@@ -1697,7 +1699,7 @@ Return the searchpath where the file was found (or NULL)
 and the file index in the package if relevant
 ====================
 */
-static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedironly )
+static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedironly )
 {
 	searchpath_t	*search;
 	char		*pEnvPath;
@@ -1712,7 +1714,7 @@ static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedir
 		// is the element a pak file?
 		if( search->pack )
 		{
-			int left, right, middle;
+			int	left, right, middle;
 
 			pak = search->pack;
 
@@ -1721,7 +1723,7 @@ static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedir
 			right = pak->numfiles - 1;
 			while( left <= right )
 			{
-				int diff;
+				int	diff;
 
 				middle = (left + right) / 2;
 				diff = Q_stricmp( pak->files[middle].name, name );
@@ -1773,6 +1775,7 @@ static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedir
 			FS_FileBase( name, shortname );
 
 			lump = W_FindLump( search->wad, shortname, type );
+
 			if( lump )
 			{
 				if( index )
@@ -1783,7 +1786,9 @@ static searchpath_t *FS_FindFile( const char *name, int* index, qboolean gamedir
 		else
 		{
 			char	netpath[MAX_SYSPATH];
+
 			Q_sprintf( netpath, "%s%s", search->filename, name );
+
 			if( FS_SysFileExists( netpath ))
 			{
 				if( index != NULL ) *index = -1;
@@ -1952,6 +1957,7 @@ long FS_Write( file_t *file, const void *data, size_t datasize )
 	// write the buffer and update the position
 	result = write( file->handle, data, (long)datasize );
 	file->position = lseek( file->handle, 0, SEEK_CUR );
+
 	if( file->real_length < file->position )
 		file->real_length = file->position;
 
@@ -2062,7 +2068,7 @@ FS_Printf
 Print a string into a file
 ====================
 */
-int FS_Printf( file_t *file, const char* format, ... )
+int FS_Printf( file_t *file, const char *format, ... )
 {
 	int	result;
 	va_list	args;
@@ -2081,7 +2087,7 @@ FS_VPrintf
 Print a string into a file
 ====================
 */
-int FS_VPrintf( file_t *file, const char* format, va_list ap )
+int FS_VPrintf( file_t *file, const char *format, va_list ap )
 {
 	int	len;
 	long	buff_size = MAX_SYSPATH;
@@ -2118,7 +2124,7 @@ int FS_Getc( file_t *file )
 {
 	char	c;
 
-	if( FS_Read( file, &c, 1) != 1 )
+	if( FS_Read( file, &c, 1 ) != 1 )
 		return EOF;
 
 	return c;
@@ -2155,8 +2161,10 @@ int FS_Gets( file_t *file, byte *string, size_t bufsize )
 	while( 1 )
 	{
 		c = FS_Getc( file );
+
 		if( c == '\r' || c == '\n' || c < 0 )
 			break;
+
 		if( end < bufsize - 1 )
 			string[end++] = c;
 	}
@@ -2166,6 +2174,7 @@ int FS_Gets( file_t *file, byte *string, size_t bufsize )
 	if( c == '\r' )
 	{
 		c = FS_Getc( file );
+
 		if( c != '\n' )
 			FS_UnGetc( file, (byte)c );
 	}
@@ -2224,7 +2233,7 @@ FS_Tell
 Give the current position in a file
 ====================
 */
-long FS_Tell( file_t* file )
+long FS_Tell( file_t *file )
 {
 	if( !file ) return 0;
 	return file->position - file->buff_len + file->buff_ind;
@@ -2237,7 +2246,7 @@ FS_Eof
 indicates at reached end of file
 ====================
 */
-qboolean FS_Eof( file_t* file )
+qboolean FS_Eof( file_t *file )
 {
 	if( !file ) return true;
 	return (( file->position - file->buff_len + file->buff_ind ) == file->real_length ) ? true : false;
@@ -2250,7 +2259,7 @@ FS_Purge
 Erases any buffered input or output data
 ====================
 */
-void FS_Purge( file_t* file )
+void FS_Purge( file_t *file )
 {
 	file->buff_len = 0;
 	file->buff_ind = 0;
@@ -2359,6 +2368,7 @@ void FS_StripExtension( char *path )
 		if( path[length] == '/' || path[length] == '\\' || path[length] == ':' )
 			return; // no extension
 	}
+
 	if( length ) path[length] = 0;
 }
 
@@ -2369,7 +2379,7 @@ FS_DefaultExtension
 */
 void FS_DefaultExtension( char *path, const char *extension )
 {
-	const char *src;
+	const char	*src;
 
 	// if path doesn't have a .EXT, append extension
 	// (extension should include the .)
@@ -2381,6 +2391,7 @@ void FS_DefaultExtension( char *path, const char *extension )
 		if( *src == '.' ) return;                 
 		src--;
 	}
+
 	Q_strcat( path, extension );
 }
 
@@ -2540,6 +2551,7 @@ long FS_FileSize( const char *filename, qboolean gamedironly )
 		length = FS_Tell( fp );
 		FS_Close( fp );
 	}
+
 	return length;
 }
 
@@ -2583,6 +2595,7 @@ long FS_FileTime( const char *filename, qboolean gamedironly )
 		Q_sprintf( path, "%s%s", search->filename, filename );
 		return FS_SysFileTime( path );
 	}
+
 	return -1; // doesn't exist
 }
 
@@ -2736,6 +2749,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 						if( resultlistindex == resultlist.numstrings )
 							stringlistappend( &resultlist, temp );
 					}
+
 					// strip off one path element at a time until empty
 					// this way directories are added to the listing if they match the pattern
 					slash = Q_strrchr( temp, '/' );
@@ -2783,6 +2797,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 
 			// look through all the wad file elements
 			wad = searchpath->wad;
+
 			for( i = 0; i < wad->numlumps; i++ )
 			{
 				// if type not matching, we already have no chance ...
@@ -2833,9 +2848,11 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 			Q_sprintf( netpath, "%s%s", searchpath->filename, basepath );
 			stringlistinit( &dirlist );
 			listdirectory( &dirlist, netpath );
+
 			for( dirlistindex = 0; dirlistindex < dirlist.numstrings; dirlistindex++ )
 			{
 				Q_sprintf( temp, "%s%s", basepath, dirlist.strings[dirlistindex] );
+
 				if( matchpattern( temp, (char *)pattern, true ))
 				{
 					for( resultlistindex = 0; resultlistindex < resultlist.numstrings; resultlistindex++ )
@@ -3159,6 +3176,7 @@ byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, long *lumpsizeptr )
 
 	buf = (byte *)Mem_Alloc( wad->mempool, lump->disksize );
 	size = FS_Read( wad->handle, buf, lump->disksize );
+
 	if( size < lump->disksize )
 	{
 		MsgDev( D_WARN, "W_ReadLump: %s is probably corrupted\n", lump->name );

@@ -780,7 +780,7 @@ SV_PushEntity
 Does not change the entities velocity at all
 ============
 */
-trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int *blocked )
+trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int *blocked, float flDamage )
 {
 	trace_t	trace;
 	qboolean	monsterClip;
@@ -818,7 +818,7 @@ trace_t SV_PushEntity( edict_t *ent, const vec3_t lpush, const vec3_t apush, int
 	if( blocked )
 	{
 		// more accuracy blocking code
-		if( FBitSet( host.features, ENGINE_PHYSICS_PUSHER_EXT ))
+		if( flDamage <= 0.0f )
 			*blocked = !VectorCompare( ent->v.origin, end ); // can't move full distance
 		else *blocked = true;
 	}
@@ -966,7 +966,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 
 		// try moving the contacted entity 
 		pusher->v.solid = SOLID_NOT;
-		SV_PushEntity( check, lmove, vec3_origin, &block );
+		SV_PushEntity( check, lmove, vec3_origin, &block, pusher->v.dmg );
 		pusher->v.solid = oldsolid;
 
 		// if it is still inside the pusher, block
@@ -1099,7 +1099,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 
 		// try moving the contacted entity 
 		pusher->v.solid = SOLID_NOT;
-		SV_PushEntity( check, lmove, amove, &block );
+		SV_PushEntity( check, lmove, amove, &block, pusher->v.dmg );
 		pusher->v.solid = oldsolid;
 
 		// pushed entity blocked by wall
@@ -1487,7 +1487,7 @@ void SV_Physics_Toss( edict_t *ent )
 
 	VectorSubtract( ent->v.velocity, ent->v.basevelocity, ent->v.velocity );
 
-	trace = SV_PushEntity( ent, move, vec3_origin, NULL );
+	trace = SV_PushEntity( ent, move, vec3_origin, NULL, 0.0f );
 	if( ent->free ) return;
 
 	SV_CheckVelocity( ent );
@@ -1541,7 +1541,7 @@ void SV_Physics_Toss( edict_t *ent )
 		{
 			VectorScale( ent->v.velocity, (1.0f - trace.fraction) * sv.frametime * 0.9f, move );
 			VectorMA( move, (1.0f - trace.fraction) * sv.frametime * 0.9f, ent->v.basevelocity, move );
-			trace = SV_PushEntity( ent, move, vec3_origin, NULL );
+			trace = SV_PushEntity( ent, move, vec3_origin, NULL, 0.0f );
 			if( ent->free ) return;
 		}
 	}

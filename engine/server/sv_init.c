@@ -310,14 +310,21 @@ void SV_ActivateServer( void )
 	// Activate the DLL server code
 	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
 
-	numFrames = (sv.loadgame) ? 1 : 2;
-	if( !sv.loadgame || svgame.globals->changelevel )
-		sv.frametime = 0.1f;			
-
-	// GoldSrc rules
-	// NOTE: this stuff is breaking sound from func_rotating in multiplayer
-	// e.g. ambience\boomer.wav on snark_pit.bsp
-	numFrames *= Q_min( svs.maxclients, 8 );
+	if( sv.loadgame || svgame.globals->changelevel )
+	{
+		sv.frametime = bound( 0.001, sv_changetime.value, 0.1 );
+		numFrames = 1;
+	}
+	else if( svs.maxclients <= 1 )
+	{
+		sv.frametime = bound( 0.1, sv_spawntime.value, 0.8 );
+		numFrames = 2;
+	}
+	else
+	{
+		sv.frametime = 0.1f;
+		numFrames = 8;
+	}
 
 	// run some frames to allow everything to settle
 	for( i = 0; i < numFrames; i++ )

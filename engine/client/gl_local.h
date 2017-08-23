@@ -38,6 +38,7 @@ extern byte	*r_temppool;
 #define MAX_DECAL_SURFS	4096
 
 #define SHADEDOT_QUANT 	16	// precalculated dot products for quantized angles
+#define SHADE_LAMBERT	1.495f
 
 // refparams
 #define RP_NONE		0

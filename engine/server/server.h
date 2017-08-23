@@ -417,6 +417,8 @@ extern convar_t		sv_skyname;
 extern convar_t		sv_skyspeed;
 extern convar_t		sv_skyangle;
 extern convar_t		sv_consistency;
+extern convar_t		sv_spawntime;
+extern convar_t		sv_changetime;
 extern convar_t		deathmatch;
 extern convar_t		skill;
 extern convar_t		coop;
