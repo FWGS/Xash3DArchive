@@ -1037,10 +1037,27 @@ add the view angle yaw
 */
 void CL_ParseAddAngle( sizebuf_t *msg )
 {
-	float	add_angle;
+	pred_viewangle_t	*a;
+	float		delta_yaw;
 	
-	add_angle = MSG_ReadBitAngle( msg, 16 );
-	cl.viewangles[YAW] += add_angle;
+	delta_yaw = MSG_ReadBitAngle( msg, 16 );
+
+	if( cl.maxclients <= 1 && !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+	{
+		cl.viewangles[YAW] += delta_yaw;
+		return;
+	}
+
+	// update running counter	
+	cl.addangletotal += delta_yaw;
+
+	// select entry into circular buffer
+	cl.angle_position = (cl.angle_position + 1) & ANGLE_MASK;
+	a = &cl.predicted_angle[cl.angle_position];
+
+	// record update
+	a->starttime = cl.mtime[0];
+	a->total = cl.addangletotal;
 }
 
 /*

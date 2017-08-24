@@ -485,6 +485,7 @@ typedef enum
 	IMAGE_QUAKESKY	= BIT(6),		// it's a quake sky double layered clouds (so keep it as 8 bit)
 	IMAGE_DDS_FORMAT	= BIT(7),		// a hint for GL loader
 	IMAGE_MULTILAYER	= BIT(8),		// to differentiate from 3D texture
+	IMAGE_ONEBIT_ALPHA	= BIT(9),		// binary alpha
 
 	// Image_Process manipulation flags
 	IMAGE_FLIP_X	= BIT(16),	// flip the image by width

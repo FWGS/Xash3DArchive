@@ -396,8 +396,75 @@ void CL_UpdateFrameLerp( void )
 		return;
 
 	// compute last interpolation amount
-	cl.commands[(cls.netchan.outgoing_sequence - 1) & CL_UPDATE_MASK].frame_lerp = CL_LerpPoint();
+	cl.lerpFrac = CL_LerpPoint();
+
+	cl.commands[(cls.netchan.outgoing_sequence - 1) & CL_UPDATE_MASK].frame_lerp = cl.lerpFrac;
 }
+
+void CL_FindInterpolatedAddAngle( float t, float *frac, pred_viewangle_t **prev, pred_viewangle_t **next )
+{
+	int	i, i0, i1, imod;
+	float	at;
+
+	imod = cl.angle_position - 1;
+	i0 = (imod + 1) & ANGLE_MASK;
+	i1 = (imod + 0) & ANGLE_MASK;
+
+	if( cl.predicted_angle[i0].starttime >= t )
+	{
+		for( i = 0; i < ANGLE_BACKUP - 2; i++ )
+		{
+			at = cl.predicted_angle[imod & ANGLE_MASK].starttime;
+			if( at == 0.0f ) break;
+
+			if( at < t )
+			{
+				i0 = (imod + 1) & ANGLE_MASK;
+				i1 = (imod + 0) & ANGLE_MASK;
+				break;
+			}
+			imod--;
+		}
+	}
+
+	*next = &cl.predicted_angle[i0];
+	*prev = &cl.predicted_angle[i1];
+
+	// avoid division by zero (probably this should never happens)
+	if((*prev)->starttime == (*next)->starttime )
+	{
+		*prev = *next;
+		*frac = 0.0f;
+		return;
+	}
+
+	// time spans the two entries
+	*frac = ( t - (*prev)->starttime ) / ((*next)->starttime - (*prev)->starttime );
+	*frac = bound( 0.0f, *frac, 1.0f );
+}
+
+void CL_ApplyAddAngle( void )
+{
+	float		curtime = cl.time - cl_serverframetime();
+	pred_viewangle_t	*prev = NULL, *next = NULL;
+	float		addangletotal = 0.0f;
+	float		amove, frac = 0.0f;
+
+	CL_FindInterpolatedAddAngle( curtime, &frac, &prev, &next );
+
+	if( prev && next )
+		addangletotal = prev->total + frac * ( next->total - prev->total );
+	else addangletotal = cl.prevaddangletotal;
+
+	amove = addangletotal - cl.prevaddangletotal;
+
+	// update input angles
+	cl.viewangles[YAW] += amove;
+
+	// remember last total
+	cl.prevaddangletotal = addangletotal;
+}
+
 
 /*
 =======================================================================
@@ -555,6 +622,7 @@ void CL_CreateCmd( void )
 		pcmd->processedfuncs = false;
 		pcmd->heldback = false;
 		pcmd->sendsize = 0;
+		CL_ApplyAddAngle();
 	}
 
 	active = ( cls.state == ca_active && !cl.paused && !cls.demoplayback );

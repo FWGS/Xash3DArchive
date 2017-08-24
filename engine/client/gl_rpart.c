@@ -1247,7 +1247,7 @@ void R_RocketTrail( vec3_t start, vec3_t end, int type )
 			VectorMAMAM( 1.0f, start, s, right, c, up, p->org );
 			VectorSubtract( start, p->org, p->vel );
 			VectorScale( p->vel, 2.0f, p->vel );
-			VectorMA( p->vel, COM_RandomFloat( 96, 111 ), vec, p->vel );
+			VectorMA( p->vel, COM_RandomFloat( 96.0f, 111.0f ), vec, p->vel );
 			p->ramp = COM_RandomLong( 0, 3 );
 			p->color = ramp3[(int)p->ramp];
 			p->type = pt_explode2;
@@ -1474,6 +1474,7 @@ void R_TracerEffect( const vec3_t start, const vec3_t end )
 {
 	vec3_t	pos, vel, dir;
 	float	len, speed;
+	float	offset;
 
 	speed = Q_max( tracerspeed->value, 3.0f );
 
@@ -1482,7 +1483,8 @@ void R_TracerEffect( const vec3_t start, const vec3_t end )
 	if( len == 0.0f ) return;
 
 	VectorScale( dir, 1.0f / len, dir ); // normalize
-	VectorScale( dir, COM_RandomFloat( -10.0f, 9.0f ) + traceroffset->value, vel );
+	offset = COM_RandomFloat( -10.0f, 9.0f ) + traceroffset->value;
+	VectorScale( dir, offset, vel );
 	VectorAdd( start, vel, pos );
 	VectorScale( dir, speed, vel );
 

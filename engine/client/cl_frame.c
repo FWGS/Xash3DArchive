@@ -428,7 +428,9 @@ int CL_InterpolateModel( cl_entity_t *e )
 	if( cl.local.moving && cl.local.onground == e->index )
 		return 1;
 
-	t = cl.time - cl_interp->value;
+	if( cl.maxclients <= 1 && FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
+		t = cl.time - cl_serverframetime();
+	else t = cl.time - cl_interp->value;
 
 	CL_FindInterpolationUpdates( e, t, &ph0, &ph1 );
 
@@ -441,7 +443,7 @@ int CL_InterpolateModel( cl_entity_t *e )
 	if( t - t1 < 0.0f )
 		return 0;
 
-	if( t1 == 0.0f || ( VectorIsNull( ph1->origin ) && !VectorIsNull( ph0->origin )))
+	if( t1 == 0.0f )
 	{
 		VectorCopy( ph0->origin, e->origin );
 		VectorCopy( ph0->angles, e->angles );

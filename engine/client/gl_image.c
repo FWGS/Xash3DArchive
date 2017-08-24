@@ -1178,7 +1178,7 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 			if( !ImageDXT( pic->type ) && !FBitSet( tex->flags, TF_NOMIPMAP|TF_SKYSIDE ))
 				data = GL_ApplyGamma( data, tex->width * tex->height * tex->depth, FBitSet( tex->flags, TF_NORMALMAP ));
 
-			if( !ImageDXT( pic->type ) && FBitSet( tex->flags, TF_HAS_ALPHA ))
+			if( !ImageDXT( pic->type ) && FBitSet( pic->flags, IMAGE_ONEBIT_ALPHA ))
 				data = GL_ApplyFilter( data, tex->width, tex->height );
 
 			// mips will be auto-generated if desired

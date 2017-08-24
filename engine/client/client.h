@@ -99,6 +99,13 @@ typedef struct runcmd_s
 	int		sendsize;
 } runcmd_t;
 
+// add angles
+typedef struct
+{
+	float		starttime;
+	float		total;
+} pred_viewangle_t;
+
 #define ANGLE_BACKUP	16
 #define ANGLE_MASK		(ANGLE_BACKUP - 1)
 
@@ -176,6 +183,7 @@ typedef struct
 	int		delta_sequence;		// acknowledged sequence number
 
 	double		mtime[2];			// the timestamp of the last two messages
+	float		lerpFrac;
 
 	int		last_command_ack;
 	int		last_incoming_sequence;
@@ -215,6 +223,11 @@ typedef struct
 
 	int		intermission;		// don't change view angle, full screen, et
 	vec3_t		crosshairangle;
+
+	pred_viewangle_t	predicted_angle[ANGLE_BACKUP];// accumulate angles from server
+	int		angle_position;
+	float		addangletotal;
+	float		prevaddangletotal;
 
 	// predicted origin and velocity
 	vec3_t		simorg;

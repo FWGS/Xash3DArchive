@@ -248,7 +248,7 @@ void CL_CheckPredictionError( void )
 		// save for error interpolation
 		VectorCopy( delta, cl.local.prediction_error );
 
-		if(( dist > MIN_CORRECTION_DISTANCE ) && ( cl.maxclients > 1 ))
+		if(( dist > MIN_CORRECTION_DISTANCE ) && (( cl.maxclients > 1 ) || FBitSet( host.features, ENGINE_FIXED_FRAMERATE )))
 			cls.correction_time = cl_smoothtime->value;
 	}
 }
@@ -1329,7 +1329,7 @@ void CL_PredictMovement( qboolean repredicting )
 		VectorCopy( to->client.velocity, cl.simvel );
 		VectorCopy( to->playerstate.origin, cl.simorg );
 		VectorCopy( to->client.punchangle, cl.punchangle );
-		VectorCopy( to->client.view_ofs, cl.viewheight) ;
+		VectorCopy( to->client.view_ofs, cl.viewheight );
 	}
 	else
 	{

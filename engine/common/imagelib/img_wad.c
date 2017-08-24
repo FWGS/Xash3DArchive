@@ -163,7 +163,7 @@ qboolean Image_LoadMDL( const char *name, const byte *buffer, size_t filesize )
 			byte	*pal = fin + pixels;
 
 			Image_GetPaletteLMP( pal, LUMP_MASKED );
-			image.flags |= IMAGE_HAS_ALPHA;
+			image.flags |= IMAGE_HAS_ALPHA|IMAGE_ONEBIT_ALPHA;
 		}
 		else Image_GetPaletteLMP( fin + pixels, LUMP_NORMAL );
 	}
@@ -229,8 +229,9 @@ qboolean Image_LoadSPR( const char *name, const byte *buffer, size_t filesize )
 	// detect alpha-channel by palette type
 	switch( image.d_rendermode )
 	{
-	case LUMP_GRADIENT:
 	case LUMP_MASKED:
+		SetBits( image.flags, IMAGE_ONEBIT_ALPHA );
+	case LUMP_GRADIENT:
 	case LUMP_QUAKE1:
 		SetBits( image.flags, IMAGE_HAS_ALPHA );
 		break;
@@ -384,6 +385,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			if(( !host.decal_loading ) || ( pal[765] == 0 && pal[766] == 0 && pal[767] == 255 ))
 			{
 				rendermode = LUMP_MASKED;
+				image.flags |= IMAGE_ONEBIT_ALPHA;
 			}
 			else
 			{
@@ -454,6 +456,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			{
 				if( fin[i] == 255 )
 				{
+					// don't set ONEBIT_ALPHA flag for some reasons
 					image.flags |= IMAGE_HAS_ALPHA;
 					break;
 				}
