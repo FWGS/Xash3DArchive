@@ -97,7 +97,7 @@ typedef enum
 
 // PERFORMANCE INFO
 #define MIN_FPS         	20.0		// host minimum fps value for maxfps.
-#define MAX_FPS         	100.0		// upper limit for maxfps.
+#define MAX_FPS         	200.0		// upper limit for maxfps.
 #define HOST_FPS		72.0		// multiplayer games typical fps
 
 #define MAX_FRAMETIME	0.25

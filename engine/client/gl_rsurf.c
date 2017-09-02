@@ -1032,9 +1032,7 @@ void R_RenderDetails( void )
 	pglEnable( GL_BLEND );
 	pglBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
-
-	if( RI.currententity->curstate.rendermode == kRenderTransAlpha )
-		pglDepthFunc( GL_EQUAL );
+	pglDepthFunc( GL_EQUAL );
 
 	for( i = 1; i < MAX_TEXTURES; i++ )
 	{
@@ -1056,9 +1054,7 @@ void R_RenderDetails( void )
 
 	pglDisable( GL_BLEND );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-
-	if( RI.currententity->curstate.rendermode == kRenderTransAlpha )
-		pglDepthFunc( GL_LEQUAL );
+	pglDepthFunc( GL_LEQUAL );
 
 	draw_details = false;
 

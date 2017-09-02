@@ -611,7 +611,7 @@ void Mod_Init( void )
 {
 	com_studiocache = Mem_AllocPool( "Studio Cache" );
 	mod_studiocache = Cvar_Get( "r_studiocache", "1", FCVAR_ARCHIVE, "enables studio cache for speedup tracing hitboxes" );
-	r_wadtextures = Cvar_Get( "r_wadtextures", "1", FCVAR_ARCHIVE, "completely ignore textures in the wad-files if disabled" );
+	r_wadtextures = Cvar_Get( "r_wadtextures", "0", 0, "completely ignore textures in the wad-files if disabled" );
 
 	Cmd_AddCommand( "mapstats", Mod_PrintBSPFileSizes_f, "show stats for currently loaded map" );
 	Cmd_AddCommand( "modellist", Mod_Modellist_f, "display loaded models list" );

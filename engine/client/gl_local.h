@@ -142,6 +142,7 @@ typedef struct
 	float		fogStart;
 	float		fogEnd;
 	int		cached_contents;	// in water
+	int		cached_waterlevel;	// was in water
 
 	float		skyMins[2][6];
 	float		skyMaxs[2][6];

@@ -2760,6 +2760,15 @@ static void R_StudioClientEvents( void )
 	if( g_studio.frametime == 0.0 )
 		return; // gamepaused
 
+	// fill attachments with interpolated origin
+	if( m_pStudioHeader->numattachments <= 0 )
+	{
+		Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, e->attachment[0] );
+		Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, e->attachment[1] );
+		Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, e->attachment[2] );
+		Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, e->attachment[3] );
+	}
+
 	if( FBitSet( e->curstate.effects, EF_MUZZLEFLASH ))
 	{
 		dlight_t	*el = CL_AllocElight( 0 );

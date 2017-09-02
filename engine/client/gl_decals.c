@@ -910,8 +910,6 @@ void DrawSurfaceDecals( msurface_t *fa, qboolean single, qboolean reverse )
 			pglEnable( GL_POLYGON_OFFSET_FILL );
 			pglPolygonOffset( -1.0f, -gl_polyoffset->value );
 		}
-
-		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	}
 
 	if( FBitSet( fa->flags, SURF_TRANSPARENT ) && glState.stencilEnabled )
@@ -1013,6 +1011,8 @@ void DrawSurfaceDecals( msurface_t *fa, qboolean single, qboolean reverse )
 		// restore blendfunc here
 		if( e->curstate.rendermode == kRenderTransAdd || e->curstate.rendermode == kRenderGlow )
 			pglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+
+		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 	}
 }
 

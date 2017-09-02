@@ -785,7 +785,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 			sf->fadeEnd = title->holdtime + title->fadeout;
 			sf->fadeReset = title->fadeout;
 		}
-		else sf->fadeEnd = sf->fadeReset = 4.0f;
+		else sf->fadeEnd = sf->fadeReset = 5.0f;
 	
 		sf->fadeFlags = FFADE_IN;
 		sf->fader = sf->fadeg = sf->fadeb = 0;
@@ -1439,18 +1439,20 @@ void CL_ParseScreenFade( sizebuf_t *msg )
 {
 	float		duration, holdTime;
 	screenfade_t	*sf = &clgame.fade;
+	float		flScale;
 
-	duration = (float)(word)MSG_ReadShort( msg ) * (1.0f / (float)(1<<12));
-	holdTime = (float)(word)MSG_ReadShort( msg ) * (1.0f / (float)(1<<12));
+	duration = (float)MSG_ReadShort( msg );
+	holdTime = (float)MSG_ReadShort( msg );
 	sf->fadeFlags = MSG_ReadShort( msg );
+	flScale = ( sf->fadeFlags & FFADE_LONGFADE ) ? (1.0f / 256.0f) : (1.0f / 4096.0f);
 
 	sf->fader = MSG_ReadByte( msg );
 	sf->fadeg = MSG_ReadByte( msg );
 	sf->fadeb = MSG_ReadByte( msg );
 	sf->fadealpha = MSG_ReadByte( msg );
 	sf->fadeSpeed = 0.0f;
-	sf->fadeEnd = duration;
-	sf->fadeReset = holdTime;
+	sf->fadeEnd = duration * flScale;
+	sf->fadeReset = holdTime * flScale;
 
 	// calc fade speed
 	if( duration > 0 )

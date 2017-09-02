@@ -317,18 +317,15 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 		}
 		break;
 	case LUMP_MASKED:
-		for( i = 0; i < 256; i++ )
+		for( i = 0; i < 255; i++ )
 		{
-			if( i != 255 )
-			{
-				rgba[0] = pal[i*3+0];
-				rgba[1] = pal[i*3+1];
-				rgba[2] = pal[i*3+2];
-				rgba[3] = 0xFF;
-				d_table[i] = *(uint *)rgba;
-			}
-			else d_table[i] = 0;
+			rgba[0] = pal[i*3+0];
+			rgba[1] = pal[i*3+1];
+			rgba[2] = pal[i*3+2];
+			rgba[3] = 0xFF;
+			d_table[i] = *(uint *)rgba;
 		}
+		d_table[255] = 0;
 		break;
 	case LUMP_EXTENDED:
 		for( i = 0; i < 256; i++ )

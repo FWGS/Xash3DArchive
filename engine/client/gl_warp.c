@@ -414,7 +414,9 @@ void R_DrawSkyBox( void )
 		if( RI.skyMins[0][i] >= RI.skyMaxs[0][i] || RI.skyMins[1][i] >= RI.skyMaxs[1][i] )
 			continue;
 
-		GL_Bind( GL_TEXTURE0, tr.skyboxTextures[r_skyTexOrder[i]] );
+		if( tr.skyboxTextures[r_skyTexOrder[i]] )
+			GL_Bind( GL_TEXTURE0, tr.skyboxTextures[r_skyTexOrder[i]] );
+		else GL_Bind( GL_TEXTURE0, tr.skyTexture ); // stub
 
 		pglBegin( GL_QUADS );
 		MakeSkyVec( RI.skyMins[0][i], RI.skyMins[1][i], i );

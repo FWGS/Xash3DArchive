@@ -257,7 +257,7 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int type )
 	if( clent->curstate.effects & EF_NODRAW )
 		return false; // done
 
-	if( clent->curstate.rendermode != kRenderNormal && clent->curstate.renderamt <= 0 )
+	if( clent->curstate.rendermode != kRenderNormal && CL_FxBlend( clent ) <= 0 )
 		return true; // invisible
 
 	if( type == ET_FRAGMENTED )
@@ -715,12 +715,23 @@ static void R_CheckFog( void )
 	RI.fogEnabled = false;
 
 	if( RI.onlyClientDraw || cl.local.waterlevel < 2 || !RI.drawWorld || !RI.viewleaf )
+	{
+		if( RI.cached_waterlevel == 3 )
+                    {
+			// in some cases waterlevel jumps from 3 to 1. Catch it
+			RI.cached_waterlevel = cl.local.waterlevel;
+			RI.cached_contents = CONTENTS_EMPTY;
+			pglDisable( GL_FOG );
+		}
 		return;
+	}
 
 	ent = CL_GetWaterEntity( RI.vieworg );
 	if( ent && ent->model && ent->model->type == mod_brush && ent->curstate.skin < 0 )
 		cnt = ent->curstate.skin;
 	else cnt = RI.viewleaf->contents;
+
+	RI.cached_waterlevel = cl.local.waterlevel;
 
 	if( IsLiquidContents( RI.cached_contents ) && !IsLiquidContents( cnt ))
 	{
@@ -773,13 +784,13 @@ static void R_CheckFog( void )
 		RI.fogColor[3] = 1.0f;
 		RI.fogCustom = false;
 		RI.fogEnabled = true;
-		RI.fogSkybox = false;
+		RI.fogSkybox = true;
 	}
 	else
 	{
 		RI.fogCustom = false;
 		RI.fogEnabled = true;
-		RI.fogSkybox = false;
+		RI.fogSkybox = true;
 	}
 }
 

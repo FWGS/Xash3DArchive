@@ -94,7 +94,7 @@ int CL_FxBlend( cl_entity_t *e )
 		break;
 	// JAY: HACK for now -- not time based
 	case kRenderFxFadeSlow:			
-		if( tr.frametime )
+		if( RP_NORMALPASS( ))
 		{
 			if( e->curstate.renderamt > 0 ) 
 				e->curstate.renderamt -= 1;
@@ -103,7 +103,7 @@ int CL_FxBlend( cl_entity_t *e )
 		blend = e->curstate.renderamt;
 		break;
 	case kRenderFxFadeFast:
-		if( tr.frametime )
+		if( RP_NORMALPASS( ))
 		{
 			if( e->curstate.renderamt > 3 ) 
 				e->curstate.renderamt -= 4;
@@ -112,7 +112,7 @@ int CL_FxBlend( cl_entity_t *e )
 		blend = e->curstate.renderamt;
 		break;
 	case kRenderFxSolidSlow:
-		if( tr.frametime )
+		if( RP_NORMALPASS( ))
 		{
 			if( e->curstate.renderamt < 255 ) 
 				e->curstate.renderamt += 1;
@@ -121,7 +121,7 @@ int CL_FxBlend( cl_entity_t *e )
 		blend = e->curstate.renderamt;
 		break;
 	case kRenderFxSolidFast:
-		if( tr.frametime )
+		if( RP_NORMALPASS( ))
 		{
 			if( e->curstate.renderamt < 252 ) 
 				e->curstate.renderamt += 4;
@@ -867,7 +867,7 @@ void R_RocketFlare( const vec3_t pos )
 	pTemp->entity.curstate.frame = COM_RandomLong( 0, pTemp->frameMax );
 	pTemp->entity.curstate.scale = 1.0;
 	pTemp->die = cl.time + 0.01f;	// when 100 fps die at next frame
-	pTemp->flags |= FTENT_SPRANIMATE;
+	pTemp->entity.curstate.effects = EF_NOINTERP;
 }
 
 /*

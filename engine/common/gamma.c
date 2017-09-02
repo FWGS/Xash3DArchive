@@ -31,7 +31,7 @@ void BuildGammaTable( float lightgamma, float brightness )
 	float	f, g, g1, g3;
 
 	lightgamma = bound( 1.8f, lightgamma, 3.0f );
-	brightness = bound( 0.0f, brightness, 3.0f );
+	brightness = bound( 0.0f, brightness, 10.0f );
 
 	if( brightness <= 0.0f )
 		g3 = 0.125f;
