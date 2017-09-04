@@ -670,8 +670,14 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 		return;
 	}
 
-	// interpolation must be reset
-	if( newent ) SETVISBIT( frame->flags, pack );
+	if( newent )
+	{
+		// interpolation must be reset
+		SETVISBIT( frame->flags, pack );
+
+		// release beams from previous entity
+		CL_KillDeadBeams( ent );
+	}
 
 	// add entity to packet
 	cls.next_client_entities++;
@@ -968,7 +974,7 @@ void CL_LinkPlayers( frame_t *frame )
 	cl_entity_t	*ent;
 	int		i;
 
-	ent = CL_GetEntityByIndex( cl.viewentity );
+	ent = CL_GetLocalPlayer();
 
 	// apply muzzleflash to weaponmodel
 	if( ent && FBitSet( ent->curstate.effects, EF_MUZZLEFLASH ))
@@ -1038,7 +1044,7 @@ void CL_LinkPlayers( frame_t *frame )
 	}
 
 	// apply local player effects if entity is not added
-	if( !local_added ) CL_AddEntityEffects( ent );
+	if( !local_added ) CL_AddEntityEffects( CL_GetLocalPlayer( ));
 }
 
 /*

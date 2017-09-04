@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "input.h"
 
 #define VID_AUTOMODE		"-1"
-#define VID_DEFAULTMODE		2.0f
+#define VID_DEFAULTMODE		3.0f
 #define DISP_CHANGE_BADDUALVIEW	-6 // MSVC 6.0 doesn't
 #define num_vidmodes		ARRAYSIZE( vidmode )
 #define WINDOW_STYLE		(WS_OVERLAPPED|WS_BORDER|WS_SYSMENU|WS_CAPTION|WS_VISIBLE)
@@ -731,7 +731,7 @@ qboolean GL_CreateContext( void )
 	if(!( pwglMakeCurrent( glw_state.hDC, glw_state.hGLRC )))
 		return GL_DeleteContext();
 
-	if( !Sys_CheckParm( "-gldebug" ) || host.developer < D_INFO ) // debug bit the kills perfomance
+	if( !Sys_CheckParm( "-gldebug" ) || host.developer <= D_INFO ) // debug bit kill the perfomance
 		return true;
 
 	pwglCreateContextAttribsARB = GL_GetProcAddress( "wglCreateContextAttribsARB" );
@@ -1434,7 +1434,7 @@ qboolean R_Init_OpenGL( void )
 	if( !opengl_dll.link )
 		return false;
 
-	if( Sys_CheckParm( "-gldebug" ) && host.developer >= 1 )
+	if( Sys_CheckParm( "-gldebug" ) && host.developer > D_INFO )
 		GL_CheckExtension( "OpenGL Internal ProcAddress", wglproc_funcs, NULL, GL_WGL_PROCADDRESS );
 
 	return VID_SetMode();
@@ -1544,7 +1544,7 @@ void R_RenderInfo_f( void )
 	}
 
 	Msg( "\n" );
-	Msg( "%s [%i x %i]\n", vidmode[(int)vid_mode->value].desc, glState.width, glState.height );
+	Msg( "MODE: %s\n", vidmode[(int)vid_mode->value].desc );
 	Msg( "\n" );
 	Msg( "VERTICAL SYNC: %s\n", gl_vsync->value ? "enabled" : "disabled" );
 	Msg( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
@@ -1662,10 +1662,12 @@ void GL_InitExtensions( void )
 		glConfig.hardware_type = GLHW_RADEON;
 	else if( Q_stristr( glConfig.renderer_string, "radeon" ))
 		glConfig.hardware_type = GLHW_RADEON;
+	else if( Q_stristr( glConfig.renderer_string, "intel" ))
+		glConfig.hardware_type = GLHW_INTEL;
 	else glConfig.hardware_type = GLHW_GENERIC;
 
 	// initalize until base opengl functions loaded (old-context)
-	if( !Sys_CheckParm( "-gldebug" ) || host.developer < D_INFO )
+	if( !Sys_CheckParm( "-gldebug" ) || host.developer <= D_INFO )
 		GL_CheckExtension( "OpenGL Internal ProcAddress", wglproc_funcs, NULL, GL_WGL_PROCADDRESS );
 
 	// windows-specific extensions
@@ -1743,7 +1745,8 @@ void GL_InitExtensions( void )
 	if( GL_Support( GL_ANISOTROPY_EXT ))
 		pglGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.max_texture_anisotropy );
 
-	GL_CheckExtension( "GL_EXT_texture_lod_bias", NULL, "gl_ext_texture_lod_bias", GL_TEXTURE_LOD_BIAS );
+	if( glConfig.hardware_type != GLHW_INTEL )
+		GL_CheckExtension( "GL_EXT_texture_lod_bias", NULL, "gl_ext_texture_lod_bias", GL_TEXTURE_LOD_BIAS );
 
 	if( GL_Support( GL_TEXTURE_LOD_BIAS ))
 		pglGetFloatv( GL_MAX_TEXTURE_LOD_BIAS_EXT, &glConfig.max_texture_lod_bias );

@@ -716,7 +716,7 @@ static void R_CheckFog( void )
 
 	if( RI.onlyClientDraw || cl.local.waterlevel < 2 || !RI.drawWorld || !RI.viewleaf )
 	{
-		if( RI.cached_waterlevel == 3 )
+		if( RI.cached_waterlevel == 3 && !RI.fogCustom )
                     {
 			// in some cases waterlevel jumps from 3 to 1. Catch it
 			RI.cached_waterlevel = cl.local.waterlevel;

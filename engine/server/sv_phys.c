@@ -133,13 +133,15 @@ void SV_CheckVelocity( edict_t *ent )
 	{
 		if( IS_NAN( ent->v.velocity[i] ))
 		{
-			MsgDev( D_INFO, "Got a NaN velocity on %s\n", STRING( ent->v.classname ));
+			if( sv_check_errors->value )
+				MsgDev( D_INFO, "Got a NaN velocity on %s\n", STRING( ent->v.classname ));
 			ent->v.velocity[i] = 0.0f;
 		}
 
 		if( IS_NAN( ent->v.origin[i] ))
 		{
-			MsgDev( D_INFO, "Got a NaN origin on %s\n", STRING( ent->v.classname ));
+			if( sv_check_errors->value )
+				MsgDev( D_INFO, "Got a NaN origin on %s\n", STRING( ent->v.classname ));
 			ent->v.origin[i] = 0.0f;
 		}
 	}
@@ -149,8 +151,10 @@ void SV_CheckVelocity( edict_t *ent )
 
 	if( wishspd > maxspd )
 	{
-		MsgDev( D_INFO, "Got a velocity too high on %s ( %.2f > %.2f )\n", STRING( ent->v.classname ), sqrt( wishspd ), sqrt( maxspd ));
-		wishspd = sv_maxvelocity.value / sqrt( wishspd );
+		wishspd = sqrt( wishspd );
+		if( sv_check_errors->value )
+			MsgDev( D_INFO, "Got a velocity too high on %s ( %.2f > %.2f )\n", STRING( ent->v.classname ), wishspd, sqrt( maxspd ));
+		wishspd = sv_maxvelocity.value / wishspd;
 		VectorScale( ent->v.velocity, wishspd, ent->v.velocity );
 	}
 }

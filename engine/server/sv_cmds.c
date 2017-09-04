@@ -203,19 +203,19 @@ void SV_Map_f( void )
 
 	if( FBitSet( flags, MAP_INVALID_VERSION ))
 	{
-		Msg( "SV_NewMap: map %s is invalid or not supported\n", mapname );
+		MsgDev( D_ERROR, "map %s is invalid or not supported\n", mapname );
 		return;
 	}
 	
 	if( !FBitSet( flags, MAP_IS_EXIST ))
 	{
-		Msg( "SV_NewMap: map %s doesn't exist\n", mapname );
+		MsgDev( D_ERROR, "map %s doesn't exist\n", mapname );
 		return;
 	}
 
 	if( !FBitSet( flags, MAP_HAS_SPAWNPOINT ))
 	{
-		Msg( "SV_NewMap: map %s doesn't have a valid spawnpoint\n", mapname );
+		MsgDev( D_ERROR, "map %s doesn't have a valid spawnpoint\n", mapname );
 		return;
 	}
 
@@ -258,7 +258,7 @@ void SV_MapBackground_f( void )
 
 	if( sv.state == ss_active && !sv.background )
 	{
-		Msg( "SV_NewMap: can't set background map while game is active\n" );
+		MsgDev( D_ERROR, "can't set background map while game is active\n" );
 		return;
 	}
 
@@ -270,19 +270,19 @@ void SV_MapBackground_f( void )
 
 	if( FBitSet( flags, MAP_INVALID_VERSION ))
 	{
-		Msg( "SV_NewMap: map %s is invalid or not supported\n", mapname );
+		MsgDev( D_ERROR, "map %s is invalid or not supported\n", mapname );
 		return;
 	}
 
 	if( !FBitSet( flags, MAP_IS_EXIST ))
 	{
-		Msg( "SV_NewMap: map %s doesn't exist\n", mapname );
+		MsgDev( D_ERROR, "map %s doesn't exist\n", mapname );
 		return;
 	}
 
 	// background maps allow without spawnpoints (just throw warning)
 	if( !FBitSet( flags, MAP_HAS_SPAWNPOINT ))
-		MsgDev( D_WARN, "SV_NewMap: map %s doesn't have a valid spawnpoint\n", mapname );
+		MsgDev( D_WARN, "map %s doesn't have a valid spawnpoint\n", mapname );
 		
 	Q_strncpy( host.finalmsg, "", MAX_STRING );
 	SV_Shutdown( true );
@@ -335,7 +335,13 @@ void SV_HazardCourse_f( void )
 		return;
 	}
 
-	Host_NewGame( GI->trainmap, false );
+	// special case for Gunman Chronicles: playing avi-file
+	if( FS_FileExists( va( "media/%s.avi", GI->trainmap ), false ))
+	{
+		Cbuf_AddText( va( "wait; movie %s\n", GI->trainmap ));
+		Host_EndGame( "The End" );
+	}
+	else Host_NewGame( GI->trainmap, false );
 }
 
 /*
@@ -492,13 +498,13 @@ void SV_ChangeLevel_f( void )
 
 	if( FBitSet( flags, MAP_INVALID_VERSION ))
 	{
-		Msg( "SV_ChangeLevel: map %s is invalid or not supported\n", mapname );
+		MsgDev( D_ERROR, "map %s is invalid or not supported\n", mapname );
 		return;
 	}
 	
 	if( !FBitSet( flags, MAP_IS_EXIST ))
 	{
-		Msg( "SV_ChangeLevel: map %s doesn't exist\n", mapname );
+		MsgDev( D_ERROR, "map %s doesn't exist\n", mapname );
 		return;
 	}
 
@@ -508,15 +514,15 @@ void SV_ChangeLevel_f( void )
 		{
 			// NOTE: we find valid map but specified landmark it's doesn't exist
 			// run simple changelevel like in q1, throw warning
-			MsgDev( D_INFO, "SV_ChangeLevel: map %s is exist but doesn't contain\n", mapname );
-			MsgDev( D_INFO, "landmark with name %s. Run classic quake changelevel\n", Cmd_Argv( 2 ));
+			MsgDev( D_WARN, "map %s is exist but doesn't contain landmark with name %s. smooth transition disabled\n",
+			mapname, Cmd_Argv( 2 ));
 			c = 2; // reduce args
 		}
 	}
 
 	if( c >= 3 && !Q_stricmp( sv.name, Cmd_Argv( 1 )))
 	{
-		MsgDev( D_INFO, "SV_ChangeLevel: can't changelevel with same map. Ignored.\n" );
+		MsgDev( D_ERROR, "can't changelevel with same map. Ignored.\n" );
 		return;	
 	}
 
@@ -524,7 +530,7 @@ void SV_ChangeLevel_f( void )
 	{
 		if( sv_validate_changelevel->value )
 		{
-			MsgDev( D_INFO, "SV_ChangeLevel: map %s doesn't have a valid spawnpoint. Ignored.\n", mapname );
+			MsgDev( D_ERROR, "map %s doesn't have a valid spawnpoint. Ignored.\n", mapname );
 			return;	
 		}
 	}
@@ -534,15 +540,14 @@ void SV_ChangeLevel_f( void )
 	{
 		if( sv_validate_changelevel->value )
 		{
-			MsgDev( D_INFO, "SV_ChangeLevel: a infinite changelevel detected.\n" );
-			MsgDev( D_INFO, "Changelevel will be disabled until a next save\\restore.\n" );
+			MsgDev( D_WARN, "an infinite changelevel detected and will be disabled until a next save\\restore\n" );
 			return; // lock with svs.spawncount here
 		}
 	}
 
 	if( sv.state != ss_active )
 	{
-		MsgDev( D_INFO, "Only the server may changelevel\n" );
+		MsgDev( D_ERROR, "only the server may changelevel\n" );
 		return;
 	}
 

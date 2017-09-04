@@ -62,7 +62,7 @@ UI_VidOptions_GetConfig
 static void UI_VidOptions_GetConfig( void )
 {
 	uiVidOptions.screenSize.curValue = RemapVal( CVAR_GET_FLOAT( "viewsize" ), 30.0f, 120.0f, 0.0f, 1.0f );
-	uiVidOptions.glareReduction.curValue = CVAR_GET_FLOAT( "brightness" );
+	uiVidOptions.glareReduction.curValue = RemapVal( CVAR_GET_FLOAT( "brightness" ), 0.0f, 3.0f, 0.0f, 1.0f );
 	uiVidOptions.gammaIntensity.curValue = RemapVal( CVAR_GET_FLOAT( "gamma" ), 1.8f, 3.0f, 0.0f, 1.0f );
 	PIC_SetGamma( uiVidOptions.hTestImage, 1.0f );
 
@@ -78,7 +78,7 @@ UI_VidOptions_UpdateConfig
 static void UI_VidOptions_UpdateConfig( void )
 {
 	CVAR_SET_FLOAT( "viewsize", RemapVal( uiVidOptions.screenSize.curValue, 0.0f, 1.0f, 30.0f, 120.0f ));
-	CVAR_SET_FLOAT( "brightness", uiVidOptions.glareReduction.curValue );
+	CVAR_SET_FLOAT( "brightness", RemapVal( uiVidOptions.glareReduction.curValue, 0.0f, 1.0f, 0.0f, 3.0f ));
 	CVAR_SET_FLOAT( "gamma", RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 1.8f, 3.0f ));
 	PIC_SetGamma( uiVidOptions.hTestImage, 1.0f );
 }
@@ -86,7 +86,7 @@ static void UI_VidOptions_UpdateConfig( void )
 static void UI_VidOptions_SetConfig( void )
 {
 	CVAR_SET_FLOAT( "viewsize", RemapVal( uiVidOptions.screenSize.curValue, 0.0f, 1.0f, 30.0f, 120.0f ));
-	CVAR_SET_FLOAT( "brightness", uiVidOptions.glareReduction.curValue );
+	CVAR_SET_FLOAT( "brightness", RemapVal( uiVidOptions.glareReduction.curValue, 0.0f, 1.0f, 0.0f, 3.0f ));
 	CVAR_SET_FLOAT( "gamma", RemapVal( uiVidOptions.gammaIntensity.curValue, 0.0f, 1.0f, 1.8f, 3.0f ));
 }
 

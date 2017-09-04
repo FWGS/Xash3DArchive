@@ -573,7 +573,8 @@ typedef enum
 {
 	GLHW_GENERIC,		// where everthing works the way it should
 	GLHW_RADEON,		// where you don't have proper GLSL support
-	GLHW_NVIDIA		// Geforce 8/9 class DX10 hardware
+	GLHW_NVIDIA,		// Geforce 8/9 class DX10 hardware
+	GLHW_INTEL		// Intel Mobile Graphics
 } glHWType_t;
 
 typedef struct

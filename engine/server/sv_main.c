@@ -95,7 +95,7 @@ CVAR_DEFINE_AUTO( sv_skydir_z, "1", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "sky rotation
 CVAR_DEFINE_AUTO( sv_skyangle, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skybox rotational angle (in degrees)" );
 CVAR_DEFINE_AUTO( sv_skyspeed, "0", 0, "skybox rotational speed" );
 
-CVAR_DEFINE( sv_spawntime, "host_spawntime", "0.8", FCVAR_ARCHIVE, "host.frametime on spawn new map (force to 0.1 if have problems or crashes)" );
+CVAR_DEFINE( sv_spawntime, "host_spawntime", "0.1", FCVAR_ARCHIVE, "host.frametime on spawn new map (force to 0.8 if have problems)" );
 CVAR_DEFINE( sv_changetime, "host_changetime", "0.001", FCVAR_ARCHIVE, "host.frametime on changelevel (force to 0.1 if have player stucks)" );
 
 // obsolete cvars which we should keep because game DLL's will be relies on it

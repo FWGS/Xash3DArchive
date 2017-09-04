@@ -126,7 +126,6 @@ void Host_EndGame( const char *message, ... )
 		SV_Shutdown( false );
 	}
 
-	SV_Shutdown( false );
 	CL_Disconnect();
 
 	// recreate world if needs
@@ -1017,6 +1016,9 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	SCR_CheckStartupVids();	// must be last
 
 	oldtime = Sys_DoubleTime() - 0.1;
+
+	if( host.type == HOST_DEDICATED && !SV_Active( ))
+		MsgDev( D_INFO, "type 'map <mapname>' to run server... (TAB-autocomplete is working too)\n" );
 
 	// main window message loop
 	while( !host.crashed )
