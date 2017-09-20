@@ -143,6 +143,7 @@ void Mod_PrintBSPFileSizes_f( void )
 	Msg( "Supports transparency world water: %s\n", world.water_alpha ? "Yes" : "No" );
 	Msg( "original name: ^1%s\n", worldmodel->name );
 	Msg( "internal name: %s\n", (world.message[0]) ? va( "^2%s", world.message ) : "none" );
+	Msg( "map compiler: %s\n", (world.compiler[0]) ? va( "^3%s", world.compiler ) : "unknown" );
 }
 
 /*
@@ -1050,7 +1051,7 @@ static void Mod_LoadTexInfo( const dlump_t *l, dextrahdr_t *extrahdr )
 
 		miptex = in->miptex;
 		if( miptex < 0 || miptex > loadmodel->numtextures )
-			Host_Error( "Mod_LoadTexInfo: bad miptex number in '%s'\n", loadmodel->name );
+			Host_Error( "Mod_LoadTexInfo: bad miptex number %i in '%s'\n", miptex, loadmodel->name );
 
 		out->texture = loadmodel->textures[miptex];
 		out->flags = in->flags;
@@ -1895,7 +1896,7 @@ static void Mod_LoadPlanes( const dlump_t *l )
 		}
 
 		if( VectorIsNull( out->normal ))
-			Host_Error( "Mod_LoadPlanes: bad normal for plane #%i\n", i );
+			MsgDev( D_ERROR, "Mod_LoadPlanes: zero normal for plane #%i\n", i );
 
 		out->dist = in->dist;
 		out->type = in->type;
@@ -1944,6 +1945,7 @@ static void Mod_LoadEntities( const dlump_t *l )
 
 	world.entdatasize = l->filelen;
 	pfile = (char *)loadmodel->entities;
+	world.compiler[0] = '\0';
 	world.message[0] = '\0';
 	wadlist.count = 0;
 
@@ -1991,6 +1993,8 @@ static void Mod_LoadEntities( const dlump_t *l )
 				world.mapversion = Q_atoi( token );
 			else if( !Q_stricmp( keyname, "message" ))
 				Q_strncpy( world.message, token, sizeof( world.message ));
+			else if( !Q_stricmp( keyname, "compiler" ) || !Q_stricmp( keyname, "_compiler" ))
+				Q_strncpy( world.compiler, token, sizeof( world.compiler ));
 		}
 		return;	// all done
 	}

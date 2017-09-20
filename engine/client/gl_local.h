@@ -662,6 +662,7 @@ extern convar_t	*gl_extensions;
 extern convar_t	*gl_check_errors;
 extern convar_t	*gl_texture_lodbias;
 extern convar_t	*gl_texture_nearest;
+extern convar_t	*gl_lightmap_nearest;
 extern convar_t	*gl_keeptjunctions;
 extern convar_t	*gl_detailscale;
 extern convar_t	*gl_wireframe;

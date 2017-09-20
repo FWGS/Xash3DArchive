@@ -147,7 +147,7 @@ void GL_ApplyTextureParams( gltexture_t *tex )
 	}
 	else if( FBitSet( tex->flags, TF_NOMIPMAP ) || tex->numMips <= 1 )
 	{
-		if( FBitSet( tex->flags, TF_NEAREST ))
+		if( FBitSet( tex->flags, TF_NEAREST ) || ( !Q_strncmp( tex->name, "*lightmap", 9 ) && gl_lightmap_nearest->value ))
 		{
 			pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 			pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
@@ -262,6 +262,20 @@ static void GL_UpdateTextureParams( int iTexture )
 	if( GL_Support( GL_TEXTURE_LOD_BIAS ) && ( tex->numMips > 1 ) && !FBitSet( tex->flags, TF_DEPTHMAP ))
 		pglTexParameterf( tex->target, GL_TEXTURE_LOD_BIAS_EXT, gl_texture_lodbias->value );
 
+	if( !Q_strncmp( tex->name, "*lightmap", 9 ))
+	{
+		if( gl_lightmap_nearest->value )
+		{
+			pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+			pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+		}
+		else
+		{
+			pglTexParameteri( tex->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+			pglTexParameteri( tex->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		}
+	}
+
 	if( tex->numMips <= 1 ) return;
 
 	if( FBitSet( tex->flags, TF_NEAREST ) || gl_texture_nearest->value )
@@ -304,6 +318,7 @@ void R_SetTextureParameters( void )
 	ClearBits( gl_texture_anisotropy->flags, FCVAR_CHANGED );
 	ClearBits( gl_texture_lodbias->flags, FCVAR_CHANGED );
 	ClearBits( gl_texture_nearest->flags, FCVAR_CHANGED );
+	ClearBits( gl_lightmap_nearest->flags, FCVAR_CHANGED );
 
 	// change all the existing mipmapped texture objects
 	for( i = 0; i < r_numTextures; i++ )

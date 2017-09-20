@@ -95,6 +95,7 @@ typedef struct
 	int		block_size;	// lightmap blocksize
 	color24		*deluxedata;	// deluxemap data pointer
 	char		message[2048];	// just for debug
+	char		compiler[256];	// map compiler
 
 	// visibility info
 	byte		*visdata;		// uncompressed visdata

@@ -31,6 +31,7 @@ convar_t	*gl_extensions;
 convar_t	*gl_texture_anisotropy;
 convar_t	*gl_texture_lodbias;
 convar_t	*gl_texture_nearest;
+convar_t	*gl_lightmap_nearest;
 convar_t	*gl_keeptjunctions;
 convar_t	*gl_showtextures;
 convar_t	*gl_detailscale;
@@ -1584,6 +1585,7 @@ void GL_InitCommands( void )
 
 	gl_extensions = Cvar_Get( "gl_allow_extensions", "1", FCVAR_GLCONFIG, "allow gl_extensions" );			
 	gl_texture_nearest = Cvar_Get( "gl_texture_nearest", "0", FCVAR_ARCHIVE, "disable texture filter" );
+	gl_lightmap_nearest = Cvar_Get( "gl_lightmap_nearest", "0", FCVAR_ARCHIVE, "disable lightmap filter" );
 	gl_max_size = Cvar_Get( "gl_max_size", "512", FCVAR_ARCHIVE, "no effect in Xash3D just a legacy" );
 	gl_check_errors = Cvar_Get( "gl_check_errors", "1", FCVAR_ARCHIVE, "ignore video engine errors" );
 	gl_vsync = Cvar_Get( "gl_vsync", "0", FCVAR_ARCHIVE,  "enable vertical syncronization" );

@@ -714,14 +714,14 @@ static void R_CheckFog( void )
 
 	RI.fogEnabled = false;
 
-	if( RI.onlyClientDraw || cl.local.waterlevel < 2 || !RI.drawWorld || !RI.viewleaf )
+	if( RI.onlyClientDraw || cl.local.waterlevel < 3 || !RI.drawWorld || !RI.viewleaf )
 	{
-		if( RI.cached_waterlevel == 3 && !RI.fogCustom )
+		if( RI.cached_waterlevel == 3 )
                     {
 			// in some cases waterlevel jumps from 3 to 1. Catch it
 			RI.cached_waterlevel = cl.local.waterlevel;
 			RI.cached_contents = CONTENTS_EMPTY;
-			pglDisable( GL_FOG );
+			if( !RI.fogCustom ) pglDisable( GL_FOG );
 		}
 		return;
 	}
@@ -732,19 +732,6 @@ static void R_CheckFog( void )
 	else cnt = RI.viewleaf->contents;
 
 	RI.cached_waterlevel = cl.local.waterlevel;
-
-	if( IsLiquidContents( RI.cached_contents ) && !IsLiquidContents( cnt ))
-	{
-		RI.cached_contents = CONTENTS_EMPTY;
-		pglDisable( GL_FOG );
-		return;
-	}
-
-	if( cl.local.waterlevel < 3 )
-	{
-		pglDisable( GL_FOG );
-		return;
-	}
 
 	if( !IsLiquidContents( RI.cached_contents ) && IsLiquidContents( cnt ))
 	{
@@ -974,10 +961,10 @@ void R_RenderScene( void )
 	R_Clear( ~0 );
 
 	R_MarkLeaves();
-	R_CheckFog();
 	R_DrawFog ();
 	
 	R_DrawWorld();
+	R_CheckFog();
 
 	CL_ExtraUpdate ();	// don't let sound get messed up if going slow
 
@@ -1062,7 +1049,7 @@ void R_BeginFrame( qboolean clearScene )
 	pglDrawBuffer( GL_BACK );
 
 	// update texture parameters
-	if( FBitSet( gl_texture_nearest->flags|gl_texture_anisotropy->flags|gl_texture_lodbias->flags, FCVAR_CHANGED ))
+	if( FBitSet( gl_texture_nearest->flags|gl_lightmap_nearest->flags|gl_texture_anisotropy->flags|gl_texture_lodbias->flags, FCVAR_CHANGED ))
 		R_SetTextureParameters();
 
 	// swapinterval stuff
