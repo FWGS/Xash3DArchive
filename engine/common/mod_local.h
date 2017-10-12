@@ -97,6 +97,9 @@ typedef struct
 	char		message[2048];	// just for debug
 	char		compiler[256];	// map compiler
 
+	dclipnode2_t	*clipnodes;	// temporary 32-bit array to hold clipnodes
+	int		numclipnodes;	// may be exceeds 32768
+
 	// visibility info
 	byte		*visdata;		// uncompressed visdata
 	size_t		visbytes;		// cluster size

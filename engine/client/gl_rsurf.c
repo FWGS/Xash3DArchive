@@ -1696,7 +1696,7 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	if( node->visframe != tr.visframecount )
 		return;
 
-	if( clipflags )
+	if( clipflags && !r_nocull->value )
 	{
 		for( i = 0; i < 6; i++ )
 		{
@@ -1846,7 +1846,7 @@ void R_DrawWorldTopView( mnode_t *node, uint clipflags )
 		if( node->visframe != tr.visframecount )
 			return;
 
-		if( clipflags )
+		if( clipflags && !r_nocull->value )
 		{
 			for( i = 0; i < 6; i++ )
 			{

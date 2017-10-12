@@ -2269,8 +2269,8 @@ void Con_VidInit( void )
 		int		length = 0;
 		gltexture_t	*chars;
 
-		// FIXME: remove 'qwrap' folder check unitl wrapper has been moved into the "id1"
-		if( !Q_stricmp( FS_Gamedir(), "id1" ) || !Q_stricmp( FS_Gamedir(), "qwrap" ))
+		// NOTE: only these games want to draw build number into console background
+		if( !Q_stricmp( FS_Gamedir(), "id1" ))
 			draw_to_console = true;
 
 		if( !Q_stricmp( FS_Gamedir(), "hipnotic" ))

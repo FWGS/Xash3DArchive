@@ -96,6 +96,7 @@ BRUSH MODELS
 #define MAX_MAP_MIPTEX		0x2000000		// 32 Mb internal textures data
 #define MAX_MAP_LIGHTING		0x2000000		// 32 Mb lightmap raw data (can contain deluxemaps)
 #define MAX_MAP_VISIBILITY		0x1000000		// 16 Mb visdata
+#define MAX_TOTAL_CLIPNODES		524288
 
 // quake lump ordering
 #define LUMP_ENTITIES		0

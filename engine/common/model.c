@@ -25,8 +25,6 @@ GNU General Public License for more details.
 #include "client.h"
 #include "server.h"			// LUMP_ error codes
 
-#define MAX_SIDE_VERTS		512	// per one polygon
-
 world_static_t	world;
 
 byte		*mod_base;
@@ -106,12 +104,17 @@ void Mod_PrintBSPFileSizes_f( void )
 {
 	int	totalmemory = 0;
 	model_t	*w = worldmodel;
+	int	clipnode_size;
 
 	if( !w || !w->numsubmodels )
 	{
 		Msg( "No map loaded\n" );
 		return;
 	}
+
+	if( world.version == QBSP2_VERSION )
+		clipnode_size = sizeof( dclipnode2_t );
+	else clipnode_size = sizeof( dclipnode_t );
 
 	Msg( "\n" );
 	Msg( "Object names  Objects/Maxobjs  Memory / Maxmem  Fullness\n" );
@@ -123,10 +126,7 @@ void Mod_PrintBSPFileSizes_f( void )
 	totalmemory += Mod_ArrayUsage( "nodes",		w->numnodes,	MAX_MAP_NODES,		sizeof( dnode_t ));
 	totalmemory += Mod_ArrayUsage( "texinfos",	w->numtexinfo,	MAX_MAP_TEXINFO,		sizeof( dtexinfo_t ));
 	totalmemory += Mod_ArrayUsage( "faces",		w->numsurfaces,	MAX_MAP_FACES,		sizeof( dface_t ));
-	if( world.version == XTBSP_VERSION )
-		totalmemory += Mod_ArrayUsage( "clipnodes", w->numclipnodes, MAX_MAP_CLIPNODES * 3,	sizeof( dclipnode_t ));
-	else
-		totalmemory += Mod_ArrayUsage( "clipnodes", w->numclipnodes, MAX_MAP_CLIPNODES,		sizeof( dclipnode_t ));
+	totalmemory += Mod_ArrayUsage( "clipnodes",	w->numclipnodes,	MAX_TOTAL_CLIPNODES,	clipnode_size );
 	totalmemory += Mod_ArrayUsage( "leaves",	w->numleafs,	MAX_MAP_LEAFS,		sizeof( dleaf_t ));
 	totalmemory += Mod_ArrayUsage( "marksurfaces",	w->nummarksurfaces,	MAX_MAP_MARKSURFACES,	sizeof( dmarkface_t ));
 	totalmemory += Mod_ArrayUsage( "surfedges",	w->numsurfedges,	MAX_MAP_SURFEDGES,		sizeof( dsurfedge_t ));
@@ -2001,6 +2001,82 @@ static void Mod_LoadEntities( const dlump_t *l )
 }
 
 /*
+==================
+RemapClipNodes_r
+==================
+*/
+static int RemapClipNodes_r( dclipnode2_t *srcnodes, hull_t *hull, int nodenum )
+{
+	dclipnode2_t	*src;
+	mclipnode_t	*out;
+	int		i, c;
+
+	// leaf?
+	if( nodenum < 0 )
+	{
+		return nodenum;
+	}
+
+	// emit a clipnode
+	if( hull->lastclipnode == MAX_MAP_CLIPNODES )
+		Host_Error( "MAX_MAP_CLIPNODES limit exceeded\n" );
+
+	src = srcnodes + nodenum;
+
+	c = hull->lastclipnode;
+	out = &hull->clipnodes[c];
+	hull->lastclipnode++;
+
+	out->planenum = src->planenum;
+
+	for( i = 0; i < 2; i++ )
+		out->children[i] = RemapClipNodes_r( srcnodes, hull, src->children[i] );
+
+	return c;
+}
+
+/*
+=================
+Mod_SetupHull
+=================
+*/
+static void Mod_SetupHull( model_t *mod, byte *mempool, int headnode, int hullnum )
+{
+	hull_t	*hull = &mod->hulls[hullnum];
+
+	hull->clipnodes = (mclipnode_t *)Mem_Alloc( mempool, sizeof( mclipnode_t ) * MAX_MAP_CLIPNODES );
+	hull->firstclipnode = hull->lastclipnode = 0;
+	hull->planes = mod->planes; // share planes
+
+	// remap clipnodes to 16-bit indexes
+	RemapClipNodes_r( world.clipnodes, hull, headnode );
+
+	// fit array to real count
+	Msg( "resize clipnodes for hull%d from %d to %d\n", hullnum, MAX_MAP_CLIPNODES, hull->lastclipnode );
+	hull->clipnodes = (mclipnode_t *)Mem_Realloc( mempool, hull->clipnodes, sizeof( mclipnode_t ) * hull->lastclipnode );
+	if( !hull->lastclipnode ) hull->planes = NULL; // hull is missed
+
+	switch( hullnum )
+	{
+	case 1:
+		VectorCopy( host.player_mins[0], hull->clip_mins ); // copy human hull
+		VectorCopy( host.player_maxs[0], hull->clip_maxs );
+		break;
+	case 2:
+		VectorCopy( host.player_mins[3], hull->clip_mins ); // copy large hull
+		VectorCopy( host.player_maxs[3], hull->clip_maxs );
+		break;
+	case 3:
+		VectorCopy( host.player_mins[1], hull->clip_mins ); // copy head hull
+		VectorCopy( host.player_maxs[1], hull->clip_maxs );
+		break;
+	default:
+		Host_Error( "Mod_SetupHull: bad hull number %i\n", hullnum );
+		break;
+	}
+}
+
+/*
 =================
 Mod_LoadClipnodes
 =================
@@ -2009,11 +2085,14 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 {
 	dclipnode_t	*in16;
 	dclipnode2_t	*in32;
-	mclipnode_t	*out;
+	dclipnode2_t	*out;
+	qboolean		extended = false;
 	int		i, count;
-	hull_t		*hull;
 
-	if( bmodel_version == QBSP2_VERSION )
+	if( bmodel_version == QBSP2_VERSION || ( l->filelen % sizeof( *in16 )) || ( l->filelen / sizeof( *in16 )) >= MAX_MAP_CLIPNODES )
+		extended = true;
+
+	if( extended )
 	{
 		in32 = (void *)(mod_base + l->fileofs);
 		if( l->filelen % sizeof( *in32 )) Host_Error( "Mod_LoadClipnodes: funny lump size\n" );
@@ -2028,37 +2107,11 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 		in32 = NULL;
 	}
 
-	out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));	
-	loadmodel->clipnodes = out;
-	loadmodel->numclipnodes = count;
+	out = (dclipnode2_t	*)Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));	
+	world.numclipnodes = count;
+	world.clipnodes = out;
 
-	// hulls[0] is a point hull, always zeroed
-
-	hull = &loadmodel->hulls[1];
-	hull->clipnodes = out;
-	hull->firstclipnode = 0;
-	hull->lastclipnode = count - 1;
-	hull->planes = loadmodel->planes;
-	VectorCopy( host.player_mins[0], hull->clip_mins ); // copy human hull
-	VectorCopy( host.player_maxs[0], hull->clip_maxs );
-
-	hull = &loadmodel->hulls[2];
-	hull->clipnodes = out;
-	hull->firstclipnode = 0;
-	hull->lastclipnode = count - 1;
-	hull->planes = loadmodel->planes;
-	VectorCopy( host.player_mins[3], hull->clip_mins ); // copy large hull
-	VectorCopy( host.player_maxs[3], hull->clip_maxs );
-
-	hull = &loadmodel->hulls[3];
-	hull->clipnodes = out;
-	hull->firstclipnode = 0;
-	hull->lastclipnode = count - 1;
-	hull->planes = loadmodel->planes;
-	VectorCopy( host.player_mins[1], hull->clip_mins ); // copy head hull
-	VectorCopy( host.player_maxs[1], hull->clip_maxs );
-
-	if( bmodel_version == QBSP2_VERSION )
+	if( extended )
 	{
 		for( i = 0; i < count; i++, out++, in32++ )
 		{
@@ -2072,7 +2125,7 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 		for( i = 0; i < count; i++, out++, in16++ )
 		{
 			out->planenum = in16->planenum;
-#ifdef SUPPORT_BSP2_FORMAT
+
 			out->children[0] = (unsigned short)in16->children[0];
 			out->children[1] = (unsigned short)in16->children[1];
 
@@ -2081,12 +2134,11 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 				out->children[0] -= 65536;
 			if( out->children[1] >= count )
 				out->children[1] -= 65536;
-#else
-			out->children[0] = in16->children[0];
-			out->children[1] = in16->children[1];
-#endif
 		}
 	}
+
+	// FIXME: fill loadmodel->clipnodes?
+	loadmodel->numclipnodes = count;
 }
 
 /*
@@ -2094,77 +2146,75 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 Mod_LoadClipnodes31
 =================
 */
-static void Mod_LoadClipnodes31( const dlump_t *l, const dlump_t *l2, const dlump_t *l3 )
+static void Mod_LoadClipnodes31( const dlump_t *l1, const dlump_t *l2, const dlump_t *l3 )
 {
-	dclipnode_t	*in, *in2, *in3;
-	mclipnode_t	*out, *out2, *out3;
-	int		i, count, count2, count3;
-	hull_t		*hull;
+	dclipnode_t	*in1, *in2, *in3;
+	int		i, count1, count2, count3;
+	dclipnode2_t	*out;
 
-	in = (void *)(mod_base + l->fileofs);
-	if( l->filelen % sizeof( *in )) Host_Error( "Mod_LoadClipnodes: funny lump size\n" );
-	count = l->filelen / sizeof( *in );
-	out = Mem_Alloc( loadmodel->mempool, count * sizeof( *out ));	
+	in1 = (dclipnode_t *)(mod_base + l1->fileofs);
+	if( l1->filelen % sizeof( *in1 )) Host_Error( "Mod_LoadClipnodes1: funny lump size\n" );
+	count1 = l1->filelen / sizeof( *in1 );
 
-	in2 = (void *)(mod_base + l2->fileofs);
+	in2 = (dclipnode_t *)(mod_base + l2->fileofs);
 	if( l2->filelen % sizeof( *in2 )) Host_Error( "Mod_LoadClipnodes2: funny lump size\n" );
 	count2 = l2->filelen / sizeof( *in2 );
-	out2 = Mem_Alloc( loadmodel->mempool, count2 * sizeof( *out2 ));
 
-	in3 = (void *)(mod_base + l3->fileofs);
+	in3 = (dclipnode_t *)(mod_base + l3->fileofs);
 	if( l3->filelen % sizeof( *in3 )) Host_Error( "Mod_LoadClipnodes3: funny lump size\n" );
 	count3 = l3->filelen / sizeof( *in3 );
-	out3 = Mem_Alloc( loadmodel->mempool, count3 * sizeof( *out3 ));
 
-	loadmodel->clipnodes = out;
-	loadmodel->numclipnodes = count + count2 + count3;
+	world.clipnodes = out = (dclipnode2_t *)Mem_Alloc( loadmodel->mempool, ( count1 + count2 + count3 ) * sizeof( *out ));	
+	world.numclipnodes = 0;
 
-	// hulls[0] is a point hull, always zeroed
-
-	hull = &loadmodel->hulls[1];
-	hull->clipnodes = out;
-	hull->firstclipnode = 0;
-	hull->lastclipnode = count - 1;
-	hull->planes = loadmodel->planes;
-	VectorCopy( host.player_mins[0], hull->clip_mins ); // copy human hull
-	VectorCopy( host.player_maxs[0], hull->clip_maxs );
-
-	hull = &loadmodel->hulls[2];
-	hull->clipnodes = out2;
-	hull->firstclipnode = 0;
-	hull->lastclipnode = count2 - 1;
-	hull->planes = loadmodel->planes;
-	VectorCopy( host.player_mins[3], hull->clip_mins ); // copy large hull
-	VectorCopy( host.player_maxs[3], hull->clip_maxs );
-
-	hull = &loadmodel->hulls[3];
-	hull->clipnodes = out3;
-	hull->firstclipnode = 0;
-	hull->lastclipnode = count3 - 1;
-	hull->planes = loadmodel->planes;
-	VectorCopy( host.player_mins[1], hull->clip_mins ); // copy head hull
-	VectorCopy( host.player_maxs[1], hull->clip_maxs );
-
-	for( i = 0; i < count; i++, out++, in++ )
+	for( i = 0; i < count1; i++, out++, in1++ )
 	{
-		out->planenum = in->planenum;
-		out->children[0] = in->children[0];
-		out->children[1] = in->children[1];
+		out->children[0] = in1->children[0];
+		out->children[1] = in1->children[1];
+		out->planenum = in1->planenum;
+		world.numclipnodes++;
 	}
 
-	for( i = 0; i < count2; i++, out2++, in2++ )
+	// merge offsets so we have shared array of clipnodes again
+	for( i = 0; i < count2; i++, out++, in2++ )
 	{
-		out2->planenum = in2->planenum;
-		out2->children[0] = in2->children[0];
-		out2->children[1] = in2->children[1];
+		out->children[0] = in2->children[0];
+		out->children[1] = in2->children[1];
+		out->planenum = in2->planenum;
+
+		if( out->children[0] >= 0 )
+			out->children[0] += count1;
+		if( out->children[1] >= 0 )
+			out->children[1] += count1;
+		world.numclipnodes++;
 	}
 
-	for( i = 0; i < count3; i++, out3++, in3++ )
+	// merge offsets so we have shared array of clipnodes again
+	for( i = 0; i < count3; i++, out++, in3++ )
 	{
-		out3->planenum = in3->planenum;
-		out3->children[0] = in3->children[0];
-		out3->children[1] = in3->children[1];
+		out->children[0] = in3->children[0];
+		out->children[1] = in3->children[1];
+		out->planenum = in3->planenum;
+
+		if( out->children[0] >= 0 )
+			out->children[0] += (count1 + count2);
+		if( out->children[1] >= 0 )
+			out->children[1] += (count1 + count2);
+		world.numclipnodes++;
 	}
+
+	// fixup headnode offsets
+	for( i = 0; i < loadmodel->numsubmodels; i++ )
+	{
+		loadmodel->submodels[i].headnode[2] += (count1);
+		loadmodel->submodels[i].headnode[3] += (count1 + count2);
+	}
+
+	if( world.numclipnodes != ( count1 + count2 + count3 ))
+		Host_Error( "Mod_LoadClipnodes31: mismatch node count (%i should be %i)\n", world.numclipnodes, ( count1 + count2 + count3 ));
+
+	// FIXME: fill loadmodel->clipnodes?
+	loadmodel->numclipnodes = world.numclipnodes;
 }
 
 /*
@@ -2312,6 +2362,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	char		*ents;
 	dheader_t		*header;
 	dextrahdr_t	*extrahdr;
+	byte		*mempool;
 	dmodel_t		*bm;
 
 	if( loaded ) *loaded = false;	
@@ -2408,19 +2459,20 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	Mod_MakeHull0 ();
 
 	ents = loadmodel->entities;
-	
+	mempool = loadmodel->mempool;
+
 	// set up the submodels
 	for( i = 0; i < mod->numsubmodels; i++ )
 	{
 		bm = &mod->submodels[i];
 
+		// hull 0 is just shared across all bmodels
 		mod->hulls[0].firstclipnode = bm->headnode[0];
+
+		// but hulls1-3 is build individually for a each given submodel
 		for( j = 1; j < MAX_MAP_HULLS; j++ )
-		{
-			mod->hulls[j].firstclipnode = bm->headnode[j];
-//			mod->hulls[j].lastclipnode = mod->numclipnodes - 1;
-		}
-		
+			Mod_SetupHull( mod, mempool, bm->headnode[j], j );
+
 		mod->firstmodelsurface = bm->firstface;
 		mod->nummodelsurfaces = bm->numfaces;
 
@@ -2486,6 +2538,12 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 			mod = loadmodel;
 		}
 	}
+
+	// delete temporary array
+	if( world.clipnodes )
+		Mem_Free( world.clipnodes );
+	world.clipnodes = NULL;
+	world.numclipnodes = 0;
 
 	if( loaded ) *loaded = true;	// all done
 }
