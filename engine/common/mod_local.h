@@ -99,6 +99,7 @@ typedef struct
 
 	dclipnode2_t	*clipnodes;	// temporary 32-bit array to hold clipnodes
 	int		numclipnodes;	// may be exceeds 32768
+	int		numnodes;		// worldcount of nodes
 
 	// visibility info
 	byte		*visdata;		// uncompressed visdata

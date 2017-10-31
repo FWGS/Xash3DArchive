@@ -123,7 +123,7 @@ void Mod_PrintBSPFileSizes_f( void )
 	totalmemory += Mod_ArrayUsage( "models",	w->numsubmodels,	MAX_MAP_MODELS,		sizeof( dmodel_t ));
 	totalmemory += Mod_ArrayUsage( "planes",	w->numplanes,	MAX_MAP_PLANES,		sizeof( dplane_t ));
 	totalmemory += Mod_ArrayUsage( "vertexes",	w->numvertexes,	MAX_MAP_VERTS,		sizeof( dvertex_t ));
-	totalmemory += Mod_ArrayUsage( "nodes",		w->numnodes,	MAX_MAP_NODES,		sizeof( dnode_t ));
+	totalmemory += Mod_ArrayUsage( "nodes",		world.numnodes,	MAX_MAP_NODES,		sizeof( dnode_t ));
 	totalmemory += Mod_ArrayUsage( "texinfos",	w->numtexinfo,	MAX_MAP_TEXINFO,		sizeof( dtexinfo_t ));
 	totalmemory += Mod_ArrayUsage( "faces",		w->numsurfaces,	MAX_MAP_FACES,		sizeof( dface_t ));
 	totalmemory += Mod_ArrayUsage( "clipnodes",	w->numclipnodes,	MAX_TOTAL_CLIPNODES,	clipnode_size );
@@ -1647,7 +1647,9 @@ static void Mod_SetParent( mnode_t *node, mnode_t *parent )
 {
 	node->parent = parent;
 
-	if( node->contents < 0 ) return; // it's node
+	if( node->contents < 0 ) return; // it's leaf
+	if( world.loading ) world.numnodes++;
+
 	Mod_SetParent( node->children[0], node );
 	Mod_SetParent( node->children[1], node );
 }
@@ -1727,6 +1729,9 @@ static void Mod_LoadNodes( const dlump_t *l )
 			in16++;
 		}
 	}
+
+	if( world.loading )
+		world.numnodes = 0;
 
 	// sets nodes and leafs
 	Mod_SetParent( loadmodel->nodes, NULL );
@@ -2002,6 +2007,22 @@ static void Mod_LoadEntities( const dlump_t *l )
 
 /*
 ==================
+CountClipNodes_r
+==================
+*/
+static void CountClipNodes_r( dclipnode2_t *src, hull_t *hull, int nodenum )
+{
+	// leaf?
+	if( nodenum < 0 ) return;
+
+	hull->lastclipnode++;
+
+	CountClipNodes_r( src, hull, src[nodenum].children[0] );
+	CountClipNodes_r( src, hull, src[nodenum].children[1] );
+}
+
+/*
+==================
 RemapClipNodes_r
 ==================
 */
@@ -2043,18 +2064,13 @@ Mod_SetupHull
 static void Mod_SetupHull( model_t *mod, byte *mempool, int headnode, int hullnum )
 {
 	hull_t	*hull = &mod->hulls[hullnum];
+	int	count;
 
-	hull->clipnodes = (mclipnode_t *)Mem_Alloc( mempool, sizeof( mclipnode_t ) * MAX_MAP_CLIPNODES );
+	// assume no hull
 	hull->firstclipnode = hull->lastclipnode = 0;
-	hull->planes = mod->planes; // share planes
 
-	// remap clipnodes to 16-bit indexes
-	RemapClipNodes_r( world.clipnodes, hull, headnode );
-
-	// fit array to real count
-	Msg( "resize clipnodes for hull%d from %d to %d\n", hullnum, MAX_MAP_CLIPNODES, hull->lastclipnode );
-	hull->clipnodes = (mclipnode_t *)Mem_Realloc( mempool, hull->clipnodes, sizeof( mclipnode_t ) * hull->lastclipnode );
-	if( !hull->lastclipnode ) hull->planes = NULL; // hull is missed
+	if(( headnode == -1 ) || ( hullnum != 1 && headnode == 0 ))
+		return; // hull missed
 
 	switch( hullnum )
 	{
@@ -2074,6 +2090,22 @@ static void Mod_SetupHull( model_t *mod, byte *mempool, int headnode, int hullnu
 		Host_Error( "Mod_SetupHull: bad hull number %i\n", hullnum );
 		break;
 	}
+
+	if( VectorIsNull( hull->clip_mins ) && VectorIsNull( hull->clip_maxs ))
+		return;	// no hull specified
+
+	CountClipNodes_r( world.clipnodes, hull, headnode );
+	count = hull->lastclipnode;
+
+	hull->clipnodes = (mclipnode_t *)Mem_Alloc( mempool, sizeof( mclipnode_t ) * hull->lastclipnode );
+	hull->planes = mod->planes; // share planes
+	hull->lastclipnode = 0; // restart counting
+
+	// remap clipnodes to 16-bit indexes
+	RemapClipNodes_r( world.clipnodes, hull, headnode );
+
+	// fit array to real count
+//	Msg( "%s hull%d, %i clipnodes (headnode %i)\n", mod->name, hullnum, hull->lastclipnode, headnode );
 }
 
 /*
@@ -2089,8 +2121,13 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 	qboolean		extended = false;
 	int		i, count;
 
-	if( bmodel_version == QBSP2_VERSION || ( l->filelen % sizeof( *in16 )) || ( l->filelen / sizeof( *in16 )) >= MAX_MAP_CLIPNODES )
+	if( bmodel_version == QBSP2_VERSION )
 		extended = true;
+	else if( bmodel_version != Q1BSP_VERSION )
+	{
+		if(( l->filelen % sizeof( *in16 )) || ( l->filelen / sizeof( *in16 )) >= MAX_MAP_CLIPNODES )
+			extended = true;
+	}
 
 	if( extended )
 	{
