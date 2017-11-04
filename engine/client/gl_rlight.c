@@ -228,7 +228,8 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 {
 	float		front, back, frac, midf;
 	int		i, map, side, size, s, t;
-	int		sample_size;
+	float		sample_size;
+	mextrasurf_t	*info;
 	msurface_t	*surf;
 	mtexinfo_t	*tex;
 	color24		*lm;
@@ -271,14 +272,15 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
 		tex = surf->texinfo;
+		info = surf->info;
 
 		if( FBitSet( surf->flags, SURF_DRAWTILED ))
 			continue;	// no lightmaps
 
-		s = DotProduct( mid, tex->vecs[0] ) + tex->vecs[0][3] - surf->texturemins[0];
-		t = DotProduct( mid, tex->vecs[1] ) + tex->vecs[1][3] - surf->texturemins[1];
+		s = DotProduct( mid, info->lmvecs[0] ) + info->lmvecs[0][3] - info->lightmapmins[0];
+		t = DotProduct( mid, info->lmvecs[1] ) + info->lmvecs[1][3] - info->lightmapmins[1];
 
-		if(( s < 0 || s > surf->extents[0] ) || ( t < 0 || t > surf->extents[1] ))
+		if(( s < 0 || s > info->lightextents[0] ) || ( t < 0 || t > info->lightextents[1] ))
 			continue;
 
 		cv->r = cv->g = cv->b = cv->a = 0;
@@ -290,8 +292,8 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 		s /= sample_size;
 		t /= sample_size;
 
-		lm = surf->samples + (t * ((surf->extents[0]  / sample_size) + 1) + s);
-		size = ((surf->extents[0] / sample_size) + 1) * ((surf->extents[1] / sample_size) + 1);
+		lm = surf->samples + (t * ((info->lightextents[0] / (int)sample_size) + 1) + s);
+		size = ((info->lightextents[0] / (int)sample_size) + 1) * ((info->lightextents[1] / sample_size) + 1);
 		g_trace_fraction = midf;
 
 		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )

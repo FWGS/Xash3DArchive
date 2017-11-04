@@ -200,6 +200,10 @@ typedef struct mextrasurf_s
 	int		mirrortexturenum;	// gl texnum
 	float		mirrormatrix[4][4];
 
+	short		lightmapmins[2];	// lightmatrix
+	short		lightextents[2];
+	float		lmvecs[2][4];
+
 	struct mextrasurf_s	*mirrorchain;	// for gl_texsort drawing
 	struct mextrasurf_s	*detailchain;	// for detail textures drawing
 	struct msurface_s	*lightmapchain;	// lightmapped polys

@@ -223,7 +223,7 @@ qboolean PM_RecursiveHullCheck( hull_t *hull, int num, float p1f, float p2f, vec
 
 	if( hull->firstclipnode >= hull->lastclipnode )
 	{
-		// studiotrace issues
+		// empty hull?
 		trace->allsolid = false;
 		trace->inopen = true;
 		return true;

@@ -499,10 +499,54 @@ return the current lightmap resolution per face
 */
 int Mod_SampleSizeForFace( msurface_t *surf )
 {
-	if( !surf || !surf->texinfo || !surf->texinfo->faceinfo )
+	if( !surf || !surf->texinfo )
 		return LM_SAMPLE_SIZE;
 
-	return surf->texinfo->faceinfo->texture_step;
+	if( FBitSet( surf->texinfo->flags, TEX_WORLD_LUXELS ))
+		return 1;
+
+	if( surf->texinfo->faceinfo )
+		return surf->texinfo->faceinfo->texture_step;
+
+	return LM_SAMPLE_SIZE;
+}
+
+/*
+==================
+Mod_SampleSizeForFace
+
+return the current lightmap resolution per face
+==================
+*/
+static void Mod_LightMatrixFromTexMatrix( const mtexinfo_t *tx, float lmvecs[2][4] )
+{
+	float	lmscale = LM_SAMPLE_SIZE;
+	int	i, j;
+
+	if( tx->faceinfo )
+		lmscale = tx->faceinfo->texture_step;
+
+	// copy texmatrix into lightmap matrix fisrt
+	for( i = 0; i < 2; i++ )
+	{
+		for( j = 0; j < 4; j++ )
+		{
+			lmvecs[i][j] = tx->vecs[i][j];
+		}
+	}
+
+	if( !FBitSet( tx->flags, TEX_WORLD_LUXELS ))
+		return; // just use texmatrix
+
+	VectorNormalize( lmvecs[0] );
+	VectorNormalize( lmvecs[1] );
+
+	// put the lighting origin at center the poly
+	VectorScale( lmvecs[0], (1.0 / lmscale), lmvecs[0] );
+	VectorScale( lmvecs[1], -(1.0 / lmscale), lmvecs[1] );
+
+	lmvecs[0][3] = lmscale * 0.5;
+	lmvecs[1][3] = -lmscale * 0.5;
 }
 
 /*
@@ -1275,16 +1319,21 @@ Fills in surf->texturemins[] and surf->extents[]
 static void Mod_CalcSurfaceExtents( msurface_t *surf )
 {
 	float		mins[2], maxs[2], val;
+	float		lmmins[2], lmmaxs[2];
 	int		bmins[2], bmaxs[2];
 	int		i, j, e, sample_size;
+	mextrasurf_t	*info = surf->info;
+	int		facenum = surf - loadmodel->surfaces;
 	mtexinfo_t	*tex;
 	mvertex_t		*v;
 
 	sample_size = Mod_SampleSizeForFace( surf );
 	tex = surf->texinfo;
 
-	mins[0] = mins[1] = 999999;
-	maxs[0] = maxs[1] = -999999;
+	Mod_LightMatrixFromTexMatrix( tex, info->lmvecs ); 
+
+	mins[0] = lmmins[0] = mins[1] = lmmins[1] = 999999;
+	maxs[0] = lmmaxs[0] = maxs[1] = lmmaxs[1] =-999999;
 
 	for( i = 0; i < surf->numedges; i++ )
 	{
@@ -1299,8 +1348,15 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 		for( j = 0; j < 2; j++ )
 		{
 			val = DotProduct( v->position, surf->texinfo->vecs[j] ) + surf->texinfo->vecs[j][3];
-			if( val < mins[j] ) mins[j] = val;
-			if( val > maxs[j] ) maxs[j] = val;
+			mins[j] = Q_min( val, mins[j] );
+			maxs[j] = Q_max( val, maxs[j] );
+		}
+
+		for( j = 0; j < 2; j++ )
+		{
+			val = DotProduct( v->position, info->lmvecs[j] ) + info->lmvecs[j][3];
+			lmmins[j] = Q_min( val, lmmins[j] );
+			lmmaxs[j] = Q_max( val, lmmaxs[j] );
 		}
 	}
 
@@ -1311,6 +1367,21 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 
 		surf->texturemins[i] = bmins[i] * sample_size;
 		surf->extents[i] = (bmaxs[i] - bmins[i]) * sample_size;
+
+		if( FBitSet( tex->flags, TEX_WORLD_LUXELS ))
+		{
+			lmmins[i] = floor( lmmins[i] );
+			lmmaxs[i] = ceil( lmmaxs[i] );
+
+			info->lightmapmins[i] = lmmins[i];
+			info->lightextents[i] = (lmmaxs[i] - lmmins[i]);
+		}
+		else
+		{
+			// just copy texturemins
+			info->lightmapmins[i] = surf->texturemins[i];
+			info->lightextents[i] = surf->extents[i];
+		}
 
 		if( !FBitSet( tex->flags, TEX_SPECIAL ) && surf->extents[i] > 4096 )
 			MsgDev( D_ERROR, "Bad surface extents %i\n", surf->extents[i] );
@@ -2071,6 +2142,9 @@ static void Mod_SetupHull( model_t *mod, byte *mempool, int headnode, int hullnu
 
 	if(( headnode == -1 ) || ( hullnum != 1 && headnode == 0 ))
 		return; // hull missed
+
+	if( headnode >= world.numclipnodes )
+		return;	// ZHLT weird empty hulls
 
 	switch( hullnum )
 	{

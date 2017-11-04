@@ -438,7 +438,7 @@ void CL_AddLinksToPmove( frame_t *frame )
 		if(( state->owner != 0 ) && ( state->owner == cl.playernum + 1 ))
 			continue;
 
-		if(( model->hulls[1].firstclipnode || model->type == mod_studio ) && clgame.pmove->numvisent < MAX_PHYSENTS )
+		if(( model->hulls[1].lastclipnode || model->type == mod_studio ) && clgame.pmove->numvisent < MAX_PHYSENTS )
 		{
 			pe = &clgame.pmove->visents[clgame.pmove->numvisent];
 			CL_CopyEntityToPhysEnt( pe, state, true );
@@ -456,7 +456,7 @@ void CL_AddLinksToPmove( frame_t *frame )
 		if( VectorIsNull( state->mins ) && VectorIsNull( state->maxs ))
 			continue;
 
-		if ( !model->hulls[1].firstclipnode && model->type != mod_studio )
+		if ( !model->hulls[1].lastclipnode && model->type != mod_studio )
 			continue;
 
 		if( state->solid == SOLID_NOT && state->skin < CONTENTS_EMPTY )

@@ -136,7 +136,8 @@ BRUSH MODELS
 #define EXTRA_LUMPS			12	// count of the extra lumps
 
 // texture flags
-#define TEX_SPECIAL			BIT( 0 )		// sky or slime, no lightmap or 256 subdivision
+#define TEX_SPECIAL			BIT( 0 )	// sky or slime, no lightmap or 256 subdivision
+#define TEX_WORLD_LUXELS		BIT( 1 )	// alternative lightmap matrix will be used (luxels per world units instead of luxels per texels)
 
 // ambient sound types
 enum
