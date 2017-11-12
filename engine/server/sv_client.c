@@ -1101,10 +1101,6 @@ void SV_PutClientInServer( sv_client_t *cl )
 	}
 	else
 	{
-		// enable dev-mode to prevent crash cheat-protecting from Invasion mod
-		if( FBitSet( ent->v.flags, FL_GODMODE|FL_NOTARGET ) && !Q_stricmp( GI->gamefolder, "invasion" ))
-			SV_ExecuteClientCommand( cl, "test\n" );
-
 		// NOTE: we needs to setup angles on restore here
 		if( ent->v.fixangle == 1 )
 		{
@@ -1125,6 +1121,10 @@ void SV_PutClientInServer( sv_client_t *cl )
 			cl->pViewEntity = EDICT_NUM( sv.viewentity );
 		else cl->pViewEntity = NULL;
 	}
+
+	// enable dev-mode to prevent crash cheat-protecting from Invasion mod
+	if( FBitSet( ent->v.flags, FL_GODMODE|FL_NOTARGET ) && !Q_stricmp( GI->gamefolder, "invasion" ))
+		SV_ExecuteClientCommand( cl, "test\n" );
 
 	// refresh the userinfo and movevars
 	// NOTE: because movevars can be changed during the connection process

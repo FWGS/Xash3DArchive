@@ -93,6 +93,7 @@ typedef struct
 	qboolean		water_alpha;	// allow translucency water
 	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
 	int		block_size;	// lightmap blocksize
+	int		lightmap_samples;	// samples per pixel
 	color24		*deluxedata;	// deluxemap data pointer
 	char		message[2048];	// just for debug
 	char		compiler[256];	// map compiler

@@ -1184,7 +1184,8 @@ static void Mod_LoadLightVecs( const dlump_t *l )
 
 	if( world.vecdatasize != world.litdatasize )
 	{
-		MsgDev( D_ERROR, "Mod_LoadLightVecs: has mismatched size (%i should be %i)\n", world.vecdatasize, world.litdatasize );
+		if( world.vecdatasize > 0 )
+			MsgDev( D_ERROR, "Mod_LoadLightVecs: has mismatched size (%i should be %i)\n", world.vecdatasize, world.litdatasize );
 		world.deluxedata = NULL;
 		world.vecdatasize = 0;
 		return;
@@ -1428,6 +1429,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 	dface2_t		*in32;
 	msurface_t	*out;
 	mextrasurf_t	*info;
+	int		test_lightsize = -1;
 	int		i, j, count;
 	int		lightofs;
 
@@ -1451,6 +1453,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 	loadmodel->numsurfaces = count;
 	loadmodel->surfaces = out = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t ));
 	info = Mem_Alloc( loadmodel->mempool, count * sizeof( mextrasurf_t ));
+	world.lightmap_samples = 1; // assume monochrome lighting
 
 	for( i = 0; i < count; i++, out++, info++ )
 	{
@@ -1478,7 +1481,6 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 			for( j = 0; j < MAXLIGHTMAPS; j++ )
 				out->styles[j] = in32->styles[j];
-
 			lightofs = in32->lightofs;
 			in32++;
 		}
@@ -1500,7 +1502,6 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 
 			for( j = 0; j < MAXLIGHTMAPS; j++ )
 				out->styles[j] = in16->styles[j];
-
 			lightofs = in16->lightofs;
 			in16++;
 		}
@@ -1526,7 +1527,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		if( !Q_strncmp( tex->name, "{scroll", 7 ))
 			out->flags |= SURF_CONVEYOR|SURF_TRANSPARENT;
 
-		// g-cont this texture from decals.wad he-he
+		// g-cont this texture comes from decals.wad he-he
 		// support !reflect for reflected water
 		if( !Q_strcmp( tex->name, "reflect1" ) || !Q_strncmp( tex->name, "!reflect", 8 ))
 		{
@@ -1543,11 +1544,31 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		Mod_CalcSurfaceBounds( out );
 		Mod_CalcSurfaceExtents( out );
 
+		// grab the second sample to detect colored lighting
+		if( test_lightsize > 0 && lightofs != -1 )
+		{
+			world.lightmap_samples = lightofs / test_lightsize;
+			MsgDev( D_REPORT, "lighting: %s\n", (world.lightmap_samples == 1) ? "monochrome" : "colored" );
+			world.lightmap_samples = Q_max( world.lightmap_samples, 1 ); // avoid division by zero
+			test_lightsize = 0;	// finish samples detect
+		}
+
+		// grab the first sample to determine lightmap size
+		if( !lightofs && test_lightsize == -1 )
+		{
+			int	sample_size = Mod_SampleSizeForFace( out );
+			int	lightstyles = 0;
+
+			test_lightsize = ((info->lightextents[0] / sample_size) + 1) * ((info->lightextents[1] / sample_size) + 1);
+			// count styles to right compute test_lightsize
+			for( j = 0; j < MAXLIGHTMAPS && out->styles[j] != 255; j++ )
+				lightstyles++;
+			test_lightsize *= lightstyles;
+		}
+
 		if( loadmodel->lightdata && lightofs != -1 )
 		{
-			if( bmodel_version == HLBSP_VERSION || bmodel_version == XTBSP_VERSION )
-				out->samples = loadmodel->lightdata + (lightofs / 3);
-			else out->samples = loadmodel->lightdata + lightofs;
+			out->samples = loadmodel->lightdata + (lightofs / world.lightmap_samples);
 
 			// if deluxemap is present setup it too
 			if( world.deluxedata )
@@ -2541,13 +2562,6 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 		// normal half-life lumps
 		Mod_LoadEntities( &header->lumps[LUMP_ENTITIES] );
 		Mod_LoadPlanes( &header->lumps[LUMP_PLANES] );
-	}
-
-	if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
-	{
-		// Half-Life: alpha version has BSP version 29 and map version 220 (and lightdata is RGB)
-		if( world.version <= 29 && world.mapversion == 220 && (header->lumps[LUMP_LIGHTING].filelen % 3) == 0 )
-			world.version = bmodel_version = HLBSP_VERSION;
 	}
 
 	Mod_LoadSubmodels( &header->lumps[LUMP_MODELS] );
