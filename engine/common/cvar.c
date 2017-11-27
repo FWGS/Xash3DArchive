@@ -821,7 +821,7 @@ void Cvar_Unlink( int group )
 		count++;
 	}
 
-	MsgDev( D_INFO, "unlink %i cvars\n", count );
+	MsgDev( D_REPORT, "unlink %i cvars\n", count );
 }
 
 /*

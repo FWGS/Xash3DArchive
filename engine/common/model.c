@@ -51,7 +51,7 @@ model_t		*worldmodel;
 */
 /*
 ================
-Mod_SetupHulls
+Mod_ArrayUsage
 ================
 */
 int Mod_ArrayUsage( const char *szItem, int items, int maxitems, int itemsize )
@@ -73,7 +73,7 @@ int Mod_ArrayUsage( const char *szItem, int items, int maxitems, int itemsize )
 
 /*
 ================
-Mod_SetupHulls
+Mod_GlobUsage
 ================
 */
 int Mod_GlobUsage( const char *szItem, int itemstorage, int maxstorage )
@@ -2160,6 +2160,7 @@ static void Mod_SetupHull( model_t *mod, byte *mempool, int headnode, int hullnu
 
 	// assume no hull
 	hull->firstclipnode = hull->lastclipnode = 0;
+	hull->planes = NULL; // hull is missed
 
 	if(( headnode == -1 ) || ( hullnum != 1 && headnode == 0 ))
 		return; // hull missed
