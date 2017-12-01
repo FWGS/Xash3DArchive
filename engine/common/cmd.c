@@ -575,8 +575,11 @@ void Cmd_TokenizeString( char *text )
 	
 		if( cmd_argc == 1 )
 			 cmd_args = text;
-			
+
+		host.com_ignorebracket = true;			
 		text = COM_ParseFile( text, cmd_token );
+		host.com_ignorebracket = false;
+
 		if( !text ) return;
 
 		if( cmd_argc < MAX_CMD_TOKENS )

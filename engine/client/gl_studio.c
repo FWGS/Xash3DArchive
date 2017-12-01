@@ -3104,6 +3104,32 @@ void R_StudioRenderFinal( void )
 		R_StudioDrawAttachments();
 	}
 
+	if( r_drawentities->value == 7 )
+	{
+		vec3_t	origin;
+
+		pglDisable( GL_TEXTURE_2D );
+		pglDisable( GL_DEPTH_TEST );
+
+		Matrix3x4_OriginFromMatrix( g_studio.rotationmatrix, origin );
+
+		pglBegin( GL_LINES );
+		pglColor3f( 1, 0.5, 0 );
+		pglVertex3fv( origin );
+		pglVertex3fv( g_studio.lightspot );
+		pglEnd();
+
+		pglPointSize( 5.0f );
+		pglColor3f( 1, 0, 0 );
+		pglBegin( GL_POINTS );
+		pglVertex3fv( g_studio.lightspot );
+		pglEnd();
+		pglPointSize( 1.0f );
+
+		pglEnable( GL_DEPTH_TEST );
+		pglEnable( GL_TEXTURE_2D );
+	}
+
 	R_StudioRestoreRenderer();
 }
 

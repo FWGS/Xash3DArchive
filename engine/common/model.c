@@ -511,6 +511,25 @@ int Mod_SampleSizeForFace( msurface_t *surf )
 	return LM_SAMPLE_SIZE;
 }
 
+static void MakeAxial( vec3_t normal )
+{
+	int	i, type;
+
+	for( type = 0; type < 3; type++ )
+	{
+		if( fabs( normal[type] ) > 0.9999f )
+			break;
+	}
+
+	// make positive and pure axial
+	for( i = 0; i < 3 && type != 3; i++ )
+	{
+		if( i == type )
+			normal[i] = 1.0f;
+		else normal[i] = 0.0f;
+	}
+}
+
 /*
 ==================
 Mod_SampleSizeForFace
@@ -540,6 +559,12 @@ static void Mod_LightMatrixFromTexMatrix( const mtexinfo_t *tx, float lmvecs[2][
 
 	VectorNormalize( lmvecs[0] );
 	VectorNormalize( lmvecs[1] );
+
+	if( FBitSet( tx->flags, TEX_AXIAL_LUXELS ))
+	{
+		MakeAxial( lmvecs[0] );
+		MakeAxial( lmvecs[1] );
+	}
 
 	// put the lighting origin at center the poly
 	VectorScale( lmvecs[0], (1.0 / lmscale), lmvecs[0] );
@@ -656,7 +681,7 @@ void Mod_Init( void )
 {
 	com_studiocache = Mem_AllocPool( "Studio Cache" );
 	mod_studiocache = Cvar_Get( "r_studiocache", "1", FCVAR_ARCHIVE, "enables studio cache for speedup tracing hitboxes" );
-	r_wadtextures = Cvar_Get( "r_wadtextures", "0", 0, "completely ignore textures in the wad-files if disabled" );
+	r_wadtextures = Cvar_Get( "r_wadtextures", "0", 0, "completely ignore textures in the bsp-file if enabled" );
 
 	Cmd_AddCommand( "mapstats", Mod_PrintBSPFileSizes_f, "show stats for currently loaded map" );
 	Cmd_AddCommand( "modellist", Mod_Modellist_f, "display loaded models list" );
@@ -2079,7 +2104,7 @@ static void Mod_LoadEntities( const dlump_t *l )
 					Q_strcat( wadstring, ";" );
 
 				// parse wad pathes
-				for (pszWadFile = strtok( wadstring, ";" ); pszWadFile != NULL; pszWadFile = strtok( NULL, ";" ))
+				for( pszWadFile = strtok( wadstring, ";" ); pszWadFile != NULL; pszWadFile = strtok( NULL, ";" ))
 				{
 					COM_FixSlashes( pszWadFile );
 					FS_FileBase( pszWadFile, wadlist.wadnames[wadlist.count++] );

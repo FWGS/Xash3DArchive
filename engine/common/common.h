@@ -324,6 +324,7 @@ typedef struct host_parm_s
 	qboolean		allow_cheats;	// this host will allow cheating
 	qboolean		con_showalways;	// show console always (developer and dedicated)
 	qboolean		com_handlecolon;	// allow COM_ParseFile to handle colon as single char
+	qboolean		com_ignorebracket;	// allow COM_ParseFile to ignore () as single char
 	qboolean		change_game;	// initialize when game is changed
 	qboolean		mouse_visible;	// vgui override cursor control
 	qboolean		input_enabled;	// vgui override mouse & keyboard input
@@ -409,7 +410,6 @@ int FS_UnGetc( file_t *file, byte c );
 void FS_StripExtension( char *path );
 long FS_Tell( file_t *file );
 qboolean FS_Eof( file_t *file );
-void FS_Purge( file_t *file );
 int FS_Close( file_t *file );
 int FS_Getc( file_t *file );
 qboolean FS_Eof( file_t *file );

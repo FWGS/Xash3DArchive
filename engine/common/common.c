@@ -131,7 +131,10 @@ interpert this character as single
 */
 static int COM_IsSingleChar( char c )
 {
-	if( c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ',' )
+	if( c == '{' || c == '}' || c == '\'' || c == ',' )
+		return true;
+
+	if( !host.com_ignorebracket && ( c == ')' || c == '(' ))
 		return true;
 
 	if( host.com_handlecolon && c == ':' )

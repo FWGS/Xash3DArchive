@@ -224,11 +224,12 @@ static vec3_t	g_trace_lightspot;
 R_RecursiveLightPoint
 =================
 */
-static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f, float p2f, colorVec *cv, const vec3_t start, const vec3_t end )
+static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f, float p2f, colorVec *cv, const vec3_t start, const vec3_t end, qboolean debug )
 {
 	float		front, back, frac, midf;
-	int		i, map, side, size, s, t;
-	float		sample_size;
+	int		i, map, side, size;
+	float		ds, dt, s, t;
+	int		sample_size;
 	mextrasurf_t	*info;
 	msurface_t	*surf;
 	mtexinfo_t	*tex;
@@ -248,7 +249,7 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 
 	side = front < 0;
 	if(( back < 0 ) == side )
-		return R_RecursiveLightPoint( model, node->children[side], p1f, p2f, cv, start, end );
+		return R_RecursiveLightPoint( model, node->children[side], p1f, p2f, cv, start, end, debug );
 
 	frac = front / ( front - back );
 
@@ -256,7 +257,7 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 	midf = p1f + ( p2f - p1f ) * frac;
 
 	// co down front side	
-	if( R_RecursiveLightPoint( model, node->children[side], p1f, midf, cv, start, mid ))
+	if( R_RecursiveLightPoint( model, node->children[side], p1f, midf, cv, start, mid, debug ))
 		return true; // hit something
 
 	if(( back < 0 ) == side )
@@ -271,16 +272,24 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 
 	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
+		int	smax, tmax;
+
 		tex = surf->texinfo;
 		info = surf->info;
 
 		if( FBitSet( surf->flags, SURF_DRAWTILED ))
 			continue;	// no lightmaps
 
-		s = DotProduct( mid, info->lmvecs[0] ) + info->lmvecs[0][3] - info->lightmapmins[0];
-		t = DotProduct( mid, info->lmvecs[1] ) + info->lmvecs[1][3] - info->lightmapmins[1];
+		s = DotProduct( mid, info->lmvecs[0] ) + info->lmvecs[0][3];
+		t = DotProduct( mid, info->lmvecs[1] ) + info->lmvecs[1][3];
 
-		if(( s < 0 || s > info->lightextents[0] ) || ( t < 0 || t > info->lightextents[1] ))
+		if( s < info->lightmapmins[0] || t < info->lightmapmins[1] )
+			continue;
+
+		ds = s - info->lightmapmins[0];
+		dt = t - info->lightmapmins[1];
+		
+		if ( ds > info->lightextents[0] || dt > info->lightextents[1] )
 			continue;
 
 		cv->r = cv->g = cv->b = cv->a = 0;
@@ -289,12 +298,14 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 			return true;
 
 		sample_size = Mod_SampleSizeForFace( surf );
-		s /= sample_size;
-		t /= sample_size;
+		smax = (info->lightextents[0] / sample_size) + 1;
+		tmax = (info->lightextents[1] / sample_size) + 1;
+		ds /= sample_size;
+		dt /= sample_size;
 
-		lm = surf->samples + (t * ((info->lightextents[0] / (int)sample_size) + 1) + s);
-		size = ((info->lightextents[0] / (int)sample_size) + 1) * ((info->lightextents[1] / sample_size) + 1);
+		lm = surf->samples + Q_rint( dt ) * smax + Q_rint( ds );
 		g_trace_fraction = midf;
+		size = smax * tmax;
 
 		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{
@@ -319,7 +330,7 @@ static qboolean R_RecursiveLightPoint( model_t *model, mnode_t *node, float p1f,
 	}
 
 	// go down back side
-	return R_RecursiveLightPoint( model, node->children[!side], midf, p2f, cv, mid, end );
+	return R_RecursiveLightPoint( model, node->children[!side], midf, p2f, cv, mid, end, debug );
 }
 
 int R_LightTraceFilter( physent_t *pe )
@@ -380,7 +391,7 @@ colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot )
 			VectorClear( g_trace_lightspot );
 			g_trace_fraction = 1.0f;
 
-			if( !R_RecursiveLightPoint( pe->model, pnodes, 0.0f, 1.0f, &cv, start_l, end_l ))
+			if( !R_RecursiveLightPoint( pe->model, pnodes, 0.0f, 1.0f, &cv, start_l, end_l, lspot != NULL ))
 				continue;	// didn't hit anything
 
 			if( g_trace_fraction < last_fraction )

@@ -138,6 +138,7 @@ BRUSH MODELS
 // texture flags
 #define TEX_SPECIAL			BIT( 0 )	// sky or slime, no lightmap or 256 subdivision
 #define TEX_WORLD_LUXELS		BIT( 1 )	// alternative lightmap matrix will be used (luxels per world units instead of luxels per texels)
+#define TEX_AXIAL_LUXELS		BIT( 2 )	// force world luxels to axial positive scales
 
 // ambient sound types
 enum

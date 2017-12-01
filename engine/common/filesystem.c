@@ -106,7 +106,6 @@ typedef struct searchpath_s
 byte			*fs_mempool;
 searchpath_t		*fs_searchpaths = NULL;	// chain
 searchpath_t		fs_directpath;		// static direct path
-char			fs_rootdir[MAX_SYSPATH];	// engine root directory
 char			fs_basedir[MAX_SYSPATH];	// base game directory
 char			fs_gamedir[MAX_SYSPATH];	// game current directory
 char			fs_writedir[MAX_SYSPATH];	// path that game allows to overwrite, delete and rename files (and create new of course)
@@ -124,6 +123,7 @@ static qboolean FS_SysFolderExists( const char *path );
 static long FS_SysFileTime( const char *filename );
 static char W_TypeFromExt( const char *lumpname );
 static const char *W_ExtFromType( char lumptype );
+static void FS_Purge( file_t* file );
 
 /*
 =============================================================================
@@ -1703,7 +1703,6 @@ static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedir
 {
 	searchpath_t	*search;
 	char		*pEnvPath;
-	pack_t		*pak;
 
 	// search through the path, one element at a time
 	for( search = fs_searchpaths; search; search = search->next )
@@ -1715,6 +1714,7 @@ static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedir
 		if( search->pack )
 		{
 			int	left, right, middle;
+			pack_t	*pak;
 
 			pak = search->pack;
 
@@ -1867,11 +1867,13 @@ file_t *FS_OpenReadFile( const char *filename, const char *mode, qboolean gamedi
 		return NULL; // let W_LoadFile get lump correctly
 	else if( pack_ind < 0 )
 	{
-		// found in the filesystem?
 		char	path [MAX_SYSPATH];
+
+		// found in the filesystem?
 		Q_sprintf( path, "%s%s", search->filename, filename );
 		return FS_SysOpen( path, mode );
 	} 
+
 	return NULL;
 }
 
