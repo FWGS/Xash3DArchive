@@ -141,6 +141,7 @@ void Mod_PrintBSPFileSizes_f( void )
 	Msg( "=== Total BSP file data space used: %s ===\n", Q_memprint( totalmemory ));
 	Msg( "World size ( %g %g %g ) units\n", world.size[0], world.size[1], world.size[2] );
 	Msg( "Supports transparency world water: %s\n", world.water_alpha ? "Yes" : "No" );
+	Msg( "Lighting: %s\n", FBitSet( w->flags, MODEL_COLORED_LIGHTING ) ? "colored" : "monochrome" );
 	Msg( "original name: ^1%s\n", worldmodel->name );
 	Msg( "internal name: %s\n", (world.message[0]) ? va( "^2%s", world.message ) : "none" );
 	Msg( "map compiler: %s\n", (world.compiler[0]) ? va( "^3%s", world.compiler ) : "unknown" );
@@ -799,6 +800,7 @@ static void Mod_LoadTextures( const dlump_t *l )
 	texture_t		*anims[10];
 	texture_t		*altanims[10];
 	int		num, max, altmax;
+	qboolean		custom_palette;
 	char		texname[64];
 	imgfilter_t	*filter;
 	mip_t		*mt;
@@ -857,14 +859,36 @@ static void Mod_LoadTextures( const dlump_t *l )
 		Q_strnlwr( mt->name, mt->name, sizeof( mt->name ));
 		Q_strncpy( tx->name, mt->name, sizeof( tx->name ));
 		filter = R_FindTexFilter( tx->name ); // grab texture filter
+		custom_palette = false;
 
 		tx->width = mt->width;
 		tx->height = mt->height;
 
+		if( mt->offsets[0] > 0 )
+		{
+			int	size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
+			int	next_dataofs, remaining;
+
+			// compute next dataofset to determine allocated miptex sapce
+			for( j = i + 1; j < loadmodel->numtextures; j++ )
+			{
+				next_dataofs = in->dataofs[j];
+				if( next_dataofs != -1 ) break;
+			}
+
+			if( j == loadmodel->numtextures )
+				next_dataofs = l->filelen;
+
+			// NOTE: imagelib detect miptex version by size
+			// 770 additional bytes is indicated custom palette
+			remaining = next_dataofs - (in->dataofs[i] + size);
+			if( remaining >= 770 ) custom_palette = true;
+		}
+
 		// check for multi-layered sky texture
 		if( world.loading && !Q_strncmp( mt->name, "sky", 3 ) && mt->width == 256 && mt->height == 128 )
 		{	
-			R_InitSky( mt, tx ); // loadq quake sky
+			R_InitSky( mt, tx, custom_palette ); // load quake sky
 
 			if( tr.solidskyTexture && tr.alphaskyTexture )
 				world.sky_sphere = true;
@@ -898,10 +922,9 @@ static void Mod_LoadTextures( const dlump_t *l )
 			{
 				// NOTE: imagelib detect miptex version by size
 				// 770 additional bytes is indicated custom palette
-				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-				if( bmodel_version == HLBSP_VERSION || bmodel_version == XTBSP_VERSION )
-					size += sizeof( short ) + 768;
+				int	size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 
+				if( custom_palette ) size += sizeof( short ) + 768;
 				Q_snprintf( texname, sizeof( texname ), "#%s.mip", mt->name );
 				tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0, filter );
 			}
@@ -919,10 +942,9 @@ static void Mod_LoadTextures( const dlump_t *l )
 			{
 				// NOTE: imagelib detect miptex version by size
 				// 770 additional bytes is indicated custom palette
-				int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-				if( bmodel_version == HLBSP_VERSION || bmodel_version == XTBSP_VERSION )
-					size += sizeof( short ) + 768;
+				int	size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 
+				if( custom_palette ) size += sizeof( short ) + 768;
 				tx->fb_texturenum = GL_LoadTexture( texname, (byte *)mt, size, TF_MAKELUMA, NULL );
 			}
 			else
@@ -1260,6 +1282,7 @@ static qboolean Mod_LoadColoredLighting( void )
 	loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, litdatasize );
 	memcpy( loadmodel->lightdata, in + 8, litdatasize );
 	if( world.loading ) world.litdatasize = litdatasize;
+	SetBits( loadmodel->flags, MODEL_COLORED_LIGHTING );
 	Mem_Free( in );
 
 	return true;
@@ -1270,11 +1293,15 @@ static qboolean Mod_LoadColoredLighting( void )
 Mod_LoadLighting
 =================
 */
-static void Mod_LoadLighting( const dlump_t *l, dextrahdr_t *extrahdr )
+static void Mod_LoadLighting( const dlump_t *l, const dlump_t *faces, dextrahdr_t *extrahdr )
 {
-	byte	d, *in;
-	color24	*out;
-	int	i;
+	int		i, count;
+	dface_t		*in16;
+	dface2_t		*in32;
+	msurface_t	*surf;
+	byte		d, *in;
+	int		lightofs;
+	color24		*out;
 
 	if( !l->filelen )
 	{
@@ -1291,10 +1318,9 @@ static void Mod_LoadLighting( const dlump_t *l, dextrahdr_t *extrahdr )
 	in = (void *)(mod_base + l->fileofs);
 	if( world.loading ) world.litdatasize = l->filelen;
 
-	switch( bmodel_version )
+	switch( world.lightmap_samples )
 	{
-	case Q1BSP_VERSION:
-	case QBSP2_VERSION:
+	case 1:
 		if( !Mod_LoadColoredLighting( ))
 		{
 			// expand the white lighting data
@@ -1310,29 +1336,72 @@ static void Mod_LoadLighting( const dlump_t *l, dextrahdr_t *extrahdr )
 			}
 		}
 		break;
-	case HLBSP_VERSION:
-	case XTBSP_VERSION:
-		// load colored lighting
+	case 3:	// load colored lighting
 		loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, l->filelen );
 		memcpy( loadmodel->lightdata, in, l->filelen );
 		SetBits( loadmodel->flags, MODEL_COLORED_LIGHTING );
 		break;
+	default:
+		Host_Error( "Mod_LoadLighting: bad lightmap sample count %i\n", world.lightmap_samples );
+		break;
 	}
 
-	if( !world.loading ) return;	// only world can have deluxedata (FIXME: what about quake models?)
-
-	// not supposed to be load ?
-	if( !FBitSet( host.features, ENGINE_LOAD_DELUXEDATA ))
+	if( world.loading )
 	{
-		world.deluxedata = NULL;
-		world.vecdatasize = 0;
-		return;
+		// only world can have deluxedata (FIXME: what about quake models?)
+		// not supposed to be load ?
+		if( FBitSet( host.features, ENGINE_LOAD_DELUXEDATA ))
+		{
+			// try to loading deluxemap too
+			if( extrahdr != NULL )
+				Mod_LoadLightVecs( &extrahdr->lumps[LUMP_LIGHTVECS] );
+			else Mod_LoadDeluxemap (); // old method
+		}
+		else
+		{
+			world.deluxedata = NULL;
+			world.vecdatasize = 0;
+		}
 	}
 
-	// try to loading deluxemap too
-	if( extrahdr != NULL )
-		Mod_LoadLightVecs( &extrahdr->lumps[LUMP_LIGHTVECS] );
-	else Mod_LoadDeluxemap (); // old method
+	// setup lightdata pointers
+	if( bmodel_version == QBSP2_VERSION )
+	{
+		in32 = (void *)(mod_base + faces->fileofs);
+		count = faces->filelen / sizeof( *in32 );
+		in16 = NULL;
+	}
+	else
+	{
+		in16 = (void *)(mod_base + faces->fileofs);
+		count = faces->filelen / sizeof( *in16 );
+		in32 = NULL;
+	}
+
+	surf = loadmodel->surfaces;
+
+	for( i = 0; i < count; i++, surf++ )
+	{
+		if( bmodel_version == QBSP2_VERSION )
+		{
+			lightofs = in32->lightofs;
+			in32++;
+		}
+		else
+		{
+			lightofs = in16->lightofs;
+			in16++;
+		}
+
+		if( loadmodel->lightdata && lightofs != -1 )
+		{
+			surf->samples = loadmodel->lightdata + (lightofs / world.lightmap_samples);
+
+			// if deluxemap is present setup it too
+			if( world.deluxedata )
+				surf->info->deluxemap = world.deluxedata + (lightofs / 3);
+		}
+	}
 }
 
 /*
@@ -1455,6 +1524,8 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 	msurface_t	*out;
 	mextrasurf_t	*info;
 	int		test_lightsize = -1;
+	int		next_lightofs = -1;
+	int		prev_lightofs = -1;
 	int		i, j, count;
 	int		lightofs;
 
@@ -1478,7 +1549,11 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 	loadmodel->numsurfaces = count;
 	loadmodel->surfaces = out = Mem_Alloc( loadmodel->mempool, count * sizeof( msurface_t ));
 	info = Mem_Alloc( loadmodel->mempool, count * sizeof( mextrasurf_t ));
-	world.lightmap_samples = 1; // assume monochrome lighting
+
+	// predict samplecount based on bspversion
+	if( bmodel_version == Q1BSP_VERSION || bmodel_version == QBSP2_VERSION )
+		world.lightmap_samples = 1;
+	else world.lightmap_samples = 3;
 
 	for( i = 0; i < count; i++, out++, info++ )
 	{
@@ -1572,25 +1647,28 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 		// grab the second sample to detect colored lighting
 		if( test_lightsize > 0 && lightofs != -1 )
 		{
-			world.lightmap_samples = lightofs / test_lightsize;
-			MsgDev( D_REPORT, "lighting: %s\n", (world.lightmap_samples == 1) ? "monochrome" : "colored" );
-			world.lightmap_samples = Q_max( world.lightmap_samples, 1 ); // avoid division by zero
-			test_lightsize = 0;	// finish samples detect
+			if( lightofs > prev_lightofs && lightofs < next_lightofs )
+				next_lightofs = lightofs;
 		}
 
 		// grab the first sample to determine lightmap size
-		if( !lightofs && test_lightsize == -1 )
+		if( lightofs != -1 && test_lightsize == -1 )
 		{
 			int	sample_size = Mod_SampleSizeForFace( out );
+			int	smax = (info->lightextents[0] / sample_size) + 1;
+			int	tmax = (info->lightextents[1] / sample_size) + 1;
 			int	lightstyles = 0;
 
-			test_lightsize = ((info->lightextents[0] / sample_size) + 1) * ((info->lightextents[1] / sample_size) + 1);
+			test_lightsize = smax * tmax;
 			// count styles to right compute test_lightsize
 			for( j = 0; j < MAXLIGHTMAPS && out->styles[j] != 255; j++ )
 				lightstyles++;
-			test_lightsize *= lightstyles;
-		}
 
+			test_lightsize *= lightstyles;
+			prev_lightofs = lightofs;
+			next_lightofs = 99999999;
+		}
+#if 0
 		if( loadmodel->lightdata && lightofs != -1 )
 		{
 			out->samples = loadmodel->lightdata + (lightofs / world.lightmap_samples);
@@ -1599,9 +1677,29 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			if( world.deluxedata )
 				out->info->deluxemap = world.deluxedata + (lightofs / 3);
 		}
-
+#endif
 		if( out->flags & SURF_DRAWTURB )
 			GL_SubdivideSurface( out ); // cut up polygon for warps
+	}
+
+	// now we have enough data to trying determine samplecount per lightmap pixel
+	if( test_lightsize != -1 && prev_lightofs != -1 && next_lightofs != -1 )
+	{
+		float	samples = (float)(next_lightofs - prev_lightofs) / (float)test_lightsize;
+
+		if( samples != (int)samples )
+		{
+			test_lightsize = (test_lightsize + 3) & ~3; // align datasize and try again
+			samples = (float)(next_lightofs - prev_lightofs) / (float)test_lightsize;
+		}
+
+		if( samples == 1 || samples == 3 )
+		{
+			world.lightmap_samples = (int)samples;
+			MsgDev( D_REPORT, "lighting: %s\n", (world.lightmap_samples == 1) ? "monochrome" : "colored" );
+			world.lightmap_samples = Q_max( world.lightmap_samples, 1 ); // avoid division by zero
+		}
+		else MsgDev( D_WARN, "lighting invalid samplecount: %g, defaulting to %i\n", samples, world.lightmap_samples );
 	}
 }
 
@@ -2595,10 +2693,10 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	Mod_LoadEdges( &header->lumps[LUMP_EDGES] );
 	Mod_LoadSurfEdges( &header->lumps[LUMP_SURFEDGES] );
 	Mod_LoadTextures( &header->lumps[LUMP_TEXTURES] );
-	Mod_LoadLighting( &header->lumps[LUMP_LIGHTING], extrahdr );
 	Mod_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
 	Mod_LoadTexInfo( &header->lumps[LUMP_TEXINFO], extrahdr );
 	Mod_LoadSurfaces( &header->lumps[LUMP_FACES] );
+	Mod_LoadLighting( &header->lumps[LUMP_LIGHTING], &header->lumps[LUMP_FACES], extrahdr );
 	Mod_LoadMarkSurfaces( &header->lumps[LUMP_MARKSURFACES] );
 	Mod_LoadLeafs( &header->lumps[LUMP_LEAFS] );
 	Mod_LoadNodes( &header->lumps[LUMP_NODES] );

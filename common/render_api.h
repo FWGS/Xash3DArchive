@@ -90,7 +90,7 @@ typedef enum
 // reserved
 	TF_CUBEMAP	= (1<<6),		// it's cubemap texture
 	TF_DEPTHMAP	= (1<<7),		// custom texture filter used
-// reserved
+	TF_QUAKEPAL	= (1<<8),		// image has an quake1 palette
 	TF_LUMINANCE	= (1<<9),		// force image to grayscale
 	TF_SKYSIDE	= (1<<10),	// this is a part of skybox
 	TF_CLAMP		= (1<<11),	// clamp texcoords to [0..1] range

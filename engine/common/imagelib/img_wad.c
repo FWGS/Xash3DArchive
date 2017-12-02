@@ -394,7 +394,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 				rendermode = LUMP_GRADIENT;
 			}
 
-			image.flags |= IMAGE_HAS_ALPHA;
+			SetBits( image.flags, IMAGE_HAS_ALPHA );
 		}
 		else
 		{
@@ -418,6 +418,8 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 				}
 			}
 
+			if( pal_type == PAL_QUAKE1 )
+				SetBits( image.flags, IMAGE_QUAKEPAL );
 			rendermode = LUMP_NORMAL;
 		}
 
@@ -463,6 +465,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 			}
 		}
 
+		SetBits( image.flags, IMAGE_QUAKEPAL );
 		Image_GetPaletteQ1();
 	}
 	else

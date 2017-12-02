@@ -486,6 +486,7 @@ typedef enum
 	IMAGE_DDS_FORMAT	= BIT(7),		// a hint for GL loader
 	IMAGE_MULTILAYER	= BIT(8),		// to differentiate from 3D texture
 	IMAGE_ONEBIT_ALPHA	= BIT(9),		// binary alpha
+	IMAGE_QUAKEPAL	= BIT(10),	// image has quake1 palette
 
 	// Image_Process manipulation flags
 	IMAGE_FLIP_X	= BIT(16),	// flip the image by width
@@ -493,10 +494,10 @@ typedef enum
 	IMAGE_ROT_90	= BIT(18),	// flip from upper left corner to down right corner
 	IMAGE_ROT180	= IMAGE_FLIP_X|IMAGE_FLIP_Y,
 	IMAGE_ROT270	= IMAGE_FLIP_X|IMAGE_FLIP_Y|IMAGE_ROT_90,	
-	IMAGE_ROUND	= BIT(19),	// round image to nearest Pow2
+// reserved
 	IMAGE_RESAMPLE	= BIT(20),	// resample image to specified dims
-	IMAGE_PALTO24	= BIT(21),	// turn 32-bit palette into 24-bit mode (only for indexed images)
-	IMAGE_ROUNDFILLER	= BIT(22),	// round image to Pow2 and fill unused entries with single color	
+// reserved
+// reserved
 	IMAGE_FORCE_RGBA	= BIT(23),	// force image to RGBA buffer
 	IMAGE_MAKE_LUMA	= BIT(24),	// create luma texture from indexed
 	IMAGE_QUANTIZE	= BIT(25),	// make indexed image from 24 or 32- bit image
@@ -556,8 +557,8 @@ rgbdata_t *FS_CopyImage( rgbdata_t *in );
 void FS_FreeImage( rgbdata_t *pack );
 extern const bpc_desc_t PFDesc[];	// image get pixelformat
 qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags, imgfilter_t *filter );
-void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end );
-void Image_PaletteTranslate( byte *palSrc, int top, int bottom );
+void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end, int pal_size );
+void Image_PaletteTranslate( byte *palSrc, int top, int bottom, int pal_size );
 void Image_SetForceFlags( uint flags );	// set image force flags on loading
 size_t Image_DXTGetLinearSize( int type, int width, int height, int depth );
 

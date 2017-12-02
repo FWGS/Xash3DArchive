@@ -436,8 +436,8 @@ texture_t *R_TextureAnimation( msurface_t *s )
 
 	if( base->name[0] == '-' )
 	{
-		int tx = (int)((s->texturemins[0] + (base->width << 16)) / base->width) % MOD_FRAMES;
-		int ty = (int)((s->texturemins[1] + (base->height << 16)) / base->height) % MOD_FRAMES;
+		int	tx = (int)((s->texturemins[0] + (base->width << 16)) / base->width) % MOD_FRAMES;
+		int	ty = (int)((s->texturemins[1] + (base->height << 16)) / base->height) % MOD_FRAMES;
 
 		reletive = rtable[tx][ty] % base->anim_total;
 	}
@@ -445,8 +445,8 @@ texture_t *R_TextureAnimation( msurface_t *s )
 	{
 		int	speed;
 
-		// GoldSrc and Quake1 has different animating speed
-		if( world.sky_sphere || world.version == Q1BSP_VERSION || world.version == QBSP2_VERSION )
+		// Quake1 textures uses 10 frames per second
+		if( FBitSet( R_GetTexture( base->gl_texturenum )->flags, TF_QUAKEPAL ))
 			speed = 10;
 		else speed = 20;
 

@@ -84,8 +84,8 @@ byte *CL_CreateRawTextureFromPixels( texture_t *tx, size_t *size, int topcolor, 
 
 	// update palette
 	pal = (byte *)(tx + 1) + (tx->width * tx->height);
-	Image_PaletteHueReplace( pal, topcolor, tx->anim_min, tx->anim_max );
-	Image_PaletteHueReplace( pal, bottomcolor, tx->anim_max + 1, tx->anim_total );
+	Image_PaletteHueReplace( pal, topcolor, tx->anim_min, tx->anim_max, 3 );
+	Image_PaletteHueReplace( pal, bottomcolor, tx->anim_max + 1, tx->anim_total, 3 );
 
 	return (byte *)&pin;
 }

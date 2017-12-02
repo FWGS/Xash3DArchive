@@ -681,7 +681,7 @@ R_InitSky
 A sky texture is 256*128, with the right side being a masked overlay
 ==============
 */
-void R_InitSky( mip_t *mt, texture_t *tx )
+void R_InitSky( mip_t *mt, texture_t *tx, qboolean custom_palette )
 {
 	rgbdata_t	r_temp, *r_sky;
 	uint	*trans, *rgba;
@@ -694,12 +694,9 @@ void R_InitSky( mip_t *mt, texture_t *tx )
 
 	if( mt->offsets[0] > 0 )
 	{
-		// NOTE: imagelib detect miptex version by size
-		// 770 additional bytes is indicated custom palette
-		int size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
-		if( world.version == HLBSP_VERSION || world.version == XTBSP_VERSION )
-			size += sizeof( short ) + 768;
+		int	size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 
+		if( custom_palette ) size += sizeof( short ) + 768;
 		r_sky = FS_LoadImage( texname, (byte *)mt, size );
 	}
 	else

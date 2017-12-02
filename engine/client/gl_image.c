@@ -1256,6 +1256,9 @@ static void GL_ProcessImage( gltexture_t *tex, rgbdata_t *pic, imgfilter_t *filt
 		if( pic->flags & IMAGE_HAS_LUMA )
 			tex->flags |= TF_HAS_LUMA;
 
+		if( pic->flags & IMAGE_QUAKEPAL )
+			tex->flags |= TF_QUAKEPAL;
+
 		// create luma texture from quake texture
 		if( tex->flags & TF_MAKELUMA )
 		{

@@ -453,7 +453,7 @@ void R_AliasInit( void );
 //
 // gl_warp.c
 //
-void R_InitSky( struct mip_s *mt, struct texture_s *tx );
+void R_InitSky( struct mip_s *mt, struct texture_s *tx, qboolean custom_palette );
 void R_AddSkyBoxSurface( msurface_t *fa );
 void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
