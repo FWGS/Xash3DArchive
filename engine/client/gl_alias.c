@@ -410,70 +410,6 @@ void *Mod_LoadAliasGroup( void *pin, maliasframedesc_t *frame )
 }
 
 /*
-=================================================================
-
-SKIN REFLOODING
-
-=================================================================
-*/
-typedef struct
-{
-	short	x, y;
-} floodfill_t;
-
-// must be a power of 2
-#define FLOODFILL_FIFO_SIZE	0x1000
-#define FLOODFILL_FIFO_MASK	(FLOODFILL_FIFO_SIZE - 1)
-
-#define FLOODFILL_STEP( off, dx, dy ) \
-{ \
-	if( pos[off] == fillcolor ) \
-	{ \
-		pos[off] = 255; \
-		fifo[inpt].x = x + (dx), fifo[inpt].y = y + (dy); \
-		inpt = (inpt + 1) & FLOODFILL_FIFO_MASK; \
-	} \
-	else if( pos[off] != 255 ) fdc = pos[off]; \
-}
-
-/*
-=================
-Mod_FloodFillSkin
-
-Fill background pixels so mipmapping doesn't have haloes - Ed
-=================
-*/
-void Mod_FloodFillSkin( byte *skin, int skinwidth, int skinheight )
-{
-	byte		fillcolor = *skin; // assume this is the pixel to fill
-	floodfill_t	fifo[FLOODFILL_FIFO_SIZE];
-	int		inpt = 0, outpt = 0;
-	int		filledcolor = 0; // g-cont. opaque black is probably always 0-th index
-
-	// can't fill to filled color or to transparent color (used as visited marker)
-	if(( fillcolor == filledcolor ) || ( fillcolor == 255 ))
-		return;
-
-	fifo[inpt].x = 0, fifo[inpt].y = 0;
-	inpt = (inpt + 1) & FLOODFILL_FIFO_MASK;
-
-	while( outpt != inpt )
-	{
-		int	x = fifo[outpt].x, y = fifo[outpt].y;
-		byte	*pos = &skin[x + skinwidth * y];
-		int	fdc = filledcolor;
-
-		outpt = (outpt + 1) & FLOODFILL_FIFO_MASK;
-
-		if( x > 0 ) FLOODFILL_STEP( -1, -1, 0 );
-		if( x < skinwidth - 1 ) FLOODFILL_STEP( 1, 1, 0 );
-		if( y > 0 ) FLOODFILL_STEP( -skinwidth, 0, -1 );
-		if( y < skinheight - 1 ) FLOODFILL_STEP( skinwidth, 0, 1 );
-		skin[x + skinwidth * y] = fdc;
-	}
-}
-
-/*
 ===============
 Mod_CreateSkinData
 ===============
@@ -1319,6 +1255,31 @@ static void R_AliasDrawAbsBBox( cl_entity_t *e, const vec3_t absmin, const vec3_
 	TriRenderMode( kRenderNormal );
 }
 
+static void R_AliasDrawLightTrace( cl_entity_t *e )
+{
+	if( r_drawentities->value == 7 )
+	{
+		pglDisable( GL_TEXTURE_2D );
+		pglDisable( GL_DEPTH_TEST );
+
+		pglBegin( GL_LINES );
+		pglColor3f( 1, 0.5, 0 );
+		pglVertex3fv( e->origin );
+		pglVertex3fv( g_alias.lightspot );
+		pglEnd();
+
+		pglPointSize( 5.0f );
+		pglColor3f( 1, 0, 0 );
+		pglBegin( GL_POINTS );
+		pglVertex3fv( g_alias.lightspot );
+		pglEnd();
+		pglPointSize( 1.0f );
+
+		pglEnable( GL_DEPTH_TEST );
+		pglEnable( GL_TEXTURE_2D );
+	}
+}
+
 /*
 ================
 R_AliasSetupTimings
@@ -1435,6 +1396,7 @@ void R_DrawAliasModel( cl_entity_t *e )
 	VectorAdd( e->origin, clmodel->maxs, absmax );
 
 	R_AliasDrawAbsBBox( e, absmin, absmax );
+	R_AliasDrawLightTrace( e );
 
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 

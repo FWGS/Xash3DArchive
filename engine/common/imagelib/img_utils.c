@@ -174,13 +174,9 @@ void Image_Init( void )
 		image.loadformats = load_game;
 		image.saveformats = save_game;
 		break;
-	case HOST_DEDICATED:
+	default:	// all other instances not using imagelib
 		image.cmd_flags = 0;		
 		image.loadformats = load_game;
-		image.saveformats = save_null;
-		break;
-	default:	// all other instances not using imagelib or will be reinstalling later
-		image.loadformats = load_null;
 		image.saveformats = save_null;
 		break;
 	}
@@ -393,23 +389,14 @@ void Image_GetPaletteLMP( const byte *pal, int rendermode )
 	}
 }
 
-void Image_ConvertPalTo24bit( rgbdata_t *pic )
+static void Image_ConvertPalTo24bit( rgbdata_t *pic )
 {
 	byte	*pal32, *pal24;
 	byte	*converted;
 	int	i;
 
-	if( !pic->palette )
-	{
-		MsgDev( D_ERROR, "Image_ConvertPalTo24bit: no palette found\n" );
-		return;
-	}
-
 	if( pic->type == PF_INDEXED_24 )
-	{
-		MsgDev( D_ERROR, "Image_ConvertPalTo24bit: palette already converted\n" );
-		return;
-	}
+		return; // does nothing
 
 	pal24 = converted = Mem_Alloc( host.imagepool, 768 );
 	pal32 = pic->palette;
@@ -605,19 +592,7 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 			break;
 		}
 	}
-#if 0
-	for( i = 0; i < image.width * image.height; i++ )
-	{
-		col = (byte *)&image.d_currentpal[fin[i]];
-		*out++ = col[0];
-		*out++ = col[1];
-		*out++ = col[2];
 
-		if( image.d_rendermode == LUMP_GRADIENT )
-			*out++ = fin[i];
-		else *out++ = col[3];
-	}
-#else
 	while( pixels >= 8 )
 	{
 		iout[0] = image.d_currentpal[in[0]];
@@ -654,7 +629,6 @@ qboolean Image_Copy8bitRGBA( const byte *in, byte *out, int pixels )
 
 	if( pixels & 1 ) // last byte
 		iout[0] = image.d_currentpal[in[0]];
-#endif
 	image.type = PF_RGBA_32;	// update image type;
 
 	return true;
@@ -1371,7 +1345,11 @@ rgbdata_t *Image_LightGamma( rgbdata_t *pic )
 
 qboolean Image_RemapInternal( rgbdata_t *pic, int topColor, int bottomColor )
 {
-	int	pal_size = 3;
+	if( !pic->palette )
+	{
+		MsgDev( D_ERROR, "Image_Remap: palette is missed\n" );
+		return false;
+	}
 
 	switch( pic->type )
 	{
@@ -1385,21 +1363,15 @@ qboolean Image_RemapInternal( rgbdata_t *pic, int topColor, int bottomColor )
 		return false;
 	}
 
-	if( !pic->palette )
-	{
-		MsgDev( D_ERROR, "Image_Remap: palette is missed\n" );
-		return false;
-	}
-
 	if( Image_ComparePalette( pic->palette ) == PAL_QUAKE1 )
 	{
-		Image_PaletteTranslate( pic->palette, topColor * 16, bottomColor * 16, pal_size );
+		Image_PaletteTranslate( pic->palette, topColor * 16, bottomColor * 16, 3 );
 	}
 	else
 	{
 		// g-cont. preview images has a swapped top and bottom colors. I don't know why.
-		Image_PaletteHueReplace( pic->palette, topColor, SUIT_HUE_START, SUIT_HUE_END, pal_size );
-		Image_PaletteHueReplace( pic->palette, bottomColor, PLATE_HUE_START, PLATE_HUE_END, pal_size );
+		Image_PaletteHueReplace( pic->palette, topColor, SUIT_HUE_START, SUIT_HUE_END, 3 );
+		Image_PaletteHueReplace( pic->palette, bottomColor, PLATE_HUE_START, PLATE_HUE_END, 3 );
 	}
 
 	return true;

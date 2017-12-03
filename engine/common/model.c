@@ -104,17 +104,12 @@ void Mod_PrintBSPFileSizes_f( void )
 {
 	int	totalmemory = 0;
 	model_t	*w = worldmodel;
-	int	clipnode_size;
 
 	if( !w || !w->numsubmodels )
 	{
 		Msg( "No map loaded\n" );
 		return;
 	}
-
-	if( world.version == QBSP2_VERSION )
-		clipnode_size = sizeof( dclipnode2_t );
-	else clipnode_size = sizeof( dclipnode_t );
 
 	Msg( "\n" );
 	Msg( "Object names  Objects/Maxobjs  Memory / Maxmem  Fullness\n" );
@@ -126,7 +121,7 @@ void Mod_PrintBSPFileSizes_f( void )
 	totalmemory += Mod_ArrayUsage( "nodes",		world.numnodes,	MAX_MAP_NODES,		sizeof( dnode_t ));
 	totalmemory += Mod_ArrayUsage( "texinfos",	w->numtexinfo,	MAX_MAP_TEXINFO,		sizeof( dtexinfo_t ));
 	totalmemory += Mod_ArrayUsage( "faces",		w->numsurfaces,	MAX_MAP_FACES,		sizeof( dface_t ));
-	totalmemory += Mod_ArrayUsage( "clipnodes",	w->numclipnodes,	MAX_TOTAL_CLIPNODES,	clipnode_size );
+	totalmemory += Mod_ArrayUsage( "clipnodes",	w->numclipnodes,	MAX_TOTAL_CLIPNODES,	world.clipnodesize );
 	totalmemory += Mod_ArrayUsage( "leaves",	w->numleafs,	MAX_MAP_LEAFS,		sizeof( dleaf_t ));
 	totalmemory += Mod_ArrayUsage( "marksurfaces",	w->nummarksurfaces,	MAX_MAP_MARKSURFACES,	sizeof( dmarkface_t ));
 	totalmemory += Mod_ArrayUsage( "surfedges",	w->numsurfedges,	MAX_MAP_SURFEDGES,		sizeof( dsurfedge_t ));
@@ -2351,6 +2346,7 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 	if( extended )
 	{
 		in32 = (void *)(mod_base + l->fileofs);
+		if( world.loading ) world.clipnodesize = sizeof( dclipnode2_t );
 		if( l->filelen % sizeof( *in32 )) Host_Error( "Mod_LoadClipnodes: funny lump size\n" );
 		count = l->filelen / sizeof( *in32 );
 		in16 = NULL;
@@ -2358,6 +2354,7 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 	else
 	{
 		in16 = (void *)(mod_base + l->fileofs);
+		if( world.loading ) world.clipnodesize = sizeof( dclipnode_t );
 		if( l->filelen % sizeof( *in16 )) Host_Error( "Mod_LoadClipnodes: funny lump size\n" );
 		count = l->filelen / sizeof( *in16 );
 		in32 = NULL;
@@ -2421,6 +2418,7 @@ static void Mod_LoadClipnodes31( const dlump_t *l1, const dlump_t *l2, const dlu
 	count3 = l3->filelen / sizeof( *in3 );
 
 	world.clipnodes = out = (dclipnode2_t *)Mem_Alloc( loadmodel->mempool, ( count1 + count2 + count3 ) * sizeof( *out ));	
+	if( world.loading ) world.clipnodesize = sizeof( dclipnode_t );
 	world.numclipnodes = 0;
 
 	for( i = 0; i < count1; i++, out++, in1++ )
@@ -2659,7 +2657,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	else if( world.lm_sample_size != sample_size )
 	{
 		// can't mixing world and bmodels with different sample sizes!
-		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)", loadmodel->name, i, world.version );
+		MsgDev( D_ERROR, "%s has mismatch sample size (%i should be %i)", loadmodel->name, sample_size, world.lm_sample_size );
 		return;		
 	}
 

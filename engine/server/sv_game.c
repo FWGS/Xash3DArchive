@@ -4661,9 +4661,9 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 		if( !Q_strcmp( keyname, "wad" ))
 			continue;
 
-		// keynames with a leading underscore are used for utility comments,
-		// and are immediately discarded by engine
-		if(( world.version == Q1BSP_VERSION || world.version == QBSP2_VERSION ) && keyname[0] == '_' )
+		// keynames with a leading underscore are used for
+		// utility comments and are immediately discarded by engine
+		if( keyname[0] == '_' && Q_strcmp( keyname, "_light" ))
 			continue;
 
 		// ignore attempts to set value ""

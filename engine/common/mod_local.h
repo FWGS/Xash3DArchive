@@ -114,6 +114,7 @@ typedef struct
 	size_t		vecdatasize;	// actual size of the deluxdata
 	size_t		entdatasize;	// actual size of the entity string
 	size_t		texdatasize;	// actual size of the textures lump
+	size_t		clipnodesize;	// sizeof dclipnode_t struct
 
 	vec3_t		mins;		// real accuracy world bounds
 	vec3_t		maxs;
