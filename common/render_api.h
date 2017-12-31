@@ -103,7 +103,7 @@ typedef enum
 	TF_TEXTURE_1D	= (1<<18),	// this is GL_TEXTURE_1D
 	TF_BORDER		= (1<<19),	// zero clamp for projected textures
 	TF_TEXTURE_3D	= (1<<20),	// this is GL_TEXTURE_3D
-// reserved
+	TF_ATLAS_PAGE	= (1<<21),	// bit who indicate lightmap page or deluxemap page
 	TF_TEXTURE_RECTANGLE= (1<<22),	// this is GL_TEXTURE_RECTANGLE
 // reserved
 	TF_TEXTURE_2D_ARRAY	= (1<<24),	// this is 2D texture array (multi-layers)

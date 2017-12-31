@@ -95,6 +95,7 @@ typedef struct
 	int		block_size;	// lightmap blocksize
 	int		lightmap_samples;	// samples per pixel
 	color24		*deluxedata;	// deluxemap data pointer
+	byte		*shadowdata;	// occlusion data pointer
 	char		message[2048];	// just for debug
 	char		compiler[256];	// map compiler
 
@@ -112,6 +113,7 @@ typedef struct
 	size_t		visdatasize;	// actual size of the visdata
 	size_t		litdatasize;	// actual size of the lightdata
 	size_t		vecdatasize;	// actual size of the deluxdata
+	size_t		occdatasize;	// actual size of the shadowdata
 	size_t		entdatasize;	// actual size of the entity string
 	size_t		texdatasize;	// actual size of the textures lump
 	size_t		clipnodesize;	// sizeof dclipnode_t struct

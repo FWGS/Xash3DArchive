@@ -130,6 +130,7 @@ void Mod_PrintBSPFileSizes_f( void )
 	totalmemory += Mod_GlobUsage( "texdata",	world.texdatasize,	MAX_MAP_MIPTEX );
 	totalmemory += Mod_GlobUsage( "lightdata",	world.litdatasize,	MAX_MAP_LIGHTING );
 	totalmemory += Mod_GlobUsage( "deluxemap",	world.vecdatasize,	MAX_MAP_LIGHTING );
+	totalmemory += Mod_GlobUsage( "shadowmap",	world.occdatasize,	MAX_MAP_LIGHTING / 3 );
 	totalmemory += Mod_GlobUsage( "visdata",	world.visdatasize,	MAX_MAP_VISIBILITY );
 	totalmemory += Mod_GlobUsage( "entdata",	world.entdatasize,	MAX_MAP_ENTSTRING );
 
@@ -1240,6 +1241,32 @@ static void Mod_LoadLightVecs( const dlump_t *l )
 
 /*
 =================
+Mod_LoadShadowmap
+=================
+*/
+static void Mod_LoadShadowmap( const dlump_t *l )
+{
+	byte	*in;
+
+	in = (void *)(mod_base + l->fileofs);
+	world.occdatasize = l->filelen;
+
+	if( world.occdatasize != ( world.litdatasize / 3 ))
+	{
+		if( world.occdatasize > 0 )
+			MsgDev( D_ERROR, "Mod_LoadShadowmap: has mismatched size (%i should be %i)\n", world.occdatasize, world.litdatasize / 3 );
+		world.shadowdata = NULL;
+		world.occdatasize = 0;
+		return;
+	}
+
+	world.shadowdata = Mem_Alloc( loadmodel->mempool, world.occdatasize );
+	memcpy( world.shadowdata, in, world.occdatasize );
+	MsgDev( D_INFO, "Mod_LoadShadowmap: loaded\n" );
+}
+
+/*
+=================
 Mod_LoadColoredLighting
 =================
 */
@@ -1351,11 +1378,17 @@ static void Mod_LoadLighting( const dlump_t *l, const dlump_t *faces, dextrahdr_
 			if( extrahdr != NULL )
 				Mod_LoadLightVecs( &extrahdr->lumps[LUMP_LIGHTVECS] );
 			else Mod_LoadDeluxemap (); // old method
+
+			// try to loading occlusionmap too
+			if( extrahdr != NULL )
+				Mod_LoadShadowmap( &extrahdr->lumps[LUMP_SHADOWMAP] );
 		}
 		else
 		{
 			world.deluxedata = NULL;
 			world.vecdatasize = 0;
+			world.shadowdata = NULL;
+			world.occdatasize = 0;
 		}
 	}
 
@@ -1390,11 +1423,19 @@ static void Mod_LoadLighting( const dlump_t *l, const dlump_t *faces, dextrahdr_
 
 		if( loadmodel->lightdata && lightofs != -1 )
 		{
-			surf->samples = loadmodel->lightdata + (lightofs / world.lightmap_samples);
+			int	offset = (lightofs / world.lightmap_samples);
+
+			// NOTE: we divide offset by three because lighting and deluxemap keep their pointers
+			// into three-bytes structs and shadowmap just monochrome
+			surf->samples = loadmodel->lightdata + offset;
 
 			// if deluxemap is present setup it too
 			if( world.deluxedata )
-				surf->info->deluxemap = world.deluxedata + (lightofs / 3);
+				surf->info->deluxemap = world.deluxedata + offset;
+
+			// will be used by mods
+			if( world.shadowdata )
+				surf->info->shadowmap = world.shadowdata + offset;
 		}
 	}
 }
@@ -1678,7 +1719,7 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 	}
 
 	// now we have enough data to trying determine samplecount per lightmap pixel
-	if( test_lightsize != -1 && prev_lightofs != -1 && next_lightofs != -1 )
+	if( test_lightsize > 0 && prev_lightofs != -1 && next_lightofs != -1 )
 	{
 		float	samples = (float)(next_lightofs - prev_lightofs) / (float)test_lightsize;
 

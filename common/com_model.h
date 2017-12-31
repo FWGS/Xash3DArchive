@@ -209,6 +209,8 @@ typedef struct mextrasurf_s
 	struct msurface_s	*lightmapchain;	// lightmapped polys
 	struct cl_entity_s	*parent;		// upcast to owner entity
 	color24		*deluxemap;	// note: this is the actual deluxemap data for this surface
+	byte		*shadowmap;	// note: occlusion map for this surface
+
 // begin userdata
 	struct grasshdr_s	*grass;		// grass that linked by this surface
 	unsigned short	grasscount;	// number of bushes per polygon (used to determine total VBO size)

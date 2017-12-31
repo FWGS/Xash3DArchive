@@ -1372,33 +1372,23 @@ SV_RecursiveLightPoint
 */
 static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec3_t start, const vec3_t end )
 {
-	int		side;
-	mplane_t		*plane;
+	float		front, back, scale, frac;
+	int		i, map, side, size;
+	float		ds, dt, s, t;
+	int		sample_size;
 	msurface_t	*surf;
 	mtexinfo_t	*tex;
-	float		front, back, scale, frac;
-	int		i, map, size, s, t;
-	float		sample_size;
 	mextrasurf_t	*info;
 	color24		*lm;
 	vec3_t		mid;
 
 	// didn't hit anything
-	if( node->contents < 0 )
+	if( !node || node->contents < 0 )
 		return false;
 
 	// calculate mid point
-	plane = node->plane;
-	if( plane->type < 3 )
-	{
-		front = start[plane->type] - plane->dist;
-		back = end[plane->type] - plane->dist;
-	}
-	else
-	{
-		front = DotProduct( start, plane->normal ) - plane->dist;
-		back = DotProduct( end, plane->normal ) - plane->dist;
-	}
+	front = PlaneDiff( start, node->plane );
+	back = PlaneDiff( end, node->plane );
 
 	side = front < 0.0f;
 	if(( back < 0.0f ) == side )
@@ -1420,29 +1410,39 @@ static qboolean SV_RecursiveLightPoint( model_t *model, mnode_t *node, const vec
 
 	for( i = 0; i < node->numsurfaces; i++, surf++ )
 	{
+		int	smax, tmax;
+
 		tex = surf->texinfo;
 		info = surf->info;
 
-		if( surf->flags & SURF_DRAWTILED )
+		if( FBitSet( surf->flags, SURF_DRAWTILED ))
 			continue;	// no lightmaps
 
-		s = DotProduct( mid, info->lmvecs[0] ) + info->lmvecs[0][3] - info->lightmapmins[0];
-		t = DotProduct( mid, info->lmvecs[1] ) + info->lmvecs[1][3] - info->lightmapmins[1];
+		s = DotProduct( mid, info->lmvecs[0] ) + info->lmvecs[0][3];
+		t = DotProduct( mid, info->lmvecs[1] ) + info->lmvecs[1][3];
 
-		if(( s < 0 || s > info->lightextents[0] ) || ( t < 0 || t > info->lightextents[1] ))
+		if( s < info->lightmapmins[0] || t < info->lightmapmins[1] )
+			continue;
+
+		ds = s - info->lightmapmins[0];
+		dt = t - info->lightmapmins[1];
+		
+		if ( ds > info->lightextents[0] || dt > info->lightextents[1] )
 			continue;
 
 		if( !surf->samples )
 			return true;
 
 		sample_size = Mod_SampleSizeForFace( surf );
-		s /= sample_size;
-		t /= sample_size;
+		smax = (info->lightextents[0] / sample_size) + 1;
+		tmax = (info->lightextents[1] / sample_size) + 1;
+		ds /= sample_size;
+		dt /= sample_size;
 
 		VectorClear( sv_pointColor );
 
-		lm = surf->samples + (t * ((info->lightextents[0] / (int)sample_size) + 1) + s);
-		size = ((info->lightextents[0] / (int)sample_size) + 1) * ((info->lightextents[1] / sample_size) + 1);
+		lm = surf->samples + Q_rint( dt ) * smax + Q_rint( ds );
+		size = smax * tmax;
 
 		for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++ )
 		{

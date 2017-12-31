@@ -129,7 +129,7 @@ BRUSH MODELS
 #define LUMP_WORLDLIGHTS		5	// list of all the virtual and real lights (used to relight models in-game)
 #define LUMP_COLLISION		6	// physics engine collision hull dump
 #define LUMP_AINODEGRAPH		7	// node graph that stored into the bsp
-#define LUMP_UNUSED0		8	// one lump reserved for me
+#define LUMP_SHADOWMAP		8	// contains shadow map for direct light
 #define LUMP_UNUSED1		9	// one lump reserved for me
 #define LUMP_UNUSED2		10	// one lump reserved for me
 #define LUMP_UNUSED3		11	// one lump reserved for me

@@ -29,7 +29,7 @@ static rgbdata_t		r_image;					// generic pixelbuffer used for internal textures
 // internal tables
 static vec3_t		r_luminanceTable[256];			// RGB to luminance
 
-#define IsLightMap( tex )	(!Q_strncmp( (tex)->name, "*lightmap", 9 ) || !Q_strncmp( (tex)->name, "*dlight", 7 ))
+#define IsLightMap( tex )	( FBitSet(( tex )->flags, TF_ATLAS_PAGE ))
 /*
 =================
 R_GetTexture
@@ -2247,7 +2247,7 @@ static rgbdata_t *R_InitDlightTexture( texFlags_t *flags )
 
 	memset( data2D, 0x00, r_image.size );
 
-	*flags = TF_NOMIPMAP;
+	*flags = TF_NOMIPMAP|TF_CLAMP|TF_ATLAS_PAGE;
 
 	return &r_image;
 }
@@ -2264,7 +2264,7 @@ static rgbdata_t *R_InitDlightTexture2( texFlags_t *flags )
 
 	memset( data2D, 0x00, r_image.size );
 
-	*flags = TF_NOMIPMAP;
+	*flags = TF_NOMIPMAP|TF_CLAMP|TF_ATLAS_PAGE;
 
 	return &r_image;
 }

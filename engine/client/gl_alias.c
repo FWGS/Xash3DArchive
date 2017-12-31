@@ -443,7 +443,7 @@ rgbdata_t *Mod_CreateSkinData( byte *data, int width, int height )
 	return FS_CopyImage( &skin );
 }
 
-void *Mod_LoadSignleSkin( daliasskintype_t *pskintype, int skinnum, int size )
+void *Mod_LoadSingleSkin( daliasskintype_t *pskintype, int skinnum, int size )
 {
 	string	name, lumaname;
 	rgbdata_t	*pic;
@@ -530,7 +530,7 @@ void *Mod_LoadAllSkins( int numskins, daliasskintype_t *pskintype )
 	{
 		if( pskintype->type == ALIAS_SKIN_SINGLE )
 		{
-			pskintype = (daliasskintype_t *)Mod_LoadSignleSkin( pskintype, i, size );
+			pskintype = (daliasskintype_t *)Mod_LoadSingleSkin( pskintype, i, size );
 		}
 		else
 		{
