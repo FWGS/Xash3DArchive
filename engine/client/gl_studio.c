@@ -3003,7 +3003,7 @@ void GL_StudioSetRenderMode( int rendermode )
 		break;
 	case kRenderTransColor:
 		pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ALPHA );
+		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 		pglEnable( GL_BLEND );
 		break;
 	case kRenderTransAdd:

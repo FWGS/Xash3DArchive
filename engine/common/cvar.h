@@ -34,7 +34,6 @@ typedef struct convar_s
 	// this part unique for convar_t
 	char		*desc;		// variable descrition info
 	char		*def_string;	// keep pointer to initial value
-	char		*latched_string;	// for CVAR_LATCH vars
 } convar_t;
 
 // cvar internal flags

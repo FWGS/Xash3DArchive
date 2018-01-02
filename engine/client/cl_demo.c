@@ -615,6 +615,24 @@ void CL_ReadDemoSequence( qboolean discard )
 
 /*
 =================
+CL_DemoAborted
+=================
+*/
+void CL_DemoAborted( void )
+{
+	if( cls.demofile )
+		FS_Close( cls.demofile );
+	cls.demoplayback = false;
+	cls.changedemo = false;
+	demo.framecount = 0;
+	cls.demofile = NULL;
+	cls.demonum = -1;
+
+	Cvar_SetValue( "v_dark", 0.0f );
+}
+
+/*
+=================
 CL_DemoCompleted
 =================
 */
@@ -1186,8 +1204,7 @@ void CL_PlayDemo_f( void )
 	if( !FS_FileExists( filename, true ))
 	{
 		MsgDev( D_ERROR, "couldn't open %s\n", filename );
-		Cvar_SetValue( "v_dark", 0.0f );
-		cls.demonum = -1; // stop demo loop
+		CL_DemoAborted();
 		return;
 	}
 
@@ -1201,7 +1218,7 @@ void CL_PlayDemo_f( void )
 	if( demo.header.id != IDEMOHEADER )
 	{
 		MsgDev( D_ERROR, "%s is not a demo file\n", filename );
-		CL_DemoCompleted();
+		CL_DemoAborted();
 		return;
 	}
 
@@ -1212,7 +1229,7 @@ void CL_PlayDemo_f( void )
 
 		if( demo.header.net_protocol != PROTOCOL_VERSION )
 			MsgDev( D_ERROR, "playdemo: net protocol outdated (%i should be %i)\n", demo.header.net_protocol, PROTOCOL_VERSION );
-		CL_DemoCompleted();
+		CL_DemoAborted();
 		return;
 	}
 
@@ -1223,7 +1240,7 @@ void CL_PlayDemo_f( void )
 	if( demo.directory.numentries < 1 || demo.directory.numentries > 1024 )
 	{
 		MsgDev( D_ERROR, "demo had bogus # of directory entries: %i\n", demo.directory.numentries );
-		CL_DemoCompleted();
+		CL_DemoAborted();
 		return;
 	}
 

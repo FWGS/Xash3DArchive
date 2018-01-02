@@ -801,6 +801,7 @@ qboolean CL_IsInMenu( void );
 qboolean CL_IsInConsole( void );
 qboolean CL_IsThirdPerson( void );
 qboolean CL_IsIntermission( void );
+qboolean CL_Initialized( void );
 char *CL_Userinfo( void );
 float CL_GetServerTime( void );
 float CL_GetLerpFrac( void );

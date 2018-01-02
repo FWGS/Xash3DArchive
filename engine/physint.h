@@ -55,6 +55,7 @@ typedef struct areanode_s
 	struct areanode_s	*children[2];
 	link_t		trigger_edicts;
 	link_t		solid_edicts;
+	link_t		portal_edicts;
 } areanode_t;
 
 typedef struct server_physics_api_s

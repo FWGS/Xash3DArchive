@@ -286,7 +286,6 @@ void GL_SetRenderMode( int mode );
 void GL_TextureTarget( uint target );
 void GL_Cull( GLenum cull );
 void R_ShowTextures( void );
-void R_ShowTree( void );
 
 //
 // gl_cull.c

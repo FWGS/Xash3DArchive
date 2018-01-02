@@ -244,7 +244,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 	if( world.sky_sphere || world.lightmap_samples == 1 )
 	{
 		// alternate hull select for quake maps
-		if( size[0] < 3.0f )
+		if( size[0] < 3.0f || ent->v.solid == SOLID_PORTAL )
 			hull = &model->hulls[0];
 		else if( size[0] <= 32.0f )
 			hull = &model->hulls[1];
@@ -254,7 +254,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 	}
 	else
 	{
-		if( size[0] <= 8.0f )
+		if( size[0] <= 8.0f || ent->v.solid == SOLID_PORTAL )
 		{
 			hull = &model->hulls[0];
 			VectorCopy( hull->clip_mins, offset ); 
@@ -293,10 +293,13 @@ hull_t *SV_HullForEntity( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset 
 	hull_t	*hull;
 	vec3_t	hullmins, hullmaxs;
 
-	if( ent->v.solid == SOLID_BSP )
+	if( ent->v.solid == SOLID_BSP || ent->v.solid == SOLID_PORTAL )
 	{
-		if( ent->v.movetype != MOVETYPE_PUSH && ent->v.movetype != MOVETYPE_PUSHSTEP )
-			Host_Error( "'%s' has SOLID_BSP without MOVETYPE_PUSH or MOVETYPE_PUSHSTEP\n", SV_ClassName( ent ));
+		if( ent->v.solid != SOLID_PORTAL )
+		{
+			if( ent->v.movetype != MOVETYPE_PUSH && ent->v.movetype != MOVETYPE_PUSHSTEP )
+				Host_Error( "'%s' has SOLID_BSP without MOVETYPE_PUSH or MOVETYPE_PUSHSTEP\n", SV_ClassName( ent ));
+		}
 		hull = SV_HullForBsp( ent, mins, maxs, offset );
 	}
 	else
@@ -423,6 +426,7 @@ areanode_t *SV_CreateAreaNode( int depth, vec3_t mins, vec3_t maxs )
 
 	ClearLink( &anode->trigger_edicts );
 	ClearLink( &anode->solid_edicts );
+	ClearLink( &anode->portal_edicts );
 	
 	if( depth == AREA_DEPTH )
 	{
@@ -677,6 +681,8 @@ void SV_LinkEdict( edict_t *ent, qboolean touch_triggers )
 	// link it in	
 	if( ent->v.solid == SOLID_TRIGGER )
 		InsertLinkBefore( &ent->area, &node->trigger_edicts );
+	else if( ent->v.solid == SOLID_PORTAL )
+		InsertLinkBefore( &ent->area, &node->portal_edicts );
 	else InsertLinkBefore( &ent->area, &node->solid_edicts );
 
 	if( touch_triggers && !iTouchLinkSemaphore )
@@ -876,7 +882,7 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 	}
 
 	// rotate start and end into the models frame of reference
-	if( ent->v.solid == SOLID_BSP && !VectorIsNull( ent->v.angles ))
+	if(( ent->v.solid == SOLID_BSP || ent->v.solid == SOLID_PORTAL ) && !VectorIsNull( ent->v.angles ))
 		rotated = true;
 	else rotated = false;
 
@@ -1005,6 +1011,108 @@ void SV_CustomClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, v
 
 /*
 ====================
+SV_ClipToEntity
+
+generic clip function
+====================
+*/
+static qboolean SV_ClipToEntity( edict_t *touch, moveclip_t *clip )
+{
+	trace_t	trace;
+
+	if( touch->v.groupinfo != 0 && SV_IsValidEdict( clip->passedict ) && clip->passedict->v.groupinfo != 0 )
+	{
+		if(( svs.groupop == 0 && ( touch->v.groupinfo & clip->passedict->v.groupinfo ) == 0) ||
+		( svs.groupop == 1 && (touch->v.groupinfo & clip->passedict->v.groupinfo ) != 0 ))
+			return true;
+	}
+
+	if( touch == clip->passedict || touch->v.solid == SOLID_NOT )
+		return true;
+
+	if( touch->v.solid == SOLID_TRIGGER )
+		Host_Error( "trigger in clipping list\n" );
+
+	// custom user filter
+	if( svgame.dllFuncs2.pfnShouldCollide )
+	{
+		if( !svgame.dllFuncs2.pfnShouldCollide( touch, clip->passedict ))
+			return true; // originally this was 'return' but is completely wrong!
+	}
+
+	// monsterclip filter (solid custom is a static or dynamic bodies)
+	if( touch->v.solid == SOLID_BSP || touch->v.solid == SOLID_CUSTOM )
+	{
+		if( FBitSet( touch->v.flags, FL_MONSTERCLIP ))
+		{
+			// func_monsterclip works only with monsters that have same flag!
+			if( !FBitSet( clip->flags, FMOVE_MONSTERCLIP ))
+				return true;
+		}
+	}
+	else
+	{
+		// ignore all monsters but pushables
+		if( clip->type == MOVE_NOMONSTERS && touch->v.movetype != MOVETYPE_PUSHSTEP )
+			return true;
+	}
+
+	if( Mod_GetType( touch->v.modelindex ) == mod_brush && clip->flags & FMOVE_IGNORE_GLASS )
+	{
+		// we ignore brushes with rendermode != kRenderNormal and without FL_WORLDBRUSH set
+		if( touch->v.rendermode != kRenderNormal && !FBitSet( touch->v.flags, FL_WORLDBRUSH ))
+			return true;
+	}
+
+	if( !BoundsIntersect( clip->boxmins, clip->boxmaxs, touch->v.absmin, touch->v.absmax ))
+		return true;
+
+	// aditional check to intersects clients with sphere
+	if( touch->v.solid != SOLID_SLIDEBOX && !SV_CheckSphereIntersection( touch, clip->start, clip->end ))
+		return true;
+
+	// Xash3D extension
+	if( SV_IsValidEdict( clip->passedict ) && clip->passedict->v.solid == SOLID_TRIGGER )
+	{
+		// never collide items and player (because call "give" always stuck item in player
+		// and total trace returns fail (old half-life bug)
+		// items touch should be done in SV_TouchLinks not here
+		if( FBitSet( touch->v.flags, FL_CLIENT|FL_FAKECLIENT ))
+			return true;
+	}
+
+	// g-cont. make sure what size is really zero - check all the components
+	if( SV_IsValidEdict( clip->passedict ) && !VectorIsNull( clip->passedict->v.size ) && VectorIsNull( touch->v.size ))
+		return true; // points never interact
+
+	// might intersect, so do an exact clip
+	if( clip->trace.allsolid ) return false;
+
+	if( SV_IsValidEdict( clip->passedict ))
+	{
+	 	if( touch->v.owner == clip->passedict )
+			return true; // don't clip against own missiles
+		if( clip->passedict->v.owner == touch )
+			return true; // don't clip against owner
+	}
+
+	// make sure we don't hit the world if we're inside the portal
+	if( touch->v.solid == SOLID_PORTAL )
+		World_PortalCSG( touch, clip->mins, clip->maxs, clip->start, clip->end, &clip->trace );
+
+	if( touch->v.solid == SOLID_CUSTOM )
+		SV_CustomClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, &trace );
+	else if( touch->v.flags & FL_MONSTER )
+		SV_ClipMoveToEntity( touch, clip->start, clip->mins2, clip->maxs2, clip->end, &trace );
+	else SV_ClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, &trace );
+
+	clip->trace = World_CombineTraces( &clip->trace, &trace, touch );
+
+	return true;
+}
+
+/*
+====================
 SV_ClipToLinks
 
 Mins and maxs enclose the entire area swept by the move
@@ -1014,7 +1122,6 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 {
 	link_t	*l, *next;
 	edict_t	*touch;
-	trace_t	trace;
 
 	// touch linked edicts
 	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
@@ -1023,89 +1130,8 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 
 		touch = EDICT_FROM_AREA( l );
 
-		if( touch->v.groupinfo != 0 && SV_IsValidEdict( clip->passedict ) && clip->passedict->v.groupinfo != 0 )
-		{
-			if(( svs.groupop == 0 && ( touch->v.groupinfo & clip->passedict->v.groupinfo ) == 0) ||
-			( svs.groupop == 1 && (touch->v.groupinfo & clip->passedict->v.groupinfo ) != 0 ))
-				continue;
-		}
-
-		if( touch == clip->passedict || touch->v.solid == SOLID_NOT )
-			continue;
-
-		if( touch->v.solid == SOLID_TRIGGER )
-			Host_Error( "trigger in clipping list\n" );
-
-		// custom user filter
-		if( svgame.dllFuncs2.pfnShouldCollide )
-		{
-			if( !svgame.dllFuncs2.pfnShouldCollide( touch, clip->passedict ))
-				continue;	// originally this was 'return' but is completely wrong!
-		}
-
-		// monsterclip filter (solid custom is a static or dynamic bodies)
-		if( touch->v.solid == SOLID_BSP || touch->v.solid == SOLID_CUSTOM )
-		{
-			if( FBitSet( touch->v.flags, FL_MONSTERCLIP ))
-			{
-				// func_monsterclip works only with monsters that have same flag!
-				if( !FBitSet( clip->flags, FMOVE_MONSTERCLIP ))
-					continue;
-			}
-		}
-		else
-		{
-			// ignore all monsters but pushables
-			if( clip->type == MOVE_NOMONSTERS && touch->v.movetype != MOVETYPE_PUSHSTEP )
-				continue;
-		}
-
-		if( Mod_GetType( touch->v.modelindex ) == mod_brush && clip->flags & FMOVE_IGNORE_GLASS )
-		{
-			// we ignore brushes with rendermode != kRenderNormal and without FL_WORLDBRUSH set
-			if( touch->v.rendermode != kRenderNormal && !FBitSet( touch->v.flags, FL_WORLDBRUSH ))
-				continue;
-		}
-
-		if( !BoundsIntersect( clip->boxmins, clip->boxmaxs, touch->v.absmin, touch->v.absmax ))
-			continue;
-
-		// aditional check to intersects clients with sphere
-		if( touch->v.solid != SOLID_SLIDEBOX && !SV_CheckSphereIntersection( touch, clip->start, clip->end ))
-			continue;
-
-		// Xash3D extension
-		if( SV_IsValidEdict( clip->passedict ) && clip->passedict->v.solid == SOLID_TRIGGER )
-		{
-			// never collide items and player (because call "give" always stuck item in player
-			// and total trace returns fail (old half-life bug)
-			// items touch should be done in SV_TouchLinks not here
-			if( touch->v.flags & ( FL_CLIENT|FL_FAKECLIENT ))
-				continue;
-		}
-
-		// g-cont. make sure what size is really zero - check all the components
-		if( SV_IsValidEdict( clip->passedict ) && !VectorIsNull( clip->passedict->v.size ) && VectorIsNull( touch->v.size ))
-			continue;	// points never interact
-
-		// might intersect, so do an exact clip
-		if( clip->trace.allsolid ) return;
-
-		if( SV_IsValidEdict( clip->passedict ))
-		{
-		 	if( touch->v.owner == clip->passedict )
-				continue;	// don't clip against own missiles
-			if( clip->passedict->v.owner == touch )
-				continue;	// don't clip against owner
-		}
-
-		if( touch->v.solid == SOLID_CUSTOM )
-			SV_CustomClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, &trace );
-		else if( touch->v.flags & FL_MONSTER )
-			SV_ClipMoveToEntity( touch, clip->start, clip->mins2, clip->maxs2, clip->end, &trace );
-		else SV_ClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, &trace );
-
-		clip->trace = World_CombineTraces( &clip->trace, &trace, touch );
+		if( !SV_ClipToEntity( touch, clip ))
+			return; // trace.allsoild
 	}
 	
 	// recurse down both sides
@@ -1115,6 +1141,38 @@ static void SV_ClipToLinks( areanode_t *node, moveclip_t *clip )
 		SV_ClipToLinks( node->children[0], clip );
 	if( clip->boxmins[node->axis] < node->dist )
 		SV_ClipToLinks( node->children[1], clip );
+}
+
+/*
+====================
+SV_ClipToPortals
+
+Mins and maxs enclose the entire area swept by the move
+====================
+*/
+static void SV_ClipToPortals( areanode_t *node, moveclip_t *clip )
+{
+	link_t	*l, *next;
+	edict_t	*touch;
+
+	// touch linked edicts
+	for( l = node->portal_edicts.next; l != &node->portal_edicts; l = next )
+	{
+		next = l->next;
+
+		touch = EDICT_FROM_AREA( l );
+
+		if( !SV_ClipToEntity( touch, clip ))
+			return; // trace.allsoild
+	}
+	
+	// recurse down both sides
+	if( node->axis == -1 ) return;
+
+	if( clip->boxmaxs[node->axis] > node->dist )
+		SV_ClipToPortals( node->children[0], clip );
+	if( clip->boxmins[node->axis] < node->dist )
+		SV_ClipToPortals( node->children[1], clip );
 }
 
 /*
@@ -1202,6 +1260,7 @@ trace_t SV_Move( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end,
 
 		World_MoveBounds( start, clip.mins2, clip.maxs2, trace_endpos, clip.boxmins, clip.boxmaxs );
 		SV_ClipToLinks( sv_areanodes, &clip );
+		SV_ClipToPortals( sv_areanodes, &clip );
 
 		clip.trace.fraction *= trace_fraction;
 		svgame.globals->trace_ent = clip.trace.ent;
@@ -1249,6 +1308,7 @@ trace_t SV_MoveNoEnts( const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_
 
 		World_MoveBounds( start, clip.mins2, clip.maxs2, trace_endpos, clip.boxmins, clip.boxmaxs );
 		SV_ClipToWorldBrush( sv_areanodes, &clip );
+		SV_ClipToPortals( sv_areanodes, &clip );
 
 		clip.trace.fraction *= trace_fraction;
 		svgame.globals->trace_ent = clip.trace.ent;

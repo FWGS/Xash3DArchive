@@ -74,6 +74,11 @@ qboolean CL_Active( void )
 	return ( cls.state == ca_active );
 }
 
+qboolean CL_Initialized( void )
+{
+	return cls.initialized;
+}
+
 //======================================================================
 qboolean CL_IsInGame( void )
 {

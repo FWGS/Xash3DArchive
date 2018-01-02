@@ -168,6 +168,120 @@ void World_TransformAABB( matrix4x4 transform, const vec3_t mins, const vec3_t m
 
 /*
 ==================
+World_PortalCSG
+
+a portal is flush with a world surface behind it. this causes problems. namely that we can't pass through the portal plane
+if the bsp behind it prevents out origin from getting through. so if the trace was clipped and ended infront of the portal,
+continue the trace to the edges of the portal cutout instead.
+==================
+*/
+void World_PortalCSG( edict_t *portal, const vec3_t trace_mins, const vec3_t trace_maxs, const vec3_t start, const vec3_t end, trace_t *trace )
+{
+	vec4_t	planes[6];	//far, near, right, left, up, down
+	int	plane, k;
+	vec3_t	worldpos;
+	float	bestfrac;
+	int	hitplane;
+	model_t	*model;
+	float	portalradius;
+	
+	// only run this code if we impacted on the portal's parent.
+	if( trace->fraction == 1.0f && !trace->startsolid )
+		return;
+
+	// decide which clipping hull to use, based on the size
+	model = Mod_Handle( portal->v.modelindex );
+
+	if( !model || model->type != mod_brush )
+		return;
+
+	// make sure we use a sane valid position.
+	if( trace->startsolid ) VectorCopy( start, worldpos );
+	else VectorCopy( trace->endpos, worldpos );
+
+	// determine the csg area. normals should be facing in
+	AngleVectors( portal->v.angles, planes[1], planes[3], planes[5] );
+	VectorNegate(planes[1], planes[0]);
+	VectorNegate(planes[3], planes[2]);
+	VectorNegate(planes[5], planes[4]);
+
+	portalradius = model->radius * 0.5f;
+	planes[0][3] = DotProduct( portal->v.origin, planes[0] ) - (4.0f / 32.0f);
+	planes[1][3] = DotProduct( portal->v.origin, planes[1] ) - (4.0f / 32.0f);	//an epsilon beyond the portal
+	planes[2][3] = DotProduct( portal->v.origin, planes[2] ) - portalradius;
+	planes[3][3] = DotProduct( portal->v.origin, planes[3] ) - portalradius;
+	planes[4][3] = DotProduct( portal->v.origin, planes[4] ) - portalradius;
+	planes[5][3] = DotProduct( portal->v.origin, planes[5] ) - portalradius;
+
+	// if we're actually inside the csg region
+	for( plane = 0; plane < 6; plane++ )
+	{
+		float	d = DotProduct( worldpos, planes[plane] );
+		vec3_t	nearest;
+
+		for( k = 0; k < 3; k++ )
+			nearest[k] = (planes[plane][k]>=0) ? trace_maxs[k] : trace_mins[k];
+
+		// front plane gets further away with side
+		if( !plane )
+		{
+			planes[plane][3] -= DotProduct( nearest, planes[plane] );
+		}	
+		else if( plane > 1 )
+		{
+			// side planes get nearer with size
+			planes[plane][3] += 24; // DotProduct( nearest, planes[plane] );
+		}
+
+		if( d - planes[plane][3] >= 0 )
+			continue;	// endpos is inside
+		else return; // end is already outside
+	}
+
+	// yup, we're inside, the trace shouldn't end where it actually did
+	bestfrac = 1;
+	hitplane = -1;
+
+	for( plane = 0; plane < 6; plane++ )
+	{
+		float	ds = DotProduct( start, planes[plane] ) - planes[plane][3];
+		float	de = DotProduct( end, planes[plane] ) - planes[plane][3];
+		float	frac;
+
+		if( ds >= 0 && de < 0 )
+		{
+			frac = (ds) / (ds - de);
+			if( frac < bestfrac )
+			{
+				if( frac < 0 )
+					frac = 0;
+				bestfrac = frac;
+				hitplane = plane;
+			}
+		}
+	}
+
+	trace->startsolid = trace->allsolid = false;
+
+	// if we cross the front of the portal, don't shorten the trace,
+	// that will artificially clip us
+	if( hitplane == 0 && trace->fraction > bestfrac )
+		return;
+
+	// okay, elongate to clip to the portal hole properly.
+	VectorLerp( start, bestfrac, end, trace->endpos );
+	trace->fraction = bestfrac;
+
+	if( hitplane >= 0 )
+	{
+		VectorCopy( planes[hitplane], trace->plane.normal );
+		trace->plane.dist = planes[hitplane][3];
+		if( hitplane == 1 ) trace->ent = portal;
+	}
+}
+
+/*
+==================
 RankForContents
 
 Used for determine contents priority

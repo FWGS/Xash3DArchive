@@ -545,7 +545,13 @@ qboolean SCR_LoadVariableWidthFont( const char *fontname )
 	return true;
 }
 
+/*
+================
+SCR_LoadCreditsFont
 
+FIXME: INTRESOURCE
+================
+*/
 void SCR_LoadCreditsFont( void )
 {
 	if( !SCR_LoadVariableWidthFont( "gfx.wad/creditsfont.fnt" ))
@@ -555,6 +561,13 @@ void SCR_LoadCreditsFont( void )
 	}
 }
 
+/*
+================
+SCR_InstallParticlePalette
+
+FIXME: INTRESOURCE
+================
+*/
 void SCR_InstallParticlePalette( void )
 {
 	rgbdata_t	*pic;
@@ -589,6 +602,13 @@ void SCR_InstallParticlePalette( void )
 	}
 }
 
+/*
+================
+SCR_RegisterTextures
+
+FIXME: INTRESOURCE
+================
+*/
 void SCR_RegisterTextures( void )
 {
 	// register gfx.wad images

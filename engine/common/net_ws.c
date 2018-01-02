@@ -864,7 +864,8 @@ qboolean NET_GetLong( byte *pData, int size, int *outSize )
 		MsgDev( D_ERROR, "Malformed packet number (%i/%i)\n", packet_number + 1, packet_count );
 		return false;
 	}
-	if (net.split.current_sequence == -1 || sequence_number != net.split.current_sequence )
+
+	if( net.split.current_sequence == -1 || sequence_number != net.split.current_sequence )
 	{
 		net.split.current_sequence = pHeader->sequence_number;
 		net.split.split_count = packet_count;

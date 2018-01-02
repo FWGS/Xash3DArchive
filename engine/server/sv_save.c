@@ -2114,6 +2114,7 @@ qboolean SV_LoadGame( const char *pPath )
 	file_t		*pFile;
 	qboolean		validload = false;
 	GAME_HEADER	gameHeader;
+	int		flags;
 	string		name;
 
 	if( host.type == HOST_DEDICATED )
@@ -2151,6 +2152,21 @@ qboolean SV_LoadGame( const char *pPath )
 			validload = true;
 		}
 		FS_Close( pFile );
+
+		// now check for map problems
+		flags = SV_MapIsValid( gameHeader.mapName, GI->sp_entity, NULL );
+
+		if( FBitSet( flags, MAP_INVALID_VERSION ))
+		{
+			MsgDev( D_ERROR, "map %s is invalid or not supported\n", gameHeader.mapName );
+			validload = false;
+		}
+	
+		if( !FBitSet( flags, MAP_IS_EXIST ))
+		{
+			MsgDev( D_ERROR, "map %s doesn't exist\n", gameHeader.mapName );
+			validload = false;
+		}
 	}
 	else MsgDev( D_ERROR, "File not found or failed to open.\n" );
 

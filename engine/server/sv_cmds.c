@@ -206,7 +206,7 @@ void SV_Map_f( void )
 		MsgDev( D_ERROR, "map %s is invalid or not supported\n", mapname );
 		return;
 	}
-	
+
 	if( !FBitSet( flags, MAP_IS_EXIST ))
 	{
 		MsgDev( D_ERROR, "map %s doesn't exist\n", mapname );

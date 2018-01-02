@@ -1704,22 +1704,13 @@ static void Mod_LoadSurfaces( const dlump_t *l )
 			prev_lightofs = lightofs;
 			next_lightofs = 99999999;
 		}
-#if 0
-		if( loadmodel->lightdata && lightofs != -1 )
-		{
-			out->samples = loadmodel->lightdata + (lightofs / world.lightmap_samples);
 
-			// if deluxemap is present setup it too
-			if( world.deluxedata )
-				out->info->deluxemap = world.deluxedata + (lightofs / 3);
-		}
-#endif
 		if( out->flags & SURF_DRAWTURB )
 			GL_SubdivideSurface( out ); // cut up polygon for warps
 	}
 
 	// now we have enough data to trying determine samplecount per lightmap pixel
-	if( test_lightsize > 0 && prev_lightofs != -1 && next_lightofs != -1 )
+	if( test_lightsize > 0 && prev_lightofs != -1 && next_lightofs != -1 && next_lightofs != 99999999 )
 	{
 		float	samples = (float)(next_lightofs - prev_lightofs) / (float)test_lightsize;
 
@@ -2769,7 +2760,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 
 		mod->radius = RadiusFromBounds( mod->mins, mod->maxs );
 		mod->numleafs = bm->visleafs;
-		mod->flags = 0;
+//		mod->flags = 0;
 
 		if( i != 0 )
 		{

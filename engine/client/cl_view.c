@@ -378,7 +378,6 @@ void V_PostRender( void )
 		CL_DrawDemoRecording();
 		CL_DrawHUD( CL_CHANGELEVEL );
 		R_ShowTextures();
-		R_ShowTree();
 		Con_DrawConsole();
 		UI_UpdateMenu( host.realtime );
 		Con_DrawVersion();

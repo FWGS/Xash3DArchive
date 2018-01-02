@@ -1338,8 +1338,12 @@ FS_CheckForGameDir
 */
 static qboolean FS_CheckForGameDir( const char *gamedir )
 {
-	// if directoy contain config.cfg it's 100% gamedir
+	// if directory contain config.cfg it's 100% gamedir
 	if( FS_FileExists( va( "%s/config.cfg", gamedir ), false ))
+		return true;
+
+	// if directory contain progs.dat it's 100% gamedir
+	if( FS_FileExists( va( "%s/progs.dat", gamedir ), false ))
 		return true;
 
 	// quake mods probably always archived but can missed config.cfg before first running
