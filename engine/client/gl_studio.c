@@ -2443,6 +2443,7 @@ static void R_StudioDrawPoints( void )
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
 			pglEnable( GL_ALPHA_TEST );
+			pglAlphaFunc( GL_GREATER, 0.5f );
 			pglDepthMask( GL_TRUE );
 			if( R_ModelOpaque( RI.currententity->curstate.rendermode ))
 				tr.blend = 1.0f;
@@ -2468,6 +2469,7 @@ static void R_StudioDrawPoints( void )
 
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
+			pglAlphaFunc( GL_GREATER, 0.0f );
 			pglDisable( GL_ALPHA_TEST );
 		}
 		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_ModelOpaque( RI.currententity->curstate.rendermode ))

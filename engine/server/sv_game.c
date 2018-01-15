@@ -286,6 +286,13 @@ int SV_Multicast( int dest, const vec3_t origin, const edict_t *ent, qboolean us
 	qboolean		specproxy = false;
 	int		numsends = 0;
 
+	// some mods trying to send messages after SV_FinalMessage
+	if( !svs.initialized || sv.state == ss_dead )
+	{
+		MSG_Clear( &sv.multicast );
+		return false;
+	}
+
 	switch( dest )
 	{
 	case MSG_INIT:

@@ -132,7 +132,7 @@ FILEMATCH COMMON SYSTEM
 
 =============================================================================
 */
-int matchpattern( const char *str, const char *cmp, qboolean caseinsensitive )
+static int matchpattern( const char *str, const char *cmp, qboolean caseinsensitive )
 {
 	int	c1, c2;
 
@@ -181,12 +181,12 @@ int matchpattern( const char *str, const char *cmp, qboolean caseinsensitive )
 	return (*str) ? 0 : 1;
 }
 
-void stringlistinit( stringlist_t *list )
+static void stringlistinit( stringlist_t *list )
 {
 	memset( list, 0, sizeof( *list ));
 }
 
-void stringlistfreecontents( stringlist_t *list )
+static void stringlistfreecontents( stringlist_t *list )
 {
 	int	i;
 
@@ -205,7 +205,7 @@ void stringlistfreecontents( stringlist_t *list )
 	list->strings = NULL;
 }
 
-void stringlistappend( stringlist_t *list, char *text )
+static void stringlistappend( stringlist_t *list, char *text )
 {
 	size_t	textlen;
 
@@ -224,7 +224,7 @@ void stringlistappend( stringlist_t *list, char *text )
 	list->numstrings++;
 }
 
-void stringlistsort( stringlist_t *list )
+static void stringlistsort( stringlist_t *list )
 {
 	char	*temp;
 	int	i, j;
@@ -244,13 +244,24 @@ void stringlistsort( stringlist_t *list )
 	}
 }
 
-void listdirectory( stringlist_t *list, const char *path )
+// convert names to lowercase because windows doesn't care, but pattern matching code often does
+static void listlowercase( stringlist_t *list )
+{
+	char	*c;
+	int	i;
+
+	for( i = 0; i < list->numstrings; i++ )
+	{
+		for( c = list->strings[i]; *c; c++ )
+			*c = Q_tolower( *c );
+	}
+}
+
+static void listdirectory( stringlist_t *list, const char *path )
 {
 	char		pattern[4096];
 	struct _finddata_t	n_file;
 	long		hFile;
-	char		*c;
-	int		i;
 
 	Q_strncpy( pattern, path, sizeof( pattern ));
 	Q_strncat( pattern, "*", sizeof( pattern ));
@@ -267,12 +278,8 @@ void listdirectory( stringlist_t *list, const char *path )
 		stringlistappend( list, n_file.name );
 	_findclose( hFile );
 
-	// convert names to lowercase because windows doesn't care, but pattern matching code often does
-	for( i = 0; i < list->numstrings; i++ )
-	{
-		for( c = list->strings[i]; *c; c++ )
-			*c = Q_tolower( *c );
-	}
+	// g-cont. disabled for some reasons
+//	listlowercase( list );
 }
 
 /*

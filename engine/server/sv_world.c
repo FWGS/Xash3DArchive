@@ -232,7 +232,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 	model = Mod_Handle( ent->v.modelindex );
 
 	if( !model || model->type != mod_brush )
-		Host_Error( "Entity %i SOLID_BSP with a non bsp model %i\n", NUM_FOR_EDICT( ent ), (model) ? model->type : mod_bad );
+		Host_Error( "Entity %i (%s) SOLID_BSP with a non bsp model %s\n", NUM_FOR_EDICT( ent ), SV_ClassName( ent ), STRING( ent->v.model ));
 
 	VectorSubtract( maxs, mins, size );
 

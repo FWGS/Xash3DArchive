@@ -94,7 +94,7 @@ int	net_drop;
 netadr_t	net_from;
 sizebuf_t	net_message;
 byte	*net_mempool;
-byte	net_message_buffer[NET_MAX_PAYLOAD];
+byte	net_message_buffer[NET_MAX_MESSAGE];
 
 /*
 ===============

@@ -458,7 +458,7 @@ void SV_DropClient( sv_client_t *drop )
 		Mem_Free( drop->frames ); // release delta
 	drop->frames = NULL;
 
-	if( NET_CompareBaseAdr( drop->netchan.remote_address, host.rd.address ) )
+	if( NET_CompareBaseAdr( drop->netchan.remote_address, host.rd.address ))
 		SV_EndRedirect();
 
 	// throw away any residual garbage in the channel.

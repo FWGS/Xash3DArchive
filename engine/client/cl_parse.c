@@ -1696,6 +1696,8 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 
 		cmd = MSG_ReadServerCmd( msg );
 
+		if( cmd == svc_querycvarvalue2 ) Msg( "buffer left: %d bytes\n", MSG_GetNumBytesLeft( msg ));
+
 		// record command for debugging spew on parse problem
 		CL_Parse_RecordCommand( cmd, bufStart );
 
