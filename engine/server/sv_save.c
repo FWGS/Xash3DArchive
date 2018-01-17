@@ -391,7 +391,7 @@ int EntryInTable( SAVERESTOREDATA *pSaveData, const char *pMapName, int index )
 
 	for( i = index; i < pSaveData->connectionCount; i++ )
 	{
-		if ( !Q_strcmp( pSaveData->levelList[i].mapName, pMapName ))
+		if ( !Q_stricmp( pSaveData->levelList[i].mapName, pMapName ))
 			return i;
 	}
 
@@ -1840,7 +1840,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 		for( test = 0; test < i; test++ )
 		{
 			// only do maps once
-			if( !Q_strcmp( currentLevelData.levelList[i].mapName, currentLevelData.levelList[test].mapName ))
+			if( !Q_stricmp( currentLevelData.levelList[i].mapName, currentLevelData.levelList[test].mapName ))
 				break;
 		}
 
@@ -1866,7 +1866,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 			flags = 0;
 			index = -1;
 
-			if( !Q_strcmp( currentLevelData.levelList[i].mapName, pOldLevel ))
+			if( !Q_stricmp( currentLevelData.levelList[i].mapName, pOldLevel ))
 				flags |= FENTTABLE_PLAYER;
 
 			while( 1 )
