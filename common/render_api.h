@@ -225,6 +225,7 @@ typedef struct render_api_s
 	void		(*pfnMemFree)( void *mem, const char *filename, const int fileline );
  	// find in files
 	char		**(*pfnGetFilesList)( const char *pattern, int *numFiles, int gamedironly );
+	unsigned int	(*pfnFileBufferCRC32)( const void *buffer, const int length );
 	// ONLY ADD NEW FUNCTIONS TO THE END OF THIS STRUCT.  INTERFACE VERSION IS FROZEN AT 35
 } render_api_t;
 

@@ -3746,6 +3746,7 @@ triangleapi_t gTriApi =
 	TriLightAtPoint,
 	TriColor4fRendermode,
 	TriFogParams,
+	R_LightVec,
 };
 
 static efx_api_t gEfxApi =

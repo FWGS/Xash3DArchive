@@ -363,7 +363,7 @@ colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot )
 		if( r_lighting_extended->value )
 			maxEnts = clgame.pmove->numphysent;
 
-		// check al the bsp-models
+		// check all the bsp-models
 		for( i = 0; i < maxEnts; i++ )
 		{
 			physent_t	*pe = &clgame.pmove->physents[i];

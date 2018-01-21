@@ -1446,6 +1446,20 @@ static char **pfnGetFilesList( const char *pattern, int *numFiles, int gamediron
 	if( numFiles ) *numFiles = t->numfilenames;
 	return t->filenames;
 }
+
+static uint pfnFileBufferCRC32( const void *buffer, const int length )
+{
+	uint	modelCRC = 0;
+
+	if( !buffer || length <= 0 )
+		return modelCRC;
+
+	CRC32_Init( &modelCRC );
+	CRC32_ProcessBuffer( &modelCRC, buffer, length );
+	CRC32_Final( &modelCRC );
+
+	return modelCRC;
+}
 	
 static render_api_t gRenderAPI =
 {
@@ -1503,6 +1517,7 @@ static render_api_t gRenderAPI =
 	R_Mem_Alloc,
 	R_Mem_Free,
 	pfnGetFilesList,
+	pfnFileBufferCRC32,
 };
 
 /*

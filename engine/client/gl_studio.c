@@ -3793,6 +3793,27 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 
 /*
 =================
+R_StudioLoadTextures
+=================
+*/
+void R_StudioLoadTextures( model_t *mod, studiohdr_t *phdr )
+{
+	mstudiotexture_t	*ptexture;
+	int		i;
+
+	if( host.type == HOST_DEDICATED )
+		return;
+
+	ptexture = (mstudiotexture_t *)(((byte *)phdr) + phdr->textureindex);
+	if( phdr->textureindex > 0 && phdr->numtextures <= MAXSTUDIOSKINS )
+	{
+		for( i = 0; i < phdr->numtextures; i++ )
+			R_StudioLoadTexture( mod, phdr, &ptexture[i] );
+	}
+}
+
+/*
+=================
 R_StudioLoadHeader
 =================
 */
@@ -3800,7 +3821,6 @@ studiohdr_t *R_StudioLoadHeader( model_t *mod, const void *buffer )
 {
 	byte		*pin;
 	studiohdr_t	*phdr;
-	mstudiotexture_t	*ptexture;
 	int		i;
 
 	if( !buffer ) return NULL;
@@ -3814,16 +3834,6 @@ studiohdr_t *R_StudioLoadHeader( model_t *mod, const void *buffer )
 		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)\n", mod->name, i, STUDIO_VERSION );
 		return NULL;
 	}	
-
-	if( host.type != HOST_DEDICATED )
-	{
-		ptexture = (mstudiotexture_t *)(((byte *)phdr) + phdr->textureindex);
-		if( phdr->textureindex > 0 && phdr->numtextures <= MAXSTUDIOSKINS )
-		{
-			for( i = 0; i < phdr->numtextures; i++ )
-				R_StudioLoadTexture( mod, phdr, &ptexture[i] );
-		}
-	}
 
 	return (studiohdr_t *)buffer;
 }
@@ -3861,6 +3871,8 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 		}
                     else
                     {
+			R_StudioLoadTextures( mod, thdr );
+
 			// give space for textures and skinrefs
 			size1 = thdr->numtextures * sizeof( mstudiotexture_t );
 			size2 = thdr->numskinfamilies * thdr->numskinref * sizeof( short );
@@ -3882,9 +3894,15 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 	}
 	else
 	{
+		// NOTE: don't modify source buffer because it's used for CRC computing
+		loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length );
+		memcpy( loadmodel->cache.data, buffer, phdr->length );
+		phdr = (studiohdr_t *)loadmodel->cache.data; // get the new pointer on studiohdr
+		R_StudioLoadTextures( mod, phdr );
+
 		// NOTE: we wan't keep raw textures in memory. just cutoff model pointer above texture base
-		loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->texturedataindex );
-		memcpy( loadmodel->cache.data, buffer, phdr->texturedataindex );
+		loadmodel->cache.data = Mem_Realloc( loadmodel->mempool, loadmodel->cache.data, phdr->texturedataindex );
+		phdr = (studiohdr_t *)loadmodel->cache.data; // get the new pointer on studiohdr
 		phdr->length = phdr->texturedataindex;	// update model size
 	}
 
