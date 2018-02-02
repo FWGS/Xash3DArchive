@@ -234,8 +234,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multipla
 	char	headbuf[256], buffer[1024];
 	int	i, num_bytes, lumplen;
 	qboolean	blue_shift = false;
-	int	NUM_LUMPS, hdr_size;
-	int	version;
+	int	version, hdr_size;
 
 	if( !crcvalue ) return false;
 
@@ -253,11 +252,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multipla
 	FS_Read( f, &version, sizeof( int ));
 	FS_Seek( f, 0, SEEK_SET );
 
-	if( version == XTBSP_VERSION )
-		NUM_LUMPS = 17; // two extra lumps added
-	else NUM_LUMPS = HEADER_LUMPS;
-
-	hdr_size = sizeof( int ) + sizeof( dlump_t ) * NUM_LUMPS;
+	hdr_size = sizeof( int ) + sizeof( dlump_t ) * HEADER_LUMPS;
 	num_bytes = FS_Read( f, headbuf, hdr_size );
 
 	// corrupted map ?
@@ -274,7 +269,6 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multipla
 	{
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
-	case XTBSP_VERSION:
 	case QBSP2_VERSION:
 		break;
 	default:
@@ -289,7 +283,7 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multipla
 	if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && (header->lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
 		blue_shift = true;
 
-	for( i = 0; i < NUM_LUMPS; i++ )
+	for( i = 0; i < HEADER_LUMPS; i++ )
 	{
 		if( blue_shift && i == LUMP_PLANES ) continue;
 		else if( i == LUMP_ENTITIES ) continue;

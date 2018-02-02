@@ -513,6 +513,8 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 	state.frame = MSG_ReadByte( msg );
 	state.colormap = MSG_ReadWord( msg );
 	state.skin = MSG_ReadByte( msg );
+	state.body = MSG_ReadByte( msg );
+	state.scale = MSG_ReadCoord( msg );
 
 	for( i = 0; i < 3; i++ )
 	{
@@ -693,11 +695,15 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.maxclients = MSG_ReadByte( msg );
 	clgame.maxEntities = MSG_ReadWord( msg );
 	clgame.maxEntities = bound( 600, clgame.maxEntities, MAX_EDICTS );
+	clgame.maxModels = MSG_ReadWord( msg );
 	Q_strncpy( clgame.mapname, MSG_ReadString( msg ), MAX_STRING );
 	Q_strncpy( clgame.maptitle, MSG_ReadString( msg ), MAX_STRING );
 	background = MSG_ReadOneBit( msg );
 	Q_strncpy( gamefolder, MSG_ReadString( msg ), MAX_STRING );
 	host.features = (uint)MSG_ReadLong( msg );
+
+	if( clgame.maxModels > MAX_MODELS )
+		MsgDev( D_WARN, "server model limit is above client model limit %i > %i\n", clgame.maxModels, MAX_MODELS );
 
 	if( Con_FixedFont( ))
 	{

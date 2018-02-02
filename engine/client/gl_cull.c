@@ -126,8 +126,7 @@ int R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags )
 			{
 				vec3_t	orthonormal;
 
-				if( e == clgame.entities || R_StaticEntity( e ))
-					orthonormal[2] = surf->plane->normal[2];
+				if( e == clgame.entities ) orthonormal[2] = surf->plane->normal[2];
 				else Matrix4x4_VectorRotate( RI.objectMatrix, surf->plane->normal, orthonormal );
 
 				dist = orthonormal[2];

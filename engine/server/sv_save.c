@@ -30,7 +30,7 @@ half-life implementation of saverestore system
 #define SAVEFILE_HEADER		(('V'<<24)+('L'<<16)+('A'<<8)+'V')	// little-endian "VALV"
 #define SAVEGAME_HEADER		(('V'<<24)+('A'<<16)+('S'<<8)+'J')	// little-endian "JSAV"
 #define SAVEGAME_VERSION		0x0065				// Version 0.65
-#define CLIENT_SAVEGAME_VERSION	0x0068				// Version 0.68
+#define CLIENT_SAVEGAME_VERSION	0x0070				// Version 0.70
 
 #define SAVE_AGED_COUNT		2
 #define SAVENAME_LENGTH		128				// matches with MAX_OSPATH
@@ -39,7 +39,7 @@ half-life implementation of saverestore system
 #define LUMP_STATIC_OFFSET		1
 #define LUMP_SOUNDS_OFFSET		2
 #define LUMP_MUSIC_OFFSET		3
-#define NUM_CLIENT_OFFSETS		4
+#define NUM_CLIENT_LUMPS		8
 
 void (__cdecl *pfnSaveGameComment)( char *buffer, int max_length ) = NULL;
 
@@ -60,7 +60,7 @@ typedef struct
 
 typedef struct
 {
-	int	offsets[NUM_CLIENT_OFFSETS];
+	int	offsets[NUM_CLIENT_LUMPS];
 } ClientSections_t;
 
 typedef struct
@@ -1147,10 +1147,12 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	{
 		sv_static_entity_t	*entry;
 		byte		nameSize;
+		word		entScale;
 
 		entry = &sv.static_entities[i];
 
 		nameSize = Q_strlen( entry->model ) + 1;
+		entScale = (entry->scale * 4096);
 
 		FS_Write( pFile, &nameSize, sizeof( nameSize ));
 		FS_Write( pFile, entry->model, nameSize ); 
@@ -1160,6 +1162,8 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 		FS_Write( pFile, &entry->frame, sizeof( entry->frame ));
 		FS_Write( pFile, &entry->colormap, sizeof( entry->colormap ));
 		FS_Write( pFile, &entry->skin, sizeof( entry->skin ));
+		FS_Write( pFile, &entry->body, sizeof( entry->body ));
+		FS_Write( pFile, &entScale, sizeof( entScale ));
 		FS_Write( pFile, &entry->rendermode, sizeof( entry->rendermode ));
 
 		if( entry->rendermode != kRenderNormal )
@@ -1334,6 +1338,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 		{
 			sv_static_entity_t	*entry;
 			byte		nameSize;
+			word		entScale;
 
 			if( i >= MAX_STATIC_ENTITIES )
 			{
@@ -1351,7 +1356,11 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 			FS_Read( pFile, &entry->frame, sizeof( entry->frame ));
 			FS_Read( pFile, &entry->colormap, sizeof( entry->colormap ));
 			FS_Read( pFile, &entry->skin, sizeof( entry->skin ));
+			FS_Read( pFile, &entry->body, sizeof( entry->body ));
+			FS_Read( pFile, &entScale, sizeof( entScale ));
 			FS_Read( pFile, &entry->rendermode, sizeof( entry->rendermode ));
+
+			entry->scale = ((float)entScale / 4096.0f);
 
 			if( entry->rendermode != kRenderNormal )
 			{

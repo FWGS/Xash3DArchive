@@ -30,7 +30,6 @@ BRUSH MODELS
 // header
 #define Q1BSP_VERSION	29	// quake1 regular version (beta is 28)
 #define HLBSP_VERSION	30	// half-life regular version
-#define XTBSP_VERSION	31	// extended lightmaps and expanded clipnodes limit
 #define QBSP2_VERSION	(('B' << 0) | ('S' << 8) | ('P' << 16) | ('2'<<24))
 
 #define IDEXTRAHEADER	(('H'<<24)+('S'<<16)+('A'<<8)+'X') // little-endian "XASH"
@@ -65,8 +64,9 @@ BRUSH MODELS
 #define LS_UNUSED			0xFE
 #define LS_NONE			0xFF
 
+// these limis not using by modelloader only for display 'mapstats' correctly
 #ifdef SUPPORT_BSP2_FORMAT
-#define MAX_MAP_MODELS		2048		// can be increased up to 2048 if needed
+#define MAX_MAP_MODELS		2048		// embedded models
 #define MAX_MAP_ENTSTRING		0x200000		// 2 Mb should be enough
 #define MAX_MAP_PLANES		131072		// can be increased without problems
 #define MAX_MAP_NODES		262144		// because negative shorts are leafs
@@ -76,7 +76,7 @@ BRUSH MODELS
 #define MAX_MAP_FACES		262144		// unsigned short limit
 #define MAX_MAP_MARKSURFACES		524288		// unsigned short limit
 #else
-#define MAX_MAP_MODELS		1024		// can be increased up to 2048 if needed
+#define MAX_MAP_MODELS		512		// embedded models
 #define MAX_MAP_ENTSTRING		0x80000		// 512 kB should be enough
 #define MAX_MAP_PLANES		65536		// can be increased without problems
 #define MAX_MAP_NODES		32767		// because negative shorts are leafs
@@ -116,16 +116,12 @@ BRUSH MODELS
 #define LUMP_MODELS			14		// internal submodels
 #define HEADER_LUMPS		15
 
-// version 31
-#define LUMP_CLIPNODES2		15		// hull0 goes into LUMP_NODES, hull1 goes into LUMP_CLIPNODES,
-#define LUMP_CLIPNODES3		16		// hull2 goes into LUMP_CLIPNODES2, hull3 goes into LUMP_CLIPNODES3
-#define HEADER_LUMPS_31		17
-
+// extra lump ordering
 #define LUMP_LIGHTVECS		0	// deluxemap data
 #define LUMP_FACEINFO		1	// landscape and lightmap resolution info
 #define LUMP_CUBEMAPS		2	// cubemap description
 #define LUMP_VERTNORMALS		3	// phong shaded vertex normals
-#define LUMP_LEAF_LIGHTING		4	// contain compressed light cubes per empty leafs
+#define LUMP_VERTEX_LIGHT		4	// contain compressed light cubes per empty leafs
 #define LUMP_WORLDLIGHTS		5	// list of all the virtual and real lights (used to relight models in-game)
 #define LUMP_COLLISION		6	// physics engine collision hull dump
 #define LUMP_AINODEGRAPH		7	// node graph that stored into the bsp
@@ -139,6 +135,7 @@ BRUSH MODELS
 #define TEX_SPECIAL			BIT( 0 )	// sky or slime, no lightmap or 256 subdivision
 #define TEX_WORLD_LUXELS		BIT( 1 )	// alternative lightmap matrix will be used (luxels per world units instead of luxels per texels)
 #define TEX_AXIAL_LUXELS		BIT( 2 )	// force world luxels to axial positive scales
+#define TEX_EXTRA_LIGHTMAP		BIT( 3 )	// bsp31 legacy - using 8 texels per luxel instead of 16 texels per luxel
 
 // ambient sound types
 enum
@@ -168,13 +165,7 @@ typedef struct
 
 typedef struct
 {
-	int	version;
-	dlump_t	lumps[HEADER_LUMPS_31];
-} dheader31_t;
-
-typedef struct
-{
-	int	id;	// must be little endian XASH
+	int	id;			// must be little endian XASH
 	int	version;
 	dlump_t	lumps[EXTRA_LUMPS];	
 } dextrahdr_t;

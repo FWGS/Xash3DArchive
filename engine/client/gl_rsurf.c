@@ -505,6 +505,8 @@ void R_AddDynamicLights( msurface_t *surf )
 	{
 		if( surf->texinfo->faceinfo )
 			sample_frac = surf->texinfo->faceinfo->texture_step;
+		else if( FBitSet( surf->texinfo->flags, TEX_EXTRA_LIGHTMAP ))
+			sample_frac = LM_SAMPLE_EXTRASIZE;
 		else sample_frac = LM_SAMPLE_SIZE;
 	}
 
@@ -1608,84 +1610,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 }
 
 /*
-=================
-R_DrawStaticModel
-
-Merge static model brushes with world surfaces
-=================
-*/
-void R_DrawStaticModel( cl_entity_t *e )
-{
-	int		i, k;
-	model_t		*clmodel;
-	msurface_t	*psurf;
-	dlight_t		*l;
-	
-	clmodel = e->model;
-	if( R_CullBox( clmodel->mins, clmodel->maxs ))
-		return;
-
-	// calculate dynamic lighting for bmodel
-	for( k = 0, l = cl_dlights; k < MAX_DLIGHTS; k++, l++ )
-	{
-		if( l->die < cl.time || !l->radius )
-			continue;
-		R_MarkLights( l, 1<<k, clmodel->nodes + clmodel->hulls[0].firstclipnode );
-	}
-
-	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
-	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
-	{
-		if( R_CullSurface( psurf, &RI.frustum, 0 ))
-			continue;
-
-		if( psurf->flags & SURF_DRAWSKY )
-		{
-			// make sky chain to right clip the skybox
-			psurf->texturechain = skychain;
-			skychain = psurf;
-		}
-		else
-		{ 
-			psurf->texturechain = psurf->texinfo->texture->texturechain;
-			psurf->texinfo->texture->texturechain = psurf;
-		}
-	}
-}
-
-/*
-=================
-R_DrawStaticBrushes
-
-Insert static brushes into world texture chains
-=================
-*/
-void R_DrawStaticBrushes( void )
-{
-	int	i;
-
-	// draw static entities
-	for( i = 0; i < tr.num_static_entities; i++ )
-	{
-		RI.currententity = tr.static_entities[i];
-		RI.currentmodel = RI.currententity->model;
-	
-		ASSERT( RI.currententity != NULL );
-		ASSERT( RI.currententity->model != NULL );
-
-		switch( RI.currententity->model->type )
-		{
-		case mod_brush:
-			R_DrawStaticModel( RI.currententity );
-			break;
-		default:
-			Host_Error( "R_DrawStatics: non bsp model in static list!\n" );
-			break;
-		}
-	}
-}
-
-/*
 =============================================================
 
 	WORLD MODEL
@@ -1998,15 +1922,9 @@ void R_DrawWorld( void )
 	R_ClearSkyBox ();
 
 	if( RI.drawOrtho )
-	{
 		R_DrawWorldTopView( cl.worldmodel->nodes, RI.frustum.clipFlags );
-	}
-	else
-	{
-		R_RecursiveWorldNode( cl.worldmodel->nodes, RI.frustum.clipFlags );
-	}
+	else R_RecursiveWorldNode( cl.worldmodel->nodes, RI.frustum.clipFlags );
 
-	R_DrawStaticBrushes();
 	R_DrawTextureChains();
 
 	if( !CL_IsDevOverviewMode( ))

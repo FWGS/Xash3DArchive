@@ -2801,7 +2801,6 @@ void pfnSPR_DrawGeneric( int frame, int x, int y, const wrect_t *prc, int blends
 =============
 pfnDrawString
 
-TODO: implement
 =============
 */
 int pfnDrawString( int x, int y, const char *str, int r, int g, int b )
@@ -2817,7 +2816,6 @@ int pfnDrawString( int x, int y, const char *str, int r, int g, int b )
 =============
 pfnDrawStringReverse
 
-TODO: implement
 =============
 */
 int pfnDrawStringReverse( int x, int y, const char *str, int r, int g, int b )
@@ -2847,7 +2845,6 @@ const char *LocalPlayerInfo_ValueForKey( const char* key )
 =============
 pfnVGUI2DrawCharacter
 
-TODO: implement
 =============
 */
 int pfnVGUI2DrawCharacter( int x, int y, int ch, unsigned int font )
@@ -2859,7 +2856,6 @@ int pfnVGUI2DrawCharacter( int x, int y, int ch, unsigned int font )
 =============
 pfnVGUI2DrawCharacterAdditive
 
-TODO: implement
 =============
 */
 int pfnVGUI2DrawCharacterAdditive( int x, int y, int ch, int r, int g, int b, unsigned int font )
@@ -2975,11 +2971,12 @@ int pfnGetAppID( void )
 =============
 pfnVguiWrap2_GetMouseDelta
 
-TODO: implement
 =============
 */
 void pfnVguiWrap2_GetMouseDelta( int *x, int *y )
 {
+	if( x ) *x = 0;
+	if( y ) *y = 0;
 }
 
 /*
@@ -4076,9 +4073,8 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.mempool = Mem_AllocPool( "Client Edicts Zone" );
 	clgame.entities = NULL;
 
-	// NOTE: important stuff!
-	// vgui must startup BEFORE loading client.dll to avoid get error ERROR_NOACESS
-	// during LoadLibrary
+	// NOTE: important stuff! vgui must startup BEFORE loading client.dll
+	// to avoid get error ERROR_NOACESS during LoadLibrary
 	VGui_Startup ();
 	
 	clgame.hInstance = Com_LoadLibrary( name, false );

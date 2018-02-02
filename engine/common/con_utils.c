@@ -94,10 +94,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			{
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
-			case XTBSP_VERSION:
-#ifdef SUPPORT_BSP2_FORMAT
 			case QBSP2_VERSION:
-#endif
 				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && !(header->lumps[LUMP_ENTITIES].filelen % sizeof(dplane_t)))
 				{
 					lumpofs = header->lumps[LUMP_PLANES].fileofs;
@@ -113,11 +110,9 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 				break;
 			}
 
-			if( ver == XTBSP_VERSION )
-				hdrext = (dextrahdr_t *)((byte *)buf + sizeof( dheader31_t ));	
-			else hdrext = (dextrahdr_t *)((byte *)buf + sizeof( dheader_t ));
-
-			if( hdrext->id == IDEXTRAHEADER ) version = hdrext->version;
+			hdrext = (dextrahdr_t *)((byte *)buf + sizeof( dheader_t ));
+			if( hdrext->id == IDEXTRAHEADER )
+				version = hdrext->version;
 
 			Q_strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
@@ -169,11 +164,9 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			if( mapver == 220 ) Q_strncpy( buf, "Half-Life Alpha", sizeof( buf ));
 			else Q_strncpy( buf, "Quake", sizeof( buf ));
 			break;
-#ifdef SUPPORT_BSP2_FORMAT
 		case QBSP2_VERSION:
 			Q_strncpy( buf, "Darkplaces BSP2", sizeof( buf ));
 			break;
-#endif
 		case HLBSP_VERSION:
 			if( gearbox ) Q_strncpy( buf, "Blue-Shift", sizeof( buf ));
 			else if( version == 1 ) Q_strncpy( buf, "XashXT old format", sizeof( buf ));
@@ -181,13 +174,6 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			else if( version == 3 ) Q_strncpy( buf, "not supported", sizeof( buf ));
 			else if( version == 4 ) Q_strncpy( buf, "Half-Life extended", sizeof( buf ));
 			else Q_strncpy( buf, "Half-Life", sizeof( buf ));
-			break;
-		case XTBSP_VERSION:
-			if( version == 1 ) Q_strncpy( buf, "XashXT old format", sizeof( buf ));
-			else if( version == 2 ) Q_strncpy( buf, "Paranoia 2: Savior", sizeof( buf ));
-			else if( version == 3 ) Q_strncpy( buf, "not supported", sizeof( buf ));
-			else if( version == 4 ) Q_strncpy( buf, "Xash3D extended", sizeof( buf ));
-			else Q_strncpy( buf, "Xash3D", sizeof( buf ));
 			break;
 		default:	Q_strncpy( buf, "??", sizeof( buf )); break;
 		}
@@ -751,10 +737,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			{
 			case Q1BSP_VERSION:
 			case HLBSP_VERSION:
-			case XTBSP_VERSION:
-#ifdef SUPPORT_BSP2_FORMAT
 			case QBSP2_VERSION:
-#endif
 				header = (dheader_t *)buf;
 				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
 				{

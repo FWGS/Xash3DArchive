@@ -1245,6 +1245,7 @@ void SV_New_f( sv_client_t *cl )
 	MSG_WriteByte( &cl->netchan.message, playernum );
 	MSG_WriteByte( &cl->netchan.message, svgame.globals->maxClients );
 	MSG_WriteWord( &cl->netchan.message, svgame.globals->maxEntities );
+	MSG_WriteWord( &cl->netchan.message, MAX_MODELS );
 	MSG_WriteString( &cl->netchan.message, sv.name );
 	MSG_WriteString( &cl->netchan.message, STRING( EDICT_NUM( 0 )->v.message )); // Map Message
 	MSG_WriteOneBit( &cl->netchan.message, sv.background ); // tell client about background map

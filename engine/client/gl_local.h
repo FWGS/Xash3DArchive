@@ -36,6 +36,7 @@ extern byte	*r_temppool;
 #define SUBDIVIDE_SIZE	64
 #define MAX_MIRRORS		32	// per one frame!
 #define MAX_DECAL_SURFS	4096
+#define MAX_MIRROR_ENTITIES	MAX_MIRRORS
 
 #define SHADEDOT_QUANT 	16	// precalculated dot products for quantized angles
 #define SHADE_LAMBERT	1.495f
@@ -194,11 +195,9 @@ typedef struct
 	int		skyboxbasenum;	// start with 5800
 
 	// entity lists
-	cl_entity_t	*static_entities[MAX_VISIBLE_PACKET];	// opaque non-moved brushes
-	gl_entity_t	mirror_entities[MAX_VISIBLE_PACKET];	// an entities that has mirror
+	gl_entity_t	mirror_entities[MAX_MIRROR_ENTITIES];	// an entities that has mirror
 	cl_entity_t	*solid_entities[MAX_VISIBLE_PACKET];	// opaque moving or alpha brushes
 	cl_entity_t	*trans_entities[MAX_VISIBLE_PACKET];	// translucent brushes
-	uint		num_static_entities;
 	uint		num_mirror_entities;
 	uint		num_solid_entities;
 	uint		num_trans_entities;
@@ -258,7 +257,7 @@ extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
 extern dlight_t		cl_elights[MAX_ELIGHTS];
-#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_static_entities)
+#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities)
 #define r_numStatics	(r_stats.c_client_ents)
 
 extern struct beam_s	*cl_active_beams;
@@ -368,7 +367,6 @@ void R_LoadIdentity( void );
 void R_RenderScene( void );
 void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size );
 void R_SetupRefParams( const struct ref_viewpass_s *rvp );
-qboolean R_StaticEntity( cl_entity_t *ent );
 void R_TranslateForEntity( cl_entity_t *e );
 void R_RotateForEntity( cl_entity_t *e );
 void R_SetupGL( qboolean set_gl_state );
@@ -666,7 +664,6 @@ extern convar_t	*gl_lightmap_nearest;
 extern convar_t	*gl_keeptjunctions;
 extern convar_t	*gl_detailscale;
 extern convar_t	*gl_wireframe;
-extern convar_t	*gl_allow_static;
 extern convar_t	*gl_allow_mirrors;
 extern convar_t	*gl_polyoffset;
 extern convar_t	*gl_finish;

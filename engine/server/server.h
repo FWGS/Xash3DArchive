@@ -106,6 +106,8 @@ typedef struct
 	byte		frame;
 	short		colormap;
 	byte		skin;		// can't set contents! only real skin!
+	byte		body;
+	float		scale;
 	byte		rendermode;
 	byte		renderamt;
 	color24		rendercolor;

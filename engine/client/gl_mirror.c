@@ -429,6 +429,9 @@ void R_FindBmodelMirrors( cl_entity_t *e, qboolean static_entity )
 	gl_frustum_t	*frustum = NULL;
 	int		i;
 
+	if( tr.num_mirror_entities >= MAX_MIRROR_ENTITIES )
+		return;
+
 	clmodel = e->model;
 
 	// don't draw any water reflections if we underwater
@@ -511,24 +514,7 @@ void R_CheckEntitiesOnList( void )
 {
 	int	i;
 
-	// check static entities
-	for( i = 0; i < tr.num_static_entities; i++ )
-	{
-		RI.currententity = tr.static_entities[i];
-		RI.currentmodel = RI.currententity->model;
-	
-		ASSERT( RI.currententity != NULL );
-		ASSERT( RI.currententity->model != NULL );
-
-		switch( RI.currentmodel->type )
-		{
-		case mod_brush:
-			R_FindBmodelMirrors( RI.currententity, true );
-			break;
-		}
-	}
-
-	// world or static entities has mirror surfaces
+	// world has mirror surfaces
 	if( tr.mirror_entities[0].chain != NULL )
 	{
 		tr.mirror_entities[0].ent = clgame.entities;

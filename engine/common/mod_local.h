@@ -26,8 +26,6 @@ GNU General Public License for more details.
 #define FRAC_EPSILON		(1.0f / 1024.0f)
 #define BACKFACE_EPSILON		0.01f
 #define MAX_BOX_LEAFS		256
-#define DVIS_PVS			0
-#define DVIS_PHS			1
 #define ANIM_CYCLE			2
 #define MOD_FRAMES			20
 
@@ -42,7 +40,8 @@ GNU General Public License for more details.
 #define PANTS_HUE_START		96
 #define PANTS_HUE_END		112
 
-#define LM_SAMPLE_SIZE		world.lm_sample_size	// lightmap resoultion
+#define LM_SAMPLE_SIZE		16
+#define LM_SAMPLE_EXTRASIZE		8
 
 #define CHECKVISBIT( vis, b )		((b) >= 0 ? (byte)((vis)[(b) >> 3] & (1 << ((b) & 7))) : (byte)false )
 #define SETVISBIT( vis, b )( void )	((b) >= 0 ? (byte)((vis)[(b) >> 3] |= (1 << ((b) & 7))) : (byte)false )
@@ -79,7 +78,6 @@ typedef struct leaflist_s
 
 typedef struct
 {
-	int		version;		// bsp version
 	int		mapversion;	// map version (an key-value in worldspawn settings)
 	uint		checksum;		// current map checksum
 	int		load_sequence;	// increace each map change
@@ -91,7 +89,6 @@ typedef struct
 	qboolean		has_mirrors;	// one or more brush models contain reflective textures
 	qboolean		custom_skybox;	// if sky_sphere is active and custom skybox set
 	qboolean		water_alpha;	// allow translucency water
-	int		lm_sample_size;	// defaulting to 16 (BSP31 uses 8)
 	int		block_size;	// lightmap blocksize
 	int		lightmap_samples;	// samples per pixel
 	color24		*deluxedata;	// deluxemap data pointer
@@ -127,7 +124,6 @@ extern world_static_t	world;
 extern byte		*com_studiocache;
 extern model_t		*loadmodel;
 extern convar_t		*mod_studiocache;
-extern int		bmodel_version;	// only actual during loading
 
 //
 // model.c
@@ -152,7 +148,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean world );
 model_t *Mod_ForName( const char *name, qboolean world );
 qboolean Mod_RegisterModel( const char *name, int index );
 mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node );
-qboolean Mod_HeadnodeVisible( mnode_t *node, const byte *visbits, short *lastleaf );
+qboolean Mod_HeadnodeVisible( mnode_t *node, const byte *visbits, int *lastleaf );
 int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *lastleaf );
 int Mod_FatPVS( const vec3_t org, float radius, byte *visbuffer, int visbytes, qboolean merge, qboolean fullvis );
 qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits );

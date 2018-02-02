@@ -243,8 +243,8 @@ typedef struct
 	char		event_precache[MAX_EVENTS][CS_SIZE];
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 
-	int		sound_index[MAX_SOUNDS];
-	int		decal_index[MAX_DECALS];
+	short	sound_index[MAX_SOUNDS];
+	short	decal_index[MAX_DECALS];
 
 	cl_entity_t	*world;
 	model_t		*worldmodel;			// pointer to world
@@ -420,7 +420,7 @@ typedef struct
 	int			flags;	// FNETAPI_MULTIPLE_RESPONSE etc
 } net_request_t;
 
-// new versions of client dlls have a sanigle export with all callbacks
+// new versions of client dlls have a single export with all callbacks
 typedef void (*CL_EXPORT_FUNCS)( void *pv );
 
 typedef struct
@@ -440,6 +440,7 @@ typedef struct
 	int		maxEntities;
 	int		maxRemapInfos;		// maxEntities + cl.viewEnt; also used for catch entcount
 	int		numStatics;		// actual static entity count
+	int		maxModels;
 
 	// movement values from server
 	movevars_t	movevars;

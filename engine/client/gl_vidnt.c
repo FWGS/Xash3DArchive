@@ -36,7 +36,6 @@ convar_t	*gl_keeptjunctions;
 convar_t	*gl_showtextures;
 convar_t	*gl_detailscale;
 convar_t	*gl_check_errors;
-convar_t	*gl_allow_static;
 convar_t	*gl_allow_mirrors;
 convar_t	*gl_polyoffset;
 convar_t	*gl_wireframe;
@@ -1593,7 +1592,6 @@ void GL_InitCommands( void )
 	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "2.0", FCVAR_ARCHIVE, "textures anisotropic filter" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", FCVAR_ARCHIVE, "LOD bias for mipmapped textures (prefomance|quality)" );
 	gl_keeptjunctions = Cvar_Get( "gl_keeptjunctions", "1", FCVAR_ARCHIVE, "removing tjuncs causes blinking pixels" ); 
-	gl_allow_static = Cvar_Get( "gl_allow_static", "0", FCVAR_ARCHIVE, "force to drawing non-moveable brushes as part of world (save FPS)" );
 	gl_allow_mirrors = Cvar_Get( "gl_allow_mirrors", "1", FCVAR_ARCHIVE, "allow to draw mirror surfaces" );
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", FCVAR_CHEAT, "show all uploaded textures" );
 	gl_finish = Cvar_Get( "gl_finish", "0", FCVAR_ARCHIVE, "use glFinish instead of glFlush" );

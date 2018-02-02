@@ -94,11 +94,7 @@ GNU General Public License for more details.
 #define clc_requestcvarvalue2		10
 #define clc_lastmsg			10	// end client messages
 
-#ifdef SUPPORT_BSP2_FORMAT
-#define MAX_VISIBLE_PACKET_BITS	11	// 2048 visible entities per frame
-#else
-#define MAX_VISIBLE_PACKET_BITS	10	// 1024 visible entities per frame (hl1 has 256)
-#endif
+#define MAX_VISIBLE_PACKET_BITS	11	// 2048 visible entities per frame (hl1 has 256)
 #define MAX_VISIBLE_PACKET		(1<<MAX_VISIBLE_PACKET_BITS)
 #define MAX_VISIBLE_PACKET_VIS_BYTES	((MAX_VISIBLE_PACKET + 7) / 8)
 
@@ -106,36 +102,33 @@ GNU General Public License for more details.
 #define MAX_CLIENT_BITS		5
 #define MAX_CLIENTS			(1<<MAX_CLIENT_BITS)// 5 bits == 32 clients ( int32 limit )
 
-#define MAX_WEAPON_BITS		5
-#define MAX_WEAPONS			(1<<MAX_WEAPON_BITS)// 5 bits == 32 weapons ( int32 limit )
+#define MAX_WEAPON_BITS		6
+#define MAX_WEAPONS			(1<<MAX_WEAPON_BITS)// 6 bits == 64 predictable weapons
 
 #define MAX_EVENT_BITS		10
 #define MAX_EVENTS			(1<<MAX_EVENT_BITS)	// 10 bits == 1024 events (the original Half-Life limit)
 
+#define MAX_MODEL_BITS		12		// 12 bits == 4096 models
+
 #ifdef SUPPORT_BSP2_FORMAT
-#define MAX_MODEL_BITS		12	// 12 bits == 4096 models
+#define MAX_MODELS			(1<<MAX_MODEL_BITS)	// because BSP2 contain too much embedded bsp-models
 #else
-#define MAX_MODEL_BITS		11	// 11 bits == 2048 models
+#define MAX_MODELS			1024		// g-cont. reduce the memory without breaking proto
 #endif
-#define MAX_MODELS			(1<<MAX_MODEL_BITS)
 
 #define MAX_SOUND_BITS		11
 #define MAX_SOUNDS			(1<<MAX_SOUND_BITS)	// 11 bits == 2048 sounds
 
-#ifdef SUPPORT_BSP2_FORMAT
-#define MAX_ENTITY_BITS		13	// 13 bits = 8192 edicts
-#else
-#define MAX_ENTITY_BITS		12	// 12 bits = 4096 edicts
-#endif
+#define MAX_ENTITY_BITS		13		// 13 bits = 8192 edicts
 #define MAX_EDICTS			(1<<MAX_ENTITY_BITS)
 #define MAX_EDICTS_BYTES		((MAX_EDICTS + 7) / 8)
 
-#define MAX_CUSTOM			1024	// max custom resources per level
-#define MAX_USER_MESSAGES		197	// another 58 messages reserved for engine routines
-#define MAX_DLIGHTS			32	// dynamic lights (rendered per one frame)
-#define MAX_ELIGHTS			64	// entity only point lights
-#define MAX_LIGHTSTYLES		256	// a byte limit, don't modify
-#define MAX_RENDER_DECALS		4096	// max rendering decals per a level
+#define MAX_CUSTOM			1024		// max custom resources per level
+#define MAX_USER_MESSAGES		197		// another 58 messages reserved for engine routines
+#define MAX_DLIGHTS			32		// dynamic lights (rendered per one frame)
+#define MAX_ELIGHTS			64		// entity only point lights
+#define MAX_LIGHTSTYLES		64		// original quake limit
+#define MAX_RENDER_DECALS		4096		// max rendering decals per a level
 
 // sound proto
 #define MAX_SND_FLAGS_BITS		14

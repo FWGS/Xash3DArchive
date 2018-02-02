@@ -504,6 +504,8 @@ void SV_CreateStaticEntity( sizebuf_t *msg, sv_static_entity_t *ent )
 	MSG_WriteByte( msg, ent->frame );
 	MSG_WriteWord( msg, ent->colormap );
 	MSG_WriteByte( msg, ent->skin );
+	MSG_WriteByte( msg, ent->body );
+	MSG_WriteCoord( msg, ent->scale );
 
 	for( i = 0; i < 3; i++ )
 	{
@@ -587,10 +589,7 @@ void SV_WriteEntityPatch( const char *filename )
 	{
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
-	case XTBSP_VERSION:
-#ifdef SUPPORT_BSP2_FORMAT
 	case QBSP2_VERSION:
-#endif
 		header = (dheader_t *)buf;
 		if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && (header->lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
 		{
@@ -657,10 +656,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 	{
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
-	case XTBSP_VERSION:
-#ifdef SUPPORT_BSP2_FORMAT
 	case QBSP2_VERSION:
-#endif
 		header = (dheader_t *)buf;
 		if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && (header->lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
 		{
@@ -1121,6 +1117,12 @@ void pfnSetModel( edict_t *e, const char *m )
 	if( !m || m[0] <= ' ' )
 	{
 		MsgDev( D_WARN, "SV_SetModel: null name\n" );
+		return;
+	}
+
+	if( e == svgame.edicts )
+	{
+		MsgDev( D_ERROR, "SV_SetModel: world model can't be changed\n" );
 		return;
 	}
 
@@ -1689,6 +1691,8 @@ static void pfnMakeStatic( edict_t *ent )
 	clent->frame = ent->v.frame;
 	clent->colormap = ent->v.colormap;
 	clent->skin = ent->v.skin;
+	clent->body = ent->v.body;
+	clent->scale = ent->v.scale;
 	clent->rendermode = ent->v.rendermode;
 	clent->renderamt = ent->v.renderamt;
 	clent->rendercolor.r = ent->v.rendercolor[0];
@@ -4083,7 +4087,7 @@ int pfnCheckVisibility( const edict_t *ent, byte *pset )
 	}
 	else
 	{
-		short	leafnum;
+		int	leafnum;
 
 		for( i = 0; i < MAX_ENT_LEAFS; i++ )
 		{

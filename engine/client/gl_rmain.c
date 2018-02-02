@@ -63,40 +63,6 @@ void R_AllowFog( int allowed )
 
 /*
 ===============
-R_StaticEntity
-
-Static entity is the brush which has no custom origin and not rotated
-typically is a func_wall, func_breakable, func_ladder etc
-===============
-*/
-qboolean R_StaticEntity( cl_entity_t *ent )
-{
-	if( !gl_allow_static->value )
-		return false;
-
-	if( ent->curstate.rendermode != kRenderNormal )
-		return false;
-
-	if( ent->model->type != mod_brush )
-		return false;
-
-	if( ent->curstate.effects & ( EF_NOREFLECT|EF_REFLECTONLY ))
-		return false;
-
-	if( ent->curstate.frame || ent->model->flags & MODEL_CONVEYOR )
-		return false;
-
-	if( ent->curstate.scale ) // waveheight specified
-		return false;
-
-	if( !VectorIsNull( ent->origin ) || !VectorIsNull( ent->angles ))
-		return false;
-
-	return true;
-}
-
-/*
-===============
 R_OpaqueEntity
 
 Opaque entity can be brush or studio model but sprite
@@ -106,13 +72,6 @@ static qboolean R_OpaqueEntity( cl_entity_t *ent )
 {
 	if( ent->curstate.rendermode == kRenderNormal )
 		return true;
-#if 0
-	if( ent->model->type != mod_brush )
-		return false;
-
-	if( ent->curstate.rendermode == kRenderTransAlpha )
-		return true;
-#endif
 	return false;
 }
 
@@ -237,7 +196,7 @@ R_ClearScene
 void R_ClearScene( void )
 {
 	tr.num_solid_entities = tr.num_trans_entities = 0;
-	tr.num_static_entities = tr.num_mirror_entities = 0;
+	tr.num_mirror_entities = 0;
 	cl.num_custombeams = 0;
 }
 
@@ -265,24 +224,12 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int type )
 
 	if( R_OpaqueEntity( clent ))
 	{
-		if( R_StaticEntity( clent ))
-		{
-			// opaque static
-			if( tr.num_static_entities >= MAX_VISIBLE_PACKET )
-				return false;
+		// opaque
+		if( tr.num_solid_entities >= MAX_VISIBLE_PACKET )
+			return false;
 
-			tr.static_entities[tr.num_static_entities] = clent;
-			tr.num_static_entities++;
-		}
-		else
-		{
-			// opaque moving
-			if( tr.num_solid_entities >= MAX_VISIBLE_PACKET )
-				return false;
-
-			tr.solid_entities[tr.num_solid_entities] = clent;
-			tr.num_solid_entities++;
-		}
+		tr.solid_entities[tr.num_solid_entities] = clent;
+		tr.num_solid_entities++;
 	}
 	else
 	{
@@ -455,7 +402,7 @@ void R_RotateForEntity( cl_entity_t *e )
 {
 	float	scale = 1.0f;
 
-	if( e == clgame.entities || R_StaticEntity( e ))
+	if( e == clgame.entities )
 	{
 		R_LoadIdentity();
 		return;
@@ -481,7 +428,7 @@ void R_TranslateForEntity( cl_entity_t *e )
 {
 	float	scale = 1.0f;
 
-	if( e == clgame.entities || R_StaticEntity( e ))
+	if( e == clgame.entities )
 	{
 		R_LoadIdentity();
 		return;
@@ -1209,6 +1156,11 @@ static int GL_RenderGetParm( int parm, int arg )
 	case PARM_TEX_DEPTH:
 		glt = R_GetTexture( arg );
 		return glt->depth;
+	case PARM_BSP2_SUPPORTED:
+#ifdef SUPPORT_BSP2_FORMAT
+		return 1;
+#endif
+		return 0;
 	case PARM_TEX_SKYBOX:
 		ASSERT( arg >= 0 && arg < 6 );
 		return tr.skyboxTextures[arg];
@@ -1219,10 +1171,6 @@ static int GL_RenderGetParm( int parm, int arg )
 		return tr.lightmapTextures[arg];
 	case PARM_SKY_SPHERE:
 		return world.sky_sphere && !world.custom_skybox;
-	case PARM_WORLD_VERSION:
-		if( cls.state != ca_active )
-			return bmodel_version;
-		return world.version;
 	case PARM_WIDESCREEN:
 		return glState.wideScreen;
 	case PARM_FULLSCREEN:

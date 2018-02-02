@@ -92,7 +92,7 @@ void V_SetupViewModel( void )
 	view->model = Mod_Handle( cl.local.viewmodel );
 	view->curstate.modelindex = cl.local.viewmodel;
 	view->curstate.sequence = cl.local.weaponsequence;
-	view->curstate.rendermode = kRenderNormal;	// EXPERIMENTAL!!!
+	view->curstate.rendermode = kRenderNormal;
 
 	// alias models has another animation methods
 	if( view->model && view->model->type == mod_studio )

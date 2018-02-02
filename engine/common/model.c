@@ -33,7 +33,7 @@ static model_t	*com_models[MAX_MODELS];	// shared replacement modeltable
 static model_t	cm_models[MAX_MODELS];
 static int	cm_nummodels = 0;
 static byte	visdata[MAX_MAP_LEAFS/8];	// intermediate buffer
-int		bmodel_version;		// global stuff to detect bsp version
+static int	bmodel_version;		// global stuff to detect bsp version
 char		modelname[64];		// short model name (without path and ext)
 convar_t		*mod_studiocache;
 convar_t		*r_wadtextures;
@@ -445,7 +445,7 @@ qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbi
 Mod_HeadnodeVisible
 =============
 */
-qboolean Mod_HeadnodeVisible( mnode_t *node, const byte *visbits, short *lastleaf )
+qboolean Mod_HeadnodeVisible( mnode_t *node, const byte *visbits, int *lastleaf )
 {
 	if( !node || node->contents == CONTENTS_SOLID )
 		return false;
@@ -499,8 +499,12 @@ int Mod_SampleSizeForFace( msurface_t *surf )
 	if( !surf || !surf->texinfo )
 		return LM_SAMPLE_SIZE;
 
+	// world luxels has more priority
 	if( FBitSet( surf->texinfo->flags, TEX_WORLD_LUXELS ))
 		return 1;
+
+	if( FBitSet( surf->texinfo->flags, TEX_EXTRA_LIGHTMAP ))
+		return LM_SAMPLE_EXTRASIZE;
 
 	if( surf->texinfo->faceinfo )
 		return surf->texinfo->faceinfo->texture_step;
@@ -758,7 +762,7 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 			// spread the mins / maxs by a unit
 			out->mins[j] = in->mins[j] - 1.0f;
 			out->maxs[j] = in->maxs[j] + 1.0f;
-			out->origin[j] = in->origin[j];
+			out->origin[j] = in->origin[j]; // new P2 compillers fills the origin field
 		}
 
 		for( j = 0; j < MAX_MAP_HULLS; j++ )
@@ -770,12 +774,6 @@ static void Mod_LoadSubmodels( const dlump_t *l )
 
 		if( i == 0 || !world.loading )
 			continue; // skip the world
-
-		if( VectorIsNull( out->origin ))
-		{
-			// NOTE: zero origin after recalculating is indicated included origin brush
-			VectorAverage( out->mins, out->maxs, out->origin );
-		}
 
 		world.max_surfaces = Q_max( world.max_surfaces, out->numfaces ); 
 	}
@@ -2428,83 +2426,6 @@ static void Mod_LoadClipnodes( const dlump_t *l )
 
 /*
 =================
-Mod_LoadClipnodes31
-=================
-*/
-static void Mod_LoadClipnodes31( const dlump_t *l1, const dlump_t *l2, const dlump_t *l3 )
-{
-	dclipnode_t	*in1, *in2, *in3;
-	int		i, count1, count2, count3;
-	dclipnode2_t	*out;
-
-	in1 = (dclipnode_t *)(mod_base + l1->fileofs);
-	if( l1->filelen % sizeof( *in1 )) Host_Error( "Mod_LoadClipnodes1: funny lump size\n" );
-	count1 = l1->filelen / sizeof( *in1 );
-
-	in2 = (dclipnode_t *)(mod_base + l2->fileofs);
-	if( l2->filelen % sizeof( *in2 )) Host_Error( "Mod_LoadClipnodes2: funny lump size\n" );
-	count2 = l2->filelen / sizeof( *in2 );
-
-	in3 = (dclipnode_t *)(mod_base + l3->fileofs);
-	if( l3->filelen % sizeof( *in3 )) Host_Error( "Mod_LoadClipnodes3: funny lump size\n" );
-	count3 = l3->filelen / sizeof( *in3 );
-
-	world.clipnodes = out = (dclipnode2_t *)Mem_Alloc( loadmodel->mempool, ( count1 + count2 + count3 ) * sizeof( *out ));	
-	if( world.loading ) world.clipnodesize = sizeof( dclipnode_t );
-	world.numclipnodes = 0;
-
-	for( i = 0; i < count1; i++, out++, in1++ )
-	{
-		out->children[0] = in1->children[0];
-		out->children[1] = in1->children[1];
-		out->planenum = in1->planenum;
-		world.numclipnodes++;
-	}
-
-	// merge offsets so we have shared array of clipnodes again
-	for( i = 0; i < count2; i++, out++, in2++ )
-	{
-		out->children[0] = in2->children[0];
-		out->children[1] = in2->children[1];
-		out->planenum = in2->planenum;
-
-		if( out->children[0] >= 0 )
-			out->children[0] += count1;
-		if( out->children[1] >= 0 )
-			out->children[1] += count1;
-		world.numclipnodes++;
-	}
-
-	// merge offsets so we have shared array of clipnodes again
-	for( i = 0; i < count3; i++, out++, in3++ )
-	{
-		out->children[0] = in3->children[0];
-		out->children[1] = in3->children[1];
-		out->planenum = in3->planenum;
-
-		if( out->children[0] >= 0 )
-			out->children[0] += (count1 + count2);
-		if( out->children[1] >= 0 )
-			out->children[1] += (count1 + count2);
-		world.numclipnodes++;
-	}
-
-	// fixup headnode offsets
-	for( i = 0; i < loadmodel->numsubmodels; i++ )
-	{
-		loadmodel->submodels[i].headnode[2] += (count1);
-		loadmodel->submodels[i].headnode[3] += (count1 + count2);
-	}
-
-	if( world.numclipnodes != ( count1 + count2 + count3 ))
-		Host_Error( "Mod_LoadClipnodes31: mismatch node count (%i should be %i)\n", world.numclipnodes, ( count1 + count2 + count3 ));
-
-	// FIXME: fill loadmodel->clipnodes?
-	loadmodel->numclipnodes = world.numclipnodes;
-}
-
-/*
-=================
 Mod_FindModelOrigin
 
 routine to detect bmodels with origin-brush
@@ -2518,7 +2439,10 @@ static void Mod_FindModelOrigin( const char *entities, const char *modelname, ve
 	qboolean	model_found;
 	qboolean	origin_found;
 
-	if( !entities || !modelname || !*modelname || !origin )
+	if( !entities || !modelname || !*modelname )
+		return;
+
+	if( !origin || !VectorIsNull( origin ))
 		return;
 
 	pfile = (char *)entities;
@@ -2644,7 +2568,6 @@ Mod_LoadBrushModel
 static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *loaded )
 {
 	int		i, j;
-	int		sample_size;
 	char		*ents;
 	dheader_t		*header;
 	dextrahdr_t	*extrahdr;
@@ -2654,47 +2577,29 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	if( loaded ) *loaded = false;	
 	header = (dheader_t *)buffer;
 	loadmodel->type = mod_brush;
+	extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
 	i = header->version;
 
-	// BSP31 and BSP30 have different offsets
-	if( i == XTBSP_VERSION )
-		extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader31_t ));	
-	else extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
-
+#ifndef SUPPORT_BSP2_FORMAT
+	if( header->version == QBSP2_VERSION )
+	{
+		MsgDev( D_ERROR, "%s can't be loaded in this build. Please rebuild engine with enabled SUPPORT_BSP2_FORMAT\n", loadmodel->name );
+		return;
+	}
+#endif
 	switch( i )
 	{
-	case 28:	// get support for quake1 beta
-		i = Q1BSP_VERSION;
-		sample_size = 16;
-		break;
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
 	case QBSP2_VERSION:
-		sample_size = 16;
-		break;
-	case XTBSP_VERSION:
-		sample_size = 8;
 		break;
 	default:
-		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)", loadmodel->name, i, HLBSP_VERSION );
+		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)\n", loadmodel->name, i, HLBSP_VERSION );
 		return;
 	}
 
-	// will be merged later
-	if( world.loading )
-	{
-		world.lm_sample_size = sample_size;
-		world.version = i;
-	}
-	else if( world.lm_sample_size != sample_size )
-	{
-		// can't mixing world and bmodels with different sample sizes!
-		MsgDev( D_ERROR, "%s has mismatch sample size (%i should be %i)", loadmodel->name, sample_size, world.lm_sample_size );
-		return;		
-	}
-
-	loadmodel->numframes = sample_size; // NOTE: world store sample size into model_t->numframes
-	bmodel_version = i;	// share it
+	loadmodel->numframes = 2;	// g-cont. why is it necessary?
+	bmodel_version = i;		// share tp global
 
 	// swap all the lumps
 	mod_base = (byte *)header;
@@ -2730,10 +2635,7 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 	Mod_LoadMarkSurfaces( &header->lumps[LUMP_MARKSURFACES] );
 	Mod_LoadLeafs( &header->lumps[LUMP_LEAFS] );
 	Mod_LoadNodes( &header->lumps[LUMP_NODES] );
-
-	if( bmodel_version == XTBSP_VERSION )
-		Mod_LoadClipnodes31( &header->lumps[LUMP_CLIPNODES], &header->lumps[LUMP_CLIPNODES2], &header->lumps[LUMP_CLIPNODES3] );
-	else Mod_LoadClipnodes( &header->lumps[LUMP_CLIPNODES] );
+	Mod_LoadClipnodes( &header->lumps[LUMP_CLIPNODES] );
 
 	Mod_MakeHull0 ();
 
@@ -2764,11 +2666,11 @@ static void Mod_LoadBrushModel( model_t *mod, const void *buffer, qboolean *load
 
 		if( i != 0 )
 		{
-			// HACKHACK: c2a1 issues
-			if( !bm->origin[0] && !bm->origin[1] )
-				SetBits( mod->flags, MODEL_HAS_ORIGIN );
-
 			Mod_FindModelOrigin( ents, va( "*%i", i ), bm->origin );
+
+			// HACKHACK: c2a1 issues
+			if( !Q_stricmp( loadmodel->name, "maps/c2a1.bsp" ) && ( i == 11 ))
+				SetBits( mod->flags, MODEL_HAS_ORIGIN );
 
 			// flag 2 is indicated model with origin brush!
 			if( !VectorIsNull( bm->origin ))
@@ -2938,10 +2840,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		break;
 	case Q1BSP_VERSION:
 	case HLBSP_VERSION:
-	case XTBSP_VERSION:
-#ifdef SUPPORT_BSP2_FORMAT
 	case QBSP2_VERSION:
-#endif
 		Mod_LoadBrushModel( mod, buf, &loaded );
 		break;
 	default:
@@ -3293,7 +3192,7 @@ check lump for existing
 int Mod_CheckLump( const char *filename, const int lump, int *lumpsize )
 {
 	file_t		*f = FS_Open( filename, "rb", true );
-	byte		buffer[sizeof( dheader31_t ) + sizeof( dextrahdr_t )];
+	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
 	size_t		prefetch_size = sizeof( buffer );
 	dextrahdr_t	*extrahdr;
 	dheader_t		*header;
@@ -3308,16 +3207,13 @@ int Mod_CheckLump( const char *filename, const int lump, int *lumpsize )
 
 	header = (dheader_t *)buffer;
 
-	if( header->version != HLBSP_VERSION && header->version != XTBSP_VERSION )
+	if( header->version != HLBSP_VERSION )
 	{
 		FS_Close( f );
 		return LUMP_LOAD_BAD_VERSION;
 	}
 
-	// BSP31 and BSP30 have different offsets
-	if( header->version == XTBSP_VERSION )
-		extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader31_t ));	
-	else extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
+	extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
 
 	if( extrahdr->id != IDEXTRAHEADER || extrahdr->version != EXTRA_VERSION )
 	{
@@ -3355,7 +3251,7 @@ reading random lump by user request
 int Mod_ReadLump( const char *filename, const int lump, void **lumpdata, int *lumpsize )
 {
 	file_t		*f = FS_Open( filename, "rb", true );
-	byte		buffer[sizeof( dheader31_t ) + sizeof( dextrahdr_t )];
+	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
 	size_t		prefetch_size = sizeof( buffer );
 	dextrahdr_t	*extrahdr;
 	dheader_t		*header;
@@ -3372,16 +3268,13 @@ int Mod_ReadLump( const char *filename, const int lump, void **lumpdata, int *lu
 
 	header = (dheader_t *)buffer;
 
-	if( header->version != HLBSP_VERSION && header->version != XTBSP_VERSION )
+	if( header->version != HLBSP_VERSION )
 	{
 		FS_Close( f );
 		return LUMP_LOAD_BAD_VERSION;
 	}
 
-	// BSP31 and BSP30 have different offsets
-	if( header->version == XTBSP_VERSION )
-		extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader31_t ));	
-	else extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
+	extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
 
 	if( extrahdr->id != IDEXTRAHEADER || extrahdr->version != EXTRA_VERSION )
 	{
@@ -3414,7 +3307,7 @@ int Mod_ReadLump( const char *filename, const int lump, void **lumpdata, int *lu
 
 	if( FS_Read( f, data, length ) != length )
 	{
-		Mem_Free( data );
+		free( data );
 		FS_Close( f );
 		return LUMP_LOAD_CORRUPTED;
 	}
@@ -3440,7 +3333,7 @@ only empty lumps is allows
 int Mod_SaveLump( const char *filename, const int lump, void *lumpdata, int lumpsize )
 {
 	file_t		*f = FS_Open( filename, "e+b", true );
-	byte		buffer[sizeof( dheader31_t ) + sizeof( dextrahdr_t )];
+	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
 	size_t		prefetch_size = sizeof( buffer );
 	dextrahdr_t	*extrahdr;
 	dheader_t		*header;
@@ -3458,16 +3351,13 @@ int Mod_SaveLump( const char *filename, const int lump, void *lumpdata, int lump
 
 	header = (dheader_t *)buffer;
 
-	if( header->version != HLBSP_VERSION && header->version != XTBSP_VERSION )
+	if( header->version != HLBSP_VERSION )
 	{
 		FS_Close( f );
 		return LUMP_SAVE_BAD_VERSION;
 	}
 
-	// BSP31 and BSP30 have different offsets
-	if( header->version == XTBSP_VERSION )
-		extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader31_t ));	
-	else extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
+	extrahdr = (dextrahdr_t *)((byte *)buffer + sizeof( dheader_t ));
 
 	if( extrahdr->id != IDEXTRAHEADER || extrahdr->version != EXTRA_VERSION )
 	{
@@ -3500,9 +3390,7 @@ int Mod_SaveLump( const char *filename, const int lump, void *lumpdata, int lump
 	}
 
 	// update the header
-	if( header->version == XTBSP_VERSION )
-		FS_Seek( f, sizeof( dheader31_t ), SEEK_SET );
-	else FS_Seek( f, sizeof( dheader_t ), SEEK_SET );
+	FS_Seek( f, sizeof( dheader_t ), SEEK_SET );
 
 	if( FS_Write( f, extrahdr, sizeof( dextrahdr_t )) != sizeof( dextrahdr_t ))
 	{
