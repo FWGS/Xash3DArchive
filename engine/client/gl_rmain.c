@@ -1170,7 +1170,7 @@ static int GL_RenderGetParm( int parm, int arg )
 		arg = bound( 0, arg, MAX_LIGHTMAPS - 1 );
 		return tr.lightmapTextures[arg];
 	case PARM_SKY_SPHERE:
-		return world.sky_sphere && !world.custom_skybox;
+		return FBitSet( world.flags, FWORLD_SKYSPHERE ) && !FBitSet( world.flags, FWORLD_CUSTOM_SKYBOX );
 	case PARM_WIDESCREEN:
 		return glState.wideScreen;
 	case PARM_FULLSCREEN:
@@ -1180,7 +1180,7 @@ static int GL_RenderGetParm( int parm, int arg )
 	case PARM_SCREEN_HEIGHT:
 		return glState.height;
 	case PARM_MAP_HAS_MIRRORS:
-		return world.has_mirrors;
+		return FBitSet( world.flags, FWORLD_HAS_MIRRORS );
 	case PARM_CLIENT_INGAME:
 		return CL_IsInGame();
 	case PARM_MAX_ENTITIES:
@@ -1202,7 +1202,7 @@ static int GL_RenderGetParm( int parm, int arg )
 		arg = bound( 0, arg, MAX_LIGHTSTYLES - 1 );
 		return tr.lightstylevalue[arg];
 	case PARM_MAP_HAS_DELUXE:
-		return (world.deluxedata != NULL);
+		return FBitSet( world.flags, FWORLD_HAS_DELUXEMAP );
 	case PARM_MAX_IMAGE_UNITS:
 		return GL_MaxTextureUnits();
 	case PARM_CLIENT_ACTIVE:
@@ -1222,7 +1222,7 @@ static int GL_RenderGetParm( int parm, int arg )
 	case PARM_STENCIL_ACTIVE:
 		return glState.stencilEnabled;
 	case PARM_WATER_ALPHA:
-		return world.water_alpha;
+		return FBitSet( world.flags, FWORLD_WATERALPHA );
 	}
 	return 0;
 }
@@ -1466,6 +1466,8 @@ static render_api_t gRenderAPI =
 	R_Mem_Free,
 	pfnGetFilesList,
 	pfnFileBufferCRC32,
+	Mod_Handle,
+	pfnTime,
 };
 
 /*

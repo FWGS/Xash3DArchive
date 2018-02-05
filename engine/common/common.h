@@ -39,6 +39,7 @@ extern "C" {
 #define MAX_LOCALINFO_STRING	32768	// localinfo used on server and not sended to the clients
 #define MAX_SYSPATH		1024	// system filepath
 #define MAX_PRINT_MSG	8192	// how many symbols can handle single call of Msg or MsgDev
+#define MAX_TOKEN		2048	// parse token length
 #define MAX_MODS		512	// environment games that engine can keep visible
 #define EXPORT		__declspec( dllexport )
 #define BIT( n )		(1<<( n ))
@@ -169,27 +170,27 @@ internal shared gameinfo structure (readonly for engine parts)
 typedef struct gameinfo_s
 {
 	// filesystem info
-	char		gamefolder[64];	// used for change game '-game x'
-	char		basedir[64];	// base game directory (like 'id1' for Quake or 'valve' for Half-Life)
-	char		gamedir[64];	// game directory (can be match with basedir, used as game dir and as write path)
-	char		falldir[64];	// used as second basedir 
-	char		startmap[64];	// map to start singleplayer game
-	char		trainmap[64];	// map to start hazard course (if specified)
+	char		gamefolder[MAX_QPATH];	// used for change game '-game x'
+	char		basedir[MAX_QPATH];	// base game directory (like 'id1' for Quake or 'valve' for Half-Life)
+	char		gamedir[MAX_QPATH];	// game directory (can be match with basedir, used as game dir and as write path)
+	char		falldir[MAX_QPATH];	// used as second basedir 
+	char		startmap[MAX_QPATH];// map to start singleplayer game
+	char		trainmap[MAX_QPATH];// map to start hazard course (if specified)
 	char		title[64];	// Game Main Title
 	float		version;		// game version (optional)
 
 	// .dll pathes
-	char		dll_path[64];	// e.g. "bin" or "cl_dlls"
-	char		game_dll[64];	// custom path for game.dll
+	char		dll_path[MAX_QPATH];	// e.g. "bin" or "cl_dlls"
+	char		game_dll[MAX_QPATH];	// custom path for game.dll
 
 	// .ico path
-	char		iconpath[64];	// "game.ico" by default
+	char		iconpath[MAX_QPATH];	// "game.ico" by default
 
 	// about mod info
 	string		game_url;		// link to a developer's site
 	string		update_url;	// link to updates page
-	char		type[64];		// single, toolkit, multiplayer etc
-	char		date[64];
+	char		type[MAX_QPATH];	// single, toolkit, multiplayer etc
+	char		date[MAX_QPATH];
 	size_t		size;
 
 	int		gamemode;
@@ -199,7 +200,7 @@ typedef struct gameinfo_s
 	char		sp_entity[32];	// e.g. info_player_start
 	char		mp_entity[32];	// e.g. info_player_deathmatch
 
-	char		ambientsound[NUM_AMBIENTS][64];	// quake ambient sounds
+	char		ambientsound[NUM_AMBIENTS][MAX_QPATH];	// quake ambient sounds
 
 	int		max_edicts;	// min edicts is 600, max edicts is 4096
 	int		max_tents;	// min temp ents is 300, max is 2048
@@ -273,7 +274,7 @@ typedef struct host_redirect_s
 
 typedef struct
 {
-	char		name[64];
+	char		name[MAX_QPATH];
 	short		entnum;
 	vec3_t		origin;
 	float		volume;
@@ -311,7 +312,7 @@ typedef struct host_parm_s
 	uint		framecount;	// global framecount
 
 	// list of unique decal indexes
-	char		draw_decals[MAX_DECALS][CS_SIZE];
+	char		draw_decals[MAX_DECALS][MAX_QPATH];
 
 	vec3_t		player_mins[MAX_MAP_HULLS];	// 4 hulls allowed
 	vec3_t		player_maxs[MAX_MAP_HULLS];	// 4 hulls allowed
@@ -344,7 +345,7 @@ typedef struct host_parm_s
 	qboolean		renderinfo_changed;
 
 	char		rootdir[256];	// member root directory
-	char		gamefolder[64];	// it's a default gamefolder	
+	char		gamefolder[MAX_QPATH];	// it's a default gamefolder	
 	byte		*imagepool;	// imagelib mempool
 	byte		*soundpool;	// soundlib mempool
 
@@ -379,10 +380,8 @@ void FS_DefaultExtension( char *path, const char *extension );
 void FS_ExtractFilePath( const char *path, char *dest );
 const char *FS_GetDiskPath( const char *name, qboolean gamedironly );
 const char *FS_FileWithoutPath( const char *in );
-wfile_t *W_Open( const char *filename, const char *mode, int *errorcode );
 byte *W_LoadLump( wfile_t *wad, const char *lumpname, size_t *lumpsizeptr, const char type );
 void W_Close( wfile_t *wad );
-file_t *FS_OpenFile( const char *path, long *filesizeptr, qboolean gamedironly );
 byte *FS_LoadFile( const char *path, long *filesizeptr, qboolean gamedironly );
 qboolean FS_WriteFile( const char *filename, const void *data, long len );
 qboolean COM_ParseVector( char **pfile, float *v, size_t size );
@@ -412,7 +411,6 @@ long FS_Tell( file_t *file );
 qboolean FS_Eof( file_t *file );
 int FS_Close( file_t *file );
 int FS_Getc( file_t *file );
-qboolean FS_Eof( file_t *file );
 long FS_FileLength( file_t *f );
 
 /*
@@ -625,7 +623,6 @@ long FS_SetStreamPos( stream_t *stream, long newpos );
 long FS_GetStreamPos( stream_t *stream );
 void FS_FreeStream( stream_t *stream );
 qboolean Sound_Process( wavdata_t **wav, int rate, int width, uint flags );
-uint Sound_GetApproxWavePlayLen( const char *filepath );
 
 //
 // build.c
@@ -708,18 +705,7 @@ void Con_DPrintf( char *fmt, ... );
 void Con_Printf( char *szFmt, ... );
 int pfnNumberOfEntities( void );
 int pfnIsInGame( void );
-
-// CS:CS engfuncs (stubs)
-void *pfnSequenceGet( const char *fileName, const char *entryName );
-void *pfnSequencePickSentence( const char *groupName, int pickMethod, int *picked );
-int pfnIsCareerMatch( void );
-
-// Decay engfuncs (stubs)
-int pfnGetTimesTutorMessageShown( int mid );
-void pfnRegisterTutorMessageShown( int mid );
-void pfnConstructTutorMessageDecayBuffer( int *buffer, int buflen );
-void pfnProcessTutorMessageDecayBuffer( int *buffer, int bufferLength );
-void pfnResetTutorMessageDecayData( void );
+float pfnTime( void );
 
 /*
 ==============================================================
@@ -803,14 +789,12 @@ qboolean CL_IsThirdPerson( void );
 qboolean CL_IsIntermission( void );
 qboolean CL_Initialized( void );
 char *CL_Userinfo( void );
-float CL_GetServerTime( void );
 float CL_GetLerpFrac( void );
 void CL_CharEvent( int key );
 qboolean CL_DisableVisibility( void );
 int CL_PointContents( const vec3_t point );
 char *COM_ParseFile( char *data, char *token );
 byte *COM_LoadFile( const char *filename, int usehunk, int *pLength );
-void CL_StudioEvent( struct mstudioevent_s *event, struct cl_entity_s *ent );
 qboolean CL_GetComment( const char *demoname, char *comment );
 void COM_AddAppDirectoryToSearchPath( const char *pszBaseDir, const char *appName );
 int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBufferSize );
@@ -890,15 +874,10 @@ void Cmd_AutoComplete( char *complete_string );
 void COM_SetRandomSeed( long lSeed );
 long COM_RandomLong( long lMin, long lMax );
 float COM_RandomFloat( float fMin, float fMax );
-void TrimSpace( const char *source, char *dest );
 const byte *GL_TextureData( unsigned int texnum );
 void GL_FreeImage( const char *name );
 void VID_InitDefaultResolution( void );
 void UI_SetActiveMenu( qboolean fActive );
-struct cmd_s *Cmd_GetFirstFunctionHandle( void );
-struct cmd_s *Cmd_GetNextFunctionHandle( struct cmd_s *cmd );
-struct cmdalias_s *Cmd_AliasGetList( void );
-char *Cmd_GetName( struct cmd_s *cmd );
 void Cmd_Null_f( void );
 extern const char *svc_strings[256];
 extern const char *clc_strings[11];

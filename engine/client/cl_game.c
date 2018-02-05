@@ -87,7 +87,6 @@ static dllfunc_t cdll_new_exports[] = 	// allowed only in SDK 2.3 and higher
 { "HUD_VoiceStatus", (void **)&clgame.dllFuncs.pfnVoiceStatus },
 { "HUD_ChatInputPosition", (void **)&clgame.dllFuncs.pfnChatInputPosition },
 { "HUD_GetRenderInterface", (void **)&clgame.dllFuncs.pfnGetRenderInterface },	// Xash3D ext
-{ "HUD_GetPlayerTeam", (void **)&clgame.dllFuncs.pfnGetPlayerTeam },
 { "HUD_ClipMoveToEntity", (void **)&clgame.dllFuncs.pfnClipMoveToEntity },	// Xash3D ext
 { NULL, NULL }
 };
@@ -113,18 +112,6 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 		return cl.world;
 
 	return CL_EDICT_NUM( index );
-}
-
-/*
-====================
-CL_GetServerTime
-
-don't clamped time that come from server
-====================
-*/
-float CL_GetServerTime( void )
-{
-	return cl.mtime[0];
 }
 
 /*
@@ -258,18 +245,6 @@ int CL_PointContents( const vec3_t p )
 	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
 		cont = CONTENTS_WATER;
 	return cont;
-}
-
-/*
-====================
-StudioEvent
-
-Event callback for studio models
-====================
-*/
-void CL_StudioEvent( struct mstudioevent_s *event, cl_entity_t *pEdict )
-{
-	clgame.dllFuncs.pfnStudioEvent( event, pEdict );
 }
 
 /*
@@ -2675,11 +2650,7 @@ pfnGetMousePos
 */
 void pfnGetMousePos( struct tagPOINT *ppt )
 {
-	ASSERT( ppt != NULL );
-
-	// find mouse movement
 	GetCursorPos( ppt );
-	ScreenToClient( host.hWnd, ppt );
 }
 
 /*
@@ -2690,79 +2661,17 @@ pfnSetMousePos
 */
 void pfnSetMousePos( int mx, int my )
 {
-	POINT pt;
-
-	pt.x = mx;
-	pt.y = my;
-
-	ClientToScreen( host.hWnd, &pt );
-	SetCursorPos( pt.x, pt.y );
+	SetCursorPos( mx, my );
 }
 
 /*
 =============
 pfnSetMouseEnable
 
+legacy of dinput code
 =============
 */
 void pfnSetMouseEnable( qboolean fEnable )
-{
-	if( fEnable ) IN_ActivateMouse( false );
-	else IN_DeactivateMouse();
-}
-
-/*
-=============
-pfnGetServerTime
-
-=============
-*/
-float pfnGetClientOldTime( void )
-{
-	return cl.oldtime;
-}
-
-/*
-=============
-pfnGetGravity
-
-=============
-*/
-float pfnGetGravity( void )
-{
-	return clgame.movevars.gravity;
-}
-
-/*
-=============
-pfnEnableTexSort
-
-TODO: implement
-=============
-*/
-void pfnEnableTexSort( int enable )
-{
-}
-
-/*
-=============
-pfnSetLightmapColor
-
-TODO: implement
-=============
-*/
-void pfnSetLightmapColor( float red, float green, float blue )
-{
-}
-
-/*
-=============
-pfnSetLightmapScale
-
-TODO: implement
-=============
-*/
-void pfnSetLightmapScale( float scale )
 {
 }
 
@@ -2782,201 +2691,6 @@ char *pfnParseFile( char *data, char *token )
 	host.com_handlecolon = false;
 
 	return out;
-}
-
-/*
-=============
-pfnSPR_DrawGeneric
-
-=============
-*/
-void pfnSPR_DrawGeneric( int frame, int x, int y, const wrect_t *prc, int blendsrc, int blenddst, int width, int height )
-{
-	pglEnable( GL_BLEND );
-	pglBlendFunc( blendsrc, blenddst ); // g-cont. are params is valid?
-	SPR_DrawGeneric( frame, x, y, width, height, prc );
-}
-
-/*
-=============
-pfnDrawString
-
-=============
-*/
-int pfnDrawString( int x, int y, const char *str, int r, int g, int b )
-{
-	// draw the string until we hit the null character or a newline character
-	for( ; *str != 0 && *str != '\n'; str++ )
-		x += pfnDrawCharacter( x, y, (byte)*str, r, g, b );
-
-	return x;
-}
-
-/*
-=============
-pfnDrawStringReverse
-
-=============
-*/
-int pfnDrawStringReverse( int x, int y, const char *str, int r, int g, int b )
-{
-	char	*szIt;
-
-	// find the end of the string
-	for( szIt = (char *)str; *szIt != 0; szIt++ )
-		x -= clgame.scrInfo.charWidths[(byte)*szIt];
-	pfnDrawString( x, y, str, r, g, b );
-
-	return x;
-}
-
-/*
-=============
-LocalPlayerInfo_ValueForKey
-
-=============
-*/
-const char *LocalPlayerInfo_ValueForKey( const char* key )
-{
-	return Info_ValueForKey( cls.userinfo, key );
-}
-
-/*
-=============
-pfnVGUI2DrawCharacter
-
-=============
-*/
-int pfnVGUI2DrawCharacter( int x, int y, int ch, unsigned int font )
-{
-	return 0;
-}
-
-/*
-=============
-pfnVGUI2DrawCharacterAdditive
-
-=============
-*/
-int pfnVGUI2DrawCharacterAdditive( int x, int y, int ch, int r, int g, int b, unsigned int font )
-{
-	return 0;
-}
-
-/*
-=============
-GetCareerGameInterface
-
-=============
-*/
-void *GetCareerGameInterface( void )
-{
-	Msg( "^1Career GameInterface called!\n" );
-	return NULL;
-}
-
-/*
-=============
-pfnPlaySoundVoiceByName
-
-=============
-*/
-void pfnPlaySoundVoiceByName( char *filename, float volume, int pitch )
-{
-	int hSound = S_RegisterSound( filename );
-	S_StartSound( NULL, cl.viewentity, CHAN_AUTO, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
-}
-
-/*
-=============
-pfnMP3_InitStream
-
-=============
-*/
-void pfnMP3_InitStream( char *filename, int looping )
-{
-	if( !filename )
-	{
-		S_StopBackgroundTrack();
-		return;
-	}
-
-	if( looping )
-	{
-		S_StartBackgroundTrack( filename, filename, 0 );
-	}
-	else
-	{
-		S_StartBackgroundTrack( filename, NULL, 0 );
-	}
-}
-
-/*
-=============
-pfnPlaySoundByNameAtPitch
-
-=============
-*/
-void pfnPlaySoundByNameAtPitch( char *filename, float volume, int pitch )
-{
-	int hSound = S_RegisterSound( filename );
-	S_StartSound( NULL, cl.viewentity, CHAN_STATIC, hSound, volume, ATTN_NORM, pitch, SND_STOP_LOOPING );
-}
-
-/*
-=============
-CL_FillRGBABlend
-
-=============
-*/
-void CL_FillRGBABlend( int x, int y, int w, int h, int r, int g, int b, int a )
-{
-	r = bound( 0, r, 255 );
-	g = bound( 0, g, 255 );
-	b = bound( 0, b, 255 );
-	a = bound( 0, a, 255 );
-
-	SPR_AdjustSize( (float *)&x, (float *)&y, (float *)&w, (float *)&h );
-
-	pglDisable( GL_TEXTURE_2D );
-	pglEnable( GL_BLEND );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-	pglColor4f( r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f );
-
-	pglBegin( GL_QUADS );
-		pglVertex2f( x, y );
-		pglVertex2f( x + w, y );
-		pglVertex2f( x + w, y + h );
-		pglVertex2f( x, y + h );
-	pglEnd ();
-
-	pglColor3f( 1.0f, 1.0f, 1.0f );
-	pglEnable( GL_TEXTURE_2D );
-	pglDisable( GL_BLEND );
-}
-
-/*
-=============
-pfnGetAppID
-
-=============
-*/
-int pfnGetAppID( void )
-{
-	return 130; // borrowed from SDLash3D
-}
-
-/*
-=============
-pfnVguiWrap2_GetMouseDelta
-
-=============
-*/
-void pfnVguiWrap2_GetMouseDelta( int *x, int *y )
-{
-	if( x ) *x = 0;
-	if( y ) *y = 0;
 }
 
 /*
@@ -3176,6 +2890,7 @@ void TriCullFace( int mode )
 		clgame.ds.cullMode = GL_NONE;
 		break;
 	}
+
 	GL_Cull( clgame.ds.cullMode );
 }
 
@@ -3402,23 +3117,6 @@ NetAPI_InitNetworking
 void NetAPI_InitNetworking( void )
 {
 	NET_Config( true ); // allow remote
-}
-
-int Net_GetPacketLoss( void )
-{
-	int	packet_loss = 0;
-
-	if( cls.state == ca_active )
-	{
-		packet_loss = bound( 0, (int)cls.packet_loss, 100 );
-
-		if ( packet_loss < 0 )
-			packet_loss = 0;
-		if ( packet_loss > 100 )
-			packet_loss = 100;
-	}
-
-	return packet_loss;
 }
 
 /*
@@ -3660,6 +3358,7 @@ void NetAPI_SetValueForKey( char *s, const char *key, const char *value, int max
 =================
 IVoiceTweak implementation
 
+TODO: implement
 =================
 */
 /*
@@ -3670,7 +3369,6 @@ Voice_StartVoiceTweakMode
 */
 int Voice_StartVoiceTweakMode( void )
 {
-	// TODO: implement
 	return 0;
 }
 
@@ -3682,7 +3380,6 @@ Voice_EndVoiceTweakMode
 */
 void Voice_EndVoiceTweakMode( void )
 {
-	// TODO: implement
 }
 
 /*
@@ -3693,7 +3390,6 @@ Voice_SetControlFloat
 */	
 void Voice_SetControlFloat( VoiceTweakControl iControl, float value )
 {
-	// TODO: implement
 }
 
 /*
@@ -3704,20 +3400,7 @@ Voice_GetControlFloat
 */
 float Voice_GetControlFloat( VoiceTweakControl iControl )
 {
-	// TODO: implement
 	return 1.0f;
-}
-
-/*
-=================
-Voice_GetSpeakingVolume
-
-=================
-*/
-int Voice_GetSpeakingVolume( void )
-{
-	// TODO: implement
-	return 255;
 }
 
 // shared between client and server			
@@ -3743,7 +3426,7 @@ triangleapi_t gTriApi =
 	TriLightAtPoint,
 	TriColor4fRendermode,
 	TriFogParams,
-	R_LightVec,
+	R_LightVec,	// Xash3D added
 };
 
 static efx_api_t gEfxApi =
@@ -3848,7 +3531,7 @@ static event_api_t gEventApi =
 	pfnTraceTexture,
 	pfnStopAllSounds,
 	pfnKillEvents,
-	CL_EventIndex,
+	CL_EventIndex,		// Xash3D added
 	CL_IndexEvent,
 	CL_PlayerTraceExt,
 	CL_SoundFromIndex,
@@ -3887,7 +3570,6 @@ static IVoiceTweak gVoiceApi =
 	Voice_EndVoiceTweakMode,
 	Voice_SetControlFloat,
 	Voice_GetControlFloat,
-	Voice_GetSpeakingVolume,
 };
 
 // engine callbacks
@@ -3994,39 +3676,6 @@ static cl_enginefunc_t gEngfuncs =
 	pfnGetMousePos,
 	pfnSetMousePos,
 	pfnSetMouseEnable,
-	Cvar_GetListHead,
-	Cmd_GetFirstFunctionHandle,
-	Cmd_GetNextFunctionHandle,
-	Cmd_GetName,
-	pfnGetClientOldTime,
-	pfnGetGravity,
-	Mod_Handle,
-	pfnEnableTexSort,
-	pfnSetLightmapColor,
-	pfnSetLightmapScale,
-	pfnSequenceGet,
-	pfnSPR_DrawGeneric,
-	pfnSequencePickSentence,
-	pfnDrawString,
-	pfnDrawStringReverse,
-	LocalPlayerInfo_ValueForKey,
-	pfnVGUI2DrawCharacter,
-	pfnVGUI2DrawCharacterAdditive,
-	Sound_GetApproxWavePlayLen,
-	GetCareerGameInterface,
-	Cvar_Set,
-	pfnIsCareerMatch,
-	pfnPlaySoundVoiceByName,
-	pfnMP3_InitStream,
-	Sys_DoubleTime,
-	pfnProcessTutorMessageDecayBuffer,
-	pfnConstructTutorMessageDecayBuffer,
-	pfnResetTutorMessageDecayData,
-	pfnPlaySoundByNameAtPitch,
-	CL_FillRGBABlend,
-	pfnGetAppID,
-	Cmd_AliasGetList,
-	pfnVguiWrap2_GetMouseDelta,
 };
 
 void CL_UnloadProgs( void )
@@ -4061,7 +3710,7 @@ qboolean CL_LoadProgs( const char *name )
 {
 	static playermove_t		gpMove;
 	const dllfunc_t		*func;
-	CL_EXPORT_FUNCS		F; // export 'F'
+	CL_EXPORT_FUNCS		GetClientAPI; // single export
 	qboolean			critical_exports = true;
 
 	if( clgame.hInstance ) CL_UnloadProgs();
@@ -4085,12 +3734,12 @@ qboolean CL_LoadProgs( const char *name )
 		*func->func = NULL;
 
 	// trying to get single export named 'F'
-	if(( F = (void *)Com_GetProcAddress( clgame.hInstance, "F" )) != NULL )
+	if(( GetClientAPI = (void *)Com_GetProcAddress( clgame.hInstance, "GetClientAPI" )) != NULL )
 	{
 		MsgDev( D_NOTE, "CL_LoadProgs: found single callback export\n" );		
 
 		// trying to fill interface now
-		F( &clgame.dllFuncs );
+		GetClientAPI( &clgame.dllFuncs );
 
 		// check critical functions again
 		for( func = cdll_exports; func && func->name; func++ )
@@ -4123,7 +3772,7 @@ qboolean CL_LoadProgs( const char *name )
 		}
 	}
 
-	// it may be loaded through 'F' so we don't need to clear them
+	// it may be loaded through 'GetClientAPI' so we don't need to clear them
 	if( critical_exports )
 	{
 		// clear new exports

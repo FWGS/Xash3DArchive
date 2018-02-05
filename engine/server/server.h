@@ -137,10 +137,10 @@ typedef struct server_s
 	double		lastchecktime;
 	int		lastcheck;	// number of last checked client
 
-	char		model_precache[MAX_MODELS][CS_SIZE];
-	char		sound_precache[MAX_SOUNDS][CS_SIZE];
-	char		files_precache[MAX_CUSTOM][CS_SIZE];
-	char		event_precache[MAX_EVENTS][CS_SIZE];
+	char		model_precache[MAX_MODELS][MAX_QPATH];
+	char		sound_precache[MAX_SOUNDS][MAX_QPATH];
+	char		files_precache[MAX_CUSTOM][MAX_QPATH];
+	char		event_precache[MAX_EVENTS][MAX_QPATH];
 
 	sv_static_entity_t	static_entities[MAX_STATIC_ENTITIES];
 	int		num_static_entities;

@@ -288,17 +288,14 @@ void CL_ProcessEntityUpdate( cl_entity_t *ent )
 		CL_UpdatePositions( ent );
 	}
 
-	if( !FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
+	if( ent->player && !FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
 	{
 		// g-cont. it should be done for all the players?
 		// FIXME: probably this cause problems with flahslight and mirror reflection
 		// but it's used to reduce player body pitch...
-		if( ent->player )
-		{
-			if( world.has_mirrors && gl_allow_mirrors->value && RP_LOCALCLIENT( ent ) && !cl.local.thirdperson )
-				ent->curstate.angles[PITCH] /= 3.0f;
-			else ent->curstate.angles[PITCH] /= -3.0f;
-		}
+		if( FBitSet( world.flags, FWORLD_HAS_MIRRORS ) && gl_allow_mirrors->value && RP_LOCALCLIENT( ent ) && !cl.local.thirdperson )
+			ent->curstate.angles[PITCH] /= 3.0f;
+		else ent->curstate.angles[PITCH] /= -3.0f;
 	}
 
 	VectorCopy( ent->curstate.origin, ent->origin );
@@ -911,7 +908,16 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 
 	// check for adding this entity
 	if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, ent->model->name ))
-		return false;
+		return true;
+
+	if( entityType == ET_PLAYER && RP_LOCALCLIENT( ent ))
+	{
+		if( !CL_IsThirdPerson( ))
+		{
+			if( !gl_allow_mirrors->value || !FBitSet( world.flags, FWORLD_HAS_MIRRORS ))
+				return false;
+		}
+	}
 
 	if( entityType == ET_BEAM )
 	{
@@ -985,12 +991,6 @@ void CL_LinkPlayers( frame_t *frame )
 	{
 		if( state->messagenum != cl.parsecount )
 			continue;	// not present this frame
-
-		if( !CL_IsThirdPerson() && ( i == cl.viewentity - 1 ))
-		{
-			if( !gl_allow_mirrors->value || !world.has_mirrors )
-				continue;
-		}
 
 		if( !state->modelindex || FBitSet( state->effects, EF_NODRAW ))
 			continue;

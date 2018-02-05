@@ -565,7 +565,7 @@ Build mirror chains for this frame
 */
 void R_FindMirrors( void )
 {
-	if( !world.has_mirrors || RI.drawOrtho || !RI.drawWorld || RI.onlyClientDraw || !cl.worldmodel )
+	if( !FBitSet( world.flags, FWORLD_HAS_MIRRORS ) || RI.drawOrtho || !RI.drawWorld || RI.onlyClientDraw || !cl.worldmodel )
 		return;
 
 	// NOTE: we already has initial params at this point like vieworg, viewangles

@@ -19,20 +19,28 @@ GNU General Public License for more details.
 
 #define MAX_CMD_BUFFER	32768
 #define MAX_CMD_LINE	2048
+#define MAX_ALIAS_NAME	32
+
+typedef struct cmdalias_s
+{
+	struct cmdalias_s	*next;
+	char		name[MAX_ALIAS_NAME];
+	char		*value;
+} cmdalias_t;
 
 typedef struct
 {
-	byte	*data;
-	int	cursize;
-	int	maxsize;
+	byte		*data;
+	int		cursize;
+	int		maxsize;
 } cmdbuf_t;
 
-qboolean		cmd_wait;
-cmdbuf_t		cmd_text;
-byte		cmd_text_buf[MAX_CMD_BUFFER];
-cmdalias_t	*cmd_alias;
-uint		cmd_condition;
-int		cmd_condlevel;
+qboolean			cmd_wait;
+cmdbuf_t			cmd_text;
+byte			cmd_text_buf[MAX_CMD_BUFFER];
+cmdalias_t		*cmd_alias;
+uint			cmd_condition;
+int			cmd_condlevel;
 
 /*
 =============================================================================
@@ -73,7 +81,7 @@ void *Cbuf_GetSpace( cmdbuf_t *buf, int length )
 {
 	void    *data;
 	
-	if( buf->cursize + length > buf->maxsize )
+	if(( buf->cursize + length ) > buf->maxsize )
 	{
 		buf->cursize = 0;
 		Host_Error( "Cbuf_GetSpace: overflow\n" );
@@ -96,7 +104,7 @@ void Cbuf_AddText( const char *text )
 {
 	int	l = Q_strlen( text );
 
-	if( cmd_text.cursize + l >= cmd_text.maxsize )
+	if(( cmd_text.cursize + l ) >= cmd_text.maxsize )
 	{
 		MsgDev( D_WARN, "Cbuf_AddText: overflow\n" );
 	}
@@ -118,7 +126,7 @@ void Cbuf_InsertText( const char *text )
 {
 	int	l = Q_strlen( text );
 
-	if( cmd_text.cursize + l >= cmd_text.maxsize )
+	if(( cmd_text.cursize + l ) >= cmd_text.maxsize )
 	{
 		MsgDev( D_WARN, "Cbuf_InsertText: overflow\n" );
 	}
@@ -285,8 +293,8 @@ Cmd_StuffCmds_f
 
 Adds command line parameters as script statements
 Commands lead with a +, and continue until a - or another +
-xash -dev 3 +map c1a0d
-xash -nosound -game bshift
+hl.exe -dev 3 +map c1a0d
+hl.exe -nosound -game bshift
 ===============
 */
 void Cmd_StuffCmds_f( void )
@@ -488,47 +496,6 @@ Cmd_Args
 char *Cmd_Args( void )
 {
 	return cmd_args;
-}
-
-/*
-============
-Cmd_AliasGetList
-============
-*/
-struct cmdalias_s *Cmd_AliasGetList( void )
-{
-	return cmd_alias;
-}
-
-/*
-============
-Cmd_GetList
-============
-*/
-struct cmd_s *Cmd_GetFirstFunctionHandle( void )
-{
-	return cmd_functions;
-}
-
-/*
-============
-Cmd_GetNext
-============
-*/
-struct cmd_s *Cmd_GetNextFunctionHandle( struct cmd_s *cmd )
-{
-	return (cmd) ? cmd->next : NULL;
-}
-
-
-/*
-============
-Cmd_GetName
-============
-*/
-char *Cmd_GetName( struct cmd_s *cmd )
-{
-	return cmd->name;
 }
 
 /*

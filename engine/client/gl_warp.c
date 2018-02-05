@@ -322,7 +322,7 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 		}
 	}
 
-	if( world.sky_sphere && fa->polys && !world.custom_skybox )
+	if( FBitSet( world.flags, FWORLD_SKYSPHERE ) && fa->polys && !FBitSet( world.flags, FWORLD_CUSTOM_SKYBOX ))
 	{
 		glpoly_t	*p = fa->polys;
 
@@ -366,7 +366,7 @@ void R_UnloadSkybox( void )
 	tr.skyboxbasenum = 5800;	// set skybox base (to let some mods load hi-res skyboxes)
 
 	memset( tr.skyboxTextures, 0, sizeof( tr.skyboxTextures ));
-	world.custom_skybox = false;
+	ClearBits( world.flags, FWORLD_CUSTOM_SKYBOX );
 }
 
 /*
@@ -488,7 +488,7 @@ void R_SetupSky( const char *skyboxname )
 
 	if( i == 6 )
 	{
-		world.custom_skybox = true;
+		SetBits( world.flags, FWORLD_CUSTOM_SKYBOX );
 		return; // loaded
 	}
 
@@ -676,12 +676,12 @@ void R_DrawClouds( void )
 
 /*
 =============
-R_InitSky
+R_InitSkyClouds
 
 A sky texture is 256*128, with the right side being a masked overlay
 ==============
 */
-void R_InitSky( mip_t *mt, texture_t *tx, qboolean custom_palette )
+void R_InitSkyClouds( mip_t *mt, texture_t *tx, qboolean custom_palette )
 {
 	rgbdata_t	r_temp, *r_sky;
 	uint	*trans, *rgba;
@@ -689,6 +689,9 @@ void R_InitSky( mip_t *mt, texture_t *tx, qboolean custom_palette )
 	int	r, g, b;
 	int	i, j, p;
 	char	texname[32];
+
+	if( !glw_state.initialized )
+		return;
 
 	Q_snprintf( texname, sizeof( texname ), "%s%s.mip", ( mt->offsets[0] > 0 ) ? "#" : "", tx->name );
 
@@ -709,15 +712,15 @@ void R_InitSky( mip_t *mt, texture_t *tx, qboolean custom_palette )
 	if( !r_sky || !r_sky->palette || r_sky->type != PF_INDEXED_32 || r_sky->height == 0 )
 	{
 		MsgDev( D_ERROR, "R_InitSky: unable to load sky texture %s\n", tx->name );
-		FS_FreeImage( r_sky );
+		if( r_sky ) FS_FreeImage( r_sky );
 		return;
 	}
 
 	// make an average value for the back to avoid
 	// a fringe on the top level
 	trans = Mem_Alloc( r_temppool, r_sky->height * r_sky->height * sizeof( *trans ));
-
 	r = g = b = 0;
+
 	for( i = 0; i < r_sky->width >> 1; i++ )
 	{
 		for( j = 0; j < r_sky->height; j++ )
@@ -742,9 +745,9 @@ void R_InitSky( mip_t *mt, texture_t *tx, qboolean custom_palette )
 	r_temp.height = r_sky->height;
 	r_temp.type = PF_RGBA_32;
 	r_temp.flags = IMAGE_HAS_COLOR;
-	r_temp.palette = NULL;
-	r_temp.buffer = (byte *)trans;
 	r_temp.size = r_temp.width * r_temp.height * 4;
+	r_temp.buffer = (byte *)trans;
+	r_temp.palette = NULL;
 
 	// load it in
 	tr.solidskyTexture = GL_LoadTextureInternal( "solid_sky", &r_temp, TF_NOMIPMAP, false );
@@ -754,6 +757,7 @@ void R_InitSky( mip_t *mt, texture_t *tx, qboolean custom_palette )
 		for( j = 0; j < r_sky->height; j++ )
 		{
 			p = r_sky->buffer[i * r_sky->width + j];
+
 			if( p == 0 )
 			{
 				trans[(i * r_sky->height) + j] = transpix;

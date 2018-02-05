@@ -96,6 +96,7 @@ BRUSH MODELS
 #define MAX_MAP_MIPTEX		0x2000000		// 32 Mb internal textures data
 #define MAX_MAP_LIGHTING		0x2000000		// 32 Mb lightmap raw data (can contain deluxemaps)
 #define MAX_MAP_VISIBILITY		0x1000000		// 16 Mb visdata
+#define MAX_MAP_FACEINFO		8192		// can be increased but not needs
 #define MAX_TOTAL_CLIPNODES		524288
 
 // quake lump ordering
@@ -217,7 +218,7 @@ typedef struct
 	float	maxs[3];
 	int	firstface;
 	int	numfaces;			// counting both sides
-} dnode2_t;
+} dnode32_t;
 
 // leaf 0 is the generic CONTENTS_SOLID leaf, used for all solid areas
 // all other leafs need visibility info
@@ -247,7 +248,7 @@ typedef struct
 	int	nummarksurfaces;
 
 	byte	ambient_level[NUM_AMBIENTS];
-} dleaf2_t;
+} dleaf32_t;
 
 typedef struct
 {
@@ -259,7 +260,7 @@ typedef struct
 {
 	int	planenum;
 	int	children[2];		// negative numbers are contents
-} dclipnode2_t;
+} dclipnode32_t;
 
 typedef struct
 {
@@ -278,7 +279,7 @@ typedef struct
 } dfaceinfo_t;
 
 typedef word	dmarkface_t;		// leaf marksurfaces indexes
-typedef int	dmarkface2_t;		// leaf marksurfaces indexes
+typedef int	dmarkface32_t;		// leaf marksurfaces indexes
 
 typedef int	dsurfedge_t;		// map surfedges
 
@@ -292,7 +293,7 @@ typedef struct
 typedef struct
 {
 	int	v[2];			// vertex numbers
-} dedge2_t;
+} dedge32_t;
 
 typedef struct
 {
@@ -320,6 +321,6 @@ typedef struct
 	// lighting info
 	byte	styles[LM_STYLES];
 	int	lightofs;			// start of [numstyles*surfsize] samples
-} dface2_t;
+} dface32_t;
 
 #endif//BSPFILE_H

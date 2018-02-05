@@ -348,7 +348,7 @@ Host_RegisterDecal
 */
 qboolean Host_RegisterDecal( const char *name, int *count )
 {
-	char	shortname[CS_SIZE];
+	char	shortname[MAX_QPATH];
 	int	i;
 
 	if( !name || !*name )

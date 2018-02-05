@@ -443,6 +443,10 @@ void CL_ParseMovevars( sizebuf_t *msg )
 
 	MSG_ReadDeltaMovevars( msg, &clgame.oldmovevars, &clgame.movevars );
 
+	// water alpha is not allowed
+	if( !FBitSet( world.flags, FWORLD_WATERALPHA ))
+		clgame.movevars.wateralpha = 1.0f;
+
 	// update sky if changed
 	if( Q_strcmp( clgame.oldmovevars.skyName, clgame.movevars.skyName ) && cl.video_prepped )
 		R_SetupSky( clgame.movevars.skyName );
@@ -1488,45 +1492,6 @@ void CL_ParseScreenFade( sizebuf_t *msg )
 
 /*
 ==============
-CL_ParseCvarValue
-
-Find the client cvar value
-and sent it back to the server
-==============
-*/
-void CL_ParseCvarValue( sizebuf_t *msg )
-{
-	const char *cvarName = MSG_ReadString( msg );
-	convar_t *cvar = Cvar_FindVar( cvarName );
-
-	// build the answer
-	MSG_BeginClientCmd( &cls.netchan.message, clc_requestcvarvalue );
-	MSG_WriteString( &cls.netchan.message, cvar ? cvar->string : "Not Found" );
-}
-
-/*
-==============
-CL_ParseCvarValue2
-
-Find the client cvar value
-and sent it back to the server
-==============
-*/
-void CL_ParseCvarValue2( sizebuf_t *msg )
-{
-	int requestID = MSG_ReadLong( msg );
-	const char *cvarName = MSG_ReadString( msg );
-	convar_t *cvar = Cvar_FindVar( cvarName );
-
-	// build the answer
-	MSG_BeginClientCmd( &cls.netchan.message, clc_requestcvarvalue2 );
-	MSG_WriteLong( &cls.netchan.message, requestID );
-	MSG_WriteString( &cls.netchan.message, cvarName );
-	MSG_WriteString( &cls.netchan.message, cvar ? cvar->string : "Not Found" );
-}
-
-/*
-==============
 CL_DispatchUserMessage
 
 Dispatch user message by engine request
@@ -1701,8 +1666,6 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			break;		
 
 		cmd = MSG_ReadServerCmd( msg );
-
-		if( cmd == svc_querycvarvalue2 ) Msg( "buffer left: %d bytes\n", MSG_GetNumBytesLeft( msg ));
 
 		// record command for debugging spew on parse problem
 		CL_Parse_RecordCommand( cmd, bufStart );
@@ -1902,12 +1865,6 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			break;
 		case svc_studiodecal:
 			CL_ParseStudioDecal( msg );
-			break;
-		case svc_querycvarvalue:
-			CL_ParseCvarValue( msg );
-			break;
-		case svc_querycvarvalue2:
-			CL_ParseCvarValue2( msg );
 			break;
 		default:
 			CL_ParseUserMessage( msg, cmd );

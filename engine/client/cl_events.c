@@ -184,7 +184,7 @@ void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook func )
 	ev = clgame.events[lastnum];
 
 	// NOTE: ev->index will be set later
-	Q_strncpy( ev->name, szEvName, CS_SIZE );
+	Q_strncpy( ev->name, szEvName, MAX_QPATH );
 	ev->func = func;
 }
 

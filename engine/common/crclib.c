@@ -229,12 +229,11 @@ qboolean CRC32_File( dword *crcvalue, const char *filename )
 
 qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multiplayer )
 {
-	file_t	*f;
-	dheader_t	*header;
 	char	headbuf[256], buffer[1024];
 	int	i, num_bytes, lumplen;
-	qboolean	blue_shift = false;
 	int	version, hdr_size;
+	dheader_t	*header;
+	file_t	*f;
 
 	if( !crcvalue ) return false;
 
@@ -276,18 +275,10 @@ qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multipla
 		return false;
 	}
 
-	ASSERT( crcvalue != NULL );
 	CRC32_Init( crcvalue );
 
-	// check for Blue-Shift maps
-	if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && (header->lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
-		blue_shift = true;
-
-	for( i = 0; i < HEADER_LUMPS; i++ )
+	for( i = LUMP_PLANES; i < HEADER_LUMPS; i++ )
 	{
-		if( blue_shift && i == LUMP_PLANES ) continue;
-		else if( i == LUMP_ENTITIES ) continue;
-
 		lumplen = header->lumps[i].filelen;
 		FS_Seek( f, header->lumps[i].fileofs, SEEK_SET );
 

@@ -1265,7 +1265,7 @@ void R_DrawTextureChains( void )
 	RI.currententity = clgame.entities;
 	RI.currentmodel = RI.currententity->model;
 
-	if( world.sky_sphere && !world.custom_skybox )
+	if( FBitSet( world.flags, FWORLD_SKYSPHERE ) && !FBitSet( world.flags, FWORLD_CUSTOM_SKYBOX ))
 	{
 		pglDisable( GL_TEXTURE_2D );
 		pglColor3f( 1.0f, 1.0f, 1.0f );
@@ -1275,7 +1275,7 @@ void R_DrawTextureChains( void )
 	for( s = skychain; s != NULL; s = s->texturechain )
 		R_AddSkyBoxSurface( s );
 
-	if( world.sky_sphere && !world.custom_skybox )
+	if( FBitSet( world.flags, FWORLD_SKYSPHERE ) && !FBitSet( world.flags, FWORLD_CUSTOM_SKYBOX ))
 	{
 		pglEnable( GL_TEXTURE_2D );
 		if( skychain )
@@ -2147,6 +2147,11 @@ void GL_BuildLightmaps( void )
 	memset( tr.mirror_entities, 0, sizeof( tr.mirror_entities ));
 	memset( tr.mirrorTextures, 0, sizeof( tr.mirrorTextures ));
 	memset( &RI, 0, sizeof( RI ));
+
+	// update the lightmap blocksize
+	if( FBitSet( host.features, ENGINE_LARGE_LIGHTMAPS ))
+		tr.block_size = BLOCK_SIZE_MAX;
+	else tr.block_size = BLOCK_SIZE_DEFAULT;
 	
 	skychain = NULL;
 

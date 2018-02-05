@@ -576,37 +576,26 @@ void SV_WriteEntityPatch( const char *filename )
 	dheader_t		*header;
 	int		ver = -1, lumpofs = 0, lumplen = 0;
 	byte		buf[MAX_SYSPATH]; // 1 kb
+	string		bspfilename;
 	file_t		*f;
-			
-	f = FS_Open( va( "maps/%s.bsp", filename ), "rb", false );
+
+	Q_strncpy( bspfilename, va( "maps/%s.bsp", filename ), sizeof( bspfilename ));			
+	f = FS_Open( bspfilename, "rb", false );
 	if( !f ) return;
 
 	memset( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
-	ver = *(uint *)buf;
-                              
-	switch( ver )
+	header = (dheader_t *)buf;
+
+	// check all the lumps and some other errors
+	if( !Mod_TestBmodelLumps( bspfilename, buf, true ))
 	{
-	case Q1BSP_VERSION:
-	case HLBSP_VERSION:
-	case QBSP2_VERSION:
-		header = (dheader_t *)buf;
-		if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && (header->lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
-		{
-			// Blue-Shift ordering
-			lumpofs = header->lumps[LUMP_PLANES].fileofs;
-			lumplen = header->lumps[LUMP_PLANES].filelen;
-		}
-		else
-		{
-			lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
-			lumplen = header->lumps[LUMP_ENTITIES].filelen;
-		}
-		break;
-	default:
 		FS_Close( f );
 		return;
 	}
+
+	lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
+	lumplen = header->lumps[LUMP_ENTITIES].filelen;
 
 	if( lumplen >= 10 )
 	{
@@ -642,7 +631,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 
 	*flags = 0;
 
-	Q_strncpy( bspfilename, va( "maps/%s.bsp", filename ), sizeof( entfilename ));			
+	Q_strncpy( bspfilename, va( "maps/%s.bsp", filename ), sizeof( bspfilename ));			
 	f = FS_Open( bspfilename, "rb", false );
 	if( !f ) return NULL;
 
@@ -650,31 +639,19 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 
 	memset( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
-	ver = *(uint *)buf;
-                              
-	switch( ver )
+	header = (dheader_t *)buf;
+
+	// check all the lumps and some other errors
+	if( !Mod_TestBmodelLumps( bspfilename, buf, (host.developer <= 2) ? true : false ))
 	{
-	case Q1BSP_VERSION:
-	case HLBSP_VERSION:
-	case QBSP2_VERSION:
-		header = (dheader_t *)buf;
-		if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && (header->lumps[LUMP_ENTITIES].filelen % sizeof( dplane_t )) == 0 )
-		{
-			// Blue-Shift ordering
-			lumpofs = header->lumps[LUMP_PLANES].fileofs;
-			lumplen = header->lumps[LUMP_PLANES].filelen;
-		}
-		else
-		{
-			lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
-			lumplen = header->lumps[LUMP_ENTITIES].filelen;
-		}
-		break;
-	default:
 		*flags |= MAP_INVALID_VERSION;
 		FS_Close( f );
 		return NULL;
 	}
+
+	// after call Mod_TestBmodelLumps we gurantee what map is valid
+	lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
+	lumplen = header->lumps[LUMP_ENTITIES].filelen;
 
 	// check for entfile too
 	Q_strncpy( entfilename, va( "maps/%s.ent", filename ), sizeof( entfilename ));
@@ -692,7 +669,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 	if( !ents && lumplen >= 10 )
 	{
 		FS_Seek( f, lumpofs, SEEK_SET );
-		ents = (char *)Z_Malloc( lumplen + 1 );
+		ents = Z_Malloc( lumplen + 1 );
 		FS_Read( f, ents, lumplen );
 	}
 
@@ -3409,17 +3386,6 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 
 /*
 =============
-pfnTime
-
-=============
-*/
-float pfnTime( void )
-{
-	return (float)Sys_DoubleTime();
-}
-
-/*
-=============
 pfnStaticDecal
 
 =============
@@ -4362,111 +4328,6 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 
 	return result;
 }
-
-/*
-=============
-pfnGetFileSize
-
-returns the filesize in bytes
-=============
-*/
-int pfnGetFileSize( char *filename )
-{
-	return FS_FileSize( filename, false );
-}
-
-/*
-=============
-pfnGetLocalizedStringLength
-
-used by CS:CZ (client stub)
-=============
-*/
-int pfnGetLocalizedStringLength( const char *label )
-{
-	return 0;
-}
-
-/*
-=============
-pfnQueryClientCvarValue
-
-request client cvar value
-=============
-*/
-void pfnQueryClientCvarValue( const edict_t *player, const char *cvarName )
-{
-	sv_client_t *cl;
-
-	if( !cvarName || !*cvarName )
-	{
-		MsgDev( D_ERROR, "QueryClientCvarValue: NULL cvar name!\n" );
-		return;
-	}
-
-	if(( cl = SV_ClientFromEdict( player, true )) != NULL )
-	{
-		MSG_BeginServerCmd( &cl->netchan.message, svc_querycvarvalue );
-		MSG_WriteString( &cl->netchan.message, cvarName );
-	}
-	else
-	{
-		if( svgame.dllFuncs2.pfnCvarValue )
-			svgame.dllFuncs2.pfnCvarValue( player, "Bad Player" );
-		MsgDev( D_ERROR, "QueryClientCvarValue: tried to send to a non-client!\n" );
-	}
-}
-
-/*
-=============
-pfnQueryClientCvarValue2
-
-request client cvar value (bugfixed)
-=============
-*/
-void pfnQueryClientCvarValue2( const edict_t *player, const char *cvarName, int requestID )
-{
-	sv_client_t *cl;
-
-	if( !cvarName || !*cvarName )
-	{
-		MsgDev( D_ERROR, "QueryClientCvarValue: NULL cvar name!\n" );
-		return;
-	}
-
-	if(( cl = SV_ClientFromEdict( player, true )) != NULL )
-	{
-		MSG_BeginServerCmd( &cl->netchan.message, svc_querycvarvalue2 );
-		MSG_WriteLong( &cl->netchan.message, requestID );
-		MSG_WriteString( &cl->netchan.message, cvarName );
-	}
-	else
-	{
-		if( svgame.dllFuncs2.pfnCvarValue2 )
-			svgame.dllFuncs2.pfnCvarValue2( player, requestID, cvarName, "Bad Player" );
-		MsgDev( D_ERROR, "QueryClientCvarValue: tried to send to a non-client!\n" );
-	}
-}
-
-/*
-=============
-pfnCheckParm
-
-=============
-*/
-static int pfnCheckParm( char *parm, char **ppnext )
-{
-	int i = Sys_CheckParm( parm );
-
-	if( ppnext != NULL )
-	{
-		if( i > 0 && i < host.argc - 1 )
-			*ppnext = (char*)host.argv[i + 1];
-		else *ppnext = NULL;
-	}
-
-	return i;
-}
 					
 // engine callbacks
 static enginefuncs_t gEngfuncs = 
@@ -4615,20 +4476,6 @@ static enginefuncs_t gEngfuncs =
 	pfnVoice_GetClientListening,
 	pfnVoice_SetClientListening,
 	pfnGetPlayerAuthId,
-	pfnSequenceGet,
-	pfnSequencePickSentence,
-	pfnGetFileSize,
-	Sound_GetApproxWavePlayLen,
-	pfnIsCareerMatch,
-	pfnGetLocalizedStringLength,
-	pfnRegisterTutorMessageShown,
-	pfnGetTimesTutorMessageShown,
-	pfnProcessTutorMessageDecayBuffer,
-	pfnConstructTutorMessageDecayBuffer,
-	pfnResetTutorMessageDecayData,
-	pfnQueryClientCvarValue,
-	pfnQueryClientCvarValue2,
-	pfnCheckParm,
 };
 
 /*

@@ -26,7 +26,7 @@ GNU General Public License for more details.
 
 extern byte	*r_temppool;
 
-#define BLOCK_SIZE		world.block_size	// lightmap blocksize
+#define BLOCK_SIZE		tr.block_size	// lightmap blocksize
 #define BLOCK_SIZE_DEFAULT	128		// for keep backward compatibility
 #define BLOCK_SIZE_MAX	1024
 
@@ -220,6 +220,7 @@ typedef struct
 
 	byte		visbytes[(MAX_MAP_LEAFS+7)/8];	// member custom PVS
 	int		lightstylevalue[MAX_LIGHTSTYLES];	// value 0 - 65536
+	int		block_size;			// lightmap blocksize
 
 	double		frametime;	// special frametime for multipass rendering (will set to 0 on a nextview)
 	float		blend;		// global blend value
@@ -450,7 +451,7 @@ void R_AliasInit( void );
 //
 // gl_warp.c
 //
-void R_InitSky( struct mip_s *mt, struct texture_s *tx, qboolean custom_palette );
+void R_InitSkyClouds( struct mip_s *mt, struct texture_s *tx, qboolean custom_palette );
 void R_AddSkyBoxSurface( msurface_t *fa );
 void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );

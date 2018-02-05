@@ -79,7 +79,6 @@ typedef struct wfile_s
 	int		infotableofs;
 	byte		*mempool;			// W_ReadLump temp buffers
 	int		numlumps;
-	int		mode;
 	file_t		*handle;
 	dlumpinfo_t	*lumps;
 	time_t		filetime;
@@ -118,6 +117,7 @@ static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedir
 static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char matchtype );
 static dpackfile_t *FS_AddFileToPack( const char* name, pack_t *pack, long offset, long size );
 static byte *W_LoadFile( const char *path, long *filesizeptr, qboolean gamedironly );
+static wfile_t *W_Open( const char *filename, int *errorcode );
 static qboolean FS_SysFileExists( const char *path );
 static qboolean FS_SysFolderExists( const char *path );
 static long FS_SysFileTime( const char *filename );
@@ -313,7 +313,7 @@ static dpackfile_t *FS_AddFileToPack( const char *name, pack_t *pack, long offse
 		diff = Q_stricmp( pack->files[middle].name, name );
 
 		// If we found the file, there's a problem
-		if( !diff ) MsgDev( D_WARN, "Package %s contains the file %s several times\n", pack->filename, name );
+		if( !diff ) MsgDev( D_WARN, "package %s contains the file %s several times\n", pack->filename, name );
 
 		// If we're too far in the list
 		if( diff > 0 ) right = middle - 1;
@@ -549,7 +549,7 @@ static qboolean FS_AddWad_Fullpath( const char *wadfile, qboolean *already_loade
 	}
           
 	if( already_loaded ) *already_loaded = false;
-	if( !Q_stricmp( ext, "wad" )) wad = W_Open( wadfile, "rb", &errorcode );
+	if( !Q_stricmp( ext, "wad" )) wad = W_Open( wadfile, &errorcode );
 	else MsgDev( D_ERROR, "\"%s\" doesn't have a wad extension\n", wadfile );
 
 	if( wad )
@@ -1904,12 +1904,12 @@ Open a file. The syntax is the same as fopen
 */
 file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly )
 {
-	if( host.type == HOST_NORMAL || host.type == HOST_DEDICATED )
-          {
-		// some stupid mappers used leading '/' or '\' in path to models or sounds
-		if( filepath[0] == '/' || filepath[0] == '\\' ) filepath++;
-		if( filepath[0] == '/' || filepath[0] == '\\' ) filepath++;
-          }
+	// some stupid mappers used leading '/' or '\' in path to models or sounds
+	if( filepath[0] == '/' || filepath[0] == '\\' )
+		filepath++;
+
+	if( filepath[0] == '/' || filepath[0] == '\\' )
+		filepath++;
 
 	if( FS_CheckNastyPath( filepath, false ))
 		return NULL;
@@ -2312,25 +2312,6 @@ byte *FS_LoadFile( const char *path, long *filesizeptr, qboolean gamedironly )
 		*filesizeptr = filesize;
 
 	return buf;
-}
-
-/*
-============
-FS_OpenFile
-
-Simply version of FS_Open
-============
-*/
-file_t *FS_OpenFile( const char *path, long *filesizeptr, qboolean gamedironly )
-{
-	file_t	*file = FS_Open( path, "rb", gamedironly );
-
-	if( filesizeptr )
-	{
-		if( file ) *filesizeptr = file->real_length;
-		else *filesizeptr = 0;
-	}
-	return file;
 }
 
 /*
@@ -2925,7 +2906,7 @@ void FS_InitMemory( void )
 /*
 =============================================================================
 
-WADSYSTEM PRIVATE COMMON FUNCTIONS
+WADSYSTEM PRIVATE ROUTINES
 
 =============================================================================
 */
@@ -3205,36 +3186,6 @@ byte *W_ReadLump( wfile_t *wad, dlumpinfo_t *lump, long *lumpsizeptr )
 }
 
 /*
-===========
-W_WriteLump
-
-compress and write lump
-===========
-*/
-qboolean W_WriteLump( wfile_t *wad, dlumpinfo_t *lump, const void *data, size_t datasize )
-{
-	if( !wad || !lump ) return false;
-
-	if( !data || !datasize )
-	{
-		MsgDev( D_WARN, "W_WriteLump: ignore blank lump %s - nothing to save\n", lump->name );
-		return false;
-	}
-
-	if( wad->mode == O_RDONLY )
-	{
-		MsgDev( D_ERROR, "W_WriteLump: %s opened in readonly mode\n", wad->filename ); 
-		return false;
-	}
-
-	lump->size = lump->disksize = datasize;
-
-	if( FS_Write( wad->handle, data, datasize ) == datasize )
-		return true;		
-	return false;
-}
-
-/*
 =============================================================================
 
 WADSYSTEM PUBLIC BASE FUNCTIONS
@@ -3248,54 +3199,17 @@ W_Open
 open the wad for reading & writing
 ===========
 */
-wfile_t *W_Open( const char *filename, const char *mode, int *error )
+wfile_t *W_Open( const char *filename, int *error )
 {
-	dwadinfo_t	header;
 	wfile_t		*wad = (wfile_t *)Mem_Alloc( fs_mempool, sizeof( wfile_t ));
-	const char	*comment = "Created by Xash3D Engine.\0";
-	int		i, ind, mod, opt, lumpcount;
-	size_t		wadsize, lat_size;
+	int		i, lumpcount;
 	dlumpinfo_t	*srclumps;
-
-	// parse the mode string
-	switch( mode[0] )
-	{
-	case 'r':
-		mod = O_RDONLY;
-		opt = 0;
-		break;
-	case 'w':
-		mod = O_WRONLY;
-		opt = O_CREAT|O_TRUNC;
-		break;
-	case 'a':
-		mod = O_WRONLY;
-		opt = O_CREAT;
-		break;
-	default:
-		MsgDev( D_ERROR, "W_Open(%s, %s): invalid mode\n", filename, mode );
-		return NULL;
-	}
-
-	for( ind = 1; mode[ind] != '\0'; ind++ )
-	{
-		switch( mode[ind] )
-		{
-		case '+':
-			mod = O_RDWR;
-			break;
-		case 'b':
-			opt |= O_BINARY;
-			break;
-		default:
-			MsgDev( D_ERROR, "W_Open: %s: unknown char in mode (%c)\n", filename, mode, mode[ind] );
-			break;
-		}
-	}
+	size_t		lat_size;
+	dwadinfo_t	header;
 
 	// NOTE: FS_Open is load wad file from the first pak in the list (while fs_ext_path is false)
-	if( fs_ext_path ) wad->handle = FS_Open( filename, mode, false );
-	else wad->handle = FS_Open( FS_FileWithoutPath( filename ), mode, false );
+	if( fs_ext_path ) wad->handle = FS_Open( filename, "rb", false );
+	else wad->handle = FS_Open( FS_FileWithoutPath( filename ), "rb", false );
 
 	if( wad->handle == NULL )
 	{
@@ -3310,124 +3224,92 @@ wfile_t *W_Open( const char *filename, const char *mode, int *error )
 	wad->filetime = FS_SysFileTime( filename );
 	wad->mempool = Mem_AllocPool( filename );
 
-	wadsize = FS_FileLength( wad->handle );
-
-	// if the file is opened in "write", "append", or "read/write" mode
-	if( mod == O_WRONLY || !wadsize )
+	if( FS_Read( wad->handle, &header, sizeof( dwadinfo_t )) != sizeof( dwadinfo_t ))
 	{
-		dwadinfo_t hdr;
-
-		wad->numlumps = 0;		// blank wad
-		wad->lumps = NULL;		//
-		wad->mode = O_WRONLY;
-
-		// save space for header
-		hdr.ident = IDWAD3HEADER;
-		hdr.numlumps = wad->numlumps;
-		hdr.infotableofs = sizeof( dwadinfo_t );
-		FS_Write( wad->handle, &hdr, sizeof( hdr ));
-		FS_Write( wad->handle, comment, Q_strlen( comment ) + 1 );
-		wad->infotableofs = FS_Tell( wad->handle );
+		MsgDev( D_ERROR, "W_Open: %s can't read header\n", filename );
+		if( error ) *error = WAD_LOAD_BAD_HEADER;
+		W_Close( wad );
+		return NULL;
 	}
-	else if( mod == O_RDWR || mod == O_RDONLY )
+
+	if( header.ident != IDWAD2HEADER && header.ident != IDWAD3HEADER )
 	{
-		if( mod == O_RDWR )
-			wad->mode = O_APPEND;
-		else wad->mode = O_RDONLY;
+		MsgDev( D_ERROR, "W_Open: %s is not a WAD2 or WAD3 file\n", filename );
+		if( error ) *error = WAD_LOAD_BAD_HEADER;
+		W_Close( wad );
+		return NULL;
+	}
 
-		if( FS_Read( wad->handle, &header, sizeof( dwadinfo_t )) != sizeof( dwadinfo_t ))
-		{
-			MsgDev( D_ERROR, "W_Open: %s can't read header\n", filename );
-			if( error ) *error = WAD_LOAD_BAD_HEADER;
-			W_Close( wad );
-			return NULL;
-		}
+	lumpcount = header.numlumps;
 
-		if( header.ident != IDWAD2HEADER && header.ident != IDWAD3HEADER )
-		{
-			MsgDev( D_ERROR, "W_Open: %s is not a WAD2 or WAD3 file\n", filename );
-			if( error ) *error = WAD_LOAD_BAD_HEADER;
-			W_Close( wad );
-			return NULL;
-		}
+	if( lumpcount >= MAX_FILES_IN_WAD )
+	{
+		MsgDev( D_WARN, "W_Open: %s is full (%i lumps)\n", filename, lumpcount );
+		if( error ) *error = WAD_LOAD_TOO_MANY_FILES;
+	}
+	else if( lumpcount <= 0 )
+	{
+		MsgDev( D_ERROR, "W_Open: %s has no lumps\n", filename );
+		if( error ) *error = WAD_LOAD_NO_FILES;
+		W_Close( wad );
+		return NULL;
+	}
+	else if( error ) *error = WAD_LOAD_OK;
 
-		lumpcount = header.numlumps;
+	wad->infotableofs = header.infotableofs; // save infotableofs position
 
-		if( lumpcount >= MAX_FILES_IN_WAD && wad->mode == O_APPEND )
-		{
-			MsgDev( D_WARN, "W_Open: %s is full (%i lumps)\n", filename, lumpcount );
-			if( error ) *error = WAD_LOAD_TOO_MANY_FILES;
-			wad->mode = O_RDONLY; // set read-only mode
-		}
-		else if( lumpcount <= 0 && wad->mode == O_RDONLY )
-		{
-			MsgDev( D_ERROR, "W_Open: %s has no lumps\n", filename );
-			if( error ) *error = WAD_LOAD_NO_FILES;
-			W_Close( wad );
-			return NULL;
-		}
-		else if( error ) *error = WAD_LOAD_OK;
+	if( FS_Seek( wad->handle, wad->infotableofs, SEEK_SET ) == -1 )
+	{
+		MsgDev( D_ERROR, "W_Open: %s can't find lump allocation table\n", filename );
+		if( error ) *error = WAD_LOAD_BAD_FOLDERS;
+		W_Close( wad );
+		return NULL;
+	}
 
-		wad->infotableofs = header.infotableofs; // save infotableofs position
+	lat_size = lumpcount * sizeof( dlumpinfo_t );
 
-		if( FS_Seek( wad->handle, wad->infotableofs, SEEK_SET ) == -1 )
-		{
-			MsgDev( D_ERROR, "W_Open: %s can't find lump allocation table\n", filename );
-			if( error ) *error = WAD_LOAD_BAD_FOLDERS;
-			W_Close( wad );
-			return NULL;
-		}
+	// NOTE: lumps table can be reallocated for O_APPEND mode
+	srclumps = (dlumpinfo_t *)Mem_Alloc( wad->mempool, lat_size );
 
-		lat_size = lumpcount * sizeof( dlumpinfo_t );
-
-		// NOTE: lumps table can be reallocated for O_APPEND mode
-		srclumps = (dlumpinfo_t *)Mem_Alloc( wad->mempool, lat_size );
-
-		if( FS_Read( wad->handle, srclumps, lat_size ) != lat_size )
-		{
-			MsgDev( D_ERROR, "W_ReadLumpTable: %s has corrupted lump allocation table\n", wad->filename );
-			if( error ) *error = WAD_LOAD_CORRUPTED;
-			Mem_Free( srclumps );
-			W_Close( wad );
-			return NULL;
-		}
-
-		// starting to add lumps
-		wad->lumps = (dlumpinfo_t *)Mem_Alloc( wad->mempool, lat_size );
-		wad->numlumps = 0;
-
-		// sort lumps for binary search
-		for( i = 0; i < lumpcount; i++ )
-		{
-			char	name[16];
-			int	k;
-
-			// cleanup lumpname
-			Q_strnlwr( srclumps[i].name, name, sizeof( srclumps[i].name ));
-
-			// check for '*' symbol issues (quake1)
-			k = Q_strlen( Q_strrchr( name, '*' ));
-			if( k ) name[Q_strlen( name ) - k] = '!';
-
-			// check for Quake 'conchars' issues (only lmp loader really allows to read this lame pic)
-			if( srclumps[i].type == 68 && !Q_stricmp( srclumps[i].name, "conchars" ))
-				srclumps[i].type = TYP_GFXPIC; 
-
-			// fixups bad image types (some quake wads)
-			if( srclumps[i].img_type < 0 || srclumps[i].img_type > IMG_DECAL_COLOR )
-				srclumps[i].img_type = IMG_DIFFUSE;
-
-			W_AddFileToWad( name, wad, &srclumps[i] );
-		}
-
-		// release source lumps
+	if( FS_Read( wad->handle, srclumps, lat_size ) != lat_size )
+	{
+		MsgDev( D_ERROR, "W_ReadLumpTable: %s has corrupted lump allocation table\n", wad->filename );
+		if( error ) *error = WAD_LOAD_CORRUPTED;
 		Mem_Free( srclumps );
-
-		// if we are in append mode - we need started from infotableofs poisition
-		// overwrite lumptable as well, we have her copy in wad->lumps
-		if( wad->mode == O_APPEND )
-			FS_Seek( wad->handle, wad->infotableofs, SEEK_SET );
+		W_Close( wad );
+		return NULL;
 	}
+
+	// starting to add lumps
+	wad->lumps = (dlumpinfo_t *)Mem_Alloc( wad->mempool, lat_size );
+	wad->numlumps = 0;
+
+	// sort lumps for binary search
+	for( i = 0; i < lumpcount; i++ )
+	{
+		char	name[16];
+		int	k;
+
+		// cleanup lumpname
+		Q_strnlwr( srclumps[i].name, name, sizeof( srclumps[i].name ));
+
+		// check for '*' symbol issues (quake1)
+		k = Q_strlen( Q_strrchr( name, '*' ));
+		if( k ) name[Q_strlen( name ) - k] = '!';
+
+		// check for Quake 'conchars' issues (only lmp loader really allows to read this lame pic)
+		if( srclumps[i].type == 68 && !Q_stricmp( srclumps[i].name, "conchars" ))
+			srclumps[i].type = TYP_GFXPIC; 
+
+		// fixups bad image types (some quake wads)
+		if( srclumps[i].img_type < 0 || srclumps[i].img_type > IMG_DECAL_COLOR )
+			srclumps[i].img_type = IMG_DIFFUSE;
+
+		W_AddFileToWad( name, wad, &srclumps[i] );
+	}
+
+	// release source lumps
+	Mem_Free( srclumps );
 
 	// and leave the file open
 	return wad;
@@ -3444,28 +3326,9 @@ void W_Close( wfile_t *wad )
 {
 	if( !wad ) return;
 
-	if( wad->handle != NULL && ( wad->mode == O_APPEND || wad->mode == O_WRONLY ))
-	{
-		dwadinfo_t	hdr;
-		long		ofs;
-
-		// write the lumpinfo
-		ofs = FS_Tell( wad->handle );
-		FS_Write( wad->handle, wad->lumps, wad->numlumps * sizeof( dlumpinfo_t ));
-
-		// write the header
-		hdr.ident = IDWAD3HEADER;
-		hdr.numlumps = wad->numlumps;
-		hdr.infotableofs = ofs;
-
-		FS_Seek( wad->handle, 0, SEEK_SET );
-		FS_Write( wad->handle, &hdr, sizeof( hdr ));
-	}
-
 	Mem_FreePool( &wad->mempool );
 	if( wad->handle != NULL )
 		FS_Close( wad->handle );	
-
 	Mem_Free( wad ); // free himself
 }
 
@@ -3476,119 +3339,6 @@ FILESYSTEM IMPLEMENTATION
 
 =============================================================================
 */
-/*
-===========
-W_SaveLump
-
-write new or replace existed lump
-===========
-*/
-size_t W_SaveFile( wfile_t *wad, const char *lump, const void *data, size_t datasize, char type, qboolean replace )
-{
-	dlumpinfo_t	*find, newlump;
-	size_t		lat_size, oldpos;
-	char		hint, lumpname[64];
-
-	if( !wad || !lump ) return -1;
-
-	if( !data || !datasize )
-	{
-		MsgDev( D_WARN, "W_SaveLump: ignore blank lump %s - nothing to save\n", lump );
-		return -1;
-	}
-
-	if( wad->mode == O_RDONLY )
-	{
-		MsgDev( D_ERROR, "W_SaveLump: %s opened in readonly mode\n", wad->filename ); 
-		return -1;
-	}
-
-	if( wad->numlumps >= MAX_FILES_IN_WAD )
-	{
-		MsgDev( D_ERROR, "W_SaveLump: %s is full\n", wad->filename ); 
-		return -1;
-	}
-
-	find = W_FindLump( wad, lump, type );
-
-	if( find != NULL && replace )
-	{
-		if( FBitSet( find->attribs, ATTR_READONLY ))
-		{
-			// g-cont. i left this limitation as a protect of the replacement of compressed lumps
-			MsgDev( D_ERROR, "W_ReplaceLump: %s is read-only\n", find->name );
-			return -1;
-		}
-
-		if( datasize != find->disksize )
-		{
-			MsgDev( D_ERROR, "W_ReplaceLump: %s [%s] should be [%s]\n",
-			lumpname, Q_memprint( datasize ), Q_memprint( find->disksize )); 
-			return -1;
-		}
-
-		oldpos = FS_Tell( wad->handle ); // don't forget restore original position
-
-		if( FS_Seek( wad->handle, find->filepos, SEEK_SET ) == -1 )
-		{
-			MsgDev( D_ERROR, "W_ReplaceLump: %s is corrupted\n", find->name );
-			FS_Seek( wad->handle, oldpos, SEEK_SET );
-			return -1;
-		}
-
-		if( FS_Write( wad->handle, data, datasize ) != find->disksize )
-			MsgDev( D_WARN, "W_ReplaceLump: %s probably replaced with errors\n", find->name );
-
-		// restore old position
-		FS_Seek( wad->handle, oldpos, SEEK_SET );
-
-		return wad->numlumps;
-	}
-	else
-	{
-		MsgDev( D_ERROR, "W_SaveLump: %s already exist\n", lump ); 
-		return -1;
-	}
-
-	// prepare lump name
-	Q_strncpy( lumpname, lump, sizeof( lumpname ));
-
-	// extract image hint
-	hint = W_HintFromSuf( lumpname );
-
-	if( hint != IMG_DIFFUSE )
-		lumpname[Q_strlen( lumpname ) - HINT_NAMELEN] = '\0'; // kill the suffix
-
-	if( Q_strlen( lumpname ) >= WAD3_NAMELEN )
-	{
-		// name is too long
-		MsgDev( D_ERROR, "W_SaveLump: %s more than %i symbols\n", lumpname, WAD3_NAMELEN ); 
-		return -1;
-	}
-
-	lat_size = sizeof( dlumpinfo_t ) * (wad->numlumps + 1);
-
-	// reallocate lumptable
-	wad->lumps = (dlumpinfo_t *)Mem_Realloc( wad->mempool, wad->lumps, lat_size );
-
-	memset( &newlump, 0, sizeof( newlump ));
-
-	// write header
-	Q_strnupr( lumpname, newlump.name, WAD3_NAMELEN );
-	newlump.filepos = FS_Tell( wad->handle );
-	newlump.attribs = ATTR_NONE;
-	newlump.img_type = hint;
-	newlump.type = type;
-
-	if( !W_WriteLump( wad, &newlump, data, datasize ))
-		return -1;
-
-	// record entry and re-sort table
-	W_AddFileToWad( lumpname, wad, &newlump );
-
-	return wad->numlumps;
-}
-
 /*
 ===========
 W_LoadFile

@@ -955,7 +955,7 @@ Netchan_CopyFileFragments
 qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 {
 	fragbuf_t	*p, *n;
-	char	filename[CS_SIZE];
+	char	filename[MAX_QPATH];
 	int	nsize;
 	byte	*buffer;
 	int	pos;

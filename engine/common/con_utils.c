@@ -69,13 +69,13 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 
 	for( i = 0, nummaps = 0; i < t->numfilenames; i++ )
 	{
-		char		entfilename[CS_SIZE];
-		int		ver = -1, mapver = -1, lumpofs = 0, lumplen = 0;
+		char		entfilename[MAX_QPATH];
 		const char	*ext = FS_FileExtension( t->filenames[i] ); 
+		int		ver = -1, lumpofs = 0, lumplen = 0;
 		char		*ents = NULL, *pfile;
+		qboolean		validmap = false;
 		int		version = 0;
-		qboolean		gearbox = false;
-			
+
 		if( Q_stricmp( ext, "bsp" )) continue;
 		Q_strncpy( message, "^1error^7", sizeof( message ));
 		f = FS_Open( t->filenames[i], "rb", con_gamemaps->value );
@@ -89,30 +89,17 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 			FS_Read( f, buf, sizeof( buf ));
 			header = (dheader_t *)buf;
 			ver = header->version;
-                              
-			switch( ver )
+
+			// check all the lumps and some other errors
+			if( Mod_TestBmodelLumps( t->filenames[i], buf, true ))
 			{
-			case Q1BSP_VERSION:
-			case HLBSP_VERSION:
-			case QBSP2_VERSION:
-				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 && !(header->lumps[LUMP_ENTITIES].filelen % sizeof(dplane_t)))
-				{
-					lumpofs = header->lumps[LUMP_PLANES].fileofs;
-					lumplen = header->lumps[LUMP_PLANES].filelen;
-					gearbox = true;
-				}
-				else
-				{
-					lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
-					lumplen = header->lumps[LUMP_ENTITIES].filelen;
-					gearbox = false;
-				}
-				break;
+				lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
+				lumplen = header->lumps[LUMP_ENTITIES].filelen;
+				ver = header->version;
 			}
 
 			hdrext = (dextrahdr_t *)((byte *)buf + sizeof( dheader_t ));
-			if( hdrext->id == IDEXTRAHEADER )
-				version = hdrext->version;
+			if( hdrext->id == IDEXTRAHEADER ) version = hdrext->version;
 
 			Q_strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
@@ -132,23 +119,17 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 				// means there is no title, so clear the message string now
 				char	token[2048];
 
-				message[0] = 0;
+				message[0] = 0; // remove 'error'
 				pfile = ents;
 
 				while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 				{
 					if( !Q_strcmp( token, "{" )) continue;
-					else if(!Q_strcmp( token, "}" )) break;
-					else if(!Q_strcmp( token, "message" ))
+					else if( !Q_strcmp( token, "}" )) break;
+					else if( !Q_strcmp( token, "message" ))
 					{
 						// get the message contents
 						pfile = COM_ParseFile( pfile, message );
-					}
-					else if(!Q_strcmp( token, "mapversion" ))
-					{
-						// get the message contents
-						pfile = COM_ParseFile( pfile, token );
-						mapver = Q_atoi( token );
 					}
 				}
 				Mem_Free( ents );
@@ -161,19 +142,19 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 		switch( ver )
 		{
 		case Q1BSP_VERSION:
-			if( mapver == 220 ) Q_strncpy( buf, "Half-Life Alpha", sizeof( buf ));
-			else Q_strncpy( buf, "Quake", sizeof( buf ));
+			Q_strncpy( buf, "Quake", sizeof( buf ));
 			break;
 		case QBSP2_VERSION:
 			Q_strncpy( buf, "Darkplaces BSP2", sizeof( buf ));
 			break;
 		case HLBSP_VERSION:
-			if( gearbox ) Q_strncpy( buf, "Blue-Shift", sizeof( buf ));
-			else if( version == 1 ) Q_strncpy( buf, "XashXT old format", sizeof( buf ));
-			else if( version == 2 ) Q_strncpy( buf, "Paranoia 2: Savior", sizeof( buf ));
-			else if( version == 3 ) Q_strncpy( buf, "not supported", sizeof( buf ));
-			else if( version == 4 ) Q_strncpy( buf, "Half-Life extended", sizeof( buf ));
-			else Q_strncpy( buf, "Half-Life", sizeof( buf ));
+			switch( version )
+			{
+			case 1: Q_strncpy( buf, "XashXT old format", sizeof( buf )); break;
+			case 2: Q_strncpy( buf, "Paranoia 2: Savior", sizeof( buf )); break;
+			case 4: Q_strncpy( buf, "Half-Life extended", sizeof( buf )); break;
+			default: Q_strncpy( buf, "Half-Life", sizeof( buf )); break;
+			}
 			break;
 		default:	Q_strncpy( buf, "??", sizeof( buf )); break;
 		}
@@ -706,7 +687,6 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			// mod doesn't contain any maps (probably this is a bot)
 			return Cmd_CheckMapsList_R( fRefresh, false );
 		}
-
 		return false;
 	}
 
@@ -715,7 +695,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 	for( i = 0; i < t->numfilenames; i++ )
 	{
 		char		*ents = NULL, *pfile;
-		int		ver = -1, lumpofs = 0, lumplen = 0;
+		int		lumpofs = 0, lumplen = 0;
 		string		mapname, message, entfilename;
 
 		if( Q_stricmp( FS_FileExtension( t->filenames[i] ), "bsp" ))
@@ -731,26 +711,18 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 
 			memset( buf, 0, MAX_SYSPATH );
 			FS_Read( f, buf, MAX_SYSPATH );
-			ver = *(uint *)buf;
-                              
-			switch( ver )
+			header = (dheader_t *)buf;
+
+			// check all the lumps and some other errors
+			if( !Mod_TestBmodelLumps( t->filenames[i], buf, true ))
 			{
-			case Q1BSP_VERSION:
-			case HLBSP_VERSION:
-			case QBSP2_VERSION:
-				header = (dheader_t *)buf;
-				if( header->lumps[LUMP_ENTITIES].fileofs <= 1024 )
-				{
-					lumpofs = header->lumps[LUMP_PLANES].fileofs;
-					lumplen = header->lumps[LUMP_PLANES].filelen;
-				}
-				else
-				{
-					lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
-					lumplen = header->lumps[LUMP_ENTITIES].filelen;
-				}
-				break;
+				FS_Close( f );
+				continue;
 			}
+
+			// after call Mod_TestBmodelLumps we gurantee what map is valid                              
+			lumpofs = header->lumps[LUMP_ENTITIES].fileofs;
+			lumplen = header->lumps[LUMP_ENTITIES].filelen;
 
 			Q_strncpy( entfilename, t->filenames[i], sizeof( entfilename ));
 			FS_StripExtension( entfilename );
@@ -760,7 +732,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			if( !ents && lumplen >= 10 )
 			{
 				FS_Seek( f, lumpofs, SEEK_SET );
-				ents = (char *)Mem_Alloc( host.mempool, lumplen + 1 );
+				ents = Z_Malloc( lumplen + 1 );
 				FS_Read( f, ents, lumplen );
 			}
 
@@ -768,7 +740,7 @@ qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
 			{
 				// if there are entities to parse, a missing message key just
 				// means there is no title, so clear the message string now
-				char	token[2048];
+				char	token[MAX_TOKEN];
 				qboolean	worldspawn = true;
 
 				Q_strncpy( message, "No Title", MAX_STRING );

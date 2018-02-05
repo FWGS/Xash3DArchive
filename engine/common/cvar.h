@@ -62,7 +62,6 @@ void Cvar_WriteVariables( file_t *f, int group );
 void Cvar_Reset( const char *var_name );
 void Cvar_SetCheatState( void );
 qboolean Cvar_Command( void );
-cvar_t *Cvar_GetListHead( void );
 void Cvar_Init( void );
 void Cvar_Unlink( int group );
 

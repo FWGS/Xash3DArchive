@@ -21,16 +21,6 @@ convar_t	*cmd_scripting;
 
 /*
 ============
-Cvar_GetListHead
-============
-*/
-cvar_t *Cvar_GetListHead( void )
-{
-	return (cvar_t *)cvar_vars;
-}
-
-/*
-============
 Cvar_FindVar
 
 find the specified variable by name

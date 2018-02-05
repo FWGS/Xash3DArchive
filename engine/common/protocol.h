@@ -76,8 +76,8 @@ GNU General Public License for more details.
 #define svc_eventindex		54	// [index][eventname]
 // reserved
 #define svc_resourcelocation		56	// [string]
-#define svc_querycvarvalue		57	// [string]
-#define svc_querycvarvalue2		58	// [string][long] (context)
+// reserved
+// reserved
 #define svc_lastmsg			58	// start user messages at this point
 
 // client to server
@@ -90,8 +90,8 @@ GNU General Public License for more details.
 // reserved
 #define clc_fileconsistency		7
 #define clc_voicedata		8
-#define clc_requestcvarvalue		9
-#define clc_requestcvarvalue2		10
+// reserved
+// reserved
 #define clc_lastmsg			10	// end client messages
 
 #define MAX_VISIBLE_PACKET_BITS	11	// 2048 visible entities per frame (hl1 has 256)
@@ -174,7 +174,7 @@ typedef struct
 {
 	int	rescount;
 	int	restype[MAX_RESOURCES];
-	char	resnames[MAX_RESOURCES][CS_SIZE];
+	char	resnames[MAX_RESOURCES][MAX_QPATH];
 } resourcelist_t;
 
 #endif//PROTOCOL_H
