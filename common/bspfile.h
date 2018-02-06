@@ -56,8 +56,6 @@ BRUSH MODELS
 #define SURF_UNDERWATER		BIT( 7 )		// caustics
 #define SURF_TRANSPARENT		BIT( 8 )		// it's a transparent texture (was SURF_DONTWARP)
 
-#define SURF_REFLECT		BIT( 31 )		// reflect surface (mirror)
-
 // lightstyle management
 #define LM_STYLES			4		// MAXLIGHTMAPS
 #define LS_NORMAL			0x00

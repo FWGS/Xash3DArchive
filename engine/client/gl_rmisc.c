@@ -64,7 +64,6 @@ static const dmaterial_t detail_table[] =
 { "car",		"dt_metal%i",	'M', 1, 2 },
 { "circuit",	"dt_metal%i",	'M', 1, 2 },
 { "steel",	"dt_ssteel1",	'M', 0, 0 },
-{ "reflect",	"dt_ssteel1",	'G', 0, 0 },
 { "dirt",		"dt_ground%i",	'D', 1, 5 },	// dirt
 { "drt",		"dt_ground%i",	'D', 1, 5 },
 { "out",		"dt_ground%i",	'D', 1, 5 },

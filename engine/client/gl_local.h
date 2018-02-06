@@ -34,21 +34,18 @@ extern byte	*r_temppool;
 #define MAX_DETAIL_TEXTURES	256
 #define MAX_LIGHTMAPS	256
 #define SUBDIVIDE_SIZE	64
-#define MAX_MIRRORS		32	// per one frame!
 #define MAX_DECAL_SURFS	4096
-#define MAX_MIRROR_ENTITIES	MAX_MIRRORS
 
 #define SHADEDOT_QUANT 	16	// precalculated dot products for quantized angles
 #define SHADE_LAMBERT	1.495f
 
 // refparams
 #define RP_NONE		0
-#define RP_MIRRORVIEW	BIT( 0 )	// lock pvs at vieworg
-#define RP_ENVVIEW		BIT( 1 )	// used for cubemapshot
-#define RP_OLDVIEWLEAF	BIT( 2 )
-#define RP_CLIPPLANE	BIT( 3 )	// mirrors used
+#define RP_ENVVIEW		BIT( 0 )	// used for cubemapshot
+#define RP_OLDVIEWLEAF	BIT( 1 )
+#define RP_CLIPPLANE	BIT( 2 )
 
-#define RP_NONVIEWERREF	(RP_MIRRORVIEW|RP_ENVVIEW)
+#define RP_NONVIEWERREF	(RP_ENVVIEW)
 #define R_ModelOpaque( rm )	( rm == kRenderNormal )
 #define RP_LOCALCLIENT( e )	((e) != NULL && (e)->index == ( cl.playernum + 1 ) && e->player )
 #define RP_NORMALPASS()	((RI.params & RP_NONVIEWERREF) == 0 )
@@ -93,13 +90,6 @@ typedef struct gltexture_s
 
 	struct gltexture_s	*nextHash;
 } gltexture_t;
-
-// mirror entity
-typedef struct gl_entity_s
-{
-	cl_entity_t	*ent;
-	mextrasurf_t	*chain;
-} gl_entity_t;
 
 typedef struct
 {
@@ -187,18 +177,13 @@ typedef struct
 	int		grayCubeTexture;
 	int		whiteCubeTexture;
 	int		skyboxTextures[6];	// skybox sides
-	int		mirrorTextures[MAX_MIRRORS];
-	int		num_mirrors_used;	// used mirror textures
 
 	int		skytexturenum;	// this not a gl_texturenum!
-
 	int		skyboxbasenum;	// start with 5800
 
 	// entity lists
-	gl_entity_t	mirror_entities[MAX_MIRROR_ENTITIES];	// an entities that has mirror
 	cl_entity_t	*solid_entities[MAX_VISIBLE_PACKET];	// opaque moving or alpha brushes
 	cl_entity_t	*trans_entities[MAX_VISIBLE_PACKET];	// translucent brushes
-	uint		num_mirror_entities;
 	uint		num_solid_entities;
 	uint		num_trans_entities;
 
@@ -243,8 +228,6 @@ typedef struct
 	uint		c_studio_models_drawn;
 	uint		c_sprite_models_drawn;
 	uint		c_particle_count;
-
-	uint		c_mirror_passes;
 
 	uint		c_client_ents;	// entities that moved to client
 } ref_speeds_t;
@@ -335,14 +318,6 @@ void R_InitImages( void );
 void R_ShutdownImages( void );
 
 //
-// gl_mirror.c
-//
-void R_BeginDrawMirror( msurface_t *fa );
-void R_EndDrawMirror( void );
-void R_DrawMirrors( void );
-void R_FindMirrors( void );
-
-//
 // gl_refrag.c
 //
 void R_StoreEfrags( efrag_t **ppefrag, int framecount );
@@ -408,7 +383,6 @@ imgfilter_t *R_FindTexFilter( const char *texname );
 //
 void R_MarkLeaves( void );
 void R_DrawWorld( void );
-void R_DrawMirrors( void );
 void R_DrawWaterSurfaces( void );
 void R_DrawBrushModel( cl_entity_t *e );
 void GL_SubdivideSurface( msurface_t *fa );
@@ -665,7 +639,6 @@ extern convar_t	*gl_lightmap_nearest;
 extern convar_t	*gl_keeptjunctions;
 extern convar_t	*gl_detailscale;
 extern convar_t	*gl_wireframe;
-extern convar_t	*gl_allow_mirrors;
 extern convar_t	*gl_polyoffset;
 extern convar_t	*gl_finish;
 extern convar_t	*gl_nosort;

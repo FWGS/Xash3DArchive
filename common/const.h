@@ -115,8 +115,6 @@
 
 
 
-#define EF_NOREFLECT		(1<<24)	// Entity won't reflecting in mirrors
-#define EF_REFLECTONLY		(1<<25)	// Entity will be drawing only in mirrors
 #define EF_NOWATERCSG		(1<<26)	// Do not remove sides for func_water entity
 #define EF_FULLBRIGHT		(1<<27)	// Just get fullbright
 #define EF_NOSHADOW			(1<<28)	// ignore shadow for this entity

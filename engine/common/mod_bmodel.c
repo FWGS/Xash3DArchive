@@ -2147,14 +2147,6 @@ static void Mod_LoadSurfaces( dbspmodel_t *bmod )
 		if( !Q_strncmp( tex->name, "{scroll", 7 ))
 			SetBits( out->flags, SURF_CONVEYOR|SURF_TRANSPARENT );
 
-		// g-cont this texture comes from decals.wad he-he
-		// support !reflect for reflected water
-		if( !Q_strcmp( tex->name, "reflect1" ) || !Q_strncmp( tex->name, "!reflect", 8 ))
-		{
-			SetBits( world.flags, FWORLD_HAS_MIRRORS );
-			SetBits( out->flags, SURF_REFLECT );
-		}
-
 		if( tex->name[0] == '{' )
 			SetBits( out->flags, SURF_TRANSPARENT );
 
@@ -2377,9 +2369,8 @@ static void Mod_LoadLeafs( dbspmodel_t *bmod )
 		{
 			for( j = 0; j < out->nummarksurfaces; j++ )
 			{
-				// underwater surfaces can't have reflection (perfomance)
+				// mark underwater surfaces
 				SetBits( out->firstmarksurface[j]->flags, SURF_UNDERWATER );
-				ClearBits( out->firstmarksurface[j]->flags, SURF_REFLECT );
 			}
 		}
 	}

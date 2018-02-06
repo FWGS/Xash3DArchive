@@ -1088,8 +1088,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	texture_t	*t;
 	int	maps;
 	qboolean	is_dynamic = false;
-	qboolean	is_mirror = false;
-	
+
 	r_stats.c_world_polys++;
 
 	if( fa->flags & SURF_DRAWSKY )
@@ -1097,34 +1096,12 @@ void R_RenderBrushPoly( msurface_t *fa )
 
 	t = R_TextureAnimation( fa );
 
-	if( RP_NORMALPASS() && fa->flags & SURF_REFLECT )
-	{
-		if( fa->info->mirrortexturenum )
-		{
-			GL_Bind( GL_TEXTURE0, fa->info->mirrortexturenum );
-			is_mirror = true;
-
-			// BEGIN WATER STUFF
-			if( fa->flags & SURF_DRAWTURB )
-			{
-				R_BeginDrawMirror( fa );
-				GL_Bind( GL_TEXTURE1, t->gl_texturenum );
-				pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-			}
-		}
-		else GL_Bind( GL_TEXTURE0, t->gl_texturenum ); // dummy
-
-		// DEBUG: reset the mirror texture after drawing
-		fa->info->mirrortexturenum = 0;
-	}
-	else GL_Bind( GL_TEXTURE0, t->gl_texturenum );
+	GL_Bind( GL_TEXTURE0, t->gl_texturenum );
 
 	if( fa->flags & SURF_DRAWTURB )
 	{	
 		// warp texture, no lightmaps
 		EmitWaterPolys( fa->polys, ( fa->flags & SURF_NOCULL ), false );
-		if( is_mirror ) R_EndDrawMirror();
-		// END WATER STUFF
 		return;
 	}
 
@@ -1165,9 +1142,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 		}
 	}
 
-	if( is_mirror ) R_BeginDrawMirror( fa );
 	DrawGLPoly( fa->polys, 0.0f, 0.0f );
-	if( is_mirror ) R_EndDrawMirror();
 
 	if( RI.currententity->curstate.rendermode == kRenderNormal )
 	{
@@ -1184,10 +1159,6 @@ void R_RenderBrushPoly( msurface_t *fa )
 		// if rendermode != kRenderNormal draw decals sequentially
 		DrawSurfaceDecals( fa, true, (dist < 0.0f) ? true : false );
 	}
-
-	// NOTE: draw mirror through in mirror show dummy lightmapped texture
-	if( fa->flags & SURF_REFLECT && RP_NORMALPASS( ))
-		return; // no lightmaps for mirror
 
 	if( fa->flags & SURF_DRAWTILED )
 		return; // no lightmaps anyway
@@ -1508,14 +1479,6 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( !RI.drawWorld ) return;
 
 	clmodel = e->model;
-
-	// don't reflect this entity in mirrors
-	if( e->curstate.effects & EF_NOREFLECT && RI.params & RP_MIRRORVIEW )
-		return;
-
-	// draw only in mirrors
-	if( e->curstate.effects & EF_REFLECTONLY && !( RI.params & RP_MIRRORVIEW ))
-		return;
 
 	if( !VectorIsNull( e->angles ))
 	{
@@ -2136,16 +2099,7 @@ void GL_BuildLightmaps( void )
 		GL_FreeTexture( tr.lightmapTextures[i] );
 	}
 
-	// release old mirror textures
-	for( i = 0; i < MAX_MIRRORS; i++ )
-	{
-		if( !tr.mirrorTextures[i] ) break;
-		GL_FreeTexture( tr.mirrorTextures[i] );
-	}
-
 	memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
-	memset( tr.mirror_entities, 0, sizeof( tr.mirror_entities ));
-	memset( tr.mirrorTextures, 0, sizeof( tr.mirrorTextures ));
 	memset( &RI, 0, sizeof( RI ));
 
 	// update the lightmap blocksize
@@ -2158,8 +2112,6 @@ void GL_BuildLightmaps( void )
 	tr.framecount = tr.visframecount = 1;	// no dlight cache
 	gl_lms.current_lightmap_texture = 0;
 	tr.modelviewIdentity = false;
-	tr.num_mirror_entities = 0;
-	tr.num_mirrors_used = 0;
 	tr.realframecount = 1;
 	nColinElim = 0;
 

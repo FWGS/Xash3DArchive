@@ -905,10 +905,6 @@ void R_MuzzleFlash( const vec3_t pos, int type )
 	if( index == 0 ) pTemp->entity.angles[2] = COM_RandomLong( 0, 20 ); // rifle flash
 	else pTemp->entity.angles[2] = COM_RandomLong( 0, 359 );
 
-	// play playermodel muzzleflashes only for mirror pass
-	if( RP_LOCALCLIENT( RI.currententity ) && !cl.local.thirdperson && ( RI.params & RP_MIRRORVIEW ))
-		pTemp->entity.curstate.effects |= EF_REFLECTONLY;
-
 	CL_TempEntAddEntity( &pTemp->entity );
 }
 

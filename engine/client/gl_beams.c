@@ -347,18 +347,6 @@ qboolean R_BeamCull( const vec3_t start, const vec3_t end, qboolean pvsOnly )
 	vec3_t	mins, maxs;
 	int	i;
 
-	// support for custom mirror management
-	if( RI.currentbeam != NULL )
-	{
-		// don't reflect this entity in mirrors
-		if( FBitSet( RI.currentbeam->curstate.effects, EF_NOREFLECT ) && FBitSet( RI.params, RP_MIRRORVIEW ))
-			return true;
-
-		// draw only in mirrors
-		if( FBitSet( RI.currentbeam->curstate.effects, EF_REFLECTONLY ) && !FBitSet( RI.params, RP_MIRRORVIEW ))
-			return true;
-	}
-
 	for( i = 0; i < 3; i++ )
 	{
 		if( start[i] < end[i] )

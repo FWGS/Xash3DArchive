@@ -271,10 +271,6 @@ SOURCE=.\client\gl_image.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\gl_mirror.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\client\gl_refrag.c
 # End Source File
 # Begin Source File

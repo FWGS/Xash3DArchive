@@ -288,15 +288,9 @@ void CL_ProcessEntityUpdate( cl_entity_t *ent )
 		CL_UpdatePositions( ent );
 	}
 
+	// g-cont. it should be done for all the players?
 	if( ent->player && !FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
-	{
-		// g-cont. it should be done for all the players?
-		// FIXME: probably this cause problems with flahslight and mirror reflection
-		// but it's used to reduce player body pitch...
-		if( FBitSet( world.flags, FWORLD_HAS_MIRRORS ) && gl_allow_mirrors->value && RP_LOCALCLIENT( ent ) && !cl.local.thirdperson )
-			ent->curstate.angles[PITCH] /= 3.0f;
-		else ent->curstate.angles[PITCH] /= -3.0f;
-	}
+		ent->curstate.angles[PITCH] /= -3.0f;
 
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
@@ -908,16 +902,16 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 
 	// check for adding this entity
 	if( !clgame.dllFuncs.pfnAddEntity( entityType, ent, ent->model->name ))
-		return true;
-
-	if( entityType == ET_PLAYER && RP_LOCALCLIENT( ent ))
 	{
-		if( !CL_IsThirdPerson( ))
-		{
-			if( !gl_allow_mirrors->value || !FBitSet( world.flags, FWORLD_HAS_MIRRORS ))
-				return false;
-		}
+		// local player was reject by game code, so ignore any effects
+		if( RP_LOCALCLIENT( ent ))
+			cl.local.apply_effects = false;
+		return false;
 	}
+
+	// don't add the player in firstperson mode
+	if( RP_LOCALCLIENT( ent ) && !CL_IsThirdPerson( ) && ( ent->index == cl.viewentity ))
+		return false;
 
 	if( entityType == ET_BEAM )
 	{
@@ -933,6 +927,10 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 	// is already occupied by FTENT_FLICKER
 	if( entityType != ET_TEMPENTITY )
 	{
+		// no reason to do it twice
+		if( RP_LOCALCLIENT( ent ))
+			cl.local.apply_effects = false;
+
 		// apply client-side effects
 		CL_AddEntityEffects( ent );
 
@@ -975,7 +973,6 @@ for all current players
 */
 void CL_LinkPlayers( frame_t *frame )
 {
-	qboolean		local_added = false;
 	entity_state_t	*state;
 	cl_entity_t	*ent;
 	int		i;
@@ -985,6 +982,7 @@ void CL_LinkPlayers( frame_t *frame )
 	// apply muzzleflash to weaponmodel
 	if( ent && FBitSet( ent->curstate.effects, EF_MUZZLEFLASH ))
 		SetBits( clgame.viewent.curstate.effects, EF_MUZZLEFLASH );
+	cl.local.apply_effects = true;
 
 	// check all the clients but add only visible
 	for( i = 0, state = frame->playerstate; i < MAX_CLIENTS; i++, state++ )
@@ -1036,15 +1034,11 @@ void CL_LinkPlayers( frame_t *frame )
 		VectorCopy( ent->origin, ent->attachment[2] );
 		VectorCopy( ent->origin, ent->attachment[3] );
 
-		if( CL_AddVisibleEntity( ent, ET_PLAYER ))
-		{
-			if( i == cl.playernum )
-				local_added = true;
-		}
+		CL_AddVisibleEntity( ent, ET_PLAYER );
 	}
 
 	// apply local player effects if entity is not added
-	if( !local_added ) CL_AddEntityEffects( CL_GetLocalPlayer( ));
+	if( cl.local.apply_effects ) CL_AddEntityEffects( CL_GetLocalPlayer( ));
 }
 
 /*

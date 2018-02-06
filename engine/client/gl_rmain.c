@@ -195,8 +195,8 @@ R_ClearScene
 */
 void R_ClearScene( void )
 {
-	tr.num_solid_entities = tr.num_trans_entities = 0;
-	tr.num_mirror_entities = 0;
+	tr.num_solid_entities = 0;
+	tr.num_trans_entities = 0;
 	cl.num_custombeams = 0;
 }
 
@@ -363,13 +363,7 @@ R_SetupModelviewMatrix
 */
 static void R_SetupModelviewMatrix( matrix4x4 m )
 {
-#if 0
-	Matrix4x4_LoadIdentity( m );
-	Matrix4x4_ConcatRotate( m, -90, 1, 0, 0 );
-	Matrix4x4_ConcatRotate( m, 90, 0, 0, 1 );
-#else
 	Matrix4x4_CreateModelview( m );
-#endif
 	Matrix4x4_ConcatRotate( m, -RI.viewangles[2], 1, 0, 0 );
 	Matrix4x4_ConcatRotate( m, -RI.viewangles[0], 0, 1, 0 );
 	Matrix4x4_ConcatRotate( m, -RI.viewangles[1], 0, 0, 1 );
@@ -1070,15 +1064,8 @@ void R_RenderFrame( const ref_viewpass_t *rvp )
 	tr.fCustomRendering = false;
 	if( !RI.onlyClientDraw )
 		R_RunViewmodelEvents();
+
 	tr.realframecount++; // right called after viewmodel events
-
-	if( gl_allow_mirrors->value )
-	{
-		// render mirrors
-		R_FindMirrors ();
-		R_DrawMirrors ();
-	}
-
 	R_RenderScene();
 }
 
@@ -1179,8 +1166,6 @@ static int GL_RenderGetParm( int parm, int arg )
 		return glState.width;
 	case PARM_SCREEN_HEIGHT:
 		return glState.height;
-	case PARM_MAP_HAS_MIRRORS:
-		return FBitSet( world.flags, FWORLD_HAS_MIRRORS );
 	case PARM_CLIENT_INGAME:
 		return CL_IsInGame();
 	case PARM_MAX_ENTITIES:

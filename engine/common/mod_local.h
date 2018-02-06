@@ -67,7 +67,6 @@ GNU General Public License for more details.
 #define FWORLD_CUSTOM_SKYBOX		BIT( 1 )
 #define FWORLD_WATERALPHA		BIT( 2 )
 #define FWORLD_HAS_DELUXEMAP		BIT( 3 )
-#define FWORLD_HAS_MIRRORS		BIT( 4 )
 
 typedef struct
 {

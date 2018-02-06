@@ -101,7 +101,7 @@ void GL_FrustumInitProj( gl_frustum_t *out, float flZNear, float flZFar, float f
 	VectorMA( RI.cullorigin, flZFar, RI.cull_vforward, farpoint );
 	GL_FrustumSetPlane( out, FRUSTUM_FAR, iforward, DotProduct( iforward, farpoint ));
 
-	// no need to setup backplane for general view. It's only used for portals and mirrors
+	// no need to setup backplane for general view.
 	if( flZNear == 0.0f ) return;
 
 	// setup near plane
