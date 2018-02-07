@@ -406,7 +406,6 @@ void CL_DrawParticles( double frametime )
 
 			p->color = bound( 0, p->color, 255 );
 			pColor = &clgame.palette[p->color];
-			// FIXME: should we pass color through lightgamma table?
 
 			alpha = 255 * (p->die - cl.time) * 16.0f;
 			if( alpha > 255 || p->type == pt_static )

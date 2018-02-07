@@ -1924,25 +1924,6 @@ static float pfnGetClientMaxspeed( void )
 
 /*
 =============
-pfnCheckParm
-
-=============
-*/
-static int pfnCheckParm( char *parm, char **ppnext )
-{
-	static char	str[64];
-
-	if( Sys_GetParmFromCmdLine( parm, str ))
-	{
-		// get the pointer on cmdline param
-		if( ppnext ) *ppnext = str;
-		return 1;
-	}
-	return 0;
-}
-
-/*
-=============
 pfnGetMousePosition
 
 =============
@@ -3426,7 +3407,6 @@ triangleapi_t gTriApi =
 	TriLightAtPoint,
 	TriColor4fRendermode,
 	TriFogParams,
-	R_LightVec,	// Xash3D added
 };
 
 static efx_api_t gEfxApi =
@@ -3622,7 +3602,7 @@ static cl_enginefunc_t gEngfuncs =
 	pfnPhysInfo_ValueForKey,
 	pfnServerInfo_ValueForKey,
 	pfnGetClientMaxspeed,
-	pfnCheckParm,
+	COM_CheckParm,
 	Key_Event,
 	pfnGetMousePosition,
 	pfnIsNoClipping,

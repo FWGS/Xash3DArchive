@@ -240,7 +240,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 	// author: The FiEctro
 	hull = &model->hulls[COM_RandomLong( 0, 0 )];
 #endif
-	// FIXME: find a better method to detect quake-maps?
+	// g-cont: find a better method to detect quake-maps?
 	if( FBitSet( world.flags, FWORLD_SKYSPHERE ))
 	{
 		// alternate hull select for quake maps

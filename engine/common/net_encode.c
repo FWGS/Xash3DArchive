@@ -962,7 +962,6 @@ Delta_CompareField
 
 compare fields by offsets
 assume from and to is valid
-TESTTEST: clamp all fields and multiply by specified value before comparing
 =====================
 */
 qboolean Delta_CompareField( delta_t *pField, void *from, void *to, float timebase )

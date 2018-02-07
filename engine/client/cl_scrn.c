@@ -549,7 +549,7 @@ qboolean SCR_LoadVariableWidthFont( const char *fontname )
 ================
 SCR_LoadCreditsFont
 
-FIXME: INTRESOURCE
+INTERNAL RESOURCE
 ================
 */
 void SCR_LoadCreditsFont( void )
@@ -565,7 +565,7 @@ void SCR_LoadCreditsFont( void )
 ================
 SCR_InstallParticlePalette
 
-FIXME: INTRESOURCE
+INTERNAL RESOURCE
 ================
 */
 void SCR_InstallParticlePalette( void )
@@ -606,7 +606,7 @@ void SCR_InstallParticlePalette( void )
 ================
 SCR_RegisterTextures
 
-FIXME: INTRESOURCE
+INTERNAL RESOURCE
 ================
 */
 void SCR_RegisterTextures( void )

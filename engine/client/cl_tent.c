@@ -50,7 +50,7 @@ model_t		*cl_sprite_glow = NULL;
 ================
 CL_LoadClientSprites
 
-FIXME: INTRESOURCE
+INTERNAL RESOURCE
 ================
 */
 void CL_LoadClientSprites( void )

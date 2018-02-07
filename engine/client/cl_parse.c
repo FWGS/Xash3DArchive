@@ -1390,7 +1390,7 @@ void CL_ParseStudioDecal( sizebuf_t *msg )
 	vec3_t		start, pos;
 	int		decalIndex, entityIndex;
 	int		modelIndex = 0;
-	int		flags;
+	int		i, flags;
 
 	MSG_ReadVec3Coord( msg, pos );
 	MSG_ReadVec3Coord( msg, start );
@@ -1402,13 +1402,14 @@ void CL_ParseStudioDecal( sizebuf_t *msg )
 	state.frame = MSG_ReadShort( msg );
 	state.blending[0] = MSG_ReadByte( msg );
 	state.blending[1] = MSG_ReadByte( msg );
-	state.controller[0] = MSG_ReadByte( msg );
-	state.controller[1] = MSG_ReadByte( msg );
-	state.controller[2] = MSG_ReadByte( msg );
-	state.controller[3] = MSG_ReadByte( msg );
+	for( i = 0; i < 4; i++ )
+		state.controller[i] = MSG_ReadByte( msg );
+	for( i = 0; i < 16; i++ )
+		state.poseparam[i] = MSG_ReadByte( msg );
 	modelIndex = MSG_ReadWord( msg );
 	state.body = MSG_ReadByte( msg );
 	state.skin = MSG_ReadByte( msg );
+	state.scale = MSG_ReadWord( msg );
 
 	if( clgame.drawFuncs.R_StudioDecalShoot != NULL )
 	{

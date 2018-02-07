@@ -204,8 +204,6 @@ void R_BeamSetAttributes( BEAM *pbeam, float r, float g, float b, float framerat
 {
 	pbeam->frame = (float)startFrame;
 	pbeam->frameRate = framerate;
-
-	// FIXME: pass through lightgammatable ?
 	pbeam->r = r;
 	pbeam->g = g;
 	pbeam->b = b;

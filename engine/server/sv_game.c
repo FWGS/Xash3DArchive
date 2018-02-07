@@ -445,6 +445,8 @@ NOTE: static decals only accepted when game is loading
 */
 void SV_CreateStudioDecal( sizebuf_t *msg, const float *origin, const float *start, int decalIndex, int entityIndex, int modelIndex, int flags, modelstate_t *state )
 {
+	int	i;
+
 	if( msg == &sv.signon && sv.state != ss_loading )
 		return;
 
@@ -456,7 +458,7 @@ void SV_CreateStudioDecal( sizebuf_t *msg, const float *origin, const float *sta
 	ASSERT( start );
 
 	// this can happens if serialized map contain 4096 static decals...
-	if( MSG_GetNumBytesLeft( msg ) < 32 )
+	if( MSG_GetNumBytesLeft( msg ) < 50 )
 		return;
 
 	// static decals are posters, it's always reliable
@@ -472,13 +474,14 @@ void SV_CreateStudioDecal( sizebuf_t *msg, const float *origin, const float *sta
 	MSG_WriteShort( msg, state->frame );
 	MSG_WriteByte( msg, state->blending[0] );
 	MSG_WriteByte( msg, state->blending[1] );
-	MSG_WriteByte( msg, state->controller[0] );
-	MSG_WriteByte( msg, state->controller[1] );
-	MSG_WriteByte( msg, state->controller[2] );
-	MSG_WriteByte( msg, state->controller[3] );
+	for( i = 0; i < 4; i++ )
+		MSG_WriteByte( msg, state->controller[i] );
+	for( i = 0; i < 16; i++ )
+		MSG_WriteByte( msg, state->poseparam[i] );
 	MSG_WriteWord( msg, modelIndex );
 	MSG_WriteByte( msg, state->body );
 	MSG_WriteByte( msg, state->skin );
+	MSG_WriteWord( msg, state->scale );
 }
 
 /*

@@ -630,7 +630,7 @@ static qboolean Con_LoadVariableWidthFont( const char *fontname, cl_font_t *font
 ================
 Con_LoadConsoleFont
 
-FIXME: INTRESOURCE
+INTERNAL RESOURCE
 ================
 */
 static void Con_LoadConsoleFont( int fontNumber, cl_font_t *font )
@@ -2224,8 +2224,7 @@ void Con_CharEvent( int key )
 =========
 Con_VidInit
 
-reload backgrounds
-FIXME: INTRESOURCE
+INTERNAL RESOURCE
 =========
 */
 void Con_VidInit( void )

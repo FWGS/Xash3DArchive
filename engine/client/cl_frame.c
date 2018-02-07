@@ -1298,7 +1298,6 @@ qboolean CL_GetEntitySpatialization( channel_t *ch )
 	VectorAdd( ch->origin, ent->curstate.origin, ch->origin );
 
 	// setup mins\maxs
-	// FIXME: should to expand them for rotating bmodels?
 	VectorAdd( ent->curstate.mins, ent->curstate.origin, ch->absmin );
 	VectorAdd( ent->curstate.maxs, ent->curstate.origin, ch->absmax );
 

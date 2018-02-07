@@ -57,7 +57,6 @@ typedef struct triangleapi_s
 	void	(*LightAtPoint)( float *pos, float *value );
 	void	(*Color4fRendermode)( float r, float g, float b, float a, int rendermode );
 	void	(*FogParams)( float flDensity, int iFogSkybox );
-	colorVec	(*LightVec)( const float *start, const float *end, float *lightspot );
 } triangleapi_t;
 
 #endif//TRIANGLEAPI_H

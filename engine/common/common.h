@@ -20,6 +20,20 @@ GNU General Public License for more details.
 extern "C" {
 #endif
 
+/*
+===================================================================================================================================
+Legend:
+
+INTERNAL RESOURCE			- function contain hardcoded path to resource that engine required (optional in most cases)
+TODO				- some functionality not impemented but planned
+FIXME				- code doesn't working properly in some rare cases
+HACKHACK				- unexpected behavior on some input params (or something like)
+BUGBUG				- code doesn't working properly in most cases!
+TESTTEST				- this code may be unstable and needs to be more tested
+g-cont:				- notes from engine author
+===================================================================================================================================
+*/
+
 // disable some warnings
 #pragma warning(disable : 4244)	// MIPS
 #pragma warning(disable : 4018)	// signed/unsigned mismatch
@@ -697,6 +711,7 @@ void COM_TrimSpace( const char *source, char *dest );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 void pfnGetModelBounds( model_t *mod, float *mins, float *maxs );
 void pfnCVarDirectSet( cvar_t *var, const char *szValue );
+int COM_CheckParm( char *parm, char **ppnext );
 void pfnGetGameDir( char *szGetGameDir );
 int pfnDecalIndex( const char *m );
 int pfnGetModelType( model_t *mod );

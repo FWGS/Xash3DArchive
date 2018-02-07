@@ -754,6 +754,25 @@ int COM_CompareFileTime( const char *filename1, const char *filename2, int *iCom
 
 /*
 =============
+COM_CheckParm
+
+=============
+*/
+int COM_CheckParm( char *parm, char **ppnext )
+{
+	static char	str[64];
+
+	if( Sys_GetParmFromCmdLine( parm, str ))
+	{
+		// get the pointer on cmdline param
+		if( ppnext ) *ppnext = str;
+		return 1;
+	}
+	return 0;
+}
+
+/*
+=============
 pfnTime
 
 =============
