@@ -14,7 +14,6 @@ GNU General Public License for more details.
 */
 
 #include <winsock.h>
-#include <wsipx.h>
 #include "common.h"
 #include "netchan.h"
 #include "mathlib.h"
@@ -127,31 +126,24 @@ typedef struct
 	LONGPACKET	split;
 	int		split_flags[NET_MAX_FRAGMENTS];
 	long		sequence_number;
-
 	int		ip_sockets[NS_COUNT];
-	int		ipx_sockets[NS_COUNT];
-
 	WSADATA		winsockdata;
 	qboolean		initialized;
-	qboolean		noip, noipx;
 	qboolean		configured;
+	qboolean		allow_ip;
 } net_state_t;
 
 static net_state_t		net;
 static convar_t		*net_ipname;
 static convar_t		*net_hostport;
 static convar_t		*net_iphostport;
-static convar_t		*net_ipxhostport;
 static convar_t		*net_clientport;
 static convar_t		*net_ipclientport;
-static convar_t		*net_ipxclientport;
 static convar_t		*net_fakelag;
 static convar_t		*net_fakeloss;
 static convar_t		*net_address;
 convar_t			*net_clockwindow;
-
 netadr_t			net_local;
-netadr_t			net_local_ipx;
 
 /*
 ====================
@@ -264,20 +256,6 @@ static void NET_NetadrToSockadr( netadr_t *a, struct sockaddr *s )
 		((struct sockaddr_in *)s)->sin_addr.s_addr = *(int *)&a->ip;
 		((struct sockaddr_in *)s)->sin_port = a->port;
 	}
-	else if( a->type == NA_IPX )
-	{
-		((struct sockaddr_ipx *)s)->sa_family = AF_IPX;
-		memcpy(((struct sockaddr_ipx *)s)->sa_netnum, &a->ipx[0], 4 );
-		memcpy(((struct sockaddr_ipx *)s)->sa_nodenum, &a->ipx[4], 6 );
-		((struct sockaddr_ipx *)s)->sa_socket = a->port;
-	}
-	else if( a->type == NA_BROADCAST_IPX )
-	{
-		((struct sockaddr_ipx *)s)->sa_family = AF_IPX;
-		memset(((struct sockaddr_ipx *)s)->sa_netnum, 0, 4 );
-		memset(((struct sockaddr_ipx *)s)->sa_nodenum, 0xff, 6 );
-		((struct sockaddr_ipx *)s)->sa_socket = a->port;
-	}
 }
 
 /*
@@ -292,12 +270,6 @@ static void NET_SockadrToNetadr( struct sockaddr *s, netadr_t *a )
 		a->type = NA_IP;
 		*(int *)&a->ip = ((struct sockaddr_in *)s)->sin_addr.s_addr;
 		a->port = ((struct sockaddr_in *)s)->sin_port;
-	}
-	else if( s->sa_family == AF_IPX )
-	{
-		a->type = NA_IPX;
-		memcpy( a->ipx, s->sa_data, 10 );
-		a->port = ((struct sockaddr_ipx *)s)->sa_socket;
 	}
 }
 
@@ -316,59 +288,37 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr *sadr )
 {
 	char	*colon;
 	char	copy[128];
-	int	val, i, j;
 
 	if( !net.initialized ) return false;
 	
 	memset( sadr, 0, sizeof( *sadr ));
 
-	if(( Q_strlen( s ) >= 24 ) && ( s[8] == ':' ) && ( s[21] == ':' )) // check for an IPX address
+	((struct sockaddr_in *)sadr)->sin_family = AF_INET;
+	((struct sockaddr_in *)sadr)->sin_port = 0;
+
+	Q_strncpy( copy, s, sizeof( copy ));
+
+	// strip off a trailing :port if present
+	for( colon = copy; *colon; colon++ )
 	{
-		sadr->sa_family = AF_IPX;
-		copy[2] = 0;
-
-		for( i = j = 0; i < 10; i++, j += 2 )
+		if( *colon == ':' )
 		{
-			if( j == 8 ) j++; // skip ':'
-			copy[0] = s[j+0];
-			copy[1] = s[j+1];
-			sscanf( copy, "%x", &val );
-			sadr->sa_data[i] = (char)val;
-		}
-
-		sscanf( &s[22], "%u", &val );
-		*(word *)&sadr->sa_data[10] = pHtons( val );
-	}
-	else
-	{
-		((struct sockaddr_in *)sadr)->sin_family = AF_INET;
-		((struct sockaddr_in *)sadr)->sin_port = 0;
-
-		Q_strncpy( copy, s, sizeof( copy ));
-
-		// strip off a trailing :port if present
-		for( colon = copy; *colon; colon++ )
-		{
-			if( *colon == ':' )
-			{
-				*colon = 0;
-				((struct sockaddr_in *)sadr)->sin_port = pHtons((short)Q_atoi( colon + 1 ));	
-			}
-		}
-
-		((struct sockaddr_in *)sadr)->sin_addr.s_addr = pInet_Addr( copy );
-
-		if(((struct sockaddr_in *)sadr)->sin_addr.s_addr == INADDR_NONE )
-		{
-			struct hostent	*h = pGetHostByName( copy );
-
-			if( h == NULL || h->h_addr == NULL )
-				return false;
-
-			((struct sockaddr_in *)sadr)->sin_addr.s_addr = *(uint *)h->h_addr;	
+			*colon = 0;
+			((struct sockaddr_in *)sadr)->sin_port = pHtons((short)Q_atoi( colon + 1 ));	
 		}
 	}
 
+	((struct sockaddr_in *)sadr)->sin_addr.s_addr = pInet_Addr( copy );
+
+	if(((struct sockaddr_in *)sadr)->sin_addr.s_addr == INADDR_NONE )
+	{
+		struct hostent	*h = pGetHostByName( copy );
+
+		if( h == NULL || h->h_addr == NULL )
+			return false;
+
+		((struct sockaddr_in *)sadr)->sin_addr.s_addr = *(uint *)h->h_addr;	
+	}
 	return true;
 }
 
@@ -381,10 +331,7 @@ char *NET_AdrToString( const netadr_t a )
 {
 	if( a.type == NA_LOOPBACK )
 		return "loopback";
-	else if( a.type == NA_IP )
-		return va( "%i.%i.%i.%i:%i", a.ip[0], a.ip[1], a.ip[2], a.ip[3], pNtohs( a.port ));
-	return va( "%02x%02x%02x%02x:%02x%02x%02x%02x%02x%02x:%i",
-	a.ipx[0], a.ipx[1], a.ipx[2], a.ipx[3], a.ipx[4], a.ipx[5], a.ipx[6], a.ipx[7], a.ipx[8], a.ipx[9], pNtohs( a.port ));
+	return va( "%i.%i.%i.%i:%i", a.ip[0], a.ip[1], a.ip[2], a.ip[3], pNtohs( a.port ));
 }
 
 /*
@@ -396,10 +343,7 @@ char *NET_BaseAdrToString( const netadr_t a )
 {
 	if( a.type == NA_LOOPBACK )
 		return "loopback";
-	else if( a.type == NA_IP )
-		return va( "%i.%i.%i.%i", a.ip[0], a.ip[1], a.ip[2], a.ip[3] );
-	return va( "%02x%02x%02x%02x:%02x%02x%02x%02x%02x%02x",
-	a.ipx[0], a.ipx[1], a.ipx[2], a.ipx[3], a.ipx[4], a.ipx[5], a.ipx[6], a.ipx[7], a.ipx[8], a.ipx[9] );
+	return va( "%i.%i.%i.%i", a.ip[0], a.ip[1], a.ip[2], a.ip[3] );
 }
 
 /*
@@ -421,14 +365,6 @@ qboolean NET_CompareBaseAdr( const netadr_t a, const netadr_t b )
 	{
 		if( !memcmp( a.ip, b.ip, 4 ))
 			return true;
-		return false;
-	}
-
-	if( a.type == NA_IPX )
-	{
-		if( !memcmp( a.ipx, b.ipx, 10 ))
-			return true;
-		return false;
 	}
 
 	return false;
@@ -454,11 +390,6 @@ qboolean NET_CompareClassBAdr( netadr_t a, netadr_t b )
 		if( a.ip[0] == b.ip[0] && a.ip[1] == b.ip[1] )
 			return true;
 	}
-	else if( a.type == NA_IPX )
-	{
-		return false;
-	}
-
 	return false;
 }
 
@@ -488,12 +419,6 @@ qboolean NET_IsReservedAdr( netadr_t a )
 
 		if( a.ip[0] == 192 && a.ip[1] >= 168 )
 			return true;
-
-		return false;
-	}
-	else if( a.type == NA_IPX )
-	{
-		return true;
 	}
 
 	return false;
@@ -517,13 +442,6 @@ qboolean NET_CompareAdr( const netadr_t a, const netadr_t b )
 	if( a.type == NA_IP )
 	{
 		if(!memcmp( a.ip, b.ip, 4 ) && a.port == b.port )
-			return true;
-		return false;
-	}
-
-	if( a.type == NA_IPX )
-	{
-		if(!memcmp( a.ipx, b.ipx, 10 ) && a.port == b.port )
 			return true;
 		return false;
 	}
@@ -854,6 +772,12 @@ qboolean NET_GetLong( byte *pData, int size, int *outSize )
 	uint		packet_payload_size;
 	byte		packet_id;
 
+	if( size < sizeof( SPLITPACKET ))
+	{
+		MsgDev( D_ERROR, "invalid split packet length %i\n", size );
+		return false;
+	}
+
 	sequence_number = pHeader->sequence_number;
 	packet_id = pHeader->packet_id;
 	packet_count = packet_id & 0xF;
@@ -861,7 +785,7 @@ qboolean NET_GetLong( byte *pData, int size, int *outSize )
 
 	if( packet_number >= NET_MAX_FRAGMENTS || packet_count > NET_MAX_FRAGMENTS )
 	{
-		MsgDev( D_ERROR, "Malformed packet number (%i/%i)\n", packet_number + 1, packet_count );
+		MsgDev( D_ERROR, "malformed packet number (%i/%i)\n", packet_number + 1, packet_count );
 		return false;
 	}
 
@@ -900,7 +824,7 @@ qboolean NET_GetLong( byte *pData, int size, int *outSize )
 
 		if( SPLIT_SIZE * packet_number + packet_payload_size > MAX_UDP_PACKET )
 		{
-			MsgDev( D_ERROR, "Malformed packet size (%i, %i)\n", SPLIT_SIZE * packet_number, packet_payload_size );
+			MsgDev( D_ERROR, "malformed packet size (%i, %i)\n", SPLIT_SIZE * packet_number, packet_payload_size );
 			net.split.current_sequence = -1;
 
 			return false;
@@ -918,7 +842,7 @@ qboolean NET_GetLong( byte *pData, int size, int *outSize )
 		{
 			if( net.split_flags[i] != net.split.current_sequence )
 			{
-				MsgDev( D_ERROR, "Split packet without all %i parts, part %i had wrong sequence %i/%i\n",
+				MsgDev( D_ERROR, "split packet without all %i parts, part %i had wrong sequence %i/%i\n",
 					packet_count, i + 1, net.split_flags[i], net.split.current_sequence );
 				net.split.current_sequence = -1; // no more parts can be attached, clear it
 
@@ -938,7 +862,7 @@ qboolean NET_GetLong( byte *pData, int size, int *outSize )
 	}
 	else
 	{
-		MsgDev( D_ERROR, "Split packet too large! %d bytes\n", net.split.total_size );
+		MsgDev( D_ERROR, "split packet too large! %d bytes\n", net.split.total_size );
 		*outSize = 0;
 
 		return FALSE;
@@ -957,86 +881,61 @@ qboolean NET_QueuePacket( netsrc_t sock, netadr_t *from, byte *data, size_t *len
 	struct sockaddr	addr;
 	int		addr_len;
 	int		net_socket;
-	int		protocol;
 	byte		buf[MAX_UDP_PACKET];
 	int		ret = SOCKET_ERROR;
 
 	*length = 0;
 
-	for( protocol = 0; protocol < 2; protocol++ )
+	net_socket = net.ip_sockets[sock];
+
+	if( net_socket != INVALID_SOCKET )
 	{
-		if( !protocol) net_socket = net.ip_sockets[sock];
-		else net_socket = net.ipx_sockets[sock];
-
-		if( net_socket == INVALID_SOCKET )
-			continue;
-
 		addr_len = sizeof( addr );
 		ret = pRecvFrom( net_socket, buf, sizeof( buf ), 0, (struct sockaddr *)&addr, &addr_len );
 
-		NET_SockadrToNetadr( &addr, from );
-
-		if( ret == SOCKET_ERROR )
+		if( ret != SOCKET_ERROR )
 		{
-			int	err = pWSAGetLastError();
+			NET_SockadrToNetadr( &addr, from );
 
-			if( err == WSAENETRESET )
-				continue;
-
-			if( err != WSAEWOULDBLOCK && err != WSAECONNRESET && err != WSAECONNREFUSED )
+			if( ret < MAX_UDP_PACKET )
 			{
-				if( err == WSAEMSGSIZE )
+				// Transfer data
+				memcpy( data, buf, ret );
+				*length = ret;
+
+				// check for split message
+				if( *(int *)data == -2 )
 				{
-					MsgDev( D_REPORT, "NET_QueuePacket: Ignoring oversized network message\n" );
+					return NET_GetLong( data, ret, length );
 				}
-				else
-				{
-					if( host.type != HOST_DEDICATED )
-						Sys_Error( "NET_QueuePacket: %s from %s\n", NET_ErrorString(), NET_AdrToString( *from ));
-					else MsgDev( D_ERROR, "NET_QueuePacket: %s from %s\n", NET_ErrorString(), NET_AdrToString( *from ));
-				}
+
+				// lag the packet, if needed
+				return NET_LagPacket( true, sock, from, length, data );
 			}
-
-			continue;
-		}
-
-
-		if( ret != MAX_UDP_PACKET )
-			break;
-
-		MsgDev( D_REPORT, "NET_QueuePacket: oversize packet from %s\n", NET_AdrToString( *from ));
-	}
-
-	if( ret == SOCKET_ERROR || ret == MAX_UDP_PACKET )
-		return NET_LagPacket( false, sock, from, length, data );
-
-	memcpy( data, buf, ret );
-	*length = ret;
-
-	if( *(uint *)data == 0xFFFFFFFE )
-	{
-		if( *length >= 9 )
-		{
-			// only server can send split packets, there is no server<->server communication,
-			// so server can't receive split packets
-			if( sock == NS_SERVER )
+			else
 			{
-				MsgDev( D_ERROR, "Someone tries to send split packet to the server\n" );
-				return false;
+				MsgDev( D_REPORT, "NET_QueuePacket: oversize packet from %s\n", NET_AdrToString( *from ));
 			}
-
-			return NET_GetLong( data, ret, length );
 		}
 		else
 		{
-			MsgDev( D_ERROR, "Invalid split packet length %i\n", *length );
-			return false;
+			int	err = pWSAGetLastError();
+
+			switch( err )
+			{
+			case WSAEWOULDBLOCK:
+			case WSAECONNRESET:
+			case WSAECONNREFUSED:
+			case WSAEMSGSIZE:
+				break;
+			default:	// let's continue even after errors
+				MsgDev( D_ERROR, "NET_QueuePacket: %s from %s\n", NET_ErrorString(), NET_AdrToString( *from ));
+				break;
+			}
 		}
 	}
-	else
-	{
-		return NET_LagPacket( true, sock, from, length, data );
-	}
+
+	return NET_LagPacket( false, sock, from, length, data );
 }
 
 /*
@@ -1154,19 +1053,10 @@ void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to
 		if( net_socket == INVALID_SOCKET )
 			return;
 	}
-	else if( to.type == NA_IPX )
+	else
 	{
-		net_socket = net.ipx_sockets[sock];
-		if( net_socket == INVALID_SOCKET )
-			return;
+		Host_Error( "NET_SendPacket: bad address type %i\n", to.type );
 	}
-	else if( to.type == NA_BROADCAST_IPX )
-	{
-		net_socket = net.ipx_sockets[sock];
-		if( net_socket == INVALID_SOCKET )
-			return;
-	}
-	else Host_Error( "NET_SendPacket: bad address type %i\n", to.type );
 
 	NET_NetadrToSockadr( &to, &addr );
 
@@ -1181,7 +1071,7 @@ void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to
 			return;
 
 		// some PPP links don't allow broadcasts
-		if(( err == WSAEADDRNOTAVAIL ) && (( to.type == NA_BROADCAST ) || ( to.type == NA_BROADCAST_IPX )))
+		if( err == WSAEADDRNOTAVAIL && to.type == NA_BROADCAST )
 			return;
 
 		// let dedicated servers continue after errors
@@ -1329,91 +1219,6 @@ static void NET_OpenIP( void )
 }
 
 /*
-====================
-NET_IPXSocket
-====================
-*/
-static int NET_IPXSocket( int port )
-{
-	int		err, net_socket;
-	uint		optval = 1;
-	struct sockaddr_ipx	addr;
-
-	if(( net_socket = pSocket( PF_IPX, SOCK_DGRAM, NSPROTO_IPX )) == SOCKET_ERROR )
-	{
-		err = pWSAGetLastError();
-		if( err != WSAEAFNOSUPPORT )
-			MsgDev( D_ERROR, "NET_IPXSocket: port %d socket: %s\n", port, NET_ErrorString( ));
-		return INVALID_SOCKET;
-	}
-
-	// make it non-blocking
-	if( pIoctlSocket( net_socket, FIONBIO, &optval ) == SOCKET_ERROR )
-	{
-		MsgDev( D_ERROR, "NET_IPXSocket: port: %d ioctl FIONBIO: %s\n", port, NET_ErrorString( ));
-		pCloseSocket( net_socket );
-		return INVALID_SOCKET;
-	}
-
-	// make it broadcast capable
-	if( pSetSockopt( net_socket, SOL_SOCKET, SO_BROADCAST, (const char *)&optval, sizeof( optval )) == SOCKET_ERROR )
-	{
-		MsgDev( D_ERROR, "NET_IPXSocket: port: %d  setsockopt SO_BROADCAST: %s\n", port, NET_ErrorString( ));
-		pCloseSocket( net_socket );
-		return INVALID_SOCKET;
-	}
-
-	addr.sa_family = AF_IPX;
-	memset( addr.sa_netnum, 0, 4 );
-	memset( addr.sa_nodenum, 0, 6 );
-
-	if( port == PORT_ANY ) addr.sa_socket = 0;
-	else addr.sa_socket = pHtons( (word)port );
-
-	if( pBind( net_socket, (void *)&addr, sizeof( addr )) == SOCKET_ERROR )
-	{
-		MsgDev( D_WARN, "NET_IPXSocket: port: %d bind: %s\n", port, NET_ErrorString( ));
-		pCloseSocket( net_socket );
-		return INVALID_SOCKET;
-	}
-
-	return net_socket;
-}
-
-
-/*
-====================
-NET_OpenIPX
-====================
-*/
-void NET_OpenIPX( void )
-{
-	int	port;
-
-	if( net.ipx_sockets[NS_SERVER] == INVALID_SOCKET )
-	{
-		port = net_ipxhostport->value;
-		if( !port ) port = net_hostport->value;
-		if( !port ) port = PORT_SERVER; // forcing to default
-		net.ipx_sockets[NS_SERVER] = NET_IPXSocket( port );
-	}
-
-	// dedicated servers don't need client ports
-	if( host.type == HOST_DEDICATED ) return;
-
-	if( net.ipx_sockets[NS_CLIENT] == INVALID_SOCKET )
-	{
-		port = net_ipxclientport->value;
-		if( !port ) port = net_clientport->value;
-		if( !port ) port = PORT_ANY; // forcing to default
-		net.ipx_sockets[NS_CLIENT] = NET_IPXSocket( port );
-
-		if( net.ipx_sockets[NS_CLIENT] == INVALID_SOCKET )
-			net.ipx_sockets[NS_CLIENT] = NET_IPXSocket( PORT_ANY );
-	}
-}
-
-/*
 ================
 NET_GetLocalAddress
 
@@ -1427,14 +1232,9 @@ void NET_GetLocalAddress( void )
 	int		namelen;
 
 	memset( &net_local, 0, sizeof( netadr_t ));
-	memset( &net_local_ipx, 0, sizeof( netadr_t ));
 	buff[0] = '\0';
 
-	if( net.noip )
-	{
-		MsgDev( D_INFO, "TCP/IP Disabled.\n" );
-	}
-	else
+	if( net.allow_ip )
 	{
 		// If we have changed the ip var from the command line, use that instead.
 		if( Q_strcmp( net_ipname->string, "localhost" ))
@@ -1456,7 +1256,7 @@ void NET_GetLocalAddress( void )
 			if( pGetSockName( net.ip_sockets[NS_SERVER], (struct sockaddr *)&address, &namelen ) == SOCKET_ERROR )
 			{
 				MsgDev( D_ERROR, "Could not get TCP/IP address, TCP/IP disabled\nReason:  %s\n", NET_ErrorString( ));
-				net.noip = true;
+				net.allow_ip = false;
 			}
 			else
 			{
@@ -1470,24 +1270,9 @@ void NET_GetLocalAddress( void )
 			MsgDev( D_ERROR, "Could not get TCP/IP address, Invalid hostname: '%s'\n", buff );
 		}
 	}
-
-	if( net.noipx )
-	{
-		MsgDev( D_INFO, "No IPX Support.\n" );
-	}
 	else
 	{
-		namelen = 14;
-		if( pGetSockName( net.ipx_sockets[NS_SERVER], (struct sockaddr *)&address, &namelen ) == SOCKET_ERROR )
-		{
-			MsgDev( D_ERROR, "Could not get IPX socket name, IPX disabled\nReason:  %s\n", NET_ErrorString( ));
-			net.noipx = true;
-		}
-		else
-		{
-			NET_SockadrToNetadr((struct sockaddr *)&address, &net_local_ipx );
-			Msg( "Server IPX address %s\n", NET_AdrToString( net_local_ipx ));
-		}
+		MsgDev( D_INFO, "TCP/IP Disabled.\n" );
 	}
 }
 
@@ -1500,8 +1285,8 @@ A single player game will only use the loopback code
 */
 void NET_Config( qboolean multiplayer )
 {
-	static qboolean	old_config;
 	static qboolean	bFirst = true;
+	static qboolean	old_config;
 
 	if( !net.initialized )
 		return;
@@ -1514,8 +1299,7 @@ void NET_Config( qboolean multiplayer )
 	if( multiplayer )
 	{	
 		// open sockets
-		if( !net.noip ) NET_OpenIP();
-		if( !net.noipx ) NET_OpenIPX();
+		if( net.allow_ip ) NET_OpenIP();
 
 		// get our local address, if possible
 		if( bFirst )
@@ -1535,12 +1319,6 @@ void NET_Config( qboolean multiplayer )
 			{
 				pCloseSocket( net.ip_sockets[i] );
 				net.ip_sockets[i] = INVALID_SOCKET;
-			}
-
-			if( net.ipx_sockets[i] != INVALID_SOCKET )
-			{
-				pCloseSocket( net.ipx_sockets[i] );
-				net.ipx_sockets[i] = INVALID_SOCKET;
 			}
 		}
 	}
@@ -1596,13 +1374,6 @@ void NET_Sleep( int msec )
 		i = net.ip_sockets[NS_SERVER];
 	}
 
-	if( net.ipx_sockets[NS_SERVER] != INVALID_SOCKET )
-	{
-		FD_SET( net.ipx_sockets[NS_SERVER], &fdset ); // network socket
-		if( net.ipx_sockets[NS_SERVER] > i )
-			i = net.ipx_sockets[NS_SERVER];
-	}
-
 	timeout.tv_sec = msec / 1000;
 	timeout.tv_usec = (msec % 1000) * 1000;
 	pSelect( i+1, &fdset, NULL, NULL, &timeout );
@@ -1637,10 +1408,8 @@ void NET_Init( void )
 	net_address = Cvar_Get( "net_address", "0", FCVAR_READ_ONLY, "contain local address of current client" );
 	net_ipname = Cvar_Get( "ip", "localhost", FCVAR_READ_ONLY, "network ip address" );
 	net_iphostport = Cvar_Get( "ip_hostport", "0", FCVAR_READ_ONLY, "network ip host port" );
-	net_ipxhostport = Cvar_Get( "ipx_hostport", "0", FCVAR_READ_ONLY, "network ipx host port" );
 	net_hostport = Cvar_Get( "hostport", va( "%i", PORT_SERVER ), FCVAR_READ_ONLY, "network default host port" );
 	net_ipclientport = Cvar_Get( "ip_clientport", "0", FCVAR_READ_ONLY, "network ip client port" );
-	net_ipxclientport = Cvar_Get( "ipx_clientport", "0", FCVAR_READ_ONLY, "network ipx client port" );
 	net_clientport = Cvar_Get( "clientport", va( "%i", PORT_CLIENT ), FCVAR_READ_ONLY, "network default client port" );
 	net_fakelag = Cvar_Get( "fakelag", "0", 0, "lag all incoming network data (including loopback) by xxx ms." );
 	net_fakeloss = Cvar_Get( "fakeloss", "0", 0, "act like we dropped the packet this % of the time." );
@@ -1651,7 +1420,6 @@ void NET_Init( void )
 		net.lagdata[i].prev = &net.lagdata[i];
 		net.lagdata[i].next = &net.lagdata[i];
 		net.ip_sockets[i] = INVALID_SOCKET;
-		net.ipx_sockets[i] = INVALID_SOCKET;
 	}
 
 	if( !NET_OpenWinSock( ))	// loading wsock32.dll
@@ -1661,6 +1429,7 @@ void NET_Init( void )
 	}
 
 	i = pWSAStartup( MAKEWORD( 1, 1 ), &net.winsockdata );
+
 	if( i )
 	{
 		MsgDev( D_ERROR, "network initialization failed.\n" );
@@ -1669,10 +1438,8 @@ void NET_Init( void )
 	}
 
 	if( Sys_CheckParm( "-noip" ))
-		net.noip = true;
-
-	if( Sys_CheckParm( "-noipx" ))
-		net.noipx = true;
+		net.allow_ip = false;
+	else net.allow_ip = true;
 
 	// specify custom host port
 	if( Sys_GetParmFromCmdLine( "-port", cmd ) && Q_isdigit( cmd ))

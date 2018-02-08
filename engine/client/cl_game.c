@@ -3146,6 +3146,9 @@ void NetAPI_SendRequest( int context, int request, int flags, double timeout, ne
 		return;
 	}
 
+	if( remote_address->type >= NA_IPX )
+		return; // IPX no longer support
+
 	// find a free request
 	for( i = 0; i < MAX_REQUESTS; i++ )
 	{

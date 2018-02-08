@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include "vgui_draw.h"
 
 convar_t	*vgui_colorstrings;
+convar_t	*vgui_emulatemouse;
 int	g_textures[VGUI_MAX_TEXTURES];
 int	g_textureId = 0;
 int	g_iBoundTexture;
@@ -36,6 +37,7 @@ void VGUI_DrawInit( void )
 	g_textureId = g_iBoundTexture = 0;
 
 	vgui_colorstrings = Cvar_Get( "vgui_colorstrings", "0", FCVAR_ARCHIVE, "allow colorstrings in VGUI texts" );
+	vgui_emulatemouse = Cvar_Get( "vgui_emulatemouse", "0", FCVAR_ARCHIVE, "emulate system cursor" );
 }
 
 /*

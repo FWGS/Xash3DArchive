@@ -169,18 +169,16 @@ protected:
 class CEngineApp : public App
 {
 public:
-	CEngineApp( bool externalMain = true ) : App( externalMain ) { }
-	virtual void main( int argc, char* argv[] ) { } // stub
-	virtual void setCursorPos( int x, int y ); // we need to recompute abs position to window
+	virtual void main( int argc, char* argv[] ) { }	// stub
+	virtual void setCursorPos( int x, int y );	// we need to recompute abs position to window
 	virtual void getCursorPos( int &x,int &y );
+protected: 
+	virtual void platTick(void) { }		// stub
 };
 
-class CEnginePanel : public Panel
-{
-public:
-	virtual SurfaceBase* getSurfaceBase( void );
-	virtual App* getApp( void );
-};
+extern Panel		*rootPanel;
+extern CEngineSurface	*engSurface;
+extern CEngineApp		*engApp;
 
 //
 // vgui_input.cpp

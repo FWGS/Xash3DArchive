@@ -357,7 +357,7 @@ void V_PostRender( void )
 	{
 		SCR_TileClear();
 		CL_DrawHUD( CL_ACTIVE );
-		VGui_Paint();
+		VGui_Paint( true );
 	}
 
 	switch( cls.scrshot_action )

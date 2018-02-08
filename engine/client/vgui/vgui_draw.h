@@ -69,7 +69,7 @@ qboolean R_DescribeVIDMode( int width, int height );
 void VGui_Startup( void );
 void VGui_Shutdown( void );
 void *VGui_GetPanel( void );
-void VGui_Paint( void );
+void VGui_Paint( int paintAll );
 void VGui_RunFrame( void );
 void VGui_ViewportPaintBackground( int extents[4] );
 
