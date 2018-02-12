@@ -311,7 +311,7 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 	{
 		glt = R_GetTexture( fa->texinfo->texture->gl_texturenum );
 		tex = fa->texinfo->texture;
-		ASSERT( glt != NULL && tex != NULL );
+		Assert( glt != NULL && tex != NULL );
 
 		// update conveyor widths for keep properly speed of scrolling
 		glt->srcWidth = tex->width;

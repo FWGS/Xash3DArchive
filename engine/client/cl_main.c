@@ -112,6 +112,11 @@ qboolean CL_IsRecordDemo( void )
 	return cls.demorecording;
 }
 
+qboolean CL_IsTimeDemo( void )
+{
+	return cls.timedemo;
+}
+
 qboolean CL_DisableVisibility( void )
 {
 	return cls.envshot_disable_vis;
@@ -664,8 +669,8 @@ void CL_WriteUsercmd( sizebuf_t *msg, int from, int to )
 	usercmd_t	nullcmd;
 	usercmd_t	*f, *t;
 
-	ASSERT( from == -1 || ( from >= 0 && from < MULTIPLAYER_BACKUP ));
-	ASSERT( to >= 0 && to < MULTIPLAYER_BACKUP );
+	Assert( from == -1 || ( from >= 0 && from < MULTIPLAYER_BACKUP ));
+	Assert( to >= 0 && to < MULTIPLAYER_BACKUP );
 
 	if( from == -1 )
 	{
@@ -2257,6 +2262,7 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("localservers", CL_LocalServers_f, "collect info about local servers" );
 	Cmd_AddCommand ("internetservers", CL_InternetServers_f, "collect info about internet servers" );
 	Cmd_AddCommand ("cd", CL_PlayCDTrack_f, "Play cd-track (not real cd-player of course)" );
+	Cmd_AddCommand ("mp3", CL_PlayCDTrack_f, "Play mp3-track (based on virtual cd-player)" );
 
 	Cmd_AddCommand ("setinfo", CL_SetInfo_f, "examine or change the userinfo string (alias of userinfo)" );
 	Cmd_AddCommand ("userinfo", CL_SetInfo_f, "examine or change the userinfo string (alias of setinfo)" );
@@ -2264,6 +2270,7 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f, "disconnect from server" );
 	Cmd_AddCommand ("record", CL_Record_f, "record a demo" );
 	Cmd_AddCommand ("playdemo", CL_PlayDemo_f, "play a demo" );
+	Cmd_AddCommand ("timedemo", CL_TimeDemo_f, "demo benchmark" );
 	Cmd_AddCommand ("killdemo", CL_DeleteDemo_f, "delete a specified demo file and demoshot" );
 	Cmd_AddCommand ("startdemos", CL_StartDemos_f, "start playing back the selected demos sequentially" );
 	Cmd_AddCommand ("demos", CL_Demos_f, "restart looping demos defined by the last startdemos command" );

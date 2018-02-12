@@ -556,7 +556,7 @@ void Mod_LoadCacheFile( const char *filename, cache_user_t *cu )
 	string	name;
 	size_t	i, j, size;
 
-	ASSERT( cu != NULL );
+	Assert( cu != NULL );
 
 	if( !filename || !filename[0] ) return;
 

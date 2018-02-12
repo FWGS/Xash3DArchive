@@ -109,7 +109,7 @@ GL_LoadTexMatrixExt
 */
 void GL_LoadTexMatrixExt( const float *glmatrix )
 {
-	ASSERT( glmatrix != NULL );
+	Assert( glmatrix != NULL );
 	pglMatrixMode( GL_TEXTURE );
 	pglLoadMatrixf( glmatrix );
 	glState.texIdentityMatrix[glState.activeTMU] = false;

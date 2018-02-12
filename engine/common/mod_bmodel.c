@@ -498,7 +498,7 @@ Mod_PointInLeaf
 */
 mleaf_t *Mod_PointInLeaf( const vec3_t p, mnode_t *node )
 {
-	ASSERT( node != NULL );
+	Assert( node != NULL );
 
 	while( 1 )
 	{
@@ -524,7 +524,7 @@ byte *Mod_GetPVSForPoint( const vec3_t p )
 	mnode_t	*node;
 	mleaf_t	*leaf = NULL;
 
-	ASSERT( worldmodel != NULL );
+	Assert( worldmodel != NULL );
 
 	node = worldmodel->nodes;
 
@@ -1245,7 +1245,7 @@ static qboolean Mod_LoadColoredLighting( dbspmodel_t *bmod )
 
 	in = FS_LoadFile( path, &litdatasize, false );
 
-	ASSERT( in != NULL );
+	Assert( in != NULL );
 
 	if( *(uint *)in != IDDELUXEMAPHEADER || *((uint *)in + 1) != DELUXEMAP_VERSION )
 	{
@@ -1295,7 +1295,7 @@ static void Mod_LoadDeluxemap( dbspmodel_t *bmod )
 
 	in = FS_LoadFile( path, &deluxdatasize, false );
 
-	ASSERT( in != NULL );
+	Assert( in != NULL );
 
 	if( *(uint *)in != IDDELUXEMAPHEADER || *((uint *)in + 1) != DELUXEMAP_VERSION )
 	{
@@ -2738,7 +2738,7 @@ void Mod_UnloadBrushModel( model_t *mod )
 	texture_t	*tx;
 	int	i;
 
-	ASSERT( mod != NULL );
+	Assert( mod != NULL );
 
 	if( mod->type != mod_brush )
 		return; // not a bmodel

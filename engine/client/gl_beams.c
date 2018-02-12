@@ -469,7 +469,7 @@ static void R_DrawSegs( vec3_t source, vec3_t delta, float width, float scale, f
 		beamseg_t	nextSeg;
 		vec3_t	vPoint1, vPoint2;
 	
-		ASSERT( noiseIndex < ( NOISE_DIVISIONS << 16 ));
+		Assert( noiseIndex < ( NOISE_DIVISIONS << 16 ));
 
 		fraction = i * div;
 
@@ -1468,7 +1468,7 @@ Check for expired beams
 */
 qboolean CL_BeamAttemptToDie( BEAM *pBeam )
 {
-	ASSERT( pBeam != NULL );
+	Assert( pBeam != NULL );
 
 	// premanent beams never die automatically
 	if( FBitSet( pBeam->flags, FBEAM_FOREVER ))

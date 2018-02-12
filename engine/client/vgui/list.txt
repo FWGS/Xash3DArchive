@@ -1,12 +1,3 @@
-VGUI_EngineSurface.h
-VGUI_EngineSurface.cpp
-vgui_intwrap.h
-vgui_intwrap.cpp
-vgui_int.h
-vgui_int.cpp
-
-Host_Frame->SCR_UpdateScreen->VGui_Paint->VGuiWrap_Paint
-
 colorstrings support:
 Font.cpp
 TextImage.cpp

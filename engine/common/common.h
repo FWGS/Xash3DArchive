@@ -108,7 +108,7 @@ typedef enum
 #include "crtlib.h"
 #include "cvar.h"
 
-#define XASH_VERSION	0.99f		// engine current version
+#define XASH_VERSION	1.0f		// engine current version
 
 // PERFORMANCE INFO
 #define MIN_FPS         	20.0		// host minimum fps value for maxfps.
@@ -749,6 +749,12 @@ qboolean MD5_HashFile( byte digest[16], const char *pszFileName, uint seed[4] );
 uint Com_HashKey( const char *string, uint hashSize );
 
 //
+// cfgscript.c
+//
+int CSCR_LoadDefaultCVars( const char *scriptfilename );
+int CSCR_WriteGameCVars( file_t *cfg, const char *scriptfilename );
+
+//
 // hpak.c
 //
 void HPAK_Init( void );
@@ -802,6 +808,7 @@ qboolean CL_IsInConsole( void );
 qboolean CL_IsThirdPerson( void );
 qboolean CL_IsIntermission( void );
 qboolean CL_Initialized( void );
+qboolean CL_IsTimeDemo( void );
 char *CL_Userinfo( void );
 float CL_GetLerpFrac( void );
 void CL_CharEvent( int key );

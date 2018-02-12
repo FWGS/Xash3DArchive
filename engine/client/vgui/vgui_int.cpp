@@ -57,10 +57,7 @@ void VGui_RunFrame( void )
 void VGui_SetRootPanelSize( void )
 {
 	if( rootPanel != NULL )
-	{
 		rootPanel->setBounds( 0, 0, gameui.globals->scrWidth, gameui.globals->scrHeight );
-//		rootPanel->setSize( gameui.globals->scrWidth, gameui.globals->scrHeight );
-	}
 }
 
 void VGui_Startup( void )

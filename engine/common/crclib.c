@@ -210,7 +210,7 @@ qboolean CRC32_File( dword *crcvalue, const char *filename )
 	f = FS_Open( filename, "rb", false );
 	if( !f ) return false;
 
-	ASSERT( crcvalue != NULL );
+	Assert( crcvalue != NULL );
 	CRC32_Init( crcvalue );
 
 	while( 1 )

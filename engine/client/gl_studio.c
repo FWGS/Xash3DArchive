@@ -1400,7 +1400,7 @@ void R_StudioBuildNormalTable( void )
 	mstudiomesh_t	*pmesh;
 	int		i, j;
 
-	ASSERT( m_pSubModel );
+	Assert( m_pSubModel );
 
 	// reset chrome cache
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )
@@ -1452,7 +1452,7 @@ void R_StudioGenerateNormals( void )
 	mstudiomesh_t	*pmesh;
 	int		i, j;
 
-	ASSERT( m_pSubModel );
+	Assert( m_pSubModel );
 
 	for( i = 0; i < m_pSubModel->numverts; i++ )
 		VectorClear( g_studio.norms[i] );
@@ -3945,7 +3945,7 @@ void Mod_UnloadStudioModel( model_t *mod )
 	mstudiotexture_t	*ptexture;
 	int		i;
 
-	ASSERT( mod != NULL );
+	Assert( mod != NULL );
 
 	if( mod->type != mod_studio )
 		return; // not a studio

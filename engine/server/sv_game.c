@@ -93,7 +93,7 @@ void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max, qboolean 
 {
 	int	i;
 
-	ASSERT( min != NULL && max != NULL );
+	Assert( min != NULL && max != NULL );
 
 	if( !SV_IsValidEdict( e ))
 		return;
@@ -454,8 +454,8 @@ void SV_CreateStudioDecal( sizebuf_t *msg, const float *origin, const float *sta
 	if( !entityIndex || !modelIndex )
 		return;
 
-	ASSERT( origin );
-	ASSERT( start );
+	Assert( origin != NULL );
+	Assert( start != NULL );
 
 	// this can happens if serialized map contain 4096 static decals...
 	if( MSG_GetNumBytesLeft( msg ) < 50 )
@@ -769,7 +769,7 @@ void SV_FreePrivateData( edict_t *pEdict )
 
 void SV_InitEdict( edict_t *pEdict )
 {
-	ASSERT( pEdict );
+	Assert( pEdict != NULL );
 
 	SV_FreePrivateData( pEdict );
 	memset( &pEdict->v, 0, sizeof( entvars_t ));
@@ -786,8 +786,8 @@ void SV_InitEdict( edict_t *pEdict )
 
 void SV_FreeEdict( edict_t *pEdict )
 {
-	ASSERT( pEdict != NULL );
-	ASSERT( pEdict->free == false );
+	Assert( pEdict != NULL );
+	Assert( pEdict->free == false );
 
 	// unlink from world
 	SV_UnlinkEdict( pEdict );
@@ -2899,7 +2899,7 @@ pfnPvAllocEntPrivateData
 */
 void *pfnPvAllocEntPrivateData( edict_t *pEdict, long cb )
 {
-	ASSERT( pEdict );
+	Assert( pEdict != NULL );
 
 	SV_FreePrivateData( pEdict );
 
@@ -3937,7 +3937,7 @@ byte *pfnSetFatPVS( const float *org )
 	if( !sv.worldmodel->visdata || sv_novis->value || !org || CL_DisableVisibility( ))
 		fullvis = true;
 
-	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
+	Assert( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
 
 	// portals can't change viewpoint!
 	if( !FBitSet( sv.hostflags, SVF_MERGE_VISIBILITY ))
@@ -3987,7 +3987,7 @@ byte *pfnSetFatPAS( const float *org )
 	if( !sv.worldmodel->visdata || sv_novis->value || !org || CL_DisableVisibility( ))
 		fullvis = true;
 
-	ASSERT( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
+	Assert( svs.currentPlayerNum >= 0 && svs.currentPlayerNum < MAX_CLIENTS );
 
 	// portals can't change viewpoint!
 	if( !FBitSet( sv.hostflags, SVF_MERGE_VISIBILITY ))
@@ -4331,6 +4331,72 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 
 	return result;
 }
+
+/*
+=============
+pfnQueryClientCvarValue
+
+request client cvar value
+=============
+*/
+void pfnQueryClientCvarValue( const edict_t *player, const char *cvarName )
+{
+	sv_client_t *cl;
+
+	if( !cvarName || !*cvarName )
+		return;
+
+	if(( cl = SV_ClientFromEdict( player, true )) != NULL )
+	{
+		MSG_BeginServerCmd( &cl->netchan.message, svc_querycvarvalue );
+		MSG_WriteString( &cl->netchan.message, cvarName );
+	}
+	else
+	{
+		if( svgame.dllFuncs2.pfnCvarValue )
+			svgame.dllFuncs2.pfnCvarValue( player, "Bad Player" );
+		MsgDev( D_ERROR, "QueryClientCvarValue: tried to send to a non-client!\n" );
+	}
+}
+
+/*
+=============
+pfnQueryClientCvarValue2
+
+request client cvar value (bugfixed)
+=============
+*/
+void pfnQueryClientCvarValue2( const edict_t *player, const char *cvarName, int requestID )
+{
+	sv_client_t *cl;
+
+	if( !cvarName || !*cvarName )
+		return;
+
+	if(( cl = SV_ClientFromEdict( player, true )) != NULL )
+	{
+		MSG_BeginServerCmd( &cl->netchan.message, svc_querycvarvalue2 );
+		MSG_WriteLong( &cl->netchan.message, requestID );
+		MSG_WriteString( &cl->netchan.message, cvarName );
+	}
+	else
+	{
+		if( svgame.dllFuncs2.pfnCvarValue2 )
+			svgame.dllFuncs2.pfnCvarValue2( player, requestID, cvarName, "Bad Player" );
+		MsgDev( D_ERROR, "QueryClientCvarValue: tried to send to a non-client!\n" );
+	}
+}
+
+/*
+=============
+pfnEngineStub
+
+extended iface stubs
+=============
+*/
+static void pfnEngineStub( void )
+{
+}
 					
 // engine callbacks
 static enginefuncs_t gEngfuncs = 
@@ -4479,6 +4545,20 @@ static enginefuncs_t gEngfuncs =
 	pfnVoice_GetClientListening,
 	pfnVoice_SetClientListening,
 	pfnGetPlayerAuthId,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnEngineStub,
+	pfnQueryClientCvarValue,
+	pfnQueryClientCvarValue2,
+	COM_CheckParm,
 };
 
 /*
@@ -4628,7 +4708,7 @@ void SV_LoadFromFile( const char *mapname, char *entities )
 	int	inhibited;
 	edict_t	*ent;
 
-	ASSERT( entities != NULL );
+	Assert( entities != NULL );
 
 	// user dll can override spawn entities function (Xash3D extension)
 	if( !svgame.physFuncs.SV_LoadEntities || !svgame.physFuncs.SV_LoadEntities( mapname, entities ))

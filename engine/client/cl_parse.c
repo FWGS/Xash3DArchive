@@ -1493,6 +1493,56 @@ void CL_ParseScreenFade( sizebuf_t *msg )
 
 /*
 ==============
+CL_ParseCvarValue
+
+Find the client cvar value
+and sent it back to the server
+==============
+*/
+void CL_ParseCvarValue( sizebuf_t *msg )
+{
+	const char *cvarName = MSG_ReadString( msg );
+	convar_t *cvar = Cvar_FindVar( cvarName );
+
+	// build the answer
+	MSG_BeginClientCmd( &cls.netchan.message, clc_requestcvarvalue );
+	MSG_WriteString( &cls.netchan.message, cvar ? cvar->string : "Not Found" );
+}
+
+/*
+==============
+CL_ParseCvarValue2
+
+Find the client cvar value
+and sent it back to the server
+==============
+*/
+void CL_ParseCvarValue2( sizebuf_t *msg )
+{
+	int requestID = MSG_ReadLong( msg );
+	const char *cvarName = MSG_ReadString( msg );
+	convar_t *cvar = Cvar_FindVar( cvarName );
+
+	// build the answer
+	MSG_BeginClientCmd( &cls.netchan.message, clc_requestcvarvalue2 );
+	MSG_WriteLong( &cls.netchan.message, requestID );
+	MSG_WriteString( &cls.netchan.message, cvarName );
+
+	if( cvar )
+	{
+		// cheater can change value ignoring Cvar_Set so we responce incorrect value
+		if( cvar->value != Q_atof( cvar->string ))
+			MSG_WriteString( &cls.netchan.message, va( "%s (%g)", cvar->string, cvar->value ));
+		else MSG_WriteString( &cls.netchan.message, cvar->string );
+	}	
+	else
+	{
+		MSG_WriteString( &cls.netchan.message, "Not Found" );
+	}
+}
+
+/*
+==============
 CL_DispatchUserMessage
 
 Dispatch user message by engine request
@@ -1866,6 +1916,12 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			break;
 		case svc_studiodecal:
 			CL_ParseStudioDecal( msg );
+			break;
+		case svc_querycvarvalue:
+			CL_ParseCvarValue( msg );
+			break;
+		case svc_querycvarvalue2:
+			CL_ParseCvarValue2( msg );
 			break;
 		default:
 			CL_ParseUserMessage( msg, cmd );

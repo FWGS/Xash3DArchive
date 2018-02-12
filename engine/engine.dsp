@@ -543,10 +543,6 @@ SOURCE=.\client\vgui\vgui_draw.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\client\vgui\vgui_font.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\client\vgui\vgui_input.cpp
 # End Source File
 # Begin Source File

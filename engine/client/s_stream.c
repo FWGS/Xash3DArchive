@@ -193,7 +193,7 @@ void S_StreamBackgroundTrack( void )
 
 	ch = S_FindRawChannel( S_RAW_SOUND_BACKGROUNDTRACK, true );
 
-	ASSERT( ch != NULL );
+	Assert( ch != NULL );
 
 	// see how many samples should be copied into the raw buffer
 	if( ch->s_rawend < soundtime )
@@ -294,7 +294,7 @@ void S_StreamSoundTrack( void )
 
 	ch = S_FindRawChannel( S_RAW_SOUND_SOUNDTRACK, true );
 
-	ASSERT( ch != NULL );
+	Assert( ch != NULL );
 
 	// see how many samples should be copied into the raw buffer
 	if( ch->s_rawend < soundtime )

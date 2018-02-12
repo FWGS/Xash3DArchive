@@ -719,7 +719,7 @@ void Mod_UnloadAliasModel( model_t *mod )
 	aliashdr_t	*palias;
 	int		i, j;
 
-	ASSERT( mod != NULL );
+	Assert( mod != NULL );
 
 	if( mod->type != mod_alias )
 		return; // not an alias

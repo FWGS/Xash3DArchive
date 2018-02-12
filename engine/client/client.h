@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define MAX_MOVIES		8
 #define MAX_CDTRACKS	32
 #define MAX_IMAGES		256	// SpriteTextures
-#define MAX_EFRAGS		8192
+#define MAX_EFRAGS		8192	// Arcane Dimensions required
 #define MAX_REQUESTS	64
 
 // screenshot types
@@ -50,7 +50,7 @@ GNU General Public License for more details.
 // client sprite types
 #define SPR_CLIENT		0	// client sprite for temp-entities or user-textures
 #define SPR_HUDSPRITE	1	// hud sprite
-#define SPR_MAPSPRITE	2	// contain overview subdivided into frames 128x128
+#define SPR_MAPSPRITE	2	// contain overview.bmp that diced into frames 128x128
 
 typedef int		sound_t;
 
@@ -164,8 +164,8 @@ typedef struct
 	model_t		*model;
 } player_model_t;
 
-// the client_t structure is wiped completely at every
-// server map change
+// the client_t structure is wiped completely
+// at every server map change
 typedef struct
 {
 	int		timeoutcount;
@@ -244,8 +244,8 @@ typedef struct
 	char		event_precache[MAX_EVENTS][MAX_QPATH];
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 
-	short	sound_index[MAX_SOUNDS];
-	short	decal_index[MAX_DECALS];
+	short		sound_index[MAX_SOUNDS];
+	short		decal_index[MAX_DECALS];
 
 	cl_entity_t	*world;
 	model_t		*worldmodel;			// pointer to world
@@ -552,6 +552,10 @@ typedef struct
 	int		lastoutgoingcommand;	// sequence number of last outgoing command
 	int		lastupdate_sequence;	// prediction stuff
 
+	int		td_lastframe;		// to meter out one message a frame
+	int		td_startframe;		// host_framecount at start
+	double		td_starttime;		// realtime at second frame of timedemo
+
 	// game images
 	int		pauseIcon;		// draw 'paused' when game in-pause
 	int		tileImage;		// for draw any areas not covered by the refresh
@@ -708,6 +712,7 @@ void CL_CloseDemoHeader( void );
 void CL_StopPlayback( void );
 void CL_StopRecord( void );
 void CL_PlayDemo_f( void );
+void CL_TimeDemo_f( void );
 void CL_StartDemos_f( void );
 void CL_Demos_f( void );
 void CL_DeleteDemo_f( void );

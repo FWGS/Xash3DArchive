@@ -62,6 +62,7 @@ Emulate audio-cd system
 void CL_PlayCDTrack_f( void )
 {
 	const char	*command;
+	const char	*pszTrack;
 	static int	track = 0;
 	static qboolean	paused = false;
 	static qboolean	looped = false;
@@ -69,21 +70,30 @@ void CL_PlayCDTrack_f( void )
 
 	if( Cmd_Argc() < 2 ) return;
 	command = Cmd_Argv( 1 );
+	pszTrack = Cmd_Argv( 2 );
 
 	if( !enabled && Q_stricmp( command, "on" ))
 		return; // CD-player is disabled
 
 	if( !Q_stricmp( command, "play" ))
 	{
-		track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
-		S_StartBackgroundTrack( clgame.cdtracks[track-1], NULL, 0 );
+		if( Q_isdigit( pszTrack ))
+		{
+			track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
+			S_StartBackgroundTrack( clgame.cdtracks[track-1], NULL, 0 );
+		}
+		else S_StartBackgroundTrack( pszTrack, NULL, 0 );
 		paused = false;
 		looped = false;
 	}
 	else if( !Q_stricmp( command, "loop" ))
 	{
-		track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
-		S_StartBackgroundTrack( clgame.cdtracks[track-1], clgame.cdtracks[track-1], 0 );
+		if( Q_isdigit( pszTrack ))
+		{
+			track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
+			S_StartBackgroundTrack( clgame.cdtracks[track-1], clgame.cdtracks[track-1], 0 );
+		}
+		else S_StartBackgroundTrack( pszTrack, pszTrack, 0 );
 		paused = false;
 		looped = true;
 	}

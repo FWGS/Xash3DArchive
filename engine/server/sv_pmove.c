@@ -42,7 +42,7 @@ qboolean SV_PlayerIsFrozen( edict_t *pClient )
 
 void SV_ClipPMoveToEntity( physent_t *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, pmtrace_t *tr )
 {
-	ASSERT( tr != NULL );
+	Assert( tr != NULL );
 
 	if( svgame.physFuncs.ClipPMoveToEntity != NULL )
 	{
@@ -198,7 +198,7 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 	physent_t	*pe;
 
 	pl = EDICT_NUM( svgame.pmove->player_index + 1 );
-	ASSERT( SV_IsValidEdict( pl ));
+	Assert( SV_IsValidEdict( pl ));
 
 	// touch linked edicts
 	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )

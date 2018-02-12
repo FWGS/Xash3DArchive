@@ -693,7 +693,7 @@ static void R_DecalNode( model_t *model, mnode_t *node, decalinfo_t *decalinfo )
 	mplane_t	*splitplane;
 	float	dist;
 	
-	ASSERT( node );
+	Assert( node );
 
 	if( node->contents < 0 )
 	{
@@ -888,7 +888,7 @@ void DrawSurfaceDecals( msurface_t *fa, qboolean single, qboolean reverse )
 	if( !fa->pdecals ) return;
 
 	e = RI.currententity;
-	ASSERT( e != NULL );
+	Assert( e != NULL );
 
 	if( single )
 	{
@@ -1027,7 +1027,7 @@ void DrawDecalsBatch( void )
 		return;
 
 	e = RI.currententity;
-	ASSERT( e != NULL );
+	Assert( e != NULL );
 
 	if( e->curstate.rendermode != kRenderTransTexture )
 	{

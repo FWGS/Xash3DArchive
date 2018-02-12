@@ -71,7 +71,7 @@ byte *CL_CreateRawTextureFromPixels( texture_t *tx, size_t *size, int topcolor, 
 	static mstudiotexture_t	pin;
 	byte			*pal;
 
-	ASSERT( size != NULL );
+	Assert( size != NULL );
 
 	*size = sizeof( pin ) + (tx->width * tx->height) + 768;
 
@@ -119,7 +119,7 @@ void CL_DuplicateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomco
 			break; // found
 	}
 
-	ASSERT( tx != NULL );
+	Assert( tx != NULL );
 
 	// backup original palette
 	pal = (byte *)(tx + 1) + (tx->width * tx->height);
@@ -169,7 +169,7 @@ void CL_UpdateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomcolor
 			break; // found
 	}
 
-	ASSERT( tx != NULL );
+	Assert( tx != NULL );
 
 	// backup original palette
 	pal = (byte *)(tx + 1) + (tx->width * tx->height);
@@ -189,7 +189,7 @@ void CL_UpdateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomcolor
 	// restore original palette
 	memcpy( pal, paletteBackup, 768 );
 
-	ASSERT( index == ptexture->index );
+	Assert( index == ptexture->index );
 }
 
 /*
@@ -317,7 +317,7 @@ void CL_FreeRemapInfo( remap_info_t *info )
 {
 	int	i;
 
-	ASSERT( info != NULL );
+	Assert( info != NULL );
 
 	// release all colormap texture copies
 	for( i = 0; i < info->numtextures; i++ )

@@ -559,7 +559,7 @@ static gltexture_t *R_RecursiveFindWaterTexture( const mnode_t *node, const mnod
 	// assure the initial node is not null
 	// we could check it here, but we would rather check it 
 	// outside the call to get rid of one additional recursion level
-	ASSERT( node != NULL );
+	Assert( node != NULL );
 
 	// ignore solid nodes
 	if( node->contents == CONTENTS_SOLID )
@@ -757,8 +757,8 @@ void R_DrawEntitiesOnList( void )
 		RI.currententity = tr.solid_entities[i];
 		RI.currentmodel = RI.currententity->model;
 
-		ASSERT( RI.currententity != NULL );
-		ASSERT( RI.currententity->model != NULL );
+		Assert( RI.currententity != NULL );
+		Assert( RI.currentmodel != NULL );
 
 		switch( RI.currentmodel->type )
 		{
@@ -789,8 +789,8 @@ void R_DrawEntitiesOnList( void )
 		RI.currententity = tr.solid_entities[i];
 		RI.currentmodel = RI.currententity->model;
 
-		ASSERT( RI.currententity != NULL );
-		ASSERT( RI.currententity->model != NULL );
+		Assert( RI.currententity != NULL );
+		Assert( RI.currentmodel != NULL );
 
 		switch( RI.currentmodel->type )
 		{
@@ -822,8 +822,8 @@ void R_DrawEntitiesOnList( void )
 		tr.blend = CL_FxBlend( RI.currententity ) / 255.0f;
 		if( tr.blend <= 0.0f ) continue;
 	
-		ASSERT( RI.currententity != NULL );
-		ASSERT( RI.currententity->model != NULL );
+		Assert( RI.currententity != NULL );
+		Assert( RI.currentmodel != NULL );
 
 		switch( RI.currentmodel->type )
 		{
@@ -1149,7 +1149,7 @@ static int GL_RenderGetParm( int parm, int arg )
 #endif
 		return 0;
 	case PARM_TEX_SKYBOX:
-		ASSERT( arg >= 0 && arg < 6 );
+		Assert( arg >= 0 && arg < 6 );
 		return tr.skyboxTextures[arg];
 	case PARM_TEX_SKYTEXNUM:
 		return tr.skytexturenum;
@@ -1295,19 +1295,19 @@ static int R_FatPVS( const vec3_t org, float radius, byte *visbuffer, qboolean m
 
 static lightstyle_t *CL_GetLightStyle( int number )
 {
-	ASSERT( number >= 0 && number < MAX_LIGHTSTYLES );
+	Assert( number >= 0 && number < MAX_LIGHTSTYLES );
 	return &cl.lightstyles[number];
 }
 
 static dlight_t *CL_GetDynamicLight( int number )
 {
-	ASSERT( number >= 0 && number < MAX_DLIGHTS );
+	Assert( number >= 0 && number < MAX_DLIGHTS );
 	return &cl_dlights[number];
 }
 
 static dlight_t *CL_GetEntityLight( int number )
 {
-	ASSERT( number >= 0 && number < MAX_ELIGHTS );
+	Assert( number >= 0 && number < MAX_ELIGHTS );
 	return &cl_elights[number];
 }
 

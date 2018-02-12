@@ -537,7 +537,7 @@ double Host_CalcFPS( void )
 	}
 
 	// probably left part of this condition is redundant :-)
-	if( host.type != HOST_DEDICATED && Host_IsLocalGame( ))
+	if( host.type != HOST_DEDICATED && Host_IsLocalGame( ) && !CL_IsTimeDemo( ))
 	{
 		// ajdust fps for vertical synchronization
 		if( gl_vsync != NULL && gl_vsync->value )
@@ -581,7 +581,7 @@ qboolean Host_FilterTime( float time )
 	oldtime = host.realtime;
 
 	// NOTE: allow only in singleplayer while demos are not active
-	if( host_framerate->value > 0.0f && Host_IsLocalGame() && !CL_IsPlaybackDemo() && !CL_IsRecordDemo())
+	if( host_framerate->value > 0.0f && Host_IsLocalGame() && !CL_IsPlaybackDemo() && !CL_IsRecordDemo( ))
 		host.frametime = bound( MIN_FRAMETIME, host_framerate->value, MAX_FRAMETIME );
 	else host.frametime = bound( MIN_FRAMETIME, host.frametime, MAX_FRAMETIME );
 

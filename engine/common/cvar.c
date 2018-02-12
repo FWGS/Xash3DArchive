@@ -159,6 +159,58 @@ const char *Cvar_ValidateString( convar_t *var, const char *value )
 
 /*
 ============
+Cvar_UnlinkVar
+
+unlink the variable
+============
+*/
+int Cvar_UnlinkVar( const char *var_name, int group )
+{
+	int	count = 0;
+	convar_t	**prev;
+	convar_t	*var;
+
+	prev = &cvar_vars;
+
+	while( 1 )
+	{
+		var = *prev;
+		if( !var ) break;
+
+		// do filter by name
+		if( var_name && Q_strcmp( var->name, var_name ))
+		{
+			prev = &var->next;
+			continue;
+		}
+
+		// do filter by specified group
+		if( group && !FBitSet( var->flags, group ))
+		{
+			prev = &var->next;
+			continue;
+		}
+
+		// unlink variable from list
+		freestring( var->string );
+		*prev = var->next;
+
+		// only allocated cvars can throw these fields
+		if( FBitSet( var->flags, FCVAR_ALLOCATED ))
+		{
+			freestring( var->name );
+			freestring( var->def_string );
+			freestring( var->desc );
+			Mem_Free( var );
+		}
+		count++;
+	}
+
+	return count;
+}
+
+/*
+============
 Cvar_Changed
 
 Tell the engine parts about cvar changing
@@ -166,7 +218,7 @@ Tell the engine parts about cvar changing
 */
 static void Cvar_Changed( convar_t *var )
 {
-	ASSERT( var != NULL );
+	Assert( var != NULL );
 
 	// tell about changes
 	SetBits( var->flags, FCVAR_CHANGED );
@@ -229,7 +281,7 @@ convar_t *Cvar_Get( const char *name, const char *value, int flags, const char *
 {
 	convar_t	*cur, *find, *var;
 	
-	ASSERT( name != NULL );
+	ASSERT( name && *name );
 
 	// check for command coexisting
 	if( Cmd_Exists( name ))
@@ -313,15 +365,23 @@ Adds a freestanding variable to the variable list.
 */
 void Cvar_RegisterVariable( convar_t *var )
 {
-	convar_t	*cur, *find;
+	convar_t	*cur, *find, *dup;
 
 	ASSERT( var != NULL );
 
 	// first check to see if it has allready been defined
-	if( Cvar_FindVar( var->name ))
+	dup = Cvar_FindVar( var->name );
+
+	if( dup )
 	{
-		MsgDev( D_ERROR, "can't register variable '%s', is already defined\n", var->name );
-		return;
+		if( !FBitSet( dup->flags, FCVAR_TEMPORARY ))
+		{
+			MsgDev( D_ERROR, "can't register variable '%s', is already defined\n", var->name );
+			return;
+		}
+
+		// time to replace temp variable with real
+		Cvar_UnlinkVar( var->name, FCVAR_TEMPORARY );
 	}
 
 	// check for overlap with a command
@@ -760,9 +820,7 @@ unlink all cvars with specified flag
 */
 void Cvar_Unlink( int group )
 {
-	convar_t	*var;
-	convar_t	**prev;
-	int	count = 0;
+	int	count;
 
 	if( Cvar_VariableInteger( "host_gameloaded" ) && FBitSet( group, FCVAR_EXTDLL ))
 	{
@@ -782,35 +840,7 @@ void Cvar_Unlink( int group )
 		return;
 	}
 
-	prev = &cvar_vars;
-
-	while( 1 )
-	{
-		var = *prev;
-		if( !var ) break;
-
-		// do filter by specified group
-		if( group && !FBitSet( var->flags, group ))
-		{
-			prev = &var->next;
-			continue;
-		}
-
-		// unlink variable from list
-		freestring( var->string );
-		*prev = var->next;
-
-		// only allocated cvars can throw these fields
-		if( FBitSet( var->flags, FCVAR_ALLOCATED ))
-		{
-			freestring( var->name );
-			freestring( var->def_string );
-			freestring( var->desc );
-			Mem_Free( var );
-		}
-		count++;
-	}
-
+	count = Cvar_UnlinkVar( NULL, group );
 	MsgDev( D_REPORT, "unlink %i cvars\n", count );
 }
 

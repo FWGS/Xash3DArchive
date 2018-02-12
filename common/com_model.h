@@ -385,6 +385,9 @@ typedef struct player_info_s
 	vec3_t		prevgaitorigin;
 
 	customization_t	customdata;
+
+	// hashed cd key
+	char		hashedcdkey[16];
 } player_info_t;
 
 //

@@ -808,6 +808,7 @@ autocomplete_list_t cmd_list[] =
 { "map_background", Cmd_GetMapList },
 { "changelevel", Cmd_GetMapList },
 { "playdemo", Cmd_GetDemoList, },
+{ "timedemo", Cmd_GetDemoList, },
 { "playvol", Cmd_GetSoundList },
 { "hpkval", Cmd_GetCustomList },
 { "entpatch", Cmd_GetMapList },
@@ -956,6 +957,10 @@ void Host_WriteServerConfig( const char *name )
 	file_t	*f;
 
 	SV_InitGameProgs();	// collect user variables
+
+	// FIXME: move this out until menu parser is done
+	CSCR_LoadDefaultCVars( "settings.scr" );
+	CSCR_LoadDefaultCVars( "user.scr" );
 	
 	if(( f = FS_Open( name, "w", false )) != NULL )
 	{
@@ -964,6 +969,8 @@ void Host_WriteServerConfig( const char *name )
 		FS_Printf( f, "//\t\tgame.cfg - multiplayer server temporare config\n" );
 		FS_Printf( f, "//=======================================================================\n" );
 		Cvar_WriteVariables( f, FCVAR_SERVER );
+		CSCR_WriteGameCVars( f, "user.scr" );
+		CSCR_WriteGameCVars( f, "settings.scr" );
 		FS_Close( f );
 	}
 	else MsgDev( D_ERROR, "Couldn't write %s.\n", name );

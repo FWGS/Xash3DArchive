@@ -106,7 +106,6 @@ typedef struct server_physics_api_s
 	const byte	*(*pfnLoadImagePixels)( const char *filename, int *width, int *height );
 
 	const char*	(*pfnGetModelName)( int modelindex );
-	int		(*pfnCheckParm)( char *parm, char **ppnext );
 } server_physics_api_t;
 
 // physic callbacks

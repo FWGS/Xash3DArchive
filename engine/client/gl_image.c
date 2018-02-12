@@ -80,7 +80,7 @@ void GL_Bind( GLint tmu, GLenum texnum )
 
 	// missed texture ?
 	if( texnum <= 0 ) texnum = tr.defaultTexture;
-	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
+	Assert( texnum > 0 && texnum < MAX_TEXTURES );
 
 	if( tmu != GL_KEEP_UNIT )
 		GL_SelectTexture( tmu );
@@ -116,7 +116,7 @@ void GL_ApplyTextureParams( gltexture_t *tex )
 {
 	vec4_t	border = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-	ASSERT( tex != NULL );
+	Assert( tex != NULL );
 
 	// set texture filter
 	if( FBitSet( tex->flags, TF_DEPTHMAP ))
@@ -249,7 +249,7 @@ static void GL_UpdateTextureParams( int iTexture )
 {
 	gltexture_t	*tex = &r_textures[iTexture];
 
-	ASSERT( tex != NULL );
+	Assert( tex != NULL );
 
 	if( !tex->texnum ) return; // free slot
 
@@ -470,7 +470,7 @@ static int GL_CalcMipmapCount( gltexture_t *tex, qboolean haveBuffer )
 	int	width, height;
 	int	mipcount;
 
-	ASSERT( tex != NULL );
+	Assert( tex != NULL );
 
 	if( !haveBuffer || tex->target == GL_TEXTURE_3D )
 		return 1;
@@ -501,7 +501,7 @@ static void GL_SetTextureDimensions( gltexture_t *tex, int width, int height, in
 	int	maxTextureSize;
 	int	maxDepthSize = 1;
 
-	ASSERT( tex != NULL );
+	Assert( tex != NULL );
 
 	switch( tex->target )
 	{
@@ -574,8 +574,8 @@ GL_SetTextureTarget
 */
 static void GL_SetTextureTarget( gltexture_t *tex, rgbdata_t *pic )
 {
-	ASSERT( pic != NULL );
-	ASSERT( tex != NULL );
+	Assert( pic != NULL );
+	Assert( tex != NULL );
 
 	// correct depth size
 	pic->depth = Q_max( 1, pic->depth );
@@ -628,7 +628,7 @@ static void GL_SetTextureFormat( gltexture_t *tex, pixformat_t format, int chann
 	qboolean	haveColor = ( channelMask & IMAGE_HAS_COLOR );
 	qboolean	haveAlpha = ( channelMask & IMAGE_HAS_ALPHA );
 
-	ASSERT( tex != NULL );
+	Assert( tex != NULL );
 
 	if( ImageDXT( format ))
 	{
@@ -1016,7 +1016,7 @@ static void GL_TextureImageRAW( gltexture_t *tex, GLint side, GLint level, GLint
 	GLenum	inFormat = PFDesc[type].glFormat;
 	GLint	dataType = GL_UNSIGNED_BYTE;
 
-	ASSERT( tex != NULL );
+	Assert( tex != NULL );
 
 	if( tex->flags & TF_DEPTHMAP )
 		inFormat = GL_DEPTH_COMPONENT;
@@ -1048,7 +1048,7 @@ static void GL_TextureImageDXT( gltexture_t *tex, GLint side, GLint level, GLint
 	GLuint	cubeTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB;
 	qboolean	subImage = ( tex->flags & TF_IMG_UPLOADED );
 
-	ASSERT( tex != NULL );
+	Assert( tex != NULL );
 
 	if( tex->target == GL_TEXTURE_1D )
 	{
@@ -1083,7 +1083,7 @@ static void GL_CheckTexImageError( gltexture_t *tex )
 {
 	int	err;
 
-	ASSERT( tex != NULL );
+	Assert( tex != NULL );
 
 	// catch possible errors
 	if(( err = pglGetError()) != GL_NO_ERROR )
@@ -1107,8 +1107,8 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 	qboolean		normalMap;
 	const byte	*bufend;
 
-	ASSERT( pic != NULL );
-	ASSERT( tex != NULL );
+	Assert( pic != NULL );
+	Assert( tex != NULL );
 
 	GL_SetTextureTarget( tex, pic ); // must be first
 
@@ -1729,7 +1729,7 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 	int		flags = 0;
 
 	if( texnum <= 0 ) return; // missed image
-	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
+	Assert( texnum > 0 && texnum < MAX_TEXTURES );
 	image = &r_textures[texnum];
 
 	// select mode
@@ -1845,7 +1845,7 @@ void GL_FreeTexture( GLenum texnum )
 	if( texnum <= 0 || !glw_state.initialized )
 		return;
 
-	ASSERT( texnum > 0 && texnum < MAX_TEXTURES );
+	Assert( texnum > 0 && texnum < MAX_TEXTURES );
 	R_FreeImage( &r_textures[texnum] );
 }
 
@@ -1860,7 +1860,7 @@ void R_FreeImage( gltexture_t *image )
 	gltexture_t	*cur;
 	gltexture_t	**prev;
 
-	ASSERT( image != NULL );
+	Assert( image != NULL );
 
 	if( !image->name[0] )
 	{

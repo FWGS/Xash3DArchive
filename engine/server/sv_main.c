@@ -101,6 +101,7 @@ CVAR_DEFINE( sv_changetime, "host_changetime", "0.001", FCVAR_ARCHIVE, "host.fra
 // obsolete cvars which we should keep because game DLL's will be relies on it
 CVAR_DEFINE_AUTO( showtriggers, "0", FCVAR_LATCH, "debug cvar shows triggers" );
 CVAR_DEFINE_AUTO( sv_airmove, "1", FCVAR_SERVER, "obsolete, compatibility issues" );
+CVAR_DEFINE_AUTO( sv_version, "", FCVAR_READ_ONLY, "engine version string" );
 
 // gore-related cvars
 CVAR_DEFINE_AUTO( violence_hblood, "1", 0, "draw human blood" );
@@ -699,6 +700,8 @@ Only called at startup, not for each game
 */
 void SV_Init( void )
 {
+	string	versionString;
+
 	SV_InitHostCommands();
 
 	Cvar_Get ("protocol", va( "%i", PROTOCOL_VERSION ), FCVAR_READ_ONLY, "displays server protocol version" );
@@ -777,6 +780,7 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_allow_download);
 	Cvar_RegisterVariable (&sv_send_logos);
 	Cvar_RegisterVariable (&sv_send_resources);
+	Cvar_RegisterVariable (&sv_version);
 	sv_sendvelocity = Cvar_Get( "sv_sendvelocity", "1", FCVAR_ARCHIVE, "force to send velocity for event_t structure across network" );
 	Cvar_RegisterVariable (&sv_consistency);
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
@@ -795,6 +799,9 @@ void SV_Init( void )
 
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
 	MSG_Init( &net_message, "NetMessage", net_message_buffer, sizeof( net_message_buffer ));
+
+	Q_snprintf( versionString, sizeof( versionString ), "%s: %.2f,%i,%i", "Xash3D", XASH_VERSION, PROTOCOL_VERSION, Q_buildnum() );
+	Cvar_FullSet( "sv_version", versionString, FCVAR_READ_ONLY );
 }
 
 /*

@@ -30,8 +30,16 @@ GNU General Public License for more details.
 #define DEMO_STARTUP	0	// this lump contains startup info needed to spawn into the server
 #define DEMO_NORMAL		1	// this lump contains playback info of messages, etc., needed during playback.
 
+// Demo flags
+#define FDEMO_TITLE		0x01	// Show title
+#define FDEMO_PLAY		0x04	// Playing cd track
+#define FDEMO_FADE_IN_SLOW	0x08	// Fade in (slow)
+#define FDEMO_FADE_IN_FAST	0x10	// Fade in (fast)
+#define FDEMO_FADE_OUT_SLOW	0x20	// Fade out (slow)
+#define FDEMO_FADE_OUT_FAST	0x40	// Fade out (fast)
+
 #define IDEMOHEADER		(('M'<<24)+('E'<<16)+('D'<<8)+'I') // little-endian "IDEM"
-#define DEMO_PROTOCOL	2
+#define DEMO_PROTOCOL	3
 
 const char *demo_cmd[dem_lastcmd+1] =
 {
@@ -63,6 +71,8 @@ typedef struct
 	int		playback_frames;	// # of frames in track
 	int		offset;		// file offset of track data
 	int		length;		// length of track
+	int		flags;		// FX-flags
+	char		description[64];	// entry description
 } demoentry_t;
 
 typedef struct
@@ -171,6 +181,8 @@ overwrite host.frametime
 */
 double CL_GetDemoFramerate( void )
 {
+	if( cls.timedemo )
+		return 0.0;
 	return bound( MIN_FPS, demo.header.host_fps, MAX_FPS );
 }
 
@@ -185,7 +197,7 @@ void CL_WriteDemoCmdHeader( byte cmd, file_t *file )
 {
 	float	dt;
 
-	ASSERT( cmd >= 1 && cmd <= dem_lastcmd );
+	Assert( cmd >= 1 && cmd <= dem_lastcmd );
 	if( !file ) return;
 
 	// command
@@ -256,7 +268,7 @@ so that we can play the demo correctly.
 */
 void CL_WriteDemoSequence( file_t *file )
 {
-	ASSERT( file );
+	Assert( file );
 
 	FS_Write( file, &cls.netchan.incoming_sequence, sizeof( int ));
 	FS_Write( file, &cls.netchan.incoming_acknowledged, sizeof( int ));
@@ -392,6 +404,8 @@ void CL_WriteDemoHeader( const char *name )
 	demo.starttime = CL_GetDemoRecordClock();	// setup the demo starttime
 	demo.realstarttime = demo.starttime;
 	demo.framecount = 0;
+	cls.td_startframe = host.framecount;
+	cls.td_lastframe = -1;			// get a new message this frame
 
 	// now move on to entry # 1, the first data chunk.
 	curpos = FS_Tell( cls.demofile );
@@ -425,6 +439,7 @@ void CL_StopRecord( void )
 {
 	int	i, curpos;
 	float	stoptime;
+	int	frames;
 
 	if( !cls.demorecording ) return;
 
@@ -459,11 +474,14 @@ void CL_StopRecord( void )
 	cls.demofile = NULL;
 	cls.demorecording = false;
 	cls.demoname[0] = '\0';
+	cls.td_lastframe = host.framecount;
 	gameui.globals->demoname[0] = '\0';
 	demo.header.host_fps = 0.0;
 
+	frames = cls.td_lastframe - cls.td_startframe;
+
 	Msg( "Completed demo\n" );
-	MsgDev( D_INFO, "Recording time: %02d:%02d\n", (int)(cls.demotime / 60.0f ), (int)fmod( cls.demotime, 60.0f ));
+	MsgDev( D_INFO, "Recording time: %02d:%02d, frames %i\n", (int)(cls.demotime / 60.0f ), (int)fmod( cls.demotime, 60.0f ), frames );
 	cls.demotime = 0.0;
 }
 
@@ -508,7 +526,7 @@ void CL_ReadDemoCmdHeader( byte *cmd, float *dt )
 {
 	// read the command
 	FS_Read( cls.demofile, cmd, sizeof( byte ));
-	ASSERT( *cmd >= 1 && *cmd <= dem_lastcmd );
+	Assert( *cmd >= 1 && *cmd <= dem_lastcmd );
 
 	// read the timestamp
 	FS_Read( cls.demofile, dt, sizeof( float ));
@@ -624,6 +642,7 @@ void CL_DemoAborted( void )
 		FS_Close( cls.demofile );
 	cls.demoplayback = false;
 	cls.changedemo = false;
+	cls.timedemo = false;
 	demo.framecount = 0;
 	cls.demofile = NULL;
 	cls.demonum = -1;
@@ -683,8 +702,8 @@ qboolean CL_ReadRawNetworkData( byte *buffer, size_t *length )
 {
 	int	msglen = 0;	
 
-	ASSERT( buffer != NULL );
-	ASSERT( length != NULL );
+	Assert( buffer != NULL );
+	Assert( length != NULL );
 
 	*length = 0; // assume we fail
 	FS_Read( cls.demofile, &msglen, sizeof( int ));
@@ -730,12 +749,13 @@ reads demo data and write it to client
 */
 qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 {
-	size_t	curpos = 0, lastpos = 0;
-	float	fElapsedTime = 0.0f;
-	qboolean	swallowmessages = true;
-	byte	*userbuf = NULL;
-	size_t	size;
-	byte	cmd;
+	size_t		curpos = 0, lastpos = 0;
+	float		fElapsedTime = 0.0f;
+	qboolean		swallowmessages = true;
+	static int	tdlastdemoframe = 0;
+	byte		*userbuf = NULL;
+	size_t		size;
+	byte		cmd;
 
 	if( !cls.demofile )
 	{
@@ -763,7 +783,7 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 		CL_ReadDemoCmdHeader( &cmd, &demo.timestamp );
 
 		fElapsedTime = CL_GetDemoPlaybackClock() - demo.starttime;
-		bSkipMessage = ((demo.timestamp - cl_serverframetime()) >= fElapsedTime) ? true : false;
+		if( !cls.timedemo ) bSkipMessage = ((demo.timestamp - cl_serverframetime()) >= fElapsedTime) ? true : false;
 		if( cls.changelevel ) demo.framecount = 1;
 
 		// changelevel issues
@@ -818,6 +838,16 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 		}
 	} while( swallowmessages );
 
+	// If we are playing back a timedemo, and we've already passed on a 
+	//  frame update for this host_frame tag, then we'll just skip this message.
+	if( cls.timedemo && ( tdlastdemoframe == host.framecount ))
+	{
+		FS_Seek( cls.demofile, FS_Tell ( cls.demofile ) - 5, SEEK_SET );
+		return false;
+	}
+
+	tdlastdemoframe = host.framecount;
+
 	if( !cls.demofile )
 		return false;
 
@@ -826,7 +856,7 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 	{
 		// We are now on the second frame of a new section,
 		// if so, reset start time (unless in a timedemo)
-		if( demo.framecount == 1 )
+		if( demo.framecount == 1 && !cls.timedemo )
 		{
 			// cheat by moving the relative start time forward.
 			demo.starttime = CL_GetDemoPlaybackClock();
@@ -843,6 +873,8 @@ void CL_DemoFindInterpolatedViewAngles( float t, float *frac, demoangle_t **prev
 {
 	int	i, i0, i1, imod;
 	float	at;
+
+	if( cls.timedemo ) return;
 
 	imod = demo.angle_position - 1;
 	i0 = (imod + 1) & ANGLE_MASK;
@@ -914,6 +946,28 @@ void CL_DemoInterpolateAngles( void )
 
 /*
 ==============
+CL_FinishTimeDemo
+
+show stats
+==============
+*/
+void CL_FinishTimeDemo( void )
+{
+	int	frames;
+	double	time;
+	
+	cls.timedemo = false;
+	
+	// the first frame didn't count
+	frames = (host.framecount - cls.td_startframe) - 1;
+	time = host.realtime - cls.td_starttime;
+	if( !time ) time = 1.0;
+
+	Msg( "%i frames %5.3f seconds %5.3f fps\n", frames, time, frames / time );
+}
+
+/*
+==============
 CL_StopPlayback
 
 Called when a demo file runs out, or the user starts a game
@@ -931,6 +985,7 @@ void CL_StopPlayback( void )
 
 	cls.olddemonum = Q_max( -1, cls.demonum - 1 );
 	Mem_Free( demo.directory.entries );
+	cls.td_lastframe = host.framecount;
 	demo.directory.numentries = 0;
 	demo.directory.entries = NULL;
 	demo.header.host_fps = 0.0;
@@ -938,6 +993,9 @@ void CL_StopPlayback( void )
 
 	cls.demoname[0] = '\0';	// clear demoname too
 	gameui.globals->demoname[0] = '\0';
+
+	if( cls.timedemo )
+		CL_FinishTimeDemo();
 
 	if( cls.changedemo )
 	{
@@ -949,6 +1007,7 @@ void CL_StopPlayback( void )
 		// let game known about demo state	
 		Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
 		cls.state = ca_disconnected;
+		S_StopBackgroundTrack();
 		cls.connect_time = 0;
 		cls.demonum = -1;
 		cls.signon = 0;
@@ -1296,6 +1355,31 @@ void CL_PlayDemo_f( void )
 	Q_strncpy( cls.servername, demoname, sizeof( cls.servername ));
 
 	// begin a playback demo
+}
+
+/*
+====================
+CL_TimeDemo_f
+
+timedemo <demoname>
+====================
+*/
+void CL_TimeDemo_f( void )
+{
+	if( Cmd_Argc() != 2 )
+	{
+		Msg( "Usage: timedemo <demoname>\n" );
+		return;
+	}
+
+	CL_PlayDemo_f ();
+
+	// cls.td_starttime will be grabbed at the second frame of the demo, so
+	// all the loading time doesn't get counted
+	cls.timedemo = true;
+	cls.td_starttime = host.realtime;
+	cls.td_startframe = host.framecount;
+	cls.td_lastframe = -1;		// get a new message this frame
 }
 
 /*

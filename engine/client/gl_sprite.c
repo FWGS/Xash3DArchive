@@ -426,7 +426,7 @@ void Mod_UnloadSpriteModel( model_t *mod )
 	mspriteframe_t	*pspriteframe;
 	int		i, j;
 
-	ASSERT( mod != NULL );
+	Assert( mod != NULL );
 
 	if( mod->type != mod_sprite )
 		return; // not a sprite
@@ -477,7 +477,7 @@ mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw )
 	int		i, numframes;
 	float		targettime;
 
-	ASSERT( pModel );
+	Assert( pModel );
 	psprite = pModel->cache.data;
 
 	if( frame < 0 )

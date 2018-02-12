@@ -292,7 +292,7 @@ void CL_TempEntPlaySound( TEMPENTITY *pTemp, float damp )
 	qboolean	isshellcasing = false;
 	int	zvel;
 
-	ASSERT( pTemp != NULL );
+	Assert( pTemp != NULL );
 
 	fvol = 0.8f;
 
@@ -373,7 +373,7 @@ int CL_TempEntAddEntity( cl_entity_t *pEntity )
 {
 	vec3_t mins, maxs;
 
-	ASSERT( pEntity != NULL );
+	Assert( pEntity != NULL );
 
 	if( !pEntity->model )
 		return 0;
@@ -2412,8 +2412,8 @@ void CL_SetLightstyle( int style, const char *s, float f )
 	lightstyle_t	*ls;
 	float		val1, val2;
 
-	ASSERT( s );
-	ASSERT( style >= 0 && style < MAX_LIGHTSTYLES );
+	Assert( s );
+	Assert( style >= 0 && style < MAX_LIGHTSTYLES );
 
 	ls = &cl.lightstyles[style];
 

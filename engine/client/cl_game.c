@@ -767,7 +767,7 @@ cl_entity_t *CL_GetLocalPlayer( void )
 	cl_entity_t	*player;
 
 	player = CL_EDICT_NUM( cl.playernum + 1 );
-	ASSERT( player != NULL );
+	Assert( player != NULL );
 
 	return player;
 }
@@ -1057,7 +1057,7 @@ void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize )
 
 void CL_FreeEntity( cl_entity_t *pEdict )
 {
-	ASSERT( pEdict );
+	Assert( pEdict );
 	R_RemoveEfrags( pEdict );
 	CL_KillDeadBeams( pEdict );
 }
@@ -1077,7 +1077,7 @@ void CL_ClearWorld( void )
 
 void CL_InitEdicts( void )
 {
-	ASSERT( clgame.entities == NULL );
+	Assert( clgame.entities == NULL );
 
 	if( !clgame.mempool ) return; // Host_Error without client
 
@@ -1150,7 +1150,7 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 	size_t	size;
 	qboolean	loaded;
 
-	ASSERT( m_pSprite != NULL );
+	Assert( m_pSprite != NULL );
 
 	buf = FS_LoadFile( szSpriteName, &size, false );
 	if( !buf ) return false;
@@ -3111,7 +3111,7 @@ void NetAPI_Status( net_status_t *status )
 	qboolean	connected = false;
 	int	packet_loss = 0;
 
-	ASSERT( status != NULL );
+	Assert( status != NULL );
 
 	if( cls.state > ca_disconnected && cls.state != ca_cinematic )
 		connected = true;
@@ -3171,7 +3171,7 @@ void NetAPI_SendRequest( int context, int request, int flags, double timeout, ne
 		}
 	}
 
-	ASSERT( nr != NULL );
+	Assert( nr != NULL );
 
 	// clear slot
 	memset( nr, 0, sizeof( *nr ));
