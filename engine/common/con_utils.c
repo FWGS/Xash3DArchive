@@ -960,7 +960,6 @@ void Host_WriteServerConfig( const char *name )
 
 	// FIXME: move this out until menu parser is done
 	CSCR_LoadDefaultCVars( "settings.scr" );
-	CSCR_LoadDefaultCVars( "user.scr" );
 	
 	if(( f = FS_Open( name, "w", false )) != NULL )
 	{
@@ -969,7 +968,6 @@ void Host_WriteServerConfig( const char *name )
 		FS_Printf( f, "//\t\tgame.cfg - multiplayer server temporare config\n" );
 		FS_Printf( f, "//=======================================================================\n" );
 		Cvar_WriteVariables( f, FCVAR_SERVER );
-		CSCR_WriteGameCVars( f, "user.scr" );
 		CSCR_WriteGameCVars( f, "settings.scr" );
 		FS_Close( f );
 	}

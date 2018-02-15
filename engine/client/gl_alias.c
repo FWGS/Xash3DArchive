@@ -1180,10 +1180,15 @@ void R_SetupAliasFrame( cl_entity_t *e, aliashdr_t *paliashdr )
 	oldframe = e->latched.prevframe;
 	newframe = e->curstate.frame;
 
-	if(( newframe >= paliashdr->numframes ) || ( newframe < 0 ))
+	if( newframe < 0 )
 	{
-		MsgDev( D_ERROR, "R_SetupAliasFrame: no such frame %d\n", newframe );
 		newframe = 0;
+	}
+	else if( newframe >= paliashdr->numframes )
+	{
+		if( newframe > paliashdr->numframes )
+			MsgDev( D_WARN, "R_GetAliasFrame: no such frame %d (%s)\n", newframe, e->model->name );
+		newframe = paliashdr->numframes - 1;
 	}
 
 	if(( oldframe >= paliashdr->numframes ) || ( oldframe < 0 ))

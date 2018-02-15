@@ -239,6 +239,9 @@ typedef struct
 	int		maxclients;
 	int		num_custombeams;			// server beams count
 
+	entity_state_t	instanced_baseline[MAX_CUSTOM_BASELINES];
+	int		instanced_baseline_count;
+
 	char		model_precache[MAX_MODELS][MAX_QPATH];
 	char		sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char		event_precache[MAX_EVENTS][MAX_QPATH];
@@ -247,7 +250,6 @@ typedef struct
 	short		sound_index[MAX_SOUNDS];
 	short		decal_index[MAX_DECALS];
 
-	cl_entity_t	*world;
 	model_t		*worldmodel;			// pointer to world
 } client_t;
 
@@ -936,7 +938,7 @@ void Con_FastClose( void );
 // s_main.c
 //
 void S_StreamRawSamples( int samples, int rate, int width, int channels, const byte *data );
-void S_StartBackgroundTrack( const char *intro, const char *loop, long position );
+void S_StartBackgroundTrack( const char *intro, const char *loop, long position, qboolean fullpath );
 void S_StopBackgroundTrack( void );
 void S_StreamSetPause( int pause );
 void S_StartStreaming( void );

@@ -68,7 +68,7 @@ float S_GetMusicVolume( void )
 S_StartBackgroundTrack
 =================
 */
-void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack, long position )
+void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack, long position, qboolean fullpath )
 {
 	S_StopBackgroundTrack();
 
@@ -89,7 +89,7 @@ void S_StartBackgroundTrack( const char *introTrack, const char *mainTrack, long
 
 	if( !mainTrack || !*mainTrack ) s_bgTrack.loopName[0] = '\0';
 	else Q_strncpy( s_bgTrack.loopName, mainTrack, sizeof( s_bgTrack.loopName ));
-
+if( fullpath ) Msg( "MP3:Playing: %s\n", introTrack );
 	// open stream
 	s_bgTrack.stream = FS_OpenStream( va( "media/%s", introTrack ));
 	Q_strncpy( s_bgTrack.current, introTrack, sizeof( s_bgTrack.current ));

@@ -457,7 +457,7 @@ void CEngineSurface :: popMakeCurrent( Panel *panel )
 	Assert( top >= 0 );
 
 	// didn't pop in reverse order of push?
-	Assert( paintStack[top]->m_pPanel == panel );
+	Assert( paintStack[top].m_pPanel == panel );
 
 	staticPaintStackPos--;
 

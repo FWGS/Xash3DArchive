@@ -693,7 +693,7 @@ static void R_DecalNode( model_t *model, mnode_t *node, decalinfo_t *decalinfo )
 	mplane_t	*splitplane;
 	float	dist;
 	
-	Assert( node );
+	Assert( node != NULL );
 
 	if( node->contents < 0 )
 	{

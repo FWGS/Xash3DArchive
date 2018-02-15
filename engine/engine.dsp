@@ -143,6 +143,10 @@ SOURCE=.\common\build.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\cfgscript.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\cl_cmds.c
 # End Source File
 # Begin Source File

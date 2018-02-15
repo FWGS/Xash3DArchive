@@ -2412,7 +2412,7 @@ void CL_SetLightstyle( int style, const char *s, float f )
 	lightstyle_t	*ls;
 	float		val1, val2;
 
-	Assert( s );
+	Assert( s != NULL );
 	Assert( style >= 0 && style < MAX_LIGHTSTYLES );
 
 	ls = &cl.lightstyles[style];

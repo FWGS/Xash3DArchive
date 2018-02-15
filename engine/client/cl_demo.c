@@ -268,7 +268,7 @@ so that we can play the demo correctly.
 */
 void CL_WriteDemoSequence( file_t *file )
 {
-	Assert( file );
+	Assert( file != NULL );
 
 	FS_Write( file, &cls.netchan.incoming_sequence, sizeof( int ));
 	FS_Write( file, &cls.netchan.incoming_acknowledged, sizeof( int ));

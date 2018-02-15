@@ -150,75 +150,6 @@ int CL_IsDevOverviewMode( void )
 
 /*
 ===============
-CL_ChangeGame
-
-This is experiment. Use with precaution
-===============
-*/
-qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset )
-{
-	if( host.type == HOST_DEDICATED )
-		return false;
-
-	if( Q_stricmp( host.gamefolder, gamefolder ))
-	{
-		kbutton_t	*mlook, *jlook;
-		qboolean	mlook_active = false, jlook_active = false;
-		string	mapname, maptitle;
-		int	maxEntities;
-
-		mlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_mlook" );
-		jlook = (kbutton_t *)clgame.dllFuncs.KB_Find( "in_jlook" );
-
-		if( mlook && ( mlook->state & 1 )) 
-			mlook_active = true;
-
-		if( jlook && ( jlook->state & 1 ))
-			jlook_active = true;
-	
-		// so reload all images (remote connect)
-		Mod_ClearAll( true );
-		R_ShutdownImages();
-		FS_LoadGameInfo( (bReset) ? host.gamefolder : gamefolder );
-		R_InitImages();
-
-		// save parms
-		maxEntities = clgame.maxEntities;
-		Q_strncpy( mapname, clgame.mapname, MAX_STRING );
-		Q_strncpy( maptitle, clgame.maptitle, MAX_STRING );
-
-		if( !CL_LoadProgs( va( "%s/client.dll", GI->dll_path )))
-			Host_Error( "can't initialize client.dll\n" );
-
-		// restore parms
-		clgame.maxEntities = maxEntities;
-		Q_strncpy( clgame.mapname, mapname, MAX_STRING );
-		Q_strncpy( clgame.maptitle, maptitle, MAX_STRING );
-
-		// invalidate fonts so we can reloading them again
-		memset( &cls.creditsFont, 0, sizeof( cls.creditsFont ));
-		SCR_InstallParticlePalette();
-		SCR_LoadCreditsFont();
-		Con_InvalidateFonts();
-
-		SCR_RegisterTextures ();
-		CL_FreeEdicts ();
-		SCR_VidInit ();
-
-		if( cls.key_dest == key_game ) // restore mouse state
-			clgame.dllFuncs.IN_ActivateMouse();
-
-		// restore mlook state
-		if( mlook_active ) Cmd_ExecuteString( "+mlook\n" );
-		if( jlook_active ) Cmd_ExecuteString( "+jlook\n" );
-		return true;
-	}
-
-	return false;
-}
-
-/*
-===============
 CL_CheckClientState
 
 finalize connection process and begin new frame
@@ -231,13 +162,17 @@ void CL_CheckClientState( void )
 	{	
 		// first update is the final signon stage
 		cls.state = ca_active;
-		cls.changelevel = false;
-		cls.changedemo = false;
+		cls.changelevel = false;		// changelevel is done
+		cls.changedemo = false;		// changedemo is done
 		cl.first_frame = true;
 
-		Cvar_SetValue( "scr_loading", 0.0f );
+		SCR_MakeLevelShot();		// make levelshot if needs
+		Cvar_SetValue( "scr_loading", 0.0f );	// reset progress bar	
 		Netchan_ReportFlow( &cls.netchan );
-		SCR_MakeLevelShot();
+ 
+		if(( cls.demoplayback || cls.disable_servercount != cl.servercount ) && cl.video_prepped )
+			SCR_EndLoadingPlaque(); // get rid of loading plaque
+		cl.first_frame = true;
 	}
 }
 
@@ -266,7 +201,7 @@ static float CL_LerpPoint( void )
 		return 1.0f;
 	}
 
-	if( cl_interp->value > 0.001f )
+	if( cl_interp->value > 0.001f && !FBitSet( host.features, ENGINE_FIXED_FRAMERATE ))
 	{
 		// manual lerp value (goldsrc mode)
 		frac = ( cl.time - cl.mtime[0] ) / cl_interp->value;
@@ -623,13 +558,13 @@ void CL_CreateCmd( void )
 	// message we are constructing.
 	i = cls.netchan.outgoing_sequence & CL_UPDATE_MASK;   
 	pcmd = &cl.commands[i];
+	pcmd->processedfuncs = false;
 
 	if( !cls.demoplayback )
 	{
 		pcmd->senttime = host.realtime;      
 		memset( &pcmd->cmd, 0, sizeof( pcmd->cmd ));
 		pcmd->receivedtime = -1.0;
-		pcmd->processedfuncs = false;
 		pcmd->heldback = false;
 		pcmd->sendsize = 0;
 		CL_ApplyAddAngle();
@@ -912,6 +847,38 @@ void CL_Drop( void )
 
 /*
 =======================
+CL_GetCDKeyHash()
+
+Connections will now use a hashed cd key value
+=======================
+*/
+char *CL_GetCDKeyHash( void )
+{
+	const char	*keyBuffer;
+	static char	szHashedKeyBuffer[256];
+	int		nKeyLength = 0;
+	byte		digest[17]; // The MD5 Hash
+	MD5Context_t	ctx;
+
+	keyBuffer = Sys_GetMachineKey( &nKeyLength );
+
+	// now get the md5 hash of the key
+	memset( &ctx, 0, sizeof( ctx ));
+	memset( digest, 0, sizeof( digest ));
+	
+	MD5Init( &ctx );
+	MD5Update( &ctx, (byte *)keyBuffer, nKeyLength );
+	MD5Final( digest, &ctx );
+	digest[16] = '\0';
+
+	memset( szHashedKeyBuffer, 0, 256 );
+	Q_strncpy( szHashedKeyBuffer, MD5_Print( digest ), sizeof( szHashedKeyBuffer ));
+
+	return szHashedKeyBuffer;
+}
+
+/*
+=======================
 CL_SendConnectPacket
 
 We have gotten a challenge from the server, so try and
@@ -920,8 +887,10 @@ connect.
 */
 void CL_SendConnectPacket( void )
 {
+	char	protinfo[MAX_INFO_STRING];
+	char	*qport;
+	char	*key;
 	netadr_t	adr;
-	int	port;
 
 	if( !NET_StringToAdr( cls.servername, &adr ))
 	{
@@ -931,9 +900,14 @@ void CL_SendConnectPacket( void )
 	}
 
 	if( adr.port == 0 ) adr.port = MSG_BigShort( PORT_SERVER );
-	port = Cvar_VariableValue( "net_qport" );
+	qport = Cvar_VariableString( "net_qport" );
+	key = CL_GetCDKeyHash();
 
-	Netchan_OutOfBandPrint( NS_CLIENT, adr, "connect %i %i %i \"%s\"\n", PROTOCOL_VERSION, port, cls.challenge, cls.userinfo );
+	memset( protinfo, 0, sizeof( protinfo ));
+	Info_SetValueForKey( protinfo, "uuid", key, sizeof( protinfo ));
+	Info_SetValueForKey( protinfo, "qport", qport, sizeof( protinfo ));
+
+	Netchan_OutOfBandPrint( NS_CLIENT, adr, "connect %i %i \"%s\" \"%s\"\n", PROTOCOL_VERSION, cls.challenge, protinfo, cls.userinfo );
 }
 
 /*
@@ -1167,9 +1141,6 @@ void CL_Disconnect( void )
 	cls.state = ca_disconnected;
 	cls.signon = 0;
 
-	// restore gamefolder here (in case client was connected to another game)
-	CL_ChangeGame( GI->gamefolder, true );
-
 	// back to menu if developer mode set to "player" or "mapper"
 	if( host.developer > 2 || CL_IsInMenu( ))
 		return;
@@ -1179,7 +1150,9 @@ void CL_Disconnect( void )
 
 void CL_Disconnect_f( void )
 {
-	Host_Error( "Disconnected from server\n" );
+	if( Host_IsLocalClient( ))
+		Host_EndGame( "disconnected from server\n" );
+	else CL_Disconnect();
 }
 
 void CL_Crashed( void )
@@ -1660,9 +1633,9 @@ void CL_PrepVideo( void )
 	if( host.developer <= 2 )
 		Con_ClearNotify(); // clear any lines of console text
 
-	SCR_UpdateScreen ();
-
 	cl.video_prepped = true;
+
+	SCR_UpdateScreen ();
 }
 
 /*
@@ -1743,7 +1716,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !Q_strcmp( c, "print" ))
 	{
 		// print command from somewhere
-		Msg( "remote: %s\n", MSG_ReadString( msg ));
+		Msg( "%s", MSG_ReadString( msg ));
 	}
 	else if( !Q_strcmp( c, "ping" ))
 	{
@@ -1766,7 +1739,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	{
 		// a disconnect message from the server, which will happen if the server
 		// dropped the connection but it is still getting packets from us
-		CL_Disconnect();
+		CL_Disconnect_f();
 	}
 	else if( !Q_strcmp( c, "f" ))
 	{
@@ -2222,6 +2195,7 @@ void CL_InitLocal( void )
 	cl_lw = Cvar_Get( "cl_lw", "1", FCVAR_ARCHIVE|FCVAR_USERINFO, "enable client weapon predicting" );
 	Cvar_Get( "cl_lc", "1", FCVAR_ARCHIVE|FCVAR_USERINFO, "enable lag compensation" );
 	Cvar_Get( "msg", "0", FCVAR_USERINFO|FCVAR_ARCHIVE, "message filter for server notifications" );
+	Cvar_Get( "password", "", FCVAR_USERINFO, "server password" );
 	Cvar_Get( "team", "", FCVAR_USERINFO, "player team" );
 	Cvar_Get( "skin", "", FCVAR_USERINFO, "player skin" );
 

@@ -1400,7 +1400,7 @@ void R_StudioBuildNormalTable( void )
 	mstudiomesh_t	*pmesh;
 	int		i, j;
 
-	Assert( m_pSubModel );
+	Assert( m_pSubModel != NULL );
 
 	// reset chrome cache
 	for( i = 0; i < m_pStudioHeader->numbones; i++ )
@@ -1452,7 +1452,7 @@ void R_StudioGenerateNormals( void )
 	mstudiomesh_t	*pmesh;
 	int		i, j;
 
-	Assert( m_pSubModel );
+	Assert( m_pSubModel != NULL );
 
 	for( i = 0; i < m_pSubModel->numverts; i++ )
 		VectorClear( g_studio.norms[i] );
@@ -3583,6 +3583,8 @@ void R_DrawStudioModel( cl_entity_t *e )
 			{
 				RI.currententity = parent;
 				R_StudioDrawModelInternal( RI.currententity, 0 );
+				VectorCopy( parent->curstate.origin, e->curstate.origin );
+				VectorCopy( parent->origin, e->origin );
 				RI.currententity = e;
 			}
 		}

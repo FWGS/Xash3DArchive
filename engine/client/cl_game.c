@@ -109,7 +109,7 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 		return NULL;
 
 	if( index == 0 )
-		return cl.world;
+		return clgame.entities;
 
 	return CL_EDICT_NUM( index );
 }
@@ -1057,19 +1057,21 @@ void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize )
 
 void CL_FreeEntity( cl_entity_t *pEdict )
 {
-	Assert( pEdict );
+	Assert( pEdict != NULL );
 	R_RemoveEfrags( pEdict );
 	CL_KillDeadBeams( pEdict );
 }
 
 void CL_ClearWorld( void )
 {
-	cl.world = clgame.entities;
-	cl.world->curstate.modelindex = 1;	// world model
-	cl.world->curstate.solid = SOLID_BSP;
-	cl.world->curstate.movetype = MOVETYPE_PUSH;
-	cl.world->model = cl.worldmodel;
-	cl.world->index = 0;
+	cl_entity_t	*world;
+
+	world = clgame.entities;
+	world->curstate.modelindex = 1;	// world model
+	world->curstate.solid = SOLID_BSP;
+	world->curstate.movetype = MOVETYPE_PUSH;
+	world->model = cl.worldmodel;
+	world->index = 0;
 
 	clgame.ds.cullMode = GL_FRONT;
 	clgame.numStatics = 0;
@@ -1615,7 +1617,7 @@ pfnServerCmd
 */
 static int pfnServerCmd( const char *szCmdString )
 {
-	string buf;
+	string	buf;
 
 	if( !szCmdString || !szCmdString[0] )
 		return 0;
@@ -2553,7 +2555,7 @@ void PlayerInfo_SetValueForKey( const char *key, const char *value )
 	convar_t	*var;
 
 	if( !Q_strcmp( Info_ValueForKey( cls.userinfo, key ), value ))
-		return; // not changes ?
+		return; // no changes ?
 
 	var = Cvar_FindVar( key );
 
@@ -2576,10 +2578,15 @@ pfnGetPlayerUniqueID
 */
 qboolean pfnGetPlayerUniqueID( int iPlayer, char playerID[16] )
 {
-	// TODO: implement
+	if( iPlayer < 1 || iPlayer > cl.maxclients )
+		return false;
 
-	playerID[0] = '\0';
-	return false;
+	// make sure there is a player here..
+	if( !cl.players[iPlayer-1].userinfo[0] || !cl.players[iPlayer-1].name[0] )
+		return false;
+
+	memcpy( playerID, cl.players[iPlayer-1].hashedcdkey, 16 );
+	return true;
 }
 
 /*
@@ -3674,7 +3681,7 @@ void CL_UnloadProgs( void )
 	VGui_Shutdown();
 
 	// NOTE: HLFX 0.5 has strange bug: hanging on exit if no map was loaded
-	if( !( !Q_stricmp( GI->gamedir, "hlfx" ) && GI->version == 0.5f ))
+	if( Q_stricmp( GI->gamedir, "hlfx" ) || GI->version != 0.5f )
 		clgame.dllFuncs.pfnShutdown();
 
 	Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
@@ -3705,10 +3712,6 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.mempool = Mem_AllocPool( "Client Edicts Zone" );
 	clgame.entities = NULL;
 
-	// NOTE: important stuff! vgui must startup BEFORE loading client.dll
-	// to avoid get error ERROR_NOACESS during LoadLibrary
-	VGui_Startup ();
-	
 	clgame.hInstance = Com_LoadLibrary( name, false );
 	if( !clgame.hInstance ) return false;
 
@@ -3803,6 +3806,9 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.dllFuncs.pfnInit();
 
 	CL_InitStudioAPI( );
+
+	// initialize VGui
+	VGui_Startup ();
 
 	// trying to grab them from client.dll
 	cl_righthand = Cvar_FindVar( "cl_righthand" );

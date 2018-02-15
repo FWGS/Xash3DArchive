@@ -655,7 +655,6 @@ void Host_EndGame( const char *message, ... );
 void Host_AbortCurrentFrame( void );
 void Host_RestartAmbientSounds( void );
 void Host_RestartDecals( void );
-qboolean CL_ChangeGame( const char *gamefolder, qboolean bReset );
 void Host_WriteServerConfig( const char *name );
 void Host_WriteOpenGLConfig( void );
 void Host_WriteVideoConfig( void );
@@ -747,6 +746,7 @@ void MD5Update( MD5Context_t *ctx, const byte *buf, uint len );
 void MD5Final( byte digest[16], MD5Context_t *ctx );
 qboolean MD5_HashFile( byte digest[16], const char *pszFileName, uint seed[4] );
 uint Com_HashKey( const char *string, uint hashSize );
+char *MD5_Print( byte hash[16] );
 
 //
 // cfgscript.c

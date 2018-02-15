@@ -517,6 +517,10 @@ void Key_Event( int key, qboolean down )
 	const char	*kb;
 	char		cmd[1024];
 
+	// key was pressed before engine was run
+	if( !keys[key].down && !down )
+		return;
+
 	// update auto-repeat status and BUTTON_ANY status
 	keys[key].down = down;
 

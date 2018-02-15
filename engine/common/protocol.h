@@ -35,7 +35,7 @@ GNU General Public License for more details.
 #define svc_updateuserinfo		13	// [byte] playernum, [string] userinfo
 #define svc_deltatable		14	// [table header][...]
 #define svc_clientdata		15	// [...]
-#define svc_stopsound		16	// <see code>
+#define svc_studiodecal		16	// [float*3][float*3][short][short][byte]
 #define svc_pings			17	// [bit][idx][ping][packet_loss]
 #define svc_particle		18	// [float*3][char*3][byte][byte]
 #define svc_restoresound		19	// <see code>
@@ -48,7 +48,7 @@ GNU General Public License for more details.
 #define svc_centerprint		26	// [string] to put in center of the screen
 #define svc_modelindex		27	// [index][modelpath]
 #define svc_soundindex		28	// [index][soundpath]
-#define svc_ambientsound		29	// <see code>
+#define svc_eventindex		29	// [index][eventname]
 #define svc_intermission		30	// empty message (event)
 #define svc_finale			31	// empty message (event)
 #define svc_cdtrack			32	// [string] trackname
@@ -71,9 +71,9 @@ GNU General Public License for more details.
 #define svc_filetxferfailed		49	// [string]
 #define svc_hltv			50	// sending from the game.dll
 #define svc_director		51	// <variable sized>
-#define svc_studiodecal		52	// [float*3][float*3][short][short][byte]
+#define svc_voiceinit		52	// <see code>
 #define svc_voicedata		53	// [byte][short][...]
-#define svc_eventindex		54	// [index][eventname]
+// reserved
 // reserved
 #define svc_resourcelocation		56	// [string]
 #define svc_querycvarvalue		57	// [string]

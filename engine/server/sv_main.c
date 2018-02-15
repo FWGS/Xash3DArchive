@@ -50,6 +50,8 @@ CVAR_DEFINE_AUTO( sv_allow_upload, "1", FCVAR_SERVER, "allow uploading custom re
 CVAR_DEFINE_AUTO( sv_allow_download, "1", FCVAR_SERVER, "allow downloading custom resources to the client" );
 CVAR_DEFINE_AUTO( sv_downloadurl, "", FCVAR_PROTECTED, "location from which clients can download missing files" );
 CVAR_DEFINE( sv_consistency, "mp_consistency", "1", FCVAR_SERVER, "enbale consistency check in multiplayer" );
+CVAR_DEFINE_AUTO( mp_logecho, "1", 0, "log multiplayer frags to server logfile" );
+CVAR_DEFINE_AUTO( mp_logfile, "1", 0, "log multiplayer frags to console" );
 
 // game-related cvars
 CVAR_DEFINE_AUTO( mapcyclefile, "mapcycle.txt", 0, "name of multiplayer map cycle configuration file" );
@@ -707,13 +709,14 @@ void SV_Init( void )
 	Cvar_Get ("protocol", va( "%i", PROTOCOL_VERSION ), FCVAR_READ_ONLY, "displays server protocol version" );
 	Cvar_Get ("suitvolume", "0.25", FCVAR_ARCHIVE, "HEV suit volume" );
 	Cvar_Get ("sv_background", "0", FCVAR_READ_ONLY, "indicate what background map is running" );
-	Cvar_Get( "gamedir", GI->gamefolder, FCVAR_SERVER|FCVAR_READ_ONLY, "game folder" );
+	Cvar_Get( "gamedir", GI->gamefolder, FCVAR_SERVER, "game folder" );
 	Cvar_Get( "sv_alltalk", "1", 0, "allow to talking for all players (legacy, unused)" );
 	Cvar_Get( "sv_allow_PhysX", "1", FCVAR_ARCHIVE, "allow XashXT to usage PhysX engine" );			// XashXT cvar
 	Cvar_Get( "sv_precache_meshes", "1", FCVAR_ARCHIVE, "cache SOLID_CUSTOM meshes before level loading" );	// Paranoia 2 cvar
 	Cvar_Get ("mapcyclefile", "mapcycle.txt", 0, "name of config file for map changing rules" );
 	Cvar_Get ("servercfgfile","server.cfg", 0, "name of dedicated server configuration file" );
 	Cvar_Get ("lservercfgfile","listenserver.cfg", 0, "name of listen server configuration file" );
+	Cvar_Get ("logsdir","logs", 0, "default folder to write server logs" );
 
 	Cvar_RegisterVariable (&sv_zmax);
 	Cvar_RegisterVariable (&sv_wateramp);
@@ -781,10 +784,12 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_send_logos);
 	Cvar_RegisterVariable (&sv_send_resources);
 	Cvar_RegisterVariable (&sv_version);
-	sv_sendvelocity = Cvar_Get( "sv_sendvelocity", "1", FCVAR_ARCHIVE, "force to send velocity for event_t structure across network" );
+	sv_sendvelocity = Cvar_Get( "sv_sendvelocity", "0", FCVAR_ARCHIVE, "force to send velocity for event_t structure across network" );
 	Cvar_RegisterVariable (&sv_consistency);
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
 	sv_hostmap = Cvar_Get( "hostmap", GI->startmap, 0, "keep name of last entered map" );
+	Cvar_RegisterVariable (&sv_password);
+	Cvar_RegisterVariable (&sv_lan);
 
 	Cvar_RegisterVariable (&sv_spawntime);
 	Cvar_RegisterVariable (&sv_changetime);
@@ -793,6 +798,8 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&violence_hblood);
 	Cvar_RegisterVariable (&violence_agibs);
 	Cvar_RegisterVariable (&violence_hgibs);
+	Cvar_RegisterVariable (&mp_logecho);
+	Cvar_RegisterVariable (&mp_logfile);
 
 	// when we in developer-mode automatically turn cheats on
 	if( host.developer > 1 ) Cvar_SetValue( "sv_cheats", 1.0f );
@@ -881,6 +888,9 @@ void SV_Shutdown( qboolean reconnect )
 	// free current level
 	memset( &sv, 0, sizeof( sv ));
 	Host_SetServerState( sv.state );
+
+	Log_Printf( "Server shutdown\n" );
+	Log_Close();
 
 	// free server static data
 	if( svs.clients )

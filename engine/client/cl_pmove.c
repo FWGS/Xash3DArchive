@@ -1219,8 +1219,8 @@ void CL_PredictMovement( qboolean repredicting )
 	frame_t		*frame = NULL;
 	int		i, stoppoint;
 	qboolean		runfuncs;
+	double		f = 1.0;
 	double		time;
-	float		f;
 
 	if( cls.state != ca_active || cls.spectator )
 		return;
@@ -1284,6 +1284,11 @@ void CL_PredictMovement( qboolean repredicting )
 
 		if( to_cmd->senttime >= host.realtime )
 			break;
+
+		// now interpolate some fraction of the final frame
+		if( to_cmd->senttime != from_cmd->senttime )
+			f = (host.realtime - from_cmd->senttime) / (to_cmd->senttime - from_cmd->senttime) * 0.1;
+
 		from = to;
 		from_cmd = to_cmd;
 	}
@@ -1316,18 +1321,8 @@ void CL_PredictMovement( qboolean repredicting )
 		return;
 	}
 
-	// now interpolate some fraction of the final frame
-	if( to_cmd->senttime == from_cmd->senttime )
-	{
-		f = 0.0f;
-	}
-	else
-	{
-		f = (host.realtime - from_cmd->senttime) / (to_cmd->senttime - from_cmd->senttime);
-		f = bound( 0.0f, f, 1.0f );
-	}
-
-	if( f != 1.0f && f != 0.0f ) Msg( "Predict interp: %g\n", f );
+	f = bound( 0.0f, f, 1.0f );
+	f = 0.0;	// FIXME: make work, do revision
 
 	if( CL_PlayerTeleported( from, to ))
 	{

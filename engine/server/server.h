@@ -85,8 +85,8 @@ typedef enum
 typedef struct
 {
 	int		count;
-	string_t		classnames[64];
-	entity_state_t	baselines[64];
+	string_t		classnames[MAX_CUSTOM_BASELINES];
+	entity_state_t	baselines[MAX_CUSTOM_BASELINES];
 } sv_baselines_t;
 
 typedef struct
@@ -95,6 +95,14 @@ typedef struct
 	FORCE_TYPE	force_state;
 	vec3_t		mins, maxs;
 } sv_consistency_t;
+
+typedef struct
+{
+	qboolean		active;
+	qboolean		net_log;
+	netadr_t		net_address;
+	file_t		*file;
+} server_log_t;
 
 // like as entity_state_t in Quake
 typedef struct
@@ -212,6 +220,8 @@ typedef struct sv_client_s
 	double		cl_updaterate;		// client requested updaterate
 	double		timebase;			// client timebase
 	double		lastservertime;		// check if server time was not changed so no resaon to send update
+
+	char		hashedcdkey[34];		// MD5 hash is 32 hex #'s, plus trailing 0
 
 	customization_t	customdata;		// player customization linked list
 	resource_t	resourcesonhand;
@@ -362,6 +372,8 @@ typedef struct
 	int		groupmask;
 	int		groupop;
 
+	server_log_t	log;
+
 	char		serverinfo[MAX_SERVERINFO_STRING];
 	char		localinfo[MAX_LOCALINFO_STRING];
 
@@ -389,6 +401,8 @@ extern	areanode_t	sv_areanodes[];		// AABB dynamic tree
 
 extern convar_t		sv_lan;
 extern convar_t		sv_lan_rate;
+extern convar_t		mp_logecho;
+extern convar_t		mp_logfile;
 extern convar_t		sv_unlag;
 extern convar_t		sv_maxunlag;
 extern convar_t		sv_unlagpush;
@@ -421,6 +435,7 @@ extern convar_t		sv_skyangle;
 extern convar_t		sv_consistency;
 extern convar_t		sv_spawntime;
 extern convar_t		sv_changetime;
+extern convar_t		sv_password;
 extern convar_t		deathmatch;
 extern convar_t		skill;
 extern convar_t		coop;
@@ -605,6 +620,14 @@ _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 	Host_Error( "SV_EDICT_NUM: bad number %i (called at %s:%i)\n", n, file, line );
 	return NULL;	
 }
+
+//
+// sv_log.c
+//
+void Log_Close( void );
+void Log_Open( void );
+void Log_PrintServerVars( void );
+void SV_ServerLog_f( void );
 
 //
 // sv_save.c

@@ -45,7 +45,7 @@ const char *svc_strings[256] =
 	"svc_updateuserinfo",
 	"svc_deltatable",
 	"svc_clientdata",
-	"svc_stopsound",
+	"svc_studiodecal",
 	"svc_pings",
 	"svc_particle",
 	"svc_restoresound",
@@ -58,7 +58,7 @@ const char *svc_strings[256] =
 	"svc_centerprint",
 	"svc_modelindex",
 	"svc_soundindex",
-	"svc_ambientsound",
+	"svc_eventindex",
 	"svc_intermission",
 	"svc_finale",
 	"svc_cdtrack",
@@ -81,9 +81,9 @@ const char *svc_strings[256] =
 	"svc_filetxferfailed",
 	"svc_hltv",
 	"svc_director",
-	"svc_studiodecal",
+	"svc_voiceinit",
 	"svc_voicedata",
-	"svc_eventindex",
+	"svc_unused54",
 	"svc_unused55",
 	"svc_resourcelocation",
 	"svc_querycvarvalue",
@@ -267,15 +267,15 @@ void CL_ParseSoundPacket( sizebuf_t *msg )
 	sound = MSG_ReadUBitLong( msg, MAX_SOUND_BITS );
 	chan = MSG_ReadUBitLong( msg, MAX_SND_CHAN_BITS );
 
-	if( flags & SND_VOLUME )
+	if( FBitSet( flags, SND_VOLUME ))
 		volume = (float)MSG_ReadByte( msg ) / 255.0f;
 	else volume = VOL_NORM;
 
-	if( flags & SND_ATTENUATION )
+	if( FBitSet( flags, SND_ATTENUATION ))
 		attn = (float)MSG_ReadByte( msg ) / 64.0f;
 	else attn = ATTN_NONE;	
 
-	if( flags & SND_PITCH )
+	if( FBitSet( flags, SND_PITCH ))
 		pitch = MSG_ReadByte( msg );
 	else pitch = PITCH_NORM;
 
@@ -285,11 +285,11 @@ void CL_ParseSoundPacket( sizebuf_t *msg )
 	// positioned in space
 	MSG_ReadVec3Coord( msg, pos );
 
-	if( flags & SND_SENTENCE )
+	if( FBitSet( flags, SND_SENTENCE ))
 	{
 		char	sentenceName[32];
 
-		if( flags & SND_SEQUENCE )
+		if( FBitSet( flags, SND_SEQUENCE ))
 			Q_snprintf( sentenceName, sizeof( sentenceName ), "!#%i", sound );
 		else Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
 
@@ -303,6 +303,7 @@ void CL_ParseSoundPacket( sizebuf_t *msg )
 		return; // too early
 	}
 
+	// g-cont. sound and ambient sound have only difference with channel
 	if( chan == CHAN_STATIC )
 	{
 		S_AmbientSound( pos, entnum, handle, volume, attn, pitch, flags );
@@ -659,6 +660,28 @@ void CL_ParseCustomization( sizebuf_t *msg )
 }
 
 /*
+==================
+CL_ParseResourceRequest
+
+==================
+*/
+void CL_ParseResourceRequest( sizebuf_t *msg )
+{
+	// TODO: ???
+}
+
+/*
+==================
+CL_ParseFileTransferFailed
+
+==================
+*/
+void CL_ParseFileTransferFailed( sizebuf_t *msg )
+{
+	// TODO: ???
+}
+
+/*
 =====================================================================
 
   SERVER CONNECTING MESSAGES
@@ -729,6 +752,9 @@ void CL_ParseServerData( sizebuf_t *msg )
 	// multiplayer game?
 	if( cl.maxclients != 1 )	
 	{
+		// loading user settings
+		CSCR_LoadDefaultCVars( "user.scr" );
+
 		if( r_decals->value > mp_decals.value )
 			Cvar_SetValue( "r_decals", mp_decals.value );
 	}
@@ -752,10 +778,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 		// continue playing if we are changing level
 		S_StopBackgroundTrack ();
 	}
-#if 0
-	// NOTE: this is not tested as well. Use with precaution
-	CL_ChangeGame( gamefolder, false );
-#endif
+
 	if( !cls.changedemo )
 		UI_SetActiveMenu( cl.background );
 	else if( !cls.demoplayback )
@@ -1086,6 +1109,33 @@ void CL_ParseCrosshairAngle( sizebuf_t *msg )
 
 /*
 ================
+CL_ParseRestore
+
+reading decals, etc.
+================
+*/
+void CL_ParseRestore( sizebuf_t *msg )
+{
+	string		filename;
+	int		i, mapCount;
+	char		*pMapName;
+
+	// mapname.HL2
+	Q_strncpy( filename, MSG_ReadString( msg ), sizeof( filename ));
+	mapCount = MSG_ReadByte( msg );
+
+	// g-cont. acutally in Xash3D this does nothing.
+	// decals already restored on a server, and correctly transferred through levels
+	// but i'm leave this message for backward compatibility
+	for( i = 0; i < mapCount; i++ )
+	{
+		pMapName = MSG_ReadString( msg );
+		MsgDev( D_INFO, "Loading decals from %s\n", pMapName );
+	}
+}
+
+/*
+================
 CL_RegisterUserMessage
 
 register new user message or update existing
@@ -1137,6 +1187,7 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 		player->topcolor = Q_atoi( Info_ValueForKey( player->userinfo, "topcolor" ));
 		player->bottomcolor = Q_atoi( Info_ValueForKey( player->userinfo, "bottomcolor" ));
 		player->spectator = Q_atoi( Info_ValueForKey( player->userinfo, "*hltv" ));
+		MSG_ReadBytes( msg, player->hashedcdkey, sizeof( player->hashedcdkey ));
 
 		if( slot == cl.playernum ) memcpy( &gameui.playerinfo, player, sizeof( player_info_t ));
 	}
@@ -1320,6 +1371,39 @@ void CL_ParseResourceList( sizebuf_t *msg )
 		MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
 		MSG_WriteString( &cls.netchan.message, "continueloading" );
 	}
+}
+
+/*
+==================
+CL_ParseVoiceInit
+
+==================
+*/
+void CL_ParseVoiceInit( sizebuf_t *msg )
+{
+	// TODO: ???
+}
+
+/*
+==================
+CL_ParseVoiceData
+
+==================
+*/
+void CL_ParseVoiceData( sizebuf_t *msg )
+{
+	// TODO: ???
+}
+
+/*
+==================
+CL_ParseResLocation
+
+==================
+*/
+void CL_ParseResLocation( sizebuf_t *msg )
+{
+	// TODO: ???
 }
 
 /*
@@ -1675,6 +1759,8 @@ ACTION MESSAGES
 /*
 =====================
 CL_ParseServerMessage
+
+INTERNAL RESOURCE
 =====================
 */
 void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
@@ -1712,7 +1798,7 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 		// mark start position
 		bufStart = MSG_GetNumBytesRead( msg );
 
-		// end of message
+		// end of message (align bits)
 		if( MSG_GetNumBitsLeft( msg ) < 8 )
 			break;		
 
@@ -1733,6 +1819,10 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 		case svc_disconnect:
 			CL_Drop ();
 			Host_AbortCurrentFrame ();
+			break;
+		case svc_event:
+			CL_ParseEvent( msg );
+			cl.frames[cl.parsecountmod].graphdata.event += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_changing:
 			if( MSG_ReadOneBit( msg ))
@@ -1763,7 +1853,6 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			CL_ParseViewEntity( msg );
 			break;
 		case svc_sound:
-		case svc_ambientsound:
 			CL_ParseSoundPacket( msg );
 			cl.frames[cl.parsecountmod].graphdata.sound += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
@@ -1772,15 +1861,17 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			break;
 		case svc_print:
 			i = MSG_ReadByte( msg );
-			MsgDev( D_INFO, "^6%s", MSG_ReadString( msg ));
-			if( i == PRINT_CHAT ) S_StartLocalSound( "common/menu2.wav", VOL_NORM, false );
+			MsgDev( D_INFO, "^5%s", MSG_ReadString( msg ));
+			if( i == PRINT_CHAT )
+			{
+				if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+					S_StartLocalSound( "misc/talk.wav", VOL_NORM, false );
+				else S_StartLocalSound( "common/menu2.wav", VOL_NORM, false );
+			}
 			break;
 		case svc_stufftext:
 			s = MSG_ReadString( msg );
 			Cbuf_AddText( s );
-			break;
-		case svc_lightstyle:
-			CL_ParseLightStyle( msg );
 			break;
 		case svc_setangle:
 			CL_ParseSetAngle( msg );
@@ -1789,28 +1880,24 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			Cbuf_Execute(); // make sure any stuffed commands are done
 			CL_ParseServerData( msg );
 			break;
-		case svc_addangle:
-			CL_ParseAddAngle( msg );
+		case svc_lightstyle:
+			CL_ParseLightStyle( msg );
+			break;
+		case svc_updateuserinfo:
+			CL_UpdateUserinfo( msg );
+			break;
+		case svc_deltatable:
+			Delta_ParseTableField( msg );
 			break;
 		case svc_clientdata:
 			CL_ParseClientData( msg );
 			cl.frames[cl.parsecountmod].graphdata.client += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
-		case svc_packetentities:
-			playerbytes = CL_ParsePacketEntities( msg, false );
-			cl.frames[cl.parsecountmod].graphdata.players += playerbytes;
-			cl.frames[cl.parsecountmod].graphdata.entities += MSG_GetNumBytesRead( msg ) - bufStart - playerbytes;
-			break;
-		case svc_deltapacketentities:
-			playerbytes = CL_ParsePacketEntities( msg, true );
-			cl.frames[cl.parsecountmod].graphdata.players += playerbytes;
-			cl.frames[cl.parsecountmod].graphdata.entities += MSG_GetNumBytesRead( msg ) - bufStart - playerbytes;
+		case svc_studiodecal:
+			CL_ParseStudioDecal( msg );
 			break;
 		case svc_pings:
 			CL_UpdateUserPings( msg );
-			break;
-		case svc_usermessage:
-			CL_RegisterUserMessage( msg );
 			break;
 		case svc_particle:
 			CL_ParseParticles( msg );
@@ -1822,8 +1909,9 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 		case svc_spawnstatic:
 			CL_ParseStaticEntity( msg );
 			break;
-		case svc_crosshairangle:
-			CL_ParseCrosshairAngle( msg );
+		case svc_event_reliable:
+			CL_ParseReliableEvent( msg );
+			cl.frames[cl.parsecountmod].graphdata.event += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_spawnbaseline:
 			CL_ParseBaseline( msg );
@@ -1838,34 +1926,8 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 		case svc_signonnum:
 			CL_ParseSignon( msg );
 			break;
-		case svc_deltamovevars:
-			CL_ParseMovevars( msg );
-			break;
-		case svc_customization:
-			CL_ParseCustomization( msg );
-			break;
 		case svc_centerprint:
 			CL_CenterPrint( MSG_ReadString( msg ), 0.25f );
-			break;
-		case svc_event:
-			CL_ParseEvent( msg );
-			cl.frames[cl.parsecountmod].graphdata.event += MSG_GetNumBytesRead( msg ) - bufStart;
-			break;
-		case svc_event_reliable:
-			CL_ParseReliableEvent( msg );
-			cl.frames[cl.parsecountmod].graphdata.event += MSG_GetNumBytesRead( msg ) - bufStart;
-			break;
-		case svc_updateuserinfo:
-			CL_UpdateUserinfo( msg );
-			break;
-		case svc_intermission:
-			cl.intermission = 1;
-			break;
-		case svc_finale:
-			CL_ParseFinaleCutscene( msg, 2 );
-			break;
-		case svc_cutscene:
-			CL_ParseFinaleCutscene( msg, 3 );
 			break;
 		case svc_modelindex:
 			CL_PrecacheModel( msg );
@@ -1873,21 +1935,27 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 		case svc_soundindex:
 			CL_PrecacheSound( msg );
 			break;
-		case svc_soundfade:
-			CL_ParseSoundFade( msg );
+		case svc_eventindex:
+			CL_PrecacheEvent( msg );
+			break;
+		case svc_intermission:
+			cl.intermission = 1;
+			break;
+		case svc_finale:
+			CL_ParseFinaleCutscene( msg, 2 );
 			break;
 		case svc_cdtrack:
 			param1 = MSG_ReadByte( msg );
 			param1 = bound( 1, param1, MAX_CDTRACKS ); // tracknum
 			param2 = MSG_ReadByte( msg );
 			param2 = bound( 1, param2, MAX_CDTRACKS ); // loopnum
-			S_StartBackgroundTrack( clgame.cdtracks[param1-1], clgame.cdtracks[param2-1], 0 );
+			S_StartBackgroundTrack( clgame.cdtracks[param1-1], clgame.cdtracks[param2-1], 0, false );
 			break;
-		case svc_eventindex:
-			CL_PrecacheEvent( msg );
+		case svc_restore:
+			CL_ParseRestore( msg );
 			break;
-		case svc_deltatable:
-			Delta_ParseTableField( msg );
+		case svc_cutscene:
+			CL_ParseFinaleCutscene( msg, 3 );
 			break;
 		case svc_weaponanim:
 			param1 = MSG_ReadByte( msg );	// iAnim
@@ -1901,6 +1969,22 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			param1 = MSG_ReadShort( msg );
 			Cvar_SetValue( "room_type", param1 );
 			break;
+		case svc_addangle:
+			CL_ParseAddAngle( msg );
+			break;
+		case svc_usermessage:
+			CL_RegisterUserMessage( msg );
+			break;
+		case svc_packetentities:
+			playerbytes = CL_ParsePacketEntities( msg, false );
+			cl.frames[cl.parsecountmod].graphdata.players += playerbytes;
+			cl.frames[cl.parsecountmod].graphdata.entities += MSG_GetNumBytesRead( msg ) - bufStart - playerbytes;
+			break;
+		case svc_deltapacketentities:
+			playerbytes = CL_ParsePacketEntities( msg, true );
+			cl.frames[cl.parsecountmod].graphdata.players += playerbytes;
+			cl.frames[cl.parsecountmod].graphdata.entities += MSG_GetNumBytesRead( msg ) - bufStart - playerbytes;
+			break;
 		case svc_choke:
 			cl.frames[cls.netchan.incoming_sequence & CL_UPDATE_MASK].choked = true;
 			cl.frames[cls.netchan.incoming_sequence & CL_UPDATE_MASK].receivedtime = -2.0;
@@ -1908,14 +1992,38 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 		case svc_resourcelist:
 			CL_ParseResourceList( msg );
 			break;
-		case svc_director:
-			CL_ParseDirector( msg );
+		case svc_deltamovevars:
+			CL_ParseMovevars( msg );
+			break;
+		case svc_resourcerequest:
+			CL_ParseResourceRequest( msg );
+			break;
+		case svc_customization:
+			CL_ParseCustomization( msg );
+			break;
+		case svc_crosshairangle:
+			CL_ParseCrosshairAngle( msg );
+			break;
+		case svc_soundfade:
+			CL_ParseSoundFade( msg );
+			break;
+		case svc_filetxferfailed:
+			CL_ParseFileTransferFailed( msg );
 			break;
 		case svc_hltv:
 			CL_ParseHLTV( msg );
 			break;
-		case svc_studiodecal:
-			CL_ParseStudioDecal( msg );
+		case svc_director:
+			CL_ParseDirector( msg );
+			break;
+		case svc_voiceinit:
+			CL_ParseVoiceInit( msg );
+			break;
+		case svc_voicedata:
+			CL_ParseVoiceData( msg );
+			break;
+		case svc_resourcelocation:
+			CL_ParseResLocation( msg );
 			break;
 		case svc_querycvarvalue:
 			CL_ParseCvarValue( msg );

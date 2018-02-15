@@ -374,19 +374,19 @@ SV_RecursiveWaterLevel
 recursively recalculating the middle
 =============
 */
-float SV_RecursiveWaterLevel( vec3_t origin, float mins, float maxs, int depth )
+float SV_RecursiveWaterLevel( vec3_t origin, float out, float in, int count )
 {
 	vec3_t	point;
-	float	waterlevel;
+	float	offset;
 
-	waterlevel = ((mins - maxs) * 0.5f) + maxs;
-	if( ++depth > 5 ) return waterlevel;
+	offset = ((out - in) * 0.5) + in;
+	if( ++count > 5 ) return offset;
 
-	VectorSet( point, origin[0], origin[1], origin[2] + waterlevel );
+	VectorSet( point, origin[0], origin[1], origin[2] + offset );
 
 	if( SV_PointContents( point ) == CONTENTS_WATER )
-		return SV_RecursiveWaterLevel( origin, mins, waterlevel, depth );
-	return SV_RecursiveWaterLevel( origin, waterlevel, maxs, depth );
+		return SV_RecursiveWaterLevel( origin, out, offset, count );
+	return SV_RecursiveWaterLevel( origin, offset, in, count );
 }
 
 /*
@@ -398,31 +398,29 @@ determine how deep the entity is
 */
 float SV_Submerged( edict_t *ent )
 {
+	float	start, bottom;
 	vec3_t	point;
-	vec3_t	halfmax;
-	float	waterlevel;
+	vec3_t	center;
 
-	VectorAverage( ent->v.absmin, ent->v.absmax, halfmax );
-	waterlevel = ent->v.absmin[2] - halfmax[2];
+	VectorAverage( ent->v.absmin, ent->v.absmax, center );
+	start = ent->v.absmin[2] - center[2];
 
 	switch( ent->v.waterlevel )
 	{
 	case 1:
-		return SV_RecursiveWaterLevel( halfmax, 0.0f, waterlevel, 0 ) - waterlevel;
+		bottom = SV_RecursiveWaterLevel( center, 0.0f, start, 0 );
+		return bottom - start;
 	case 3:
-		VectorSet( point, halfmax[0], halfmax[1], ent->v.absmax[2] );
+		VectorSet( point, center[0], center[1], ent->v.absmax[2] );
 		svs.groupmask = ent->v.groupinfo;
-
 		if( SV_PointContents( point ) == CONTENTS_WATER )
-		{
 			return (ent->v.maxs[2] - ent->v.mins[2]);
-		}
-		// intentionally fallthrough
-	case 2:
-		return SV_RecursiveWaterLevel( halfmax, ent->v.absmax[2] - halfmax[2], 0.0f, 0 ) - waterlevel;
-	default:
-		return 0.0f;
+	case 2:	// intentionally fallthrough
+		bottom = SV_RecursiveWaterLevel( center, ent->v.absmax[2] - center[2], 0.0f, 0 );
+		return bottom - start;
 	}
+
+	return 0.0f;
 }
 
 /*

@@ -896,7 +896,7 @@ pfnStartBackgroundTrack
 */
 static void pfnStartBackgroundTrack( const char *introTrack, const char *mainTrack )
 {
-	S_StartBackgroundTrack( introTrack, mainTrack, 0 );
+	S_StartBackgroundTrack( introTrack, mainTrack, 0, false );
 
 	// HACKHACK to remove glitches from background track while new game is started.
 	if( !introTrack && !mainTrack )

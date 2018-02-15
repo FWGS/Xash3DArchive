@@ -108,6 +108,84 @@ int SV_GetFragmentSize( sv_client_t *cl )
 }
 
 /*
+================
+SV_RejectConnection
+
+Rejects connection request and sends back a message
+================
+*/
+void SV_RejectConnection( netadr_t from, char *fmt, ... )
+{
+	char	text[1024];
+	va_list	argptr;
+
+	va_start( argptr, fmt );
+	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+	va_end( argptr );
+
+	MsgDev( D_REPORT, "%s connection refused. Reason: %s\n", NET_AdrToString( from ), text );
+	Netchan_OutOfBandPrint( NS_SERVER, from, "print\n^1Server was reject the connection:^7 %s", text );
+	Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
+}
+
+/*
+================
+SV_CheckChallenge
+
+Make sure connecting client is not spoofing
+================
+*/
+int SV_CheckChallenge( netadr_t from, int challenge )
+{
+	int	i;
+
+	// see if the challenge is valid
+	// don't care if it is a local address.
+	if( NET_IsLocalAddress( from ))
+		return 1;
+
+	for( i = 0; i < MAX_CHALLENGES; i++ )
+	{
+		if( NET_CompareAdr( from, svs.challenges[i].adr ))
+		{
+			if( challenge == svs.challenges[i].challenge )
+				break; // valid challenge
+#if 0
+			// g-cont. this breaks multiple connections from single machine
+			SV_RejectConnection( from, "bad challenge %i\n", challenge );
+			return 0;
+#endif
+		}
+	}
+
+	if( i == MAX_CHALLENGES )
+	{
+		SV_RejectConnection( from, "no challenge for your address\n" );
+		return 0;
+	}
+	svs.challenges[i].connected = true;
+
+	return 1;
+}
+
+/*
+================
+SV_CheckIPRestrictions
+
+Determine if client is outside appropriate address range
+================
+*/
+int SV_CheckIPRestrictions( netadr_t from )
+{
+	if( !sv_lan.value )
+	{
+		if( !NET_CompareClassBAdr( from, net_local ) && !NET_IsReservedAdr( from ))
+			return 0;
+	}
+	return 1;
+}
+
+/*
 ==================
 SV_DirectConnect
 
@@ -118,26 +196,71 @@ void SV_DirectConnect( netadr_t from )
 {
 	char		userinfo[MAX_INFO_STRING];
 	char		physinfo[MAX_PHYSINFO_STRING];
+	char		protinfo[MAX_INFO_STRING];
 	sv_client_t	temp, *cl, *newcl;
 	int		qport, version;
 	int		i, edictnum;
 	int		count = 0;
 	int		challenge;
 	edict_t		*ent;
+	char		*s;
+
+	if( Cmd_Argc() < 5 )
+	{
+		SV_RejectConnection( from, "insufficient connection info\n" );
+		return;
+	}
 
 	version = Q_atoi( Cmd_Argv( 1 ));
 
 	if( version != PROTOCOL_VERSION )
 	{
-		Netchan_OutOfBandPrint( NS_SERVER, from, "print\nServer uses protocol version %i.\n", PROTOCOL_VERSION );
-		MsgDev( D_ERROR, "SV_DirectConnect: rejected connect from version %i\n", version );
-		Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
+		SV_RejectConnection( from, "unsupported protocol (%i should be %i)\n", version, PROTOCOL_VERSION );
 		return;
 	}
 
-	qport = Q_atoi( Cmd_Argv( 2 ));
-	challenge = Q_atoi( Cmd_Argv( 3 ));
-	Q_strncpy( userinfo, Cmd_Argv( 4 ), sizeof( userinfo ));
+	challenge = Q_atoi( Cmd_Argv( 2 )); // get challenge
+
+	// see if the challenge is valid (local clients don't need to challenge)
+	if( !SV_CheckChallenge( from, challenge ))
+		return;
+
+	s = Cmd_Argv( 3 );	// protocol info
+
+	if( !Info_IsValid( s ))
+	{
+		SV_RejectConnection( from, "invalid protinfo in connect command\n" );
+		return;
+	}
+
+	Q_strncpy( protinfo, s, sizeof( protinfo ));
+
+	// extract qport from protocol info
+	qport = Q_atoi( Info_ValueForKey( protinfo, "qport" ));
+
+	s = Info_ValueForKey( protinfo, "uuid" );
+	if( Q_strlen( s ) != 32 )
+	{
+		SV_RejectConnection( from, "invalid authentication certificate length\n" );
+		return;
+	}
+
+	// LAN servers restrict to class b IP addresses
+	if( !SV_CheckIPRestrictions( from ))
+	{
+		SV_RejectConnection( from, "LAN servers are restricted to local clients (class C)\n" );
+		return;
+	}
+
+	s = Cmd_Argv( 4 );	// user info
+
+	if( Q_strlen( s ) > MAX_INFO_STRING || !Info_IsValid( s ))
+	{
+		SV_RejectConnection( from, "invalid userinfo in connect command\n" );
+		return;
+	}
+
+	Q_strncpy( userinfo, s, sizeof( userinfo ));
 
 	// quick reject
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
@@ -149,35 +272,18 @@ void SV_DirectConnect( netadr_t from )
 		{
 			if( !NET_IsLocalAddress( from ) && ( host.realtime - cl->connection_started ) < sv_reconnect_limit->value )
 			{
-				MsgDev( D_INFO, "%s:reconnect rejected : too soon\n", NET_AdrToString( from ));
-				Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
+				SV_RejectConnection( from, "too soon\n" );
 				return;
 			}
 			break;
 		}
 	}
-		
-	// see if the challenge is valid (LAN clients don't need to challenge)
-	if( !NET_IsLocalAddress( from ))
+
+	// check connection password (don't verify local client)
+	if( !NET_IsLocalAddress( from ) && sv_password.string[0] && Q_stricmp( sv_password.string, Info_ValueForKey( userinfo, "password" )))
 	{
-		for( i = 0; i < MAX_CHALLENGES; i++ )
-		{
-			if( NET_CompareAdr( from, svs.challenges[i].adr ))
-			{
-				if( challenge == svs.challenges[i].challenge )
-					break; // valid challenge
-			}
-		}
-
-		if( i == MAX_CHALLENGES )
-		{
-			Netchan_OutOfBandPrint( NS_SERVER, from, "print\nNo or bad challenge for address.\n" );
-			Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
-			return;
-		}
-
-		MsgDev( D_NOTE, "Client %i connecting with challenge %p\n", i, challenge );
-		svs.challenges[i].connected = true;
+		SV_RejectConnection( from, "invalid password\n" );
+		return;
 	}
 
 	// force the IP key/value pair so the game can filter based on ip
@@ -214,9 +320,7 @@ void SV_DirectConnect( netadr_t from )
 
 	if( !newcl )
 	{
-		Netchan_OutOfBandPrint( NS_SERVER, from, "print\nServer is full.\n" );
-		MsgDev( D_INFO, "SV_DirectConnect: rejected a connection.\n" );
-		Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
+		SV_RejectConnection( from, "server is full\n" );
 		return;
 	}
 
@@ -252,14 +356,13 @@ gotnewcl:
 	if( !( SV_ClientConnect( ent, userinfo )))
 	{
 		if( *Info_ValueForKey( userinfo, "rejmsg" )) 
-			Netchan_OutOfBandPrint( NS_SERVER, from, "print\n%s\nConnection refused.\n", Info_ValueForKey( userinfo, "rejmsg" ));
-		else Netchan_OutOfBandPrint( NS_SERVER, from, "print\nConnection refused.\n" );
-
-		MsgDev( D_ERROR, "SV_DirectConnect: game rejected a connection.\n");
-		Netchan_OutOfBandPrint( NS_SERVER, from, "disconnect\n" );
+			SV_RejectConnection( from, "%s\n", Info_ValueForKey( userinfo, "rejmsg" ));
+		else SV_RejectConnection( from, "game rejected a connection\n" );
 		SV_DropClient( newcl );
 		return;
 	}
+
+	// after this point connection is accepted
 
 	// send the connect packet to the client
 	Netchan_OutOfBandPrint( NS_SERVER, from, "client_connect" );
@@ -269,6 +372,9 @@ gotnewcl:
 	newcl->connection_started = host.realtime;
 	newcl->cl_updaterate = 0.05;	// 20 fps as default
 	newcl->delta_sequence = -1;
+
+	Q_strncpy( newcl->hashedcdkey, Info_ValueForKey( protinfo, "uuid" ), 32 );
+	newcl->hashedcdkey[32] = '\0';
 
 	// parse some info from the info strings (this can override cl_updaterate)
 	Q_strncpy( newcl->userinfo, userinfo, sizeof( newcl->userinfo ));
@@ -281,6 +387,8 @@ gotnewcl:
 	// the server can hold, send a heartbeat to the master.
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 		if( cl->state >= cs_connected ) count++;
+
+	Log_Printf( "\"%s<%i><%i><>\" connected, address \"%s\"\n", newcl->name, newcl->userid, i, NET_AdrToString( newcl->netchan.remote_address ));
 
 	if( count == 1 || count == svs.maxclients )
 		svs.last_heartbeat = MAX_HEARTBEAT;
@@ -769,6 +877,7 @@ void SV_RemoteCommand( netadr_t from, sizebuf_t *msg )
 	int		i;
 
 	MsgDev( D_INFO, "Rcon from %s:\n%s\n", NET_AdrToString( from ), MSG_GetData( msg ) + 4 );
+	Log_Printf( "Rcon: \"%s\" from \"%s\"\n", MSG_GetData( msg ) + 4, NET_AdrToString( from ));
 	SV_BeginRedirect( from, RD_PACKET, outputbuf, sizeof( outputbuf ) - 16, SV_FlushRedirect );
 
 	if( Rcon_Validate( ))
@@ -931,8 +1040,10 @@ Writes all update values to a bitbuf
 */
 void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 {
-	char	info[MAX_INFO_STRING];
-	int	i;	
+	char		info[MAX_INFO_STRING];
+	char		digest[16];
+	MD5Context_t	ctx;
+	int		i;	
 
 	// process userinfo before updating
 	SV_UserinfoChanged( cl, cl->userinfo );
@@ -952,6 +1063,12 @@ void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 		// remove server passwords, etc.
 		Info_RemovePrefixedKeys( info, '_' );
 		MSG_WriteString( msg, info );
+
+		MD5Init( &ctx );
+		MD5Update( &ctx, cl->hashedcdkey, sizeof( cl->hashedcdkey ));
+		MD5Final( digest, &ctx );
+
+		MSG_WriteBytes( msg, digest, sizeof( digest ));
 	}
 	else MSG_WriteOneBit( msg, 0 );
 }
@@ -1107,6 +1224,28 @@ void SV_PutClientInServer( sv_client_t *cl )
 			MSG_WriteBitAngle( &cl->netchan.message, ent->v.angles[1], 16 );
 			MSG_WriteBitAngle( &cl->netchan.message, ent->v.angles[2], 16 );
 			ent->v.fixangle = 0;
+		}
+
+		if( svgame.dllFuncs.pfnParmsChangeLevel )
+		{
+			SAVERESTOREDATA	levelData;
+			string		name;
+			int		i;
+
+			memset( &levelData, 0, sizeof( levelData ));
+			svgame.globals->pSaveData = &levelData;
+			svgame.dllFuncs.pfnParmsChangeLevel();
+
+			MSG_WriteByte( &cl->netchan.message, svc_restore );
+			Q_snprintf( name, sizeof( name ), "save/%s.HL2", sv.name );
+			COM_FixSlashes( name );
+			MSG_WriteString( &cl->netchan.message, name );
+			MSG_WriteByte( &cl->netchan.message, levelData.connectionCount );
+
+			for( i = 0; i < levelData.connectionCount; i++ )
+				MSG_WriteString( &cl->netchan.message, levelData.levelList[i].mapName );
+
+			svgame.globals->pSaveData = NULL;
 		}
 
 		// reset weaponanim
@@ -2479,7 +2618,7 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 			SV_ParseCvarValue2( cl, msg );
 			break;
 		default:
-			MsgDev( D_ERROR, "SV_ReadClientMessage: clc_bad\n" );
+			MsgDev( D_ERROR, "clc_bad\n" );
 			SV_DropClient( cl );
 			return;
 		}

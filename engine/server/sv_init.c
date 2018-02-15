@@ -363,6 +363,8 @@ void SV_ActivateServer( void )
 		MsgDev( D_INFO, "Game started\n" );
 	}
 
+	Log_Printf( "Started map \"%s\" (CRC \"%i\")\n", sv.name, world.checksum );
+
 	// dedicated server purge unused resources here
 	if( host.type == HOST_DEDICATED )
 		Mod_FreeUnused ();
@@ -502,6 +504,10 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 
 	if( !svs.initialized )
 		return false;
+
+	Log_Open();
+	Log_Printf( "Loading map \"%s\"\n", mapname );
+	Log_PrintServerVars();
 
 	svgame.globals->changelevel = false; // will be restored later if needed
 	svs.timestart = Sys_DoubleTime();

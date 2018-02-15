@@ -2037,7 +2037,8 @@ void GL_RebuildLightmaps( void )
 	int	i, j;
 	model_t	*m;
 
-	if( !cl.world ) return;	// wait for worldmodel
+	if( !cl.video_prepped )
+		return; // wait for worldmodel
 
 	ClearBits( vid_brightness->flags, FCVAR_CHANGED );
 	ClearBits( vid_gamma->flags, FCVAR_CHANGED );

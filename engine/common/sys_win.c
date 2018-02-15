@@ -145,6 +145,33 @@ char *Sys_GetCurrentUser( void )
 
 /*
 =================
+Sys_GetMachineKey
+=================
+*/
+const char *Sys_GetMachineKey( int *nLength )
+{
+	HINSTANCE		rpcrt4_dll = LoadLibrary( "rpcrt4.dll" );
+	RPC_STATUS	(_stdcall *pUuidCreateSequential)( UUID __RPC_FAR *Uuid ) = NULL;
+	static byte	key[32];
+	byte		mac[8];
+	UUID		uuid;
+	int		i;
+
+	if( rpcrt4_dll ) pUuidCreateSequential = (void *)GetProcAddress( rpcrt4_dll, "UuidCreateSequential" );
+	if( pUuidCreateSequential ) pUuidCreateSequential( &uuid );	// ask OS to create UUID
+	if( rpcrt4_dll ) FreeLibrary( rpcrt4_dll ); // no need anymore...
+
+	for( i = 2; i < 8; i++ ) // bytes 2 through 7 inclusive are MAC address
+		mac[i-2] = uuid.Data4[i];
+
+	Q_snprintf( key, sizeof( key ), "%02X-%02X-%02X-%02X-%02X-%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5] );
+
+	if( nLength ) *nLength = Q_strlen( key );
+	return key;
+}
+
+/*
+=================
 Sys_ShellExecute
 =================
 */
@@ -541,9 +568,6 @@ void Sys_Print( const char *pMsg )
 	char		*b = buffer;
 	char		*c = logbuf;	
 	int		i = 0;
-
-	if( pMsg[0] == '0' && pMsg[1] == '\n' && pMsg[2] == '\0' )
-		return; // hlrally spam
 
 	if( host.type == HOST_NORMAL )
 		Con_Print( pMsg );

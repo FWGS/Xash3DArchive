@@ -477,7 +477,7 @@ mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw )
 	int		i, numframes;
 	float		targettime;
 
-	Assert( pModel );
+	Assert( pModel != NULL );
 	psprite = pModel->cache.data;
 
 	if( frame < 0 )
@@ -486,7 +486,8 @@ mspriteframe_t *R_GetSpriteFrame( const model_t *pModel, int frame, float yaw )
 	}
 	else if( frame >= psprite->numframes )
 	{
-		MsgDev( D_WARN, "R_GetSpriteFrame: no such frame %d (%s)\n", frame, pModel->name );
+		if( frame > psprite->numframes )
+			MsgDev( D_WARN, "R_GetSpriteFrame: no such frame %d (%s)\n", frame, pModel->name );
 		frame = psprite->numframes - 1;
 	}
 

@@ -75,6 +75,8 @@ TYPEDESCRIPTION *SV_GetEntvarsDescirption( int number )
 
 void SV_SysError( const char *error_string )
 {
+	Log_Printf( "FATAL ERROR (shutting down): %s\n", error_string );
+
 	if( svgame.hInstance != NULL )
 		svgame.dllFuncs.pfnSys_Error( error_string );
 }
@@ -1102,7 +1104,8 @@ void pfnSetModel( edict_t *e, const char *m )
 
 	if( e == svgame.edicts )
 	{
-		MsgDev( D_ERROR, "SV_SetModel: world model can't be changed\n" );
+		if( sv.state == ss_active )
+			MsgDev( D_ERROR, "SV_SetModel: world model can't be changed\n" );
 		return;
 	}
 
@@ -2036,7 +2039,7 @@ void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vo
 	// not sending (because this is out of range)
 	flags &= ~SND_SPAWNING;
 
-	MSG_BeginServerCmd( &sv.multicast, svc_ambientsound );
+	MSG_BeginServerCmd( &sv.multicast, svc_sound );
 	MSG_WriteUBitLong( &sv.multicast, flags, MAX_SND_FLAGS_BITS );
 	MSG_WriteUBitLong( &sv.multicast, sound_idx, MAX_SOUND_BITS );
 	MSG_WriteUBitLong( &sv.multicast, CHAN_STATIC, MAX_SND_CHAN_BITS );
@@ -2838,6 +2841,10 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 		if( host.developer < D_ERROR )
 			return;
 		break;
+	case at_logged:
+		if( svs.maxclients <= 1 )
+			return;
+		break;
 	}
 
 	va_start( args, szFmt );
@@ -2848,10 +2855,14 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	{
 		Sys_Print( va( "^3Warning:^7 %s", buffer ));
 	}
-	else if( level == at_error  )
+	else if( level == at_error )
 	{
 		Sys_Print( va( "^1Error:^7 %s", buffer ));
 	} 
+	else if( level == at_logged )
+	{
+		Log_Printf( "%s", buffer );
+	}
 	else
 	{
 		Sys_Print( buffer );
@@ -3254,21 +3265,18 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 		return;
 	}
 
+	if( FBitSet( client->flags, FCL_FAKECLIENT ))
+		return;
+
 	switch( ptype )
 	{
 	case print_console:
-		if( FBitSet( client->flags, FCL_FAKECLIENT ))
-			MsgDev( D_INFO, "%s", szMsg );
-		else SV_ClientPrintf( client, PRINT_HIGH, "%s", szMsg );
+		SV_ClientPrintf( client, PRINT_HIGH, "%s", szMsg );
 		break;
 	case print_chat:
-		if( FBitSet( client->flags, FCL_FAKECLIENT ))
-			return;
 		SV_ClientPrintf( client, PRINT_CHAT, "%s", szMsg );
 		break;
 	case print_center:
-		if( FBitSet( client->flags, FCL_FAKECLIENT ))
-			return;
 		MSG_BeginServerCmd( &client->netchan.message, svc_centerprint );
 		MSG_WriteString( &client->netchan.message, szMsg );
 		break;
@@ -4125,19 +4133,15 @@ pfnCreateInstancedBaseline
 */
 int pfnCreateInstancedBaseline( int classname, struct entity_state_s *baseline )
 {
-	int	i;
+	if( !baseline || sv.instanced.count >= MAX_CUSTOM_BASELINES )
+		return 0;
 
-	if( !baseline ) return -1;
-
-	i = sv.instanced.count;
-	if( i > 64 ) return 0;
-
-	Msg( "Added instanced baseline: %s [%i]\n", STRING( classname ), i );
-	sv.instanced.classnames[i] = classname;
-	sv.instanced.baselines[i] = *baseline;
+	Msg( "Added instanced baseline: %s [%i]\n", STRING( classname ), sv.instanced.count );
+	sv.instanced.classnames[sv.instanced.count] = classname;
+	sv.instanced.baselines[sv.instanced.count] = *baseline;
 	sv.instanced.count++;
 
-	return i+1;
+	return sv.instanced.count;
 }
 
 /*

@@ -452,7 +452,7 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	// NOTE: at this point all decal indexes is valid
 	decalIndex = pfnDecalIndex( entry->name );
 
-	if( flags & FDECAL_STUDIO )
+	if( FBitSet( flags, FDECAL_STUDIO ))
 	{
 		// NOTE: studio decal trace start saved into impactPlaneNormal
 		SV_CreateStudioDecal( &sv.signon, entry->position, entry->impactPlaneNormal, decalIndex, entityIndex, modelIndex, flags, &entry->studio_state );
@@ -747,6 +747,8 @@ void SV_SaveFinish( SAVERESTOREDATA *pSaveData )
 {
 	char 		**pTokens;
 	ENTITYTABLE	*pEntityTable;
+
+	if( !pSaveData ) return;
 
 	pTokens = SaveRestore_DetachSymbolTable( pSaveData );
 	if( pTokens ) Mem_Free( pTokens );
@@ -1447,6 +1449,9 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 	file_t			*pFile;
 	int			i, numents;
 	int			id, version;
+
+	if( !svgame.dllFuncs.pfnParmsChangeLevel )
+		return NULL;
 
 	pSaveData = SV_SaveInit( 0 );
 

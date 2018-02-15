@@ -28,7 +28,7 @@ CL_ResetEvent
 void CL_ResetEvent( event_info_t *ei )
 {
 	ei->index = 0;
-	memset( &ei->args, 0, sizeof( ei->args ) );
+	memset( &ei->args, 0, sizeof( ei->args ));
 	ei->fire_time = 0.0;
 	ei->flags = 0;
 }

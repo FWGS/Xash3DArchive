@@ -801,7 +801,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 			// delta from previous state
 			bufStart = MSG_GetNumBytesRead( msg );
 			CL_DeltaEntity( msg, newframe, newnum, oldent, true );
-			if( CL_IsPlayerIndex( newnum ) )
+			if( CL_IsPlayerIndex( newnum ))
 				playerbytes += MSG_GetNumBytesRead( msg ) - bufStart;
 			oldindex++;
 
@@ -822,7 +822,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 			// delta from baseline ?
 			bufStart = MSG_GetNumBytesRead( msg );
 			CL_DeltaEntity( msg, newframe, newnum, NULL, true );
-			if( CL_IsPlayerIndex( newnum ) )
+			if( CL_IsPlayerIndex( newnum ))
 				playerbytes += MSG_GetNumBytesRead( msg ) - bufStart;
 			continue;
 		}

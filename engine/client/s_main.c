@@ -2084,13 +2084,13 @@ void S_Music_f( void )
 			if( FS_FileExists( intro_path, false ) && FS_FileExists( main_path, false ))
 			{
 				// combined track with introduction and main loop theme
-				S_StartBackgroundTrack( intro, main, 0 );
+				S_StartBackgroundTrack( intro, main, 0, false );
 				break;
 			}
 			else if( FS_FileExists( va( "media/%s.%s", track, ext[i] ), false ))
 			{
 				// single non-looped theme
-				S_StartBackgroundTrack( track, NULL, 0 );
+				S_StartBackgroundTrack( track, NULL, 0, false );
 				break;
 			}
 		}
@@ -2098,12 +2098,12 @@ void S_Music_f( void )
 	}
 	else if( c == 3 )
 	{
-		S_StartBackgroundTrack( Cmd_Argv( 1 ), Cmd_Argv( 2 ), 0 );
+		S_StartBackgroundTrack( Cmd_Argv( 1 ), Cmd_Argv( 2 ), 0, false );
 	}
 	else if( c == 4 && Q_atoi( Cmd_Argv( 3 )) != 0 )
 	{
 		// restore command for singleplayer: all arguments are valid
-		S_StartBackgroundTrack( Cmd_Argv( 1 ), Cmd_Argv( 2 ), Q_atoi( Cmd_Argv( 3 )));
+		S_StartBackgroundTrack( Cmd_Argv( 1 ), Cmd_Argv( 2 ), Q_atoi( Cmd_Argv( 3 )), false );
 	}
 	else Msg( "Usage: music <musicfile> [loopfile]\n" );
 }

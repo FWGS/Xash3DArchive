@@ -80,9 +80,9 @@ void CL_PlayCDTrack_f( void )
 		if( Q_isdigit( pszTrack ))
 		{
 			track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
-			S_StartBackgroundTrack( clgame.cdtracks[track-1], NULL, 0 );
+			S_StartBackgroundTrack( clgame.cdtracks[track-1], NULL, 0, false );
 		}
-		else S_StartBackgroundTrack( pszTrack, NULL, 0 );
+		else S_StartBackgroundTrack( pszTrack, NULL, 0, true );
 		paused = false;
 		looped = false;
 	}
@@ -91,9 +91,9 @@ void CL_PlayCDTrack_f( void )
 		if( Q_isdigit( pszTrack ))
 		{
 			track = bound( 1, Q_atoi( Cmd_Argv( 2 )), MAX_CDTRACKS );
-			S_StartBackgroundTrack( clgame.cdtracks[track-1], clgame.cdtracks[track-1], 0 );
+			S_StartBackgroundTrack( clgame.cdtracks[track-1], clgame.cdtracks[track-1], 0, false );
 		}
-		else S_StartBackgroundTrack( pszTrack, pszTrack, 0 );
+		else S_StartBackgroundTrack( pszTrack, pszTrack, 0, true );
 		paused = false;
 		looped = true;
 	}

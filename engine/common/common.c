@@ -700,6 +700,9 @@ void Con_Printf( char *szFmt, ... )
 	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
 	va_end( args );
 
+	if( buffer[0] == '0' && buffer[1] == '\n' && buffer[2] == '\0' )
+		return; // hlrally spam
+
 	Sys_Print( buffer );
 }
 
@@ -720,6 +723,9 @@ void Con_DPrintf( char *szFmt, ... )
 	va_start( args, szFmt );
 	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
 	va_end( args );
+
+	if( buffer[0] == '0' && buffer[1] == '\n' && buffer[2] == '\0' )
+		return; // hlrally spam
 
 	Sys_Print( buffer );
 }

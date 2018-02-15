@@ -346,28 +346,6 @@ void SV_HazardCourse_f( void )
 
 /*
 ==============
-SV_EndGame_f
-
-==============
-*/
-void SV_EndGame_f( void )
-{
-	Host_EndGame( Cmd_Argv( 1 ));
-}
-
-/*
-==============
-SV_KillGame_f
-
-==============
-*/
-void SV_KillGame_f( void )
-{
-	Host_EndGame( "The End" );
-}
-
-/*
-==============
 SV_Load_f
 
 ==============
@@ -630,6 +608,7 @@ void SV_Kick_f( void )
 		return;
 	}
 
+	Log_Printf( "Kick: \"%s<%i>\" was kicked\n", svs.currentPlayer->name, svs.currentPlayer->userid );
 	SV_BroadcastPrintf( svs.currentPlayer, PRINT_HIGH, "%s was kicked\n", svs.currentPlayer->name );
 	SV_ClientPrintf( svs.currentPlayer, PRINT_HIGH, "You were kicked from the game\n" );
 	SV_DropClient( svs.currentPlayer );
@@ -753,7 +732,7 @@ void SV_ConSay_f( void )
 		return;
 	}
 
-	Q_strncpy( text, "console: ", MAX_SYSPATH );
+	Q_snprintf( text, sizeof( text ), "%s: ", Cvar_VariableString( "hostname" ));
 	p = Cmd_Args();
 
 	if( *p == '"' )
@@ -771,6 +750,7 @@ void SV_ConSay_f( void )
 
 		SV_ClientPrintf( client, PRINT_CHAT, "%s\n", text );
 	}
+	Log_Printf( "Server say: \"%s\"\n", p );
 }
 
 /*
@@ -1023,11 +1003,10 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "entpatch", SV_EntPatch_f, "write entity patch to allow external editing" );
 	Cmd_AddCommand( "edict_usage", SV_EdictUsage_f, "show info about edicts usage" );
 	Cmd_AddCommand( "entity_info", SV_EntityInfo_f, "show more info about edicts" );
+	Cmd_AddCommand( "log", SV_ServerLog_f, "logging server events" );
 
 	if( host.type == HOST_NORMAL )
 	{
-		Cmd_AddCommand( "endgame", SV_EndGame_f, "end current game" );
-		Cmd_AddCommand( "killgame", SV_KillGame_f, "end current game" );
 		Cmd_AddCommand( "save", SV_Save_f, "save the game to a file" );
 		Cmd_AddCommand( "savequick", SV_QuickSave_f, "save the game to the quicksave" );
 		Cmd_AddCommand( "autosave", SV_AutoSave_f, "save the game to 'autosave' file" );
@@ -1046,6 +1025,9 @@ SV_KillOperatorCommands
 */
 void SV_KillOperatorCommands( void )
 {
+	Cvar_Reset( "public" );
+	Cvar_Reset( "sv_lan" );
+
 	Cmd_RemoveCommand( "heartbeat" );
 	Cmd_RemoveCommand( "kick" );
 	Cmd_RemoveCommand( "kill" );
@@ -1059,11 +1041,10 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "entpatch" );
 	Cmd_RemoveCommand( "edict_usage" );
 	Cmd_RemoveCommand( "entity_info" );
+	Cmd_RemoveCommand( "log" );
 
 	if( host.type == HOST_NORMAL )
 	{
-		Cmd_RemoveCommand( "endgame" );
-		Cmd_RemoveCommand( "killgame" );
 		Cmd_RemoveCommand( "save" );
 		Cmd_RemoveCommand( "savequick" );
 		Cmd_RemoveCommand( "killsave" );

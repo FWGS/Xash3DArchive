@@ -517,7 +517,8 @@ static void FreeNameFuncGlobals( dll_user_t *hInst )
 
 char *GetMSVCName( const char *in_name )
 {
-	char	*pos, *out_name;
+	static string	out_name;
+	char		*pos;
 
 	if( in_name[0] == '?' )  // is this a MSVC C++ mangled name?
 	{
@@ -526,12 +527,15 @@ char *GetMSVCName( const char *in_name )
 			int	len = pos - in_name;
 
 			// strip off the leading '?'
-			out_name = copystring( in_name + 1 );
+			Q_strncpy( out_name, in_name + 1, sizeof( out_name ));
 			out_name[len-1] = 0; // terminate string at the "@@"
 			return out_name;
 		}
 	}
-	return copystring( in_name );
+
+	Q_strncpy( out_name, in_name, sizeof( out_name ));
+
+	return out_name;
 }
 
 qboolean LibraryLoadSymbols( dll_user_t *hInst )
@@ -718,7 +722,7 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 			if( FS_Seek( f, name_offset, SEEK_SET ) != -1 )
 			{
 				FsGetString( f, function_name );
-				hInst->names[i] = GetMSVCName( function_name );
+				hInst->names[i] = copystring( GetMSVCName( function_name ));
 			}
 			else break;
 		}
@@ -819,7 +823,7 @@ void *Com_GetProcAddress( void *hInstance, const char *name )
 
 	if( hInst->custom_loader )
 		return (void *)MemoryGetProcAddress( hInst->hInstance, name );
-	return (void *)GetProcAddress( hInst->hInstance, name );
+	return (void *)GetProcAddress( hInst->hInstance, GetMSVCName( name ));
 }
 
 void Com_FreeLibrary( void *hInstance )
