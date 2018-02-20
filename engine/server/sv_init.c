@@ -15,12 +15,47 @@ GNU General Public License for more details.
 
 #include "common.h"
 #include "server.h"
+#include "net_encode.h"
 
 int SV_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
 
 server_t		sv;	// local server
 server_static_t	svs;	// persistant server info
 svgame_static_t	svgame;	// persistant game info
+
+const char *check_exts[7] =
+{
+	".cfg",
+	".lst",
+	".exe",
+	".vbs",
+	".com",
+	".bat",
+	".dll",
+};
+
+/*
+================
+SV_IsGenericFileAllowed
+
+some files is not allowed to be sended to client
+================
+*/
+qboolean SV_IsGenericFileAllowed( const char *filename )
+{
+	const char	*ext = FS_FileExtension( filename );
+	int		i;
+
+	for( i = 0; i < ARRAYSIZE( check_exts ); i++ )
+	{
+		if( !Q_stricmp( ext, check_exts[i] ))
+		{
+			MsgDev( D_WARN, "Can't precache %s files:  %s\n", check_exts[i], filename );
+			return false;
+		}
+	}
+	return true;
+}
 
 /*
 ================
@@ -37,7 +72,6 @@ int SV_ModelIndex( const char *filename )
 	if( !filename || !filename[0] )
 		return 0;
 
-	if( *filename == '!' ) filename++;
 	Q_strncpy( name, filename, sizeof( name ));
 	COM_FixSlashes( name );
 
@@ -203,6 +237,136 @@ int SV_GenericIndex( const char *filename )
 	return i;
 }
 
+void SV_AddResource( resourcetype_t type, const char *name, int size, byte flags, int index )
+{
+	resource_t	*pResource = &sv.resources[sv.num_resources];
+
+	if( sv.num_resources >= MAX_RESOURCES )
+		Host_Error( "SV_AddResource: MAX_RESOURCES limit exceeded\n" );
+	sv.num_resources++;
+
+	Q_strncpy( pResource->szFileName, name, sizeof( pResource->szFileName ));
+	pResource->nDownloadSize = size;
+	pResource->ucFlags = flags;
+	pResource->nIndex = index;
+	pResource->type = type;
+}
+
+void SV_CreateGenericResources( void )
+{
+	char	*afile, *pfile;
+	string	filename, token;
+
+	Q_strncpy( filename, sv.model_precache[1], sizeof( filename ));
+	FS_StripExtension( filename );
+	FS_DefaultExtension( filename, ".res" );
+	COM_FixSlashes( filename );
+
+	afile = FS_LoadFile( filename, NULL, false );
+	if( !afile ) return;
+
+	pfile = afile;
+
+	MsgDev( D_REPORT, "Precaching from %s\n", filename );
+	MsgDev( D_REPORT, "----------------------------------\n" );
+
+	while( ( pfile = COM_ParseFile( pfile, token )) != NULL )
+	{
+		if( Q_strlen( token ) <= 0 )
+			break;
+
+		if ( Q_strstr( token, ".." ) )
+		{
+			Con_Printf( "Can't precache resource with invalid relative path %s\n", token );
+			continue;
+		}
+
+		if ( Q_strstr( token, ":" ) )
+		{
+			Con_Printf( "Can't precache resource with absolute path %s\n", token );
+			continue;
+		}
+
+		if ( Q_strstr( token, "\\" ) )
+		{
+			Con_Printf( "Can't precache resource with invalid relative path %s\n", token );
+			continue;
+		}
+
+		if( !SV_IsGenericFileAllowed( token ))
+			continue;
+
+		MsgDev( D_REPORT, "  %s\n", token );
+		SV_GenericIndex( token );
+	}
+
+	MsgDev( D_REPORT, "----------------------------------\n" );
+	Mem_Free( afile );
+}
+
+void SV_CreateResourceList( void )
+{
+	int	ffirstsent = 0;
+	int	i, nSize;
+	char	*s;
+
+	sv.num_resources = 0;
+
+	for( i = 1; i < MAX_CUSTOM; i++ )
+	{
+		s = sv.files_precache[i];
+		if( !*s ) break; // end of list
+		nSize = ( svs.maxclients > 1 ) ? FS_FileSize( s, false ) : 0;
+		if( nSize < 0 ) nSize = 0;
+		SV_AddResource( t_generic, s, nSize, RES_FATALIFMISSING, i );
+	}
+
+	for( i = 1; i < MAX_SOUNDS; i++ )
+	{
+		s = sv.sound_precache[i];
+		if( !*s ) break; // end of list
+
+		if( s[0] == '!' )
+		{
+			if( !ffirstsent )
+			{
+				SV_AddResource( t_sound, "!", 0, RES_FATALIFMISSING, i );
+				ffirstsent = 1;
+			}
+		}
+		else
+		{
+			nSize = ( svs.maxclients > 1 ) ? FS_FileSize( va( "sound/%s", s ), false ) : 0;
+			if( nSize < 0 ) nSize = 0;
+			SV_AddResource( t_sound, s, nSize, 0, i );
+		}
+	}
+
+	for( i = 1; i < MAX_MODELS; i++ )
+	{
+		s = sv.model_precache[i];
+		if( !*s ) break; // end of list
+		nSize = ( svs.maxclients > 1 && s[0] != '*' ) ? FS_FileSize( s, false ) : 0;
+		if( nSize < 0 ) nSize = 0;
+		SV_AddResource( t_model, s, nSize, sv.model_precache_flags[i], i );
+	}
+
+	// just send names
+	for( i = 0; i < MAX_DECALS && host.draw_decals[i][0]; i++ )
+	{
+		SV_AddResource( t_decal, host.draw_decals[i], 0, 0, i );
+	}
+
+	for( i = 1; i < MAX_EVENTS; i++ )
+	{
+		s = sv.event_precache[i];
+		if( !*s ) break; // end of list
+		nSize = ( svs.maxclients > 1 ) ? FS_FileSize( s, false ) : 0;
+		if( nSize < 0 ) nSize = 0;
+		SV_AddResource( t_eventscript, s, nSize, RES_FATALIFMISSING, i );
+	}
+}
+
 /*
 ================
 SV_EntityScript
@@ -252,19 +416,90 @@ SV_CreateBaseline
 Entity baselines are used to compress the update messages
 to the clients -- only the fields that differ from the
 baseline will be transmitted
+
+INTERNAL RESOURCE
 ================
 */
 void SV_CreateBaseline( void )
 {
-	int	e;	
+	entity_state_t	nullstate, *base;
+	int		playermodel;
+	qboolean		player;
+	int		entnum;
 
-	for( e = 0; e < svgame.numEntities; e++ )
+	playermodel = SV_ModelIndex( "models/player.mdl" );
+	memset( &nullstate, 0, sizeof( nullstate ));
+
+	for( entnum = 0; entnum < svgame.numEntities; entnum++ )
 	{
-		SV_BaselineForEntity( EDICT_NUM( e ));
+		edict_t	*pEdict = EDICT_NUM( entnum );
+
+		if( !SV_IsValidEdict( pEdict ))
+			continue;
+
+		if( entnum != 0 && entnum <= svs.maxclients )
+		{
+			player = true;
+		}
+		else
+		{
+			if( !pEdict->v.modelindex )
+				continue; // invisible
+			player = false;
+		}
+
+		// take current state as baseline
+		base = &svs.baselines[entnum];
+
+		base->number = entnum;
+
+		// set entity type
+		if( FBitSet( pEdict->v.flags, FL_CUSTOMENTITY ))
+			base->entityType = ENTITY_BEAM;
+		else base->entityType = ENTITY_NORMAL;
+
+		svgame.dllFuncs.pfnCreateBaseline( player, entnum, base, pEdict, playermodel, host.player_mins[0], host.player_maxs[0] );
+		sv.last_valid_baseline = entnum;
 	}
 
 	// create the instanced baselines
 	svgame.dllFuncs.pfnCreateInstancedBaselines();
+
+	// now put the baseline into the signon message.
+	MSG_BeginServerCmd( &sv.signon, svc_spawnbaseline );
+
+	for( entnum = 0; entnum < svgame.numEntities; entnum++ )
+	{
+		edict_t	*pEdict = EDICT_NUM( entnum );
+
+		if( !SV_IsValidEdict( pEdict ))
+			continue;
+
+		if( entnum != 0 && entnum <= svs.maxclients )
+		{
+			player = true;
+		}
+		else
+		{
+			if( !pEdict->v.modelindex )
+				continue; // invisible
+			player = false;
+		}
+
+		// take current state as baseline
+		base = &svs.baselines[entnum];
+
+		MSG_WriteDeltaEntity( &nullstate, base, &sv.signon, true, player, 1.0f, 0 );
+	}
+
+	MSG_WriteUBitLong( &sv.signon, LAST_EDICT, MAX_ENTITY_BITS ); // end of baselines
+	MSG_WriteUBitLong( &sv.signon, sv.instanced.count, 6 );
+
+	for( entnum = 0; entnum < sv.instanced.count; entnum++ )
+	{
+		base = &sv.instanced.baselines[entnum];
+		MSG_WriteDeltaEntity( &nullstate, base, &sv.signon, true, false, 1.0f, 0 );
+	}
 }
 
 /*
@@ -330,11 +565,17 @@ void SV_ActivateServer( void )
 	for( i = 0; i < numFrames; i++ )
 		SV_Physics();
 
+	// parse user-specified resources
+	SV_CreateGenericResources();
+
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
 
+	// collect all info from precached resources
+	SV_CreateResourceList();
+
 	// check and count all files that marked by user as unmodified (typically is a player models etc)
-	sv.num_consistency_resources = SV_TransferConsistencyInfo();
+	sv.num_consistency = SV_TransferConsistencyInfo();
 
 	// send serverinfo to all connected clients
 	for( i = 0; i < svs.maxclients; i++ )
@@ -353,6 +594,8 @@ void SV_ActivateServer( void )
 	// setup hostflags
 	sv.hostflags = 0;
 
+	HPAK_FlushHostQueue();
+
 	// tell what kind of server has been started.
 	if( svgame.globals->maxClients > 1 )
 	{
@@ -363,7 +606,7 @@ void SV_ActivateServer( void )
 		MsgDev( D_INFO, "Game started\n" );
 	}
 
-	Log_Printf( "Started map \"%s\" (CRC \"%i\")\n", sv.name, world.checksum );
+	Log_Printf( "Started map \"%s\" (CRC \"%i\")\n", sv.name, sv.worldmapCRC );
 
 	// dedicated server purge unused resources here
 	if( host.type == HOST_DEDICATED )
@@ -375,6 +618,8 @@ void SV_ActivateServer( void )
 	sv.paused = false;
 
 	Host_SetServerState( sv.state );
+
+	MsgDev( D_INFO, "level loaded at %.2f sec\n", Sys_DoubleTime() - svs.timestart );
 
 	if( svs.maxclients > 1 )
 	{
@@ -576,11 +821,15 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot )
 	else sv.startspot[0] = '\0';
 
 	Q_snprintf( sv.model_precache[1], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
-	Mod_LoadWorld( sv.model_precache[1], &sv.checksum, svs.maxclients > 1 );
+	SetBits( sv.model_precache_flags[1], RES_FATALIFMISSING );
+	Mod_LoadWorld( sv.model_precache[1], NS_SERVER );
 	sv.worldmodel = Mod_Handle( 1 ); // get world pointer
+
+	CRC32_MapFile( &sv.worldmapCRC, sv.model_precache[1], svs.maxclients > 1 );
 
 	for( i = 1; i < sv.worldmodel->numsubmodels; i++ )
 	{
+		SetBits( sv.model_precache_flags[i+1], RES_FATALIFMISSING );
 		Q_sprintf( sv.model_precache[i+1], "*%i", i );
 		Mod_RegisterModel( sv.model_precache[i+1], i+1 );
 	}

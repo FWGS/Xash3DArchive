@@ -29,9 +29,9 @@ const char	*r_debug_hitbox;
 float		gldepthmin, gldepthmax;
 ref_instance_t	RI;
 
-static int R_RankForRenderMode( cl_entity_t *ent )
+static int R_RankForRenderMode( int rendermode )
 {
-	switch( ent->curstate.rendermode )
+	switch( rendermode )
 	{
 	case kRenderTransTexture:
 		return 1;	// draw second
@@ -70,7 +70,7 @@ Opaque entity can be brush or studio model but sprite
 */
 static qboolean R_OpaqueEntity( cl_entity_t *ent )
 {
-	if( ent->curstate.rendermode == kRenderNormal )
+	if( R_GetEntityRenderMode( ent ) == kRenderNormal )
 		return true;
 	return false;
 }
@@ -87,12 +87,16 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 	cl_entity_t	*ent1, *ent2;
 	vec3_t		vecLen, org;
 	float		dist1, dist2;
+	int		rendermode1;
+	int		rendermode2;
 
 	ent1 = (cl_entity_t *)*a;
 	ent2 = (cl_entity_t *)*b;
+	rendermode1 = R_GetEntityRenderMode( ent1 );
+	rendermode2 = R_GetEntityRenderMode( ent2 );
 
 	// sort by distance
-	if( ent1->model->type != mod_brush || ent1->curstate.rendermode != kRenderTransAlpha )
+	if( ent1->model->type != mod_brush || rendermode1 != kRenderTransAlpha )
 	{
 		VectorAverage( ent1->model->mins, ent1->model->maxs, org );
 		VectorAdd( ent1->origin, org, org );
@@ -101,7 +105,7 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 	}
 	else dist1 = 1000000000;
 
-	if( ent2->model->type != mod_brush || ent2->curstate.rendermode != kRenderTransAlpha )
+	if( ent2->model->type != mod_brush || rendermode2 != kRenderTransAlpha )
 	{
 		VectorAverage( ent2->model->mins, ent2->model->maxs, org );
 		VectorAdd( ent2->origin, org, org );
@@ -116,9 +120,9 @@ static int R_TransEntityCompare( const cl_entity_t **a, const cl_entity_t **b )
 		return 1;
 
 	// then sort by rendermode
-	if( R_RankForRenderMode( ent1 ) > R_RankForRenderMode( ent2 ))
+	if( R_RankForRenderMode( rendermode1 ) > R_RankForRenderMode( rendermode2 ))
 		return 1;
-	if( R_RankForRenderMode( ent1 ) < R_RankForRenderMode( ent2 ))
+	if( R_RankForRenderMode( rendermode1 ) < R_RankForRenderMode( rendermode2 ))
 		return -1;
 
 	return 0;

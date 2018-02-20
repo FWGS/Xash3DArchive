@@ -997,60 +997,6 @@ sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, qboolean spawned_only )
 	return (svs.clients + i);
 }
 
-/*
-=========
-SV_BaselineForEntity
-
-assume pEdict is valid
-=========
-*/
-void SV_BaselineForEntity( edict_t *pEdict )
-{
-	int		usehull, player;
-	int		modelindex;
-	entity_state_t	baseline;
-	float		*mins, *maxs;
-	sv_client_t	*cl;
-
-	if( !SV_IsValidEdict( pEdict ))
-		return;
-
-	if( FBitSet( pEdict->v.flags, FL_CLIENT ) && ( cl = SV_ClientFromEdict( pEdict, false )))
-	{
-		usehull = ( pEdict->v.flags & FL_DUCKING ) ? true : false;
-		modelindex = cl->modelindex ? cl->modelindex : pEdict->v.modelindex;
-		mins = host.player_mins[usehull]; 
-		maxs = host.player_maxs[usehull]; 
-		player = true;
-	}
-	else
-	{
-		if( pEdict->v.effects == EF_NODRAW )
-			return;
-
-		if( !pEdict->v.modelindex || !STRING( pEdict->v.model ))
-			return; // invisible
-
-		modelindex = pEdict->v.modelindex;
-		mins = pEdict->v.mins; 
-		maxs = pEdict->v.maxs; 
-		player = false;
-	}
-
-	// take current state as baseline
-	memset( &baseline, 0, sizeof( baseline )); 
-	baseline.number = NUM_FOR_EDICT( pEdict );
-
-	svgame.dllFuncs.pfnCreateBaseline( player, baseline.number, &baseline, pEdict, modelindex, mins, maxs );
-
-	// set entity type
-	if( FBitSet( pEdict->v.flags, FL_CUSTOMENTITY ))
-		baseline.entityType = ENTITY_BEAM;
-	else baseline.entityType = ENTITY_NORMAL;
-
-	svs.baselines[baseline.number] = baseline;
-}
-
 void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed )
 {
 	// fakeclients must be changed speed too
@@ -1075,9 +1021,20 @@ pfnPrecacheModel
 */
 int pfnPrecacheModel( const char *s )
 {
-	int modelIndex = SV_ModelIndex( s );
+	qboolean	optional = false;
+	int	modelIndex;
 
+	if( *s == '!' )
+	{
+		optional = true;
+		*s++;
+	}
+
+	modelIndex = SV_ModelIndex( s );
 	Mod_RegisterModel( s, modelIndex );
+
+	if( !optional )
+		SetBits( sv.model_precache_flags[modelIndex], RES_FATALIFMISSING );
 
 	return modelIndex;
 }
@@ -3129,6 +3086,20 @@ static void *pfnGetModelPtr( edict_t *pEdict )
 
 /*
 =============
+SV_SendUserReg
+
+=============
+*/
+void SV_SendUserReg( sizebuf_t *msg, sv_user_message_t *user )
+{
+	MSG_BeginServerCmd( msg, svc_usermessage );
+	MSG_WriteByte( msg, user->number );
+	MSG_WriteByte( msg, (byte)user->size );
+	MSG_WriteString( msg, user->name );
+}
+
+/*
+=============
 pfnRegUserMsg
 
 =============
@@ -3181,10 +3152,7 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	if( sv.state == ss_active )
 	{
 		// tell the client about new user message
-		MSG_BeginServerCmd( &sv.multicast, svc_usermessage );
-		MSG_WriteByte( &sv.multicast, svgame.msg[i].number );
-		MSG_WriteByte( &sv.multicast, (byte)iSize );
-		MSG_WriteString( &sv.multicast, svgame.msg[i].name );
+		SV_SendUserReg( &sv.multicast, &svgame.msg[i] );
 		SV_Multicast( MSG_ALL, NULL, NULL, false, false );
 	}
 
@@ -4136,8 +4104,8 @@ int pfnCreateInstancedBaseline( int classname, struct entity_state_s *baseline )
 	if( !baseline || sv.instanced.count >= MAX_CUSTOM_BASELINES )
 		return 0;
 
-	Msg( "Added instanced baseline: %s [%i]\n", STRING( classname ), sv.instanced.count );
-	sv.instanced.classnames[sv.instanced.count] = classname;
+	// g-cont. must sure that classname is really allocated
+	sv.instanced.classnames[sv.instanced.count] = SV_CopyString( STRING( classname ));
 	sv.instanced.baselines[sv.instanced.count] = *baseline;
 	sv.instanced.count++;
 
@@ -4212,40 +4180,43 @@ pfnForceUnmodified
 */
 void pfnForceUnmodified( FORCE_TYPE type, float *mins, float *maxs, const char *filename )
 {
-	sv_consistency_t	*pData;
+	consistency_t	*pc;
 	int		i;
 
 	if( !filename || !*filename )
-		Host_Error( "SV_ForceUnmodified: bad filename string.\n" );
+		return;
 
 	if( sv.state == ss_loading )
 	{
-		for( i = 0, pData = sv.consistency_files; i < MAX_MODELS; i++, pData++ )
+		for( i = 0; i < MAX_MODELS; i++ )
 		{
-			if( !pData->name )
-			{
-				pData->name = filename;
-				pData->force_state = type;
+			pc = &sv.consistency_list[i];
 
-				if( mins ) VectorCopy( mins, pData->mins );
-				if( maxs ) VectorCopy( maxs, pData->maxs );
+			if( !pc->filename )
+			{
+				if( mins ) VectorCopy( mins, pc->mins );
+				if( maxs ) VectorCopy( maxs, pc->maxs );
+				pc->filename = copystring( filename );
+				pc->check_type = type;
 				return;
 			}
-			else if( !Q_strcmp( filename, pData->name ))
+			else if( !Q_strcmp( filename, pc->filename ))
 				return;
 		}
-
-		Host_Error( "SV_ForceUnmodified: MAX_MODELS limit exceeded\n" );
+		Host_Error( "SV_ModelIndex: MAX_MODELS limit exceeded\n" );
 	}
 	else
 	{
-		for( i = 0, pData = sv.consistency_files; i < MAX_MODELS; i++, pData++ )
+		for( i = 0; i < MAX_MODELS; i++ )
 		{
-			if( pData->name && !Q_strcmp( filename, pData->name ))
+			pc = &sv.consistency_list[i];
+			if( !pc->filename ) continue;
+
+			if( !Q_strcmp( filename, pc->filename ))
 				return;
 		}
 
-		Host_Error( "SV_ForceUnmodified: can only be done during precache\n" );
+		MsgDev( D_ERROR, "ForceUnmodified: can only be done during precache\n" );
 	}
 }
 

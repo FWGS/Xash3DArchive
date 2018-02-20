@@ -1230,7 +1230,7 @@ void CL_PredictMovement( qboolean repredicting )
 
 	CL_SetUpPlayerPrediction( false, false );
 
-	if( !cl.validsequence )
+	if( cls.state != ca_active || !cl.validsequence )
 		return;
 
 	if(( cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged ) >= CL_UPDATE_MASK )

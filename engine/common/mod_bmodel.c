@@ -261,7 +261,7 @@ static void Mod_LoadLump( const byte *in, mlumpinfo_t *info, mlumpstat_t *stat, 
 	}
 
 	// bmodels not required the visibility
-	if( !world.loading && info->lumpnumber == LUMP_VISIBILITY )
+	if( !FBitSet( flags, LUMP_TESTONLY ) && !world.loading && info->lumpnumber == LUMP_VISIBILITY )
 		SetBits( flags, LUMP_SILENT ); // shut up warning
 
 	// fill the stats for world

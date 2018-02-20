@@ -68,9 +68,34 @@ GNU General Public License for more details.
 #define FWORLD_WATERALPHA		BIT( 2 )
 #define FWORLD_HAS_DELUXEMAP		BIT( 3 )
 
+typedef struct consistency_s
+{
+	const char	*filename;
+	int		orig_index;
+	int		check_type;
+	qboolean		issound;
+	int		value;
+	vec3_t		mins;
+	vec3_t		maxs;
+} consistency_t;
+
+#define FCRC_SHOULD_CHECKSUM	BIT( 0 )
+#define FCRC_CHECKSUM_DONE	BIT( 1 )
+
 typedef struct
 {
-	uint		checksum;		// current map checksum
+	int		flags;
+	CRC32_t		initialCRC;
+} model_info_t;
+
+// values for model_t's needload
+#define NL_PRESENT		0
+#define NL_NEEDS_LOADED	1
+#define NL_UNREFERENCED	2		// this model can be freed after sequence precaching is done
+#define NL_CLIENT		3		// client-side models are static
+
+typedef struct
+{
 	int		load_sequence;	// increace each map change
 
 	qboolean		loading;		// true if worldmodel is loading
@@ -111,7 +136,7 @@ void Mod_Shutdown( void );
 void Mod_ClearUserData( void );
 void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
 void Mod_GetFrames( int handle, int *numFrames );
-void Mod_LoadWorld( const char *name, uint *checksum, qboolean multiplayer );
+void Mod_LoadWorld( const char *name, netsrc_t type );
 int Mod_FrameCount( model_t *mod );
 void *Mod_Calloc( int number, size_t size );
 void *Mod_CacheCheck( struct cache_user_s *c );
@@ -122,6 +147,8 @@ model_t *Mod_FindName( const char *name, qboolean create );
 model_t *Mod_LoadModel( model_t *mod, qboolean world );
 model_t *Mod_ForName( const char *name, qboolean world );
 qboolean Mod_RegisterModel( const char *name, int index );
+qboolean Mod_ValidateCRC( const char *name, CRC32_t crc );
+void Mod_NeedCRC( const char *name, qboolean needCRC );
 modtype_t Mod_GetType( int handle );
 model_t *Mod_Handle( int handle );
 void Mod_FreeUnused( void );

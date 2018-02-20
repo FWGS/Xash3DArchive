@@ -149,8 +149,10 @@ detect a loopback message
 */
 qboolean Netchan_IsLocal( netchan_t *chan )
 {
+#if 0	// FIXME
 	if( !NET_IsActive() || NET_IsLocalAddress( chan->remote_address ))
 		return true;
+#endif
 	return false;
 }
 
@@ -737,7 +739,9 @@ void Netchan_CreateFileFragmentsFromBuffer( netchan_t *chan, char *filename, byt
 	if( chan->pfnBlockSize != NULL )
 		chunksize = chan->pfnBlockSize( chan->client );
 	else chunksize = (FRAGMENT_MAX_SIZE >> 1);
+
 	wait = ( fragbufwaiting_t * )Mem_Alloc( net_mempool, sizeof( fragbufwaiting_t ));
+
 	remaining = size;
 	pos = 0;
 

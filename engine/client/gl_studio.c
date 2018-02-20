@@ -167,6 +167,35 @@ const char *R_StudioTexName( model_t *mod )
 
 /*
 ================
+R_GetEntityRenderMode
+
+check for texture flags
+================
+*/
+int R_GetEntityRenderMode( cl_entity_t *ent )
+{
+	studiohdr_t	*phdr;
+	mstudiotexture_t	*ptexture;
+	int		i;
+
+	if( !( phdr = Mod_StudioExtradata( ent->model )))
+		return ent->curstate.rendermode;
+
+	ptexture = (mstudiotexture_t *)((byte *)phdr + phdr->textureindex);
+
+	for( i = 0; i < phdr->numtextures; i++, ptexture++ )
+	{
+		// g-cont. this is not fully proper but better than was
+		if( FBitSet( ptexture->flags, STUDIO_NF_ADDITIVE ))
+			return kRenderTransAdd;
+		if( FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
+			return kRenderTransAlpha;
+	}
+	return ent->curstate.rendermode;
+}
+
+/*
+================
 R_StudioBodyVariations
 
 calc studio body variations

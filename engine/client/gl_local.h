@@ -413,6 +413,7 @@ void R_StudioLerpMovement( cl_entity_t *e, double time, vec3_t origin, vec3_t an
 float CL_GetSequenceDuration( cl_entity_t *ent, int sequence );
 struct mstudiotex_s *R_StudioGetTexture( cl_entity_t *e );
 float CL_GetStudioEstimatedFrame( cl_entity_t *ent );
+int R_GetEntityRenderMode( cl_entity_t *ent );
 void R_DrawStudioModel( cl_entity_t *e );
 
 //

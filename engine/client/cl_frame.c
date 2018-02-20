@@ -606,7 +606,7 @@ void CL_FlushEntityPacket( sizebuf_t *msg )
 	while( 1 )
 	{
 		newnum = MSG_ReadUBitLong( msg, MAX_VISIBLE_PACKET_BITS );
-		if( !newnum ) break; // done
+		if( newnum == LAST_EDICT ) break; // done
 
 		if( MSG_CheckOverflow( msg ))
 			Host_Error( "CL_FlushEntityPacket: overflow\n" );
@@ -628,6 +628,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	entity_state_t	*state;
 	qboolean		newent = (old) ? false : true;
 	int		pack = frame->num_entities;
+	qboolean		player = CL_IsPlayerIndex( newnum ); 
 	qboolean		alive = true;
 
 	// alloc next slot to store update
@@ -637,7 +638,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	{
 		MsgDev( D_ERROR, "CL_DeltaEntity: invalid newnum: %d\n", newnum );
 		if( has_update )
-			MSG_ReadDeltaEntity( msg, old, state, newnum, CL_IsPlayerIndex( newnum ), cl.mtime[0] );
+			MSG_ReadDeltaEntity( msg, old, state, newnum, player, cl.mtime[0] );
 		return;
 	}
 
@@ -646,7 +647,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 	if( newent ) old = &ent->baseline;
 
 	if( has_update )
-		alive = MSG_ReadDeltaEntity( msg, old, state, newnum, CL_IsPlayerIndex( newnum ), cl.mtime[0] );
+		alive = MSG_ReadDeltaEntity( msg, old, state, newnum, player, cl.mtime[0] );
 	else memcpy( state, old, sizeof( entity_state_t ));
 
 	if( !alive )
@@ -691,6 +692,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	int		oldpacket;
 	int		bufStart;
 	entity_state_t	*oldent;
+	qboolean		player;
 	int		count;
 
 	// save first uncompressed packet as timestamp
@@ -774,10 +776,11 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	while( 1 )
 	{
 		newnum = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
-		if( !newnum ) break; // end of packet entities
+		if( newnum == LAST_EDICT ) break; // end of packet entities
 
 		if( MSG_CheckOverflow( msg ))
 			Host_Error( "CL_ParsePacketEntities: overflow\n" );
+		player = CL_IsPlayerIndex( newnum );
 
 		while( oldnum < newnum )
 		{	
@@ -801,8 +804,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 			// delta from previous state
 			bufStart = MSG_GetNumBytesRead( msg );
 			CL_DeltaEntity( msg, newframe, newnum, oldent, true );
-			if( CL_IsPlayerIndex( newnum ))
-				playerbytes += MSG_GetNumBytesRead( msg ) - bufStart;
+			if( player ) playerbytes += MSG_GetNumBytesRead( msg ) - bufStart;
 			oldindex++;
 
 			if( oldindex >= oldframe->num_entities )
@@ -822,8 +824,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 			// delta from baseline ?
 			bufStart = MSG_GetNumBytesRead( msg );
 			CL_DeltaEntity( msg, newframe, newnum, NULL, true );
-			if( CL_IsPlayerIndex( newnum ))
-				playerbytes += MSG_GetNumBytesRead( msg ) - bufStart;
+			if( player ) playerbytes += MSG_GetNumBytesRead( msg ) - bufStart;
 			continue;
 		}
 	}
@@ -858,23 +859,19 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	// add new entities into physic lists
 	CL_SetSolidEntities();
 
-	if( cls.state != ca_active )
-	{
-		// client entered the game
-		cls.state = ca_active;
-		cls.changelevel = false;		// changelevel is done
-		cls.changedemo = false;		// changedemo is done
-
-		SCR_MakeLevelShot();		// make levelshot if needs
-		Cvar_SetValue( "scr_loading", 0.0f );	// reset progress bar	
-		Netchan_ReportFlow( &cls.netchan );
- 
-		if(( cls.demoplayback || cls.disable_servercount != cl.servercount ) && cl.video_prepped )
-			SCR_EndLoadingPlaque(); // get rid of loading plaque
-		cl.first_frame = true;
+	// first update is the final signon stage where we actually receive an entity (i.e., the world at least)
+	if( cls.signon == ( SIGNONS - 1 ))
+	{	
+		// we are done with signon sequence.
+		cls.signon = SIGNONS;
+		
+		// Clear loading plaque.
+		CL_SignonReply ();
 	}
-	else
+	else if( cls.state == ca_active )
 	{
+		// g-cont: now stair climbing interpolation
+		// is prepared for a new level and ready to use
 		cl.first_frame = false;
 	}
 
@@ -1209,13 +1206,12 @@ process frame interpolation etc
 */
 void CL_EmitEntities( void )
 {
-	if( !cl.validsequence || cl.paused )
-		return; // don't waste time
+	if( cl.paused ) return; // don't waste time
 
 	R_ClearScene ();
 
 	// not in server yet, no entities to redraw
-	if( cls.state != ca_active )
+	if( cls.state != ca_active || !cl.validsequence )
 		return;
 
 	// make sure we have at least one valid update

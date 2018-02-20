@@ -97,7 +97,7 @@ typedef struct
 
 typedef struct sfx_s
 {
-	string 		name;
+	char		name[64];
 	wavdata_t		*cache;
 
 	int		touchFrame;

@@ -458,6 +458,7 @@ void SCR_UpdateScreen( void )
 		break;
 	case ca_connecting:
 	case ca_connected:
+	case ca_validate:
 		SCR_DrawPlaque();
 		break;
 	case ca_active:

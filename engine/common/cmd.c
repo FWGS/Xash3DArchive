@@ -1010,7 +1010,7 @@ void Cmd_ForwardToServer( void )
 		return;
 	}
 
-	if( cls.state != ca_connected && cls.state != ca_active )
+	if( cls.state < ca_connected || cls.state > ca_active )
 	{
 		if( Q_stricmp( Cmd_Argv( 0 ), "setinfo" ))
 			MsgDev( D_INFO, "Can't \"%s\", not connected\n", Cmd_Argv( 0 ));

@@ -27,7 +27,7 @@ GNU General Public License for more details.
 
 int CL_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
 
-const char *svc_strings[256] =
+const char *svc_strings[svc_lastmsg+1] =
 {
 	"svc_bad",
 	"svc_nop",
@@ -106,7 +106,6 @@ typedef struct
 
 static msg_debug_t		cls_message_debug;
 static int		starting_count;
-static resourcelist_t	reslist;
 
 const char *CL_MsgInfo( int cmd )
 {
@@ -667,7 +666,47 @@ CL_ParseResourceRequest
 */
 void CL_ParseResourceRequest( sizebuf_t *msg )
 {
-	// TODO: ???
+	byte	buffer[MAX_INIT_MSG];
+	int	i, arg, nStartIndex;
+	sizebuf_t	sbuf;
+
+	MSG_Init( &sbuf, "ResourceBlock", buffer, sizeof( buffer ));
+
+	arg = MSG_ReadLong( msg );
+	nStartIndex = MSG_ReadLong( msg );
+
+	if( cl.servercount != arg )
+	{
+		MsgDev( D_ERROR, "request resources from different level\n" );
+		return;
+	}
+
+	if( nStartIndex < 0 && nStartIndex > cl.num_resources )
+	{
+		MsgDev( D_ERROR, "custom resource list request out of range\n" );
+		return;
+	}
+
+	MSG_WriteByte( &sbuf, clc_resourcelist );
+	MSG_WriteShort( &sbuf, cl.num_resources );
+
+	for( i = nStartIndex; i < cl.num_resources; i++ )
+	{
+		MSG_WriteString( &sbuf, cl.resourcelist[i].szFileName );
+		MSG_WriteByte( &sbuf, cl.resourcelist[i].type );
+		MSG_WriteShort( &sbuf, cl.resourcelist[i].nIndex );
+		MSG_WriteLong( &sbuf, cl.resourcelist[i].nDownloadSize );
+		MSG_WriteByte( &sbuf, cl.resourcelist[i].ucFlags );
+
+		if( FBitSet( cl.resourcelist[i].ucFlags, RES_CUSTOM ))
+			MSG_WriteBytes( &sbuf, cl.resourcelist[i].rgucMD5_hash, 16 );
+	}
+
+	if( MSG_GetNumBytesWritten( &sbuf ) > 0 )
+	{
+		Netchan_CreateFragments( &cls.netchan, &sbuf );
+		Netchan_FragSend( &cls.netchan );
+	}
 }
 
 /*
@@ -678,7 +717,10 @@ CL_ParseFileTransferFailed
 */
 void CL_ParseFileTransferFailed( sizebuf_t *msg )
 {
-	// TODO: ???
+	const char	*name = MSG_ReadString( msg );
+
+	if( !cls.demoplayback )
+		CL_ProcessFile( false, name );
 }
 
 /*
@@ -708,6 +750,9 @@ void CL_ParseServerData( sizebuf_t *msg )
 	if( !cls.changelevel && !cls.changedemo )
 		CL_ClearState ();
 	cls.state = ca_connected;
+
+	// Re-init hud video, especially if we changed game directories
+	clgame.dllFuncs.pfnVidInit();
 
 	// parse protocol version number
 	i = MSG_ReadLong( msg );
@@ -805,6 +850,13 @@ void CL_ParseServerData( sizebuf_t *msg )
 		cls.scrshot_request = scrshot_plaque; // request levelshot even if exist (check filetime)
 	}
 
+	// begin fetching modellist
+	MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
+#if 0
+	MSG_WriteString( &cls.netchan.message, va( "modellist %i\n", cl.servercount ));
+#else
+	MSG_WriteString( &cls.netchan.message, va( "sendres %i\n", cl.servercount ));
+#endif
 	if( scr_dark->value )
 	{
 		screenfade_t		*sf = &clgame.fade;
@@ -1007,26 +1059,38 @@ CL_ParseBaseline
 */
 void CL_ParseBaseline( sizebuf_t *msg )
 {
-	int		newnum;
-	float		timebase;
+	int		i, newnum;
+	entity_state_t	nullstate;
+	qboolean		player;
 	cl_entity_t	*ent;
 
 	Delta_InitClient ();	// finalize client delta's
 
-	newnum = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
+	memset( &nullstate, 0, sizeof( nullstate ));
 
-	if( newnum < 0 ) Host_Error( "CL_SpawnEdict: invalid number %i\n", newnum );
-	if( newnum >= clgame.maxEntities ) Host_Error( "CL_AllocEdict: no free edicts\n" );
+	while( 1 )
+	{
+		newnum = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
+		if( newnum == LAST_EDICT ) break; // end of baselines
+		player = CL_IsPlayerIndex( newnum );
 
-	ent = CL_EDICT_NUM( newnum );
-	memset( &ent->prevstate, 0, sizeof( ent->prevstate ));
-	ent->index = newnum;
+		if( newnum >= clgame.maxEntities )
+			Host_Error( "CL_AllocEdict: no free edicts\n" );
 
-	if( cls.state == ca_active )
-		timebase = cl.mtime[0];
-	else timebase = 1.0f; // sv.state == ss_loading
+		ent = CL_EDICT_NUM( newnum );
+		memset( &ent->prevstate, 0, sizeof( ent->prevstate ));
+		ent->index = newnum;
 
-	MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, CL_IsPlayerIndex( newnum ), timebase );
+		MSG_ReadDeltaEntity( msg, &ent->prevstate, &ent->baseline, newnum, player, 1.0f );
+	}
+
+	cl.instanced_baseline_count = MSG_ReadUBitLong( msg, 6 );
+
+	for( i = 0; i < cl.instanced_baseline_count; i++ )
+	{
+		newnum = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
+		MSG_ReadDeltaEntity( msg, &nullstate, &cl.instanced_baseline[i], newnum, false, 1.0f );
+	}
 }
 
 /*
@@ -1291,50 +1355,416 @@ void CL_UpdateUserPings( sizebuf_t *msg )
 	}
 }
 
-/*
-==============
-CL_CheckingResFile
-
-==============
-*/
-void CL_CheckingResFile( char *pResFileName )
+void CL_PrecacheBSPModels( const char *pfilename )
 {
-	sizebuf_t	buf;
-	byte	data[32];
+	resource_t	*p, *n;
 
-	if( FS_FileExists( pResFileName, false ))
-		return;	// already existing
+	if( !pfilename ) return;
 
-	cls.downloadcount++;
+	if( Q_strnicmp( pfilename, "maps/", 5 ) || !Q_strstr( pfilename, ".bsp" ))
+		return;
 
-	Msg( "Starting downloads file: %s\n", pResFileName );
+	for( p = cl.resourcesonhand.pNext; p != &cl.resourcesonhand; p = n )
+	{
+		n = p->pNext;
 
-	if( cls.state == ca_disconnected ) return;
+		if( p->type == t_model && p->szFileName[0] == '*' )
+		{
+			Q_strncpy( cl.model_precache[p->nIndex], p->szFileName, sizeof( cl.model_precache[0] ));
 
-	MSG_Init( &buf, "ClientPacket", data, sizeof( data ));
-	MSG_BeginClientCmd( &buf, clc_resourcelist );
-	MSG_WriteString( &buf, pResFileName );
+			// when we loading map all resources is precached sequentially
+			if( cl.video_prepped ) Mod_RegisterModel( cl.model_precache[p->nIndex], p->nIndex );
 
-	if( !cls.netchan.remote_address.type )	// download in singleplayer ???
-		cls.netchan.remote_address.type = NA_LOOPBACK;
+			if( !Mod_Handle( p->nIndex ))
+			{
+				MsgDev( D_ERROR, "model %s not found\n", p->szFileName );
 
-	// make sure message will be delivered
-	Netchan_Transmit( &cls.netchan, MSG_GetNumBytesWritten( &buf ), MSG_GetData( &buf ));
+				if( FBitSet( p->ucFlags, RES_FATALIFMISSING ))
+				{
+					CL_Disconnect_f();
+					break;
+				}
+			}
+		}
+	}
+}
 
+void CL_SendConsistencyInfo( sizebuf_t *msg )
+{
+	qboolean		user_changed_diskfile;
+	vec3_t		mins, maxs;
+	string		filename;
+	int		key, len;
+	CRC32_t		crcFile;
+	byte		md5[16];
+	consistency_t	*pc;
+	int		i;
+
+	if( !cl.need_force_consistency_response )
+		return;
+
+	cl.need_force_consistency_response = false;
+
+	MSG_WriteByte( msg, clc_fileconsistency );
+	key = MSG_GetRealBytesWritten( msg );
+	MSG_WriteShort( msg, 0 );
+
+	for( i = 0; i < cl.num_consistency; i++ )
+	{
+		pc = &cl.consistency_list[i];
+
+		user_changed_diskfile = false;
+		MSG_WriteOneBit( msg, 1 );
+		MSG_WriteUBitLong( msg, pc->orig_index, MAX_RESOURCE_BITS );
+
+		if( pc->issound )
+			Q_snprintf( filename, sizeof( filename ), "sound/%s", pc->filename );
+		else Q_strncpy( filename, pc->filename, sizeof( filename ));
+
+		if( Q_strstr( filename, "models/" ))
+		{
+			CRC32_Init( &crcFile );
+			CRC32_File( &crcFile, filename );
+			CRC32_Final( &crcFile );
+			user_changed_diskfile = !Mod_ValidateCRC( filename, crcFile );
+		}
+
+		switch( pc->check_type )
+		{
+		case force_exactfile:
+			MD5_HashFile( md5, filename, NULL );
+			pc->value = *(int *)md5;
+
+			if( user_changed_diskfile )
+				MSG_WriteUBitLong( msg, 0, 32 );
+			else MSG_WriteUBitLong( msg, pc->value, 32 );
+			break;
+		case force_model_samebounds:
+		case force_model_specifybounds:
+			if( !Mod_GetStudioBounds( filename, mins, maxs ))
+				Host_Error( "unable to find %s\n", filename );
+			if( user_changed_diskfile )
+				ClearBounds( maxs, mins ); // g-cont. especially swapped
+			MSG_WriteBytes( msg, mins, 12 );
+			MSG_WriteBytes( msg, maxs, 12 );
+			break;
+		default:
+			Host_Error( "Unknown consistency type %i\n", pc->check_type );
+			break;
+		}
+	}
+
+	MSG_WriteOneBit( msg, 0 );
+
+	len = MSG_GetRealBytesWritten( msg ) - key - 2;
+	*(short *)&msg->pData[key] = len;
 }
 
 /*
-==============
-CL_CheckingSoundResFile
+==================
+CL_RegisterResources
 
-==============
+Clean up and move to next part of sequence.
+==================
 */
-void CL_CheckingSoundResFile( char *pResFileName )
+void CL_RegisterResources ( sizebuf_t *msg )
 {
-	string	filepath;
+	int	i;
 
-	Q_snprintf( filepath, sizeof( filepath ), "sound/%s", pResFileName );
-	CL_CheckingResFile( filepath );
+	if( cls.dl.custom || cls.signon == SIGNONS && cls.state == ca_active )
+	{
+		cls.dl.custom = false;
+		return;
+	}
+
+	if( !cls.demoplayback )
+		CL_SendConsistencyInfo( msg );
+
+	// All done precaching.
+	cl.worldmodel = Mod_Handle( 1 ); // get world pointer
+	cl.video_prepped = true;
+	cl.audio_prepped = true;
+
+	if( cl.worldmodel && cl.maxclients > 0 )
+	{
+		clgame.entities->model = cl.worldmodel;
+		CL_PrecacheBSPModels( cl.worldmodel->name );
+
+		if( cls.state != ca_disconnected )
+		{
+			MsgDev( D_INFO, "Setting up renderer...\n" );
+
+			// load tempent sprites (glowshell, muzzleflashes etc)
+			CL_LoadClientSprites ();
+
+			// invalidate all decal indexes
+			memset( cl.decal_index, 0, sizeof( cl.decal_index ));
+
+			CL_ClearWorld ();
+
+			// tell rendering system we have a new set of models.
+			R_NewMap ();
+
+			CL_SetupOverviewParams();
+
+			// release unused SpriteTextures
+			for( i = 1; i < MAX_IMAGES; i++ )
+			{
+				if( !clgame.sprites[i].name[0] ) continue; // free slot
+				if( clgame.sprites[i].needload != clgame.load_sequence )
+					Mod_UnloadSpriteModel( &clgame.sprites[i] );
+			}
+
+			Mod_FreeUnused ();
+
+			if( host.developer <= 2 )
+				Con_ClearNotify(); // clear any lines of console text
+
+			// done with all resources, issue prespawn command.
+			// Include server count in case server disconnects and changes level during d/l
+			MSG_WriteByte( msg, clc_stringcmd );
+			MSG_WriteString( msg, va( "spawn %i", cl.servercount ));
+		}
+	}
+	else
+	{
+		MsgDev( D_ERROR, "client world model is NULL\n" );
+		CL_Disconnect();
+	}
+}
+
+void CL_ParseConsistencyInfo( sizebuf_t *msg )
+{
+	int		lastcheck;
+	int		delta;
+	int		i;
+	int		isdelta;
+	resource_t	*pResource;
+	resource_t	*skip_crc_change;
+	int		skip;
+	consistency_t	*pc;
+	byte		nullbuffer[32];
+
+	memset( nullbuffer, 0, 32 );
+
+	cl.need_force_consistency_response = MSG_ReadOneBit( msg );
+	pResource = cl.resourcesneeded.pNext;
+
+	if( !cl.need_force_consistency_response )
+		return;
+
+	skip_crc_change = NULL;
+	lastcheck = 0;
+
+	while( MSG_ReadOneBit( msg ))
+	{
+		isdelta = MSG_ReadOneBit( msg );
+
+		if( isdelta ) delta = MSG_ReadUBitLong( msg, 5 ) + lastcheck;
+		else delta = MSG_ReadUBitLong( msg, MAX_RESOURCE_BITS );
+
+		skip = delta - lastcheck;
+
+		for( i = 0; i < skip; i++ )
+		{
+			if( pResource != skip_crc_change && Q_strstr( pResource->szFileName, "models/" ))
+				Mod_NeedCRC( pResource->szFileName, false );
+			pResource = pResource->pNext;
+		}
+
+		if ( cl.num_consistency >= MAX_MODELS )
+			Host_Error( "Consistency:  server sent too many filenames\n" );
+
+		pc = &cl.consistency_list[cl.num_consistency];
+		cl.num_consistency++;
+
+		memset( pc, 0, sizeof( consistency_t ));
+		pc->filename = pResource->szFileName;
+		pc->issound = (pResource->type == t_sound);
+		pc->orig_index = delta;
+		pc->value = 0;
+
+		if( pResource->type == t_model && memcmp( nullbuffer, pResource->rguc_reserved, 32 ))
+			pc->check_type = pResource->rguc_reserved[0];
+
+		skip_crc_change = pResource;
+		lastcheck = delta;
+	}
+}
+
+int CL_EstimateNeededResources( void )
+{
+	resource_t	*p;
+	int		nTotalSize = 0;
+	int		nSize;
+
+	for( p = cl.resourcesneeded.pNext; p != &cl.resourcesneeded; p = p->pNext )
+	{
+		switch( p->type )
+		{
+		case t_sound:
+			nSize = FS_FileSize( va( "sound/%s", p->szFileName ), false );
+			if( p->szFileName[0] != '*' && ( nSize == 0 || nSize == -1 ))
+			{
+				SetBits( p->ucFlags, RES_WASMISSING );
+				nTotalSize += p->nDownloadSize;
+			}
+			break;
+		case t_model:
+			nSize = FS_FileSize( p->szFileName, false );
+			if( p->szFileName[0] != '*' && p->ucFlags != 0 && ( nSize == 0 || nSize == -1 ))
+			{
+				SetBits( p->ucFlags, RES_WASMISSING );
+				nTotalSize += p->nDownloadSize;
+			}
+			break;
+		case t_skin:
+		case t_generic:
+		case t_eventscript:
+			nSize = FS_FileSize( p->szFileName, false );
+			if( nSize == 0 || nSize == -1 )
+			{
+				SetBits( p->ucFlags, RES_WASMISSING );
+				nTotalSize += p->nDownloadSize;
+			}
+			break;
+		case t_decal:
+			if( FBitSet( p->ucFlags, RES_CUSTOM ))
+			{
+				SetBits( p->ucFlags, RES_WASMISSING );
+				nTotalSize += p->nDownloadSize;
+			}
+			break;
+		}		
+	}
+
+	return nTotalSize;
+}
+
+void CL_BatchResourceRequest( void )
+{
+	byte		data[MAX_INIT_MSG];
+	resource_t	*p, *n;
+	sizebuf_t		msg;
+
+	MSG_Init( &msg, "Resource Batch", data, sizeof( data ));
+
+// TODO: implement
+//	CL_HTTPStop_f();
+
+	for( p = cl.resourcesneeded.pNext; p && p != &cl.resourcesneeded; p = n )
+	{
+		n = p->pNext;
+
+		if( !FBitSet( p->ucFlags, RES_WASMISSING ))
+		{
+			CL_MoveToOnHandList( p );
+			continue;
+		}
+
+		if( cls.state == ca_active && !cl_download_ingame.value )
+		{
+			Msg( "skipping in game download of %s\n", p->szFileName );
+			CL_MoveToOnHandList( p );
+			continue;
+		}
+
+		switch ( p->type )
+		{
+		case t_sound:
+			if( p->szFileName[0] != '*' && !CL_CheckFile( &msg, va( "sound/%s", p->szFileName )))
+				break;
+			CL_MoveToOnHandList( p );
+			break;
+		case t_skin:
+			CL_MoveToOnHandList( p );
+			break;
+		case t_model:
+			if( p->szFileName[0] != '*' && !CL_CheckFile( &msg, p->szFileName ))
+				break;
+			CL_MoveToOnHandList( p );
+			break;
+		case t_decal:
+			if( !HPAK_GetDataPointer( "custom.hpk", p, NULL, NULL ))
+			{
+				if( !FBitSet( p->ucFlags, RES_REQUESTED ))
+				{
+					string	filename;
+
+					Q_snprintf( filename, sizeof( filename ), "!MD5%s", MD5_Print( p->rgucMD5_hash ));
+					MSG_WriteByte( &msg, clc_stringcmd );
+					MSG_WriteString( &msg, va( "dlfile %s", filename ));
+					SetBits( p->ucFlags, RES_REQUESTED );
+				}
+				break;
+			}
+			CL_MoveToOnHandList( p );
+			break;
+		case t_generic:
+			if( !COM_IsSafeFileToDownload( p->szFileName ))
+			{
+				CL_RemoveFromResourceList( p );
+				MsgDev( D_WARN, "Invalid file type...skipping download of %s\n", p );
+				Mem_Free( p );
+				break;
+			}
+			if( !CL_CheckFile( &msg, p->szFileName ))
+				break;
+			CL_MoveToOnHandList( p );
+			break;
+		case t_eventscript:
+			if( !CL_CheckFile( &msg, p->szFileName ))
+				break;
+			CL_MoveToOnHandList( p );
+			break;
+		}
+	}
+#if 0
+	if( CL_GetDownloadQueueSize() > 0 )
+	{
+		CL_MarkMapAsUsingHTTPDownload();
+		CL_Disconnect();
+	}
+#endif
+	if( cls.state != ca_disconnected )
+	{
+		if( !MSG_GetNumBytesWritten( &msg ) && CL_PrecacheResources( ))
+		{
+			CL_RegisterResources( &msg );
+		}
+
+		Netchan_CreateFragments( &cls.netchan, &msg );
+		Netchan_FragSend( &cls.netchan );
+	}
+}
+
+void CL_StartResourceDownloading( char *pszMessage, qboolean bCustom )
+{
+	resourceinfo_t	ri;
+
+	if( pszMessage )
+		MsgDev( D_REPORT, "%s", pszMessage );
+
+	cls.dl.nTotalSize = COM_SizeofResourceList( &cl.resourcesneeded, &ri );
+	cls.dl.nTotalToTransfer = CL_EstimateNeededResources();
+
+	if( bCustom )
+	{
+		cls.dl.custom = true;
+	}
+	else
+	{
+		cls.state = ca_validate;
+		cls.dl.custom = false;
+	}
+
+	cls.dl.doneregistering = false;
+	cls.dl.fLastStatusUpdate = host.realtime;
+	cls.dl.nRemainingToTransfer = cls.dl.nTotalToTransfer;
+	memset( cls.dl.rgStats, 0, sizeof( cls.dl.rgStats ));
+	cls.dl.nCurStat = 0;
+
+	CL_BatchResourceRequest();
 }
 
 /*
@@ -1345,32 +1775,33 @@ CL_ParseResourceList
 */
 void CL_ParseResourceList( sizebuf_t *msg )
 {
-	int	i = 0;
+	resource_t	*pResource;
+	int		i, total;
 
-	memset( &reslist, 0, sizeof( resourcelist_t ));
+	total = MSG_ReadUBitLong( msg, MAX_RESOURCE_BITS );
 
-	reslist.rescount = MSG_ReadWord( msg ) - 1;
-
-	for( i = 0; i < reslist.rescount; i++ )
+	for( i = 0; i < total; i++ )
 	{
-		reslist.restype[i] = MSG_ReadWord( msg );
-		Q_strncpy( reslist.resnames[i], MSG_ReadString( msg ), CS_SIZE );
+		pResource = Mem_Alloc( cls.mempool, sizeof( resource_t ));
+		pResource->type = MSG_ReadUBitLong( msg, 4 );
+
+		Q_strncpy( pResource->szFileName, MSG_ReadString( msg ), sizeof( pResource->szFileName ));
+		pResource->nIndex = MSG_ReadUBitLong( msg, MAX_MODEL_BITS );
+		pResource->nDownloadSize = MSG_ReadUBitLong( msg, 24 );
+		pResource->ucFlags = MSG_ReadUBitLong( msg, 3 ) &~ RES_WASMISSING;
+
+		if( FBitSet( pResource->ucFlags, RES_CUSTOM ))
+			MSG_ReadBytes( msg, pResource->rgucMD5_hash, sizeof( pResource->rgucMD5_hash ));
+
+		if( MSG_ReadOneBit( msg ))
+			MSG_ReadBytes( msg, pResource->rguc_reserved, sizeof( pResource->rguc_reserved ));
+
+		CL_AddToResourceList( pResource, &cl.resourcesneeded );
 	}
 
-	cls.downloadcount = 0;
+	CL_ParseConsistencyInfo( msg );
 
-	for( i = 0; i < reslist.rescount; i++ )
-	{
-		if( reslist.restype[i] == t_sound )
-			CL_CheckingSoundResFile( reslist.resnames[i] );
-		else CL_CheckingResFile( reslist.resnames[i] );
-	}
-
-	if( !cls.downloadcount )
-	{
-		MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
-		MSG_WriteString( &cls.netchan.message, "continueloading" );
-	}
+	CL_StartResourceDownloading( "Verifying and downloading resources...\n", false );
 }
 
 /*
@@ -1403,7 +1834,17 @@ CL_ParseResLocation
 */
 void CL_ParseResLocation( sizebuf_t *msg )
 {
-	// TODO: ???
+	const char	*url = MSG_ReadString( msg );
+
+	if( url && ( !Q_strnicmp( "http://", url, 7 ) || !Q_strnicmp( "https://", url, 8 )))
+	{
+		const char	*lastSlash = Q_strrchr( url, '/' );
+
+		if( lastSlash && lastSlash[1] == '\0' )
+			Q_strncpy( cl.downloadUrl, url, sizeof( cl.downloadUrl ));
+		else Q_snprintf( cl.downloadUrl, sizeof( cl.downloadUrl ), "%s/", url );
+		MsgDev( D_REPORT, "Using %s as primary download location\n", cl.downloadUrl );
+	}
 }
 
 /*

@@ -168,6 +168,39 @@ Encode a client frame onto the network channel
 
 =============================================================================
 */
+int SV_FindBestBaseline( int index, entity_state_t **baseline, entity_state_t *to, client_frame_t *frame, qboolean player )
+{
+	int	bestBitCount;
+	int	i, bitCount;
+	int	bestfound, j;
+
+	bestBitCount = j = Delta_TestBaseline( *baseline, to, player, sv.time );
+	bestfound = index;
+
+	// lookup backward for previous 64 states and try to interpret current delta as baseline
+	for( i = index - 1; bestBitCount > 0 && i >= 0 && ( index - i ) < ( MAX_CUSTOM_BASELINES - 1 ); i-- )
+	{
+		// don't worry about underflow in circular buffer
+		entity_state_t	*test = &svs.packet_entities[(frame->first_entity+i) % svs.num_client_entities];
+
+		if( to->entityType == test->entityType )
+		{
+			bitCount = Delta_TestBaseline( test, to, player, sv.time );
+
+			if( bitCount < bestBitCount )
+			{
+				bestBitCount = bitCount;
+				bestfound = i;
+			}
+		}
+	}
+
+	// using delta from previous entity as baseline for current
+	if( index != bestfound )
+		*baseline = &svs.packet_entities[(frame->first_entity+bestfound) % svs.num_client_entities];
+	return index - bestfound;
+}
+
 /*
 =============
 SV_EmitPacketEntities
@@ -179,7 +212,8 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 {
 	entity_state_t	*oldent, *newent;
 	int		oldindex, newindex;
-	int		oldnum, newnum;
+	int		i, oldnum, newnum;
+	qboolean		player;
 	int		oldmax;
 	client_frame_t	*from;
 
@@ -226,10 +260,12 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		if( newindex >= to->num_entities )
 		{
 			newnum = MAX_ENTNUMBER;
+			player = false;
 		}
 		else
 		{
 			newent = &svs.packet_entities[(to->first_entity+newindex) % svs.num_client_entities];
+			player = SV_IsPlayerIndex( newent->number );
 			newnum = newent->number;
 		}
 
@@ -248,7 +284,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 			// delta update from old position
 			// because the force parm is false, this will not result
 			// in any bytes being emited if the entity has not changed at all
-			MSG_WriteDeltaEntity( oldent, newent, msg, false, SV_IsPlayerIndex( newent->number ), sv.time );
+			MSG_WriteDeltaEntity( oldent, newent, msg, false, player, sv.time, 0 );
 			oldindex++;
 			newindex++;
 			continue;
@@ -256,29 +292,51 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 
 		if( newnum < oldnum )
 		{	
+			entity_state_t	*baseline = &svs.baselines[newnum];
+			const char	*classname = SV_ClassName( EDICT_NUM( newnum ));
+			int		offset = 0;
+
+			// trying to reduce message by select optimal baseline
+			if( sv_instancedbaseline.value == 0 || sv.instanced.count == 0 || sv.last_valid_baseline > newnum )
+			{
+				offset = SV_FindBestBaseline( newindex, &baseline, newent, to, player );
+			}
+			else
+			{
+				for( i = 0; i < sv.instanced.count; i++ )
+				{
+					if( !Q_strcmp( classname, sv.instanced.classnames[i] ))
+					{
+						baseline = &sv.instanced.baselines[i];
+						offset = -i;
+						break;
+					}
+				}
+			}
+
 			// this is a new entity, send it from the baseline
-			MSG_WriteDeltaEntity( &svs.baselines[newnum], newent, msg, true, SV_IsPlayerIndex( newent->number ), sv.time );
+			MSG_WriteDeltaEntity( baseline, newent, msg, true, player, sv.time, offset );
 			newindex++;
 			continue;
 		}
 
 		if( newnum > oldnum )
 		{	
-			qboolean	force = false;
 			edict_t	*ed = EDICT_NUM( oldent->number );
+			qboolean	force = false;
 
 			// check if entity completely removed from server
 			if( ed->free || FBitSet( ed->v.flags, FL_KILLME ))
 				force = true;
 
 			// remove from message
-			MSG_WriteDeltaEntity( oldent, NULL, msg, force, false, sv.time );
+			MSG_WriteDeltaEntity( oldent, NULL, msg, force, false, sv.time, 0 );
 			oldindex++;
 			continue;
 		}
 	}
 
-	MSG_WriteUBitLong( msg, 0, MAX_ENTITY_BITS ); // end of packetentities
+	MSG_WriteUBitLong( msg, LAST_EDICT, MAX_ENTITY_BITS ); // end of packetentities
 }
 
 /*

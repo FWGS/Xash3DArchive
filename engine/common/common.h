@@ -127,6 +127,8 @@ typedef enum
 #define CIN_MAIN		0
 #define CIN_LOGO		1
 
+#define CUSTOM_RES_PATH	"custom.hpk"
+
 #define MAX_NUM_ARGVS	128
 
 // config strings are a general means of communication from
@@ -698,8 +700,10 @@ void pfnCvar_RegisterEngineVariable( cvar_t *variable );
 cvar_t *pfnCvar_RegisterClientVariable( const char *szName, const char *szValue, int flags );
 cvar_t *pfnCvar_RegisterGameUIVariable( const char *szName, const char *szValue, int flags );
 char *COM_MemFgets( byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
+void COM_HexConvert( const char *pszInput, int nInputLength, byte *pOutput );
 int COM_SaveFile( const char *filename, const void *data, long len );
 byte* COM_LoadFileForMe( const char *filename, int *pLength );
+qboolean COM_IsSafeFileToDownload( const char *filename );
 cvar_t *pfnCVarGetPointer( const char *szVarName );
 int pfnDrawConsoleString( int x, int y, char *string );
 void pfnDrawSetTextColor( float r, float g, float b );
@@ -749,6 +753,13 @@ uint Com_HashKey( const char *string, uint hashSize );
 char *MD5_Print( byte hash[16] );
 
 //
+// custom.c
+//
+void COM_ClearCustomizationList( customization_t *pHead, qboolean bCleanDecals );
+qboolean COM_CreateCustomization( customization_t *pHead, resource_t *pRes, int playernum, int flags, customization_t **pCust, int *nLumps );
+int COM_SizeofResourceList( resource_t *pList, resourceinfo_t *ri );
+
+//
 // cfgscript.c
 //
 int CSCR_LoadDefaultCVars( const char *scriptfilename );
@@ -759,8 +770,9 @@ int CSCR_WriteGameCVars( file_t *cfg, const char *scriptfilename );
 //
 void HPAK_Init( void );
 qboolean HPAK_GetDataPointer( const char *filename, struct resource_s *pRes, byte **buffer, int *size );
-qboolean HPAK_ResourceForHash( const char *filename, char *hash, struct resource_s *pRes );
+qboolean HPAK_ResourceForHash( const char *filename, byte *hash, struct resource_s *pRes );
 void HPAK_AddLump( qboolean queue, const char *filename, struct resource_s *pRes, byte *data, file_t *f );
+void HPAK_RemoveLump( const char *name, resource_t *resource );
 void HPAK_CheckIntegrity( const char *filename );
 void HPAK_CheckSize( const char *filename );
 void HPAK_FlushHostQueue( void );
@@ -831,6 +843,7 @@ void SV_BroadcastCommand( const char *fmt, ... );
 qboolean SV_RestoreCustomDecal( struct decallist_s *entry, edict_t *pEdict, qboolean adjacent );
 void SV_BroadcastPrintf( struct sv_client_s *ignore, int level, char *fmt, ... );
 int R_CreateDecalList( struct decallist_s *pList, qboolean changelevel );
+void R_DecalRemoveAll( int texture );
 void R_ClearAllDecals( void );
 void R_ClearStaticEntities( void );
 qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *position );
@@ -900,8 +913,6 @@ void GL_FreeImage( const char *name );
 void VID_InitDefaultResolution( void );
 void UI_SetActiveMenu( qboolean fActive );
 void Cmd_Null_f( void );
-extern const char *svc_strings[256];
-extern const char *clc_strings[11];
 
 // soundlib shared exports
 qboolean S_Init( void );

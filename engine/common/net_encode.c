@@ -1084,6 +1084,70 @@ qboolean Delta_CompareField( delta_t *pField, void *from, void *to, float timeba
 
 /*
 =====================
+Delta_TestBaseline
+
+compare baselines to find optimal
+=====================
+*/
+int Delta_TestBaseline( entity_state_t *from, entity_state_t *to, qboolean player, float timebase )
+{
+	delta_info_t	*dt = NULL;
+	delta_t		*pField;
+	int		i, countBits;
+	int		numChanges = 0;
+
+	countBits = MAX_ENTITY_BITS + 2;
+
+	if( to == NULL )
+	{
+		if( from == NULL ) return 0;
+		return countBits;
+	}
+
+	if( FBitSet( to->entityType, ENTITY_BEAM ))
+		dt = Delta_FindStruct( "custom_entity_state_t" );
+	else if( player )
+		dt = Delta_FindStruct( "entity_state_player_t" );
+	else dt = Delta_FindStruct( "entity_state_t" );
+
+	Assert( dt && dt->bInitialized );
+
+	countBits++; // entityType flag
+#if 0
+	if( to->entityType != from->entityType )
+		countBits += 2;
+#endif
+	pField = dt->pFields;
+	Assert( pField != NULL );
+#if 1
+	// set all fields is active by default
+	for( i = 0; i < dt->numFields; i++ )
+		dt->pFields[i].bInactive = false;
+#else
+	// activate fields and call custom encode func
+	Delta_CustomEncode( dt, from, to );
+#endif
+	// process fields
+	for( i = 0; i < dt->numFields; i++, pField++ )
+	{
+		// flag about field change (sets always)
+		countBits++;
+
+		if( !Delta_CompareField( pField, from, to, timebase ))
+		{
+			// strings are handled difference
+			if( FBitSet( pField->flags, DT_STRING ))
+				countBits += Q_strlen(((byte *)to + pField->offset )) * 8;
+			else countBits += pField->bits;
+		}
+	}
+
+	// g-cont. compare bitcount directly no reason to call BitByte here
+	return countBits;
+}
+
+/*
+=====================
 Delta_WriteField
 
 write fields by offsets
@@ -1653,7 +1717,7 @@ If force is not set, then nothing at all will be generated if the entity is
 identical, under the assumption that the in-order delta code will catch it.
 ==================
 */
-void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, qboolean force, qboolean player, float timebase ) 
+void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *msg, qboolean force, qboolean player, float timebase, int baseline ) 
 {
 	delta_info_t	*dt = NULL;
 	delta_t		*pField;
@@ -1688,13 +1752,20 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 	MSG_WriteUBitLong( msg, to->number, MAX_ENTITY_BITS );
 	MSG_WriteUBitLong( msg, 0, 2 ); // alive
 
+	if( baseline != 0 )
+	{
+		MSG_WriteOneBit( msg, 1 );
+		MSG_WriteSBitLong( msg, baseline, 7 );
+	}
+	else MSG_WriteOneBit( msg, 0 ); 
+
 	if( force || ( to->entityType != from->entityType ))
 	{
 		MSG_WriteOneBit( msg, 1 );
 		MSG_WriteUBitLong( msg, to->entityType, 2 );
 		numChanges++;
 	}
-	else MSG_WriteOneBit( msg, 0 ); 
+	else MSG_WriteOneBit( msg, 0 );
 
 	if( FBitSet( to->entityType, ENTITY_BEAM ))
 	{
@@ -1744,12 +1815,11 @@ qboolean MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state
 	delta_info_t	*dt = NULL;
 	delta_t		*pField;
 	int		i, fRemoveType;
+	int		baseline_offset = 0;
 
 	if( number < 0 || number >= clgame.maxEntities )
 		Host_Error( "MSG_ReadDeltaEntity: bad delta entity number: %i\n", number );
 
-	*to = *from;
-	to->number = number;
 	fRemoveType = MSG_ReadUBitLong( msg, 2 );
 
 	if( fRemoveType )
@@ -1774,7 +1844,29 @@ qboolean MSG_ReadDeltaEntity( sizebuf_t *msg, entity_state_t *from, entity_state
 	}
 
 	if( MSG_ReadOneBit( msg ))
+		baseline_offset = MSG_ReadSBitLong( msg, 7 );
+
+	if( baseline_offset != 0 )
+	{
+		if( baseline_offset > 0 )
+		{
+			int backup = cls.next_client_entities - baseline_offset;
+			from = &cls.packet_entities[backup % cls.num_client_entities];
+		}
+		else
+		{
+			baseline_offset = abs( baseline_offset );
+			if( baseline_offset < cl.instanced_baseline_count )
+				from = &cl.instanced_baseline[baseline_offset];
+		}
+	}
+
+	// g-cont. probably is redundant
+	*to = *from;
+
+	if( MSG_ReadOneBit( msg ))
 		to->entityType = MSG_ReadUBitLong( msg, 2 );
+	to->number = number;
 
 	if( FBitSet( to->entityType, ENTITY_BEAM ))
 	{

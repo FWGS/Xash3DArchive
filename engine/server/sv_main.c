@@ -48,6 +48,7 @@ CVAR_DEFINE_AUTO( sv_send_resources, "1", 0, "allow to download missed resources
 CVAR_DEFINE_AUTO( sv_logbans, "0", 0, "print into the server log info about player bans" );
 CVAR_DEFINE_AUTO( sv_allow_upload, "1", FCVAR_SERVER, "allow uploading custom resources on a server" );
 CVAR_DEFINE_AUTO( sv_allow_download, "1", FCVAR_SERVER, "allow downloading custom resources to the client" );
+CVAR_DEFINE_AUTO( sv_uploadmax, "0.5", FCVAR_SERVER, "max size to upload custom resources (500 kB as default)" );
 CVAR_DEFINE_AUTO( sv_downloadurl, "", FCVAR_PROTECTED, "location from which clients can download missing files" );
 CVAR_DEFINE( sv_consistency, "mp_consistency", "1", FCVAR_SERVER, "enbale consistency check in multiplayer" );
 CVAR_DEFINE_AUTO( mp_logecho, "1", 0, "log multiplayer frags to server logfile" );
@@ -114,7 +115,6 @@ CVAR_DEFINE_AUTO( violence_agibs, "1", 0, "show alien gib entities" );
 convar_t	*sv_novis;			// disable server culling entities by vis
 convar_t	*sv_pausable;
 convar_t	*timeout;				// seconds without any message
-convar_t	*zombietime;			// seconds to sink messages after disconnect
 convar_t	*hostname;
 convar_t	*sv_lighting_modulate;
 convar_t	*sv_maxclients;
@@ -333,7 +333,6 @@ void SV_ReadPackets( void )
 				// this is a valid, sequenced packet, so process it
 				if( cl->state != cs_zombie )
 				{
-					cl->lastmessage = host.realtime; // don't timeout
 					SV_ExecuteClientMessage( cl, &net_message );
 					svgame.globals->frametime = sv.frametime;
 					svgame.globals->time = sv.time;
@@ -353,7 +352,6 @@ void SV_ReadPackets( void )
 					// this is a valid, sequenced packet, so process it
 					if( cl->state != cs_zombie )
 					{
-						cl->lastmessage = host.realtime; // don't timeout
 						SV_ExecuteClientMessage( cl, &net_message );
 						svgame.globals->frametime = sv.frametime;
 						svgame.globals->time = sv.time;
@@ -392,12 +390,10 @@ if necessary
 void SV_CheckTimeouts( void )
 {
 	sv_client_t	*cl;
-	float		droppoint;
-	float		zombiepoint;
+	double		droppoint;
 	int		i, numclients = 0;
 
 	droppoint = host.realtime - timeout->value;
-	zombiepoint = host.realtime - zombietime->value;
 
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
@@ -409,19 +405,16 @@ void SV_CheckTimeouts( void )
 
 		// fake clients do not timeout
 		if( FBitSet( cl->flags, FCL_FAKECLIENT ))
-			cl->lastmessage = host.realtime;
+			continue;
 
-		// message times may be wrong across a changelevel
-		if( cl->lastmessage > host.realtime )
-			cl->lastmessage = host.realtime;
-
-		if( cl->state == cs_zombie && cl->lastmessage < zombiepoint )
+		// FIXME: get rid of the zombie state
+		if( cl->state == cs_zombie )
 		{
 			cl->state = cs_free; // can now be reused
 			continue;
 		}
 
-		if(( cl->state == cs_connected || cl->state == cs_spawned ) && cl->lastmessage < droppoint )
+		if(( cl->state == cs_connected || cl->state == cs_spawned ) && cl->netchan.last_received < droppoint )
 		{
 			if( !NET_IsLocalAddress( cl->netchan.remote_address ))
 			{
@@ -751,7 +744,6 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_newunit);
 	hostname = Cvar_Get( "hostname", "unnamed", FCVAR_SERVER|FCVAR_ARCHIVE, "host name" );
 	timeout = Cvar_Get( "timeout", "125", FCVAR_SERVER, "connection timeout" );
-	zombietime = Cvar_Get( "zombietime", "2", FCVAR_SERVER, "timeout for clients-zombie (who died but not respawned)" );
 	sv_pausable = Cvar_Get( "pausable", "1", FCVAR_SERVER, "allow players to pause or not" );
 	sv_validate_changelevel = Cvar_Get( "sv_validate_changelevel", "1", FCVAR_ARCHIVE, "test change level for level-designer errors" );
 	Cvar_RegisterVariable (&sv_clienttrace);
@@ -783,9 +775,12 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_allow_download);
 	Cvar_RegisterVariable (&sv_send_logos);
 	Cvar_RegisterVariable (&sv_send_resources);
+	Cvar_RegisterVariable (&sv_uploadmax);
 	Cvar_RegisterVariable (&sv_version);
+	Cvar_RegisterVariable (&sv_instancedbaseline);
 	sv_sendvelocity = Cvar_Get( "sv_sendvelocity", "0", FCVAR_ARCHIVE, "force to send velocity for event_t structure across network" );
 	Cvar_RegisterVariable (&sv_consistency);
+	Cvar_RegisterVariable (&sv_downloadurl);
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
 	sv_hostmap = Cvar_Get( "hostmap", GI->startmap, 0, "keep name of last entered map" );
 	Cvar_RegisterVariable (&sv_password);

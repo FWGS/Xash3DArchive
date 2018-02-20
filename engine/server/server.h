@@ -64,7 +64,8 @@ extern int SV_UPDATE_BACKUP;
 #define FCL_LAG_COMPENSATION	BIT( 6 )	// lag compensation is enabled
 #define FCL_FAKECLIENT	BIT( 7 )	// this client is a fake player controlled by the game DLL
 #define FCL_HLTV_PROXY	BIT( 8 )	// this is a proxy for a HLTV client (spectator)
-
+#define FCL_SEND_RESOURCES	BIT( 9 )
+#define FCL_FORCE_UNMODIFIED	BIT( 10 )
 
 typedef enum
 {
@@ -81,20 +82,20 @@ typedef enum
 	cs_spawned	// client is fully in game
 } cl_state_t;
 
+typedef enum
+{
+	us_inactive = 0,
+	us_processing,
+	us_complete,
+} cl_upload_t;
+
 // instanced baselines container
 typedef struct
 {
 	int		count;
-	string_t		classnames[MAX_CUSTOM_BASELINES];
+	const char	*classnames[MAX_CUSTOM_BASELINES];
 	entity_state_t	baselines[MAX_CUSTOM_BASELINES];
 } sv_baselines_t;
-
-typedef struct
-{
-	const char	*name;
-	FORCE_TYPE	force_state;
-	vec3_t		mins, maxs;
-} sv_consistency_t;
 
 typedef struct
 {
@@ -138,6 +139,7 @@ typedef struct server_s
 	int		net_framenum;	// to avoid send edicts twice through portals
 
 	int		hostflags;	// misc server flags: predicting etc
+	CRC32_t		worldmapCRC;
 
 	string		name;		// map name
 	string		startspot;	// player_start name on nextmap
@@ -149,6 +151,7 @@ typedef struct server_s
 	char		sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char		files_precache[MAX_CUSTOM][MAX_QPATH];
 	char		event_precache[MAX_EVENTS][MAX_QPATH];
+	byte		model_precache_flags[MAX_MODELS];
 
 	sv_static_entity_t	static_entities[MAX_STATIC_ENTITIES];
 	int		num_static_entities;
@@ -156,12 +159,13 @@ typedef struct server_s
 	// run local lightstyles to let SV_LightPoint grab the actual information
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 
-	sv_consistency_t	consistency_files[MAX_MODELS];
-	resource_t	resources[MAX_MODELS];
-	int		num_consistency_resources;	// typically check model bounds on this
+	consistency_t	consistency_list[MAX_MODELS];
+	resource_t	resources[MAX_RESOURCES];
+	int		num_consistency;	// typically check model bounds on this
 	int		num_resources;
 
 	sv_baselines_t	instanced;	// instanced baselines
+	int		last_valid_baseline;// all the entities with number more than that was created in-game and doesn't have the baseline
 
 	// unreliable data to send to clients.
 	sizebuf_t		datagram;
@@ -182,7 +186,6 @@ typedef struct server_s
 	byte		spectator_buf[MAX_MULTICAST];
 
 	model_t		*worldmodel;	// pointer to world
-	uint		checksum;		// for catching cheater maps
 
 	qboolean		simulating;
 	qboolean		write_bad_message;	// just for debug
@@ -204,8 +207,10 @@ typedef struct
 typedef struct sv_client_s
 {
 	cl_state_t	state;
+	cl_upload_t	upload;			// uploading state
 	char		name[32];			// extracted from userinfo, color string allowed
 	int		flags;			// client flags, some info
+	CRC32_t		crcValue;
 
 	char		userinfo[MAX_INFO_STRING];	// name, etc (received from client)
 	char		physinfo[MAX_INFO_STRING];	// set on server (transmit to client)
@@ -255,7 +260,6 @@ typedef struct sv_client_s
 	client_frame_t	*frames;			// updates can be delta'd from here
 	event_state_t	events;
 
-	double		lastmessage;		// time when packet was last received
 	double		connection_started;
 
 	int		challenge;		// challenge of this user, randomly generated
@@ -411,6 +415,7 @@ extern convar_t		rcon_password;
 extern convar_t		sv_instancedbaseline;
 extern convar_t		sv_minupdaterate;
 extern convar_t		sv_maxupdaterate;
+extern convar_t		sv_downloadurl;
 extern convar_t		sv_newunit;
 extern convar_t		sv_clienttrace;
 extern convar_t		sv_failuretime;
@@ -436,6 +441,7 @@ extern convar_t		sv_consistency;
 extern convar_t		sv_spawntime;
 extern convar_t		sv_changetime;
 extern convar_t		sv_password;
+extern convar_t		sv_uploadmax;
 extern convar_t		deathmatch;
 extern convar_t		skill;
 extern convar_t		coop;
@@ -556,7 +562,14 @@ void SV_InitHostCommands( void );
 //
 // sv_custom.c
 //
-void SV_SendResources( sizebuf_t *msg );
+void SV_AddToResourceList( resource_t *pResource, resource_t *pList );
+void SV_MoveToOnHandList( sv_client_t *cl, resource_t *pResource );
+void SV_RemoveFromResourceList( resource_t *pResource );
+void SV_ParseConsistencyResponse( sv_client_t *cl, sizebuf_t *msg );
+int SV_EstimateNeededResources( sv_client_t *cl );
+void SV_ClearResourceList( resource_t *pList );
+void SV_BatchUploadRequest( sv_client_t *cl );
+void SV_SendResources( sv_client_t *cl, sizebuf_t *msg );
 int SV_TransferConsistencyInfo( void );
 
 //
@@ -587,7 +600,6 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, event_args_t *args );
 qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax );
-void SV_BaselineForEntity( edict_t *pEdict );
 void SV_WriteEntityPatch( const char *filename );
 char *SV_ReadEntityScript( const char *filename, int *flags );
 float SV_AngleMod( float ideal, float current, float speed );
@@ -602,6 +614,7 @@ void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed );
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
 void SV_CreateStaticEntity( struct sizebuf_s *msg, sv_static_entity_t *ent );
+void SV_SendUserReg( sizebuf_t *msg, sv_user_message_t *user );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
 void pfnWriteBytes( const byte *bytes, int count );
@@ -627,7 +640,7 @@ _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 void Log_Close( void );
 void Log_Open( void );
 void Log_PrintServerVars( void );
-void SV_ServerLog_f( void );
+void SV_ServerLog_f( sv_client_t *cl );
 
 //
 // sv_save.c

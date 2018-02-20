@@ -20,6 +20,31 @@ GNU General Public License for more details.
 #include "client.h"
 #include "library.h"
 
+const char *file_exts[10] =
+{
+	".cfg",
+	".lst",
+	".exe",
+	".vbs",
+	".com",
+	".bat",
+	".dll",
+	".ini",
+	".log",
+	".sys",
+};
+
+#ifdef _DEBUG
+void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
+{
+	if( fExpr ) return;
+
+	if( szMessage != NULL )
+		MsgDev( at_error, "ASSERT FAILED:\n %s \n(%s@%d)\n%s\n", szExpr, szFile, szLine, szMessage );
+	else MsgDev( at_error, "ASSERT FAILED:\n %s \n(%s@%d)\n", szExpr, szFile, szLine );
+}
+#endif	// DEBUG
+
 static long idum = 0;
 
 #define MAX_RANDOM_RANGE	0x7FFFFFFFUL
@@ -398,6 +423,55 @@ void COM_FixSlashes( char *pname )
 		if( *pname == '\\' )
 			*pname = '/';
 		pname++;
+	}
+}
+
+/*
+==================
+COM_Nibble
+
+Returns the 4 bit nibble for a hex character
+==================
+*/
+byte COM_Nibble( char c )
+{
+	if(( c >= '0' ) && ( c <= '9' ))
+	{
+		 return (byte)(c - '0');
+	}
+
+	if(( c >= 'A' ) && ( c <= 'F' ))
+	{
+		 return (byte)(c - 'A' + 0x0a);
+	}
+
+	if(( c >= 'a' ) && ( c <= 'f' ))
+	{
+		 return (byte)(c - 'a' + 0x0a);
+	}
+
+	return '0';
+}
+
+/*
+==================
+COM_HexConvert
+
+Converts pszInput Hex string to nInputLength/2 binary
+==================
+*/
+void COM_HexConvert( const char *pszInput, int nInputLength, byte *pOutput )
+{
+	const char	*pIn;
+	byte		*p = pOutput;
+	int		i;
+
+
+	for( i = 0; i < nInputLength; i += 2 )
+	{
+		pIn = &pszInput[i];
+		*p = COM_Nibble( pIn[0] ) << 4 | COM_Nibble( pIn[1] );		
+		p++;
 	}
 }
 
@@ -798,4 +872,48 @@ void pfnGetGameDir( char *szGetGameDir )
 {
 	if( !szGetGameDir ) return;
 	Q_sprintf( szGetGameDir, "%s/%s", host.rootdir, GI->gamedir );
+}
+
+qboolean COM_IsSafeFileToDownload( const char *filename )
+{
+	char		lwrfilename[4096];
+	const char	*first, *last;
+	const char	*ext;
+	int		i;
+
+	if( !filename )
+		return false;
+
+	if( !Q_strncmp( filename, "!MD5", 4 ))
+		return true;
+
+	Q_strnlwr( filename, lwrfilename, sizeof( lwrfilename ));
+
+	if( Q_strstr( lwrfilename, "\\" ) || Q_strstr( lwrfilename, ":" ) || Q_strstr( lwrfilename, ".." ) || Q_strstr( lwrfilename, "~" ))
+		return false;
+
+	if( lwrfilename[0] == '/' )
+		return false;
+
+	first = Q_strchr( lwrfilename, '.' );
+	last = Q_strrchr( lwrfilename, '.' );
+
+	if( first == NULL || last == NULL )
+		return false;
+
+	if( first != last )
+		return false;
+
+	if( Q_strlen( first ) != 4 )
+		return false;
+
+	ext = FS_FileExtension( lwrfilename );
+
+	for( i = 0; i < ARRAYSIZE( file_exts ); i++ )
+	{
+		if( !Q_stricmp( ext, file_exts[i] ))
+			return false;
+	}
+
+	return true;
 }

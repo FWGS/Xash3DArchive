@@ -26,17 +26,6 @@ typedef struct autocomplete_list_s
 	qboolean (*func)( const char *s, char *name, int length );
 } autocomplete_list_t;
 
-#ifdef _DEBUG
-void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage )
-{
-	if( fExpr ) return;
-
-	if( szMessage != NULL )
-		MsgDev( at_error, "ASSERT FAILED:\n %s \n(%s@%d)\n%s\n", szExpr, szFile, szLine, szMessage );
-	else MsgDev( at_error, "ASSERT FAILED:\n %s \n(%s@%d)\n", szExpr, szFile, szLine );
-}
-#endif	// DEBUG
-
 /*
 =======================================================================
 

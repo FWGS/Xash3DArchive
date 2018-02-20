@@ -49,6 +49,8 @@ GNU General Public License for more details.
 // Max length of unreliable message
 #define MAX_DATAGRAM		4000
 
+#define MAX_INIT_MSG		0x10000	// max length of possible message
+
 // This is the packet payload without any header bytes (which are attached for actual sending)
 #define NET_MAX_PAYLOAD		131072
 
@@ -99,6 +101,7 @@ NET
 
 // size of fragmentation buffer internal buffers
 #define FRAGMENT_MAX_SIZE 		1024
+#define LOCAL_FRAGMENT_MAX_SIZE	32768
 
 #define FRAG_NORMAL_STREAM		0
 #define FRAG_FILE_STREAM		1
@@ -234,6 +237,7 @@ extern int		net_drop;
 void Netchan_Init( void );
 void Netchan_Shutdown( void );
 void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport, void *client, int (*pfnBlockSize)(void * ) );
+void Netchan_CreateFileFragmentsFromBuffer( netchan_t *chan, char *filename, byte *pbuf, int size );
 qboolean Netchan_CopyNormalFragments( netchan_t *chan, sizebuf_t *msg, size_t *length );
 qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg );
 void Netchan_CreateFragments( netchan_t *chan, sizebuf_t *msg );

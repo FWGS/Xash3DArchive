@@ -13,8 +13,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 
-#ifndef PROTOCOL_H
-#define PROTOCOL_H
+#ifndef NET_PROTOCOL_H
+#define NET_PROTOCOL_H
 
 #define PROTOCOL_VERSION		49
 
@@ -109,9 +109,10 @@ GNU General Public License for more details.
 #define MAX_EVENTS			(1<<MAX_EVENT_BITS)	// 10 bits == 1024 events (the original Half-Life limit)
 
 #define MAX_MODEL_BITS		12		// 12 bits == 4096 models
+#define MAX_SUPPORTED_MODELS		(1<<MAX_MODEL_BITS)
 
 #ifdef SUPPORT_BSP2_FORMAT
-#define MAX_MODELS			(1<<MAX_MODEL_BITS)	// because BSP2 contain too much embedded bsp-models
+#define MAX_MODELS			MAX_SUPPORTED_MODELS	// because BSP2 contain too much embedded bsp-models
 #else
 #define MAX_MODELS			1024		// g-cont. reduce the memory without breaking proto
 #endif
@@ -122,6 +123,7 @@ GNU General Public License for more details.
 #define MAX_ENTITY_BITS		13		// 13 bits = 8192 edicts
 #define MAX_EDICTS			(1<<MAX_ENTITY_BITS)
 #define MAX_EDICTS_BYTES		((MAX_EDICTS + 7) / 8)
+#define LAST_EDICT			(MAX_EDICTS - 1)
 
 #define MAX_CUSTOM			1024		// max custom resources per level
 #define MAX_USER_MESSAGES		197		// another 58 messages reserved for engine routines
@@ -169,12 +171,9 @@ GNU General Public License for more details.
 #define MAX_BACKUP_COMMANDS		(1 << NUM_BACKUP_COMMAND_BITS)
 
 #define MAX_RESOURCES		(MAX_MODELS+MAX_SOUNDS+MAX_CUSTOM+MAX_EVENTS)
+#define MAX_RESOURCE_BITS		13	// 13 bits 8192 resource (4096 models + 2048 sounds + 1024 events + 1024 files)
 
-typedef struct
-{
-	int	rescount;
-	int	restype[MAX_RESOURCES];
-	char	resnames[MAX_RESOURCES][MAX_QPATH];
-} resourcelist_t;
+extern const char	*svc_strings[svc_lastmsg+1];
+extern const char	*clc_strings[clc_lastmsg+1];
 
-#endif//PROTOCOL_H
+#endif//NET_PROTOCOL_H

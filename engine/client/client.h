@@ -121,6 +121,9 @@ extern int CL_UPDATE_BACKUP;
 #define MIN_EX_INTERP	50.0f
 #define MAX_EX_INTERP	100.0f
 
+#define CL_MIN_RESEND_TIME	1.5f		// mininum time gap (in seconds) before a subsequent connection request is sent.    
+#define CL_MAX_RESEND_TIME	20.0f		// max time.  The cvar cl_resend is bounded by these.
+
 #define cl_serverframetime()	(cl.mtime[0] - cl.mtime[1])
 #define cl_clientframetime()	(cl.time - cl.oldtime)
 
@@ -163,6 +166,27 @@ typedef struct
 	char		modelname[MAX_OSPATH];
 	model_t		*model;
 } player_model_t;
+
+typedef struct
+{
+	qboolean		bUsed;
+	float		fTime;
+	int		nBytesRemaining;
+} downloadtime_t;
+
+typedef struct
+{
+	qboolean		doneregistering;
+	int		percent;
+	qboolean		downloadrequested;
+	downloadtime_t	rgStats[8];
+	int		nCurStat;
+	int		nTotalSize;
+	int		nTotalToTransfer;
+	int		nRemainingToTransfer;
+	float		fLastStatusUpdate;
+	qboolean		custom;
+} incomingtransfer_t;
 
 // the client_t structure is wiped completely
 // at every server map change
@@ -210,6 +234,7 @@ typedef struct
 	char		serverinfo[MAX_SERVERINFO_STRING];
 	player_model_t	player_models[MAX_CLIENTS];	// cache of player models
 	player_info_t	players[MAX_CLIENTS];	// collected info about all other players include himself
+	string		downloadUrl;
 	event_state_t	events;
 
 	// predicting stuff but not only...
@@ -246,6 +271,15 @@ typedef struct
 	char		sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char		event_precache[MAX_EVENTS][MAX_QPATH];
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
+
+	consistency_t	consistency_list[MAX_MODELS];
+	int		num_consistency;
+
+	qboolean		need_force_consistency_response;
+	resource_t	resourcesonhand;
+	resource_t	resourcesneeded;
+	resource_t	resourcelist[MAX_RESOURCES];
+	int		num_resources;
 
 	short		sound_index[MAX_SOUNDS];
 	short		decal_index[MAX_DECALS];
@@ -510,6 +544,7 @@ typedef struct
 	qboolean		initialized;
 	qboolean		changelevel;		// during changelevel
 	qboolean		changedemo;		// during changedemo
+	double		timestart;		// just for profiling
 
 	// screen rendering information
 	float		disable_screen;		// showing loading plaque between levels
@@ -581,8 +616,7 @@ typedef struct
 	string		shotname;
 
 	// download info
-	int		downloadcount;
-	int		downloadfileid;
+	incomingtransfer_t	dl;
 
 	// demo loop control
 	int		demonum;			// -1 = don't play demos
@@ -622,6 +656,11 @@ extern gameui_static_t	gameui;
 // cvars
 //
 extern convar_t	mp_decals;
+extern convar_t	cl_logofile;
+extern convar_t	cl_logocolor;
+extern convar_t	cl_allow_download;
+extern convar_t	cl_allow_upload;
+extern convar_t	cl_download_ingame;
 extern convar_t	*cl_nopred;
 extern convar_t	*cl_showfps;
 extern convar_t	*cl_envshot_size;
@@ -686,6 +725,15 @@ void SCR_Viewpos_f( void );
 void SCR_TimeRefresh_f( void );
 
 //
+// cl_custom.c
+//
+qboolean CL_CheckFile( sizebuf_t *msg, const char *filename );
+void CL_AddToResourceList( resource_t *pResource, resource_t *pList );
+void CL_RemoveFromResourceList( resource_t *pResource );
+void CL_MoveToOnHandList( resource_t *pResource );
+void CL_ClearResourceLists( void );
+
+//
 // cl_main.c
 //
 void CL_Init( void );
@@ -693,6 +741,8 @@ void CL_SendCommand( void );
 void CL_Disconnect_f( void );
 void CL_ProcessFile( qboolean successfully_received, const char *filename );
 void CL_WriteUsercmd( sizebuf_t *msg, int from, int to );
+qboolean CL_PrecacheResources( void );
+void CL_SetupOverviewParams( void );
 void CL_UpdateFrameLerp( void );
 int CL_IsDevOverviewMode( void );
 void CL_PingServers_f( void );

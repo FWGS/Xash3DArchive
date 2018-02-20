@@ -612,9 +612,6 @@ void SV_Kick_f( void )
 	SV_BroadcastPrintf( svs.currentPlayer, PRINT_HIGH, "%s was kicked\n", svs.currentPlayer->name );
 	SV_ClientPrintf( svs.currentPlayer, PRINT_HIGH, "You were kicked from the game\n" );
 	SV_DropClient( svs.currentPlayer );
-
-	// min case there is a funny zombie
-	svs.currentPlayer->lastmessage = host.realtime;
 }
 
 /*
@@ -702,7 +699,7 @@ void SV_Status_f( void )
 		Msg( "%s", cl->name );
 		l = 24 - Q_strlen( cl->name );
 		for( j = 0; j < l; j++ ) Msg( " " );
-		Msg( "%g ", ( host.realtime - cl->lastmessage ));
+		Msg( "%g ", ( host.realtime - cl->netchan.last_received ));
 		s = NET_BaseAdrToString( cl->netchan.remote_address );
 		Msg( "%s", s );
 		l = 22 - Q_strlen( s );
@@ -1003,7 +1000,6 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "entpatch", SV_EntPatch_f, "write entity patch to allow external editing" );
 	Cmd_AddCommand( "edict_usage", SV_EdictUsage_f, "show info about edicts usage" );
 	Cmd_AddCommand( "entity_info", SV_EntityInfo_f, "show more info about edicts" );
-	Cmd_AddCommand( "log", SV_ServerLog_f, "logging server events" );
 
 	if( host.type == HOST_NORMAL )
 	{
@@ -1041,7 +1037,6 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "entpatch" );
 	Cmd_RemoveCommand( "edict_usage" );
 	Cmd_RemoveCommand( "entity_info" );
-	Cmd_RemoveCommand( "log" );
 
 	if( host.type == HOST_NORMAL )
 	{

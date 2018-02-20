@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include "server.h"			// LUMP_ error codes
 
 static model_t	*com_models[MAX_MODELS];	// shared replacement modeltable
+static model_info_t	cm_modinfo[MAX_MODELS];
 static model_t	cm_models[MAX_MODELS];
 static int	cm_nummodels = 0;
 byte		*com_studiocache;		// cache for submodels
@@ -233,6 +234,8 @@ model_t *Mod_FindName( const char *filename, qboolean create )
 
 	// copy name, so model loader can find model file
 	Q_strncpy( mod->name, name, sizeof( mod->name ));
+	cm_modinfo[i].initialCRC = 0;
+	cm_modinfo[i].flags = 0;
 
 	return mod;
 }
@@ -246,9 +249,11 @@ Loads a model into the cache
 */
 model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 {
-	char	tempname[64];
-	qboolean	loaded;
-	byte	*buf;
+	char		tempname[64];
+	long		length = 0;
+	qboolean		loaded;
+	byte		*buf;
+	model_info_t	*p;
 
 	if( !mod )
 	{
@@ -265,7 +270,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	Q_strncpy( tempname, mod->name, sizeof( tempname ));
 	COM_FixSlashes( tempname );
 
-	buf = FS_LoadFile( tempname, NULL, false );
+	buf = FS_LoadFile( tempname, &length, false );
 
 	if( !buf )
 	{
@@ -336,6 +341,27 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		}
 	}
 
+	p = &cm_modinfo[mod - cm_models];
+
+	if( FBitSet( p->flags, FCRC_SHOULD_CHECKSUM ))
+	{
+		CRC32_t	currentCRC;
+
+		CRC32_Init( &currentCRC );
+		CRC32_ProcessBuffer( &currentCRC, buf, length );
+		CRC32_Final( &currentCRC );
+
+		if( FBitSet( p->flags, FCRC_CHECKSUM_DONE ))
+		{
+			if( currentCRC != p->initialCRC )
+				Host_Error( "Mod_ForName: %s has a bad checksum\n", tempname );
+		}
+		else
+		{
+			SetBits( p->flags, FCRC_CHECKSUM_DONE );
+			p->initialCRC = currentCRC;
+		}
+	}
 	Mem_Free( buf );
 
 	return mod;
@@ -363,23 +389,18 @@ Mod_LoadWorld
 Loads in the map and all submodels
 ==================
 */
-void Mod_LoadWorld( const char *name, uint *checksum, qboolean multiplayer )
+void Mod_LoadWorld( const char *name, netsrc_t source )
 {
 	int	i;
 
-	// now replacement table is invalidate
-	memset( com_models, 0, sizeof( com_models ));
-	com_models[1] = cm_models; // make link to world
+	// invalidate representation table
+	if( source == NS_SERVER || !Host_ServerState())
+		memset( com_models, 0, sizeof( com_models ));
 
 	if( !Q_stricmp( cm_models[0].name, name ))
 	{
-		// recalc the checksum in force-mode
-		CRC32_MapFile( &world.checksum, cm_models[0].name, multiplayer );
-
-		// singleplayer mode: server already loaded map
-		if( checksum ) *checksum = world.checksum;
-
-		// still have the right version
+		// map already loaded
+		com_models[1] = cm_models;
 		return;
 	}
 
@@ -388,22 +409,17 @@ void Mod_LoadWorld( const char *name, uint *checksum, qboolean multiplayer )
 	{
 		if( cm_models[i].type == mod_studio )
 			cm_models[i].submodels = NULL;
-		else if( cm_models[i].type == mod_brush )
-			Mod_FreeModel( cm_models + i );
 	}
 
 	// purge all submodels
-	Mod_FreeModel( &cm_models[0] );
-	Mem_EmptyPool( com_studiocache );
-	world.load_sequence++;	// now all models are invalid
+	Mod_FreeModel( &cm_models[0] );	// unload the previois map
+	Mem_EmptyPool( com_studiocache );	// purge studio cache
+	world.load_sequence++;		// now all models are invalid
 
 	// load the newmap
 	world.loading = true;
-	Mod_ForName( name, true );
-	CRC32_MapFile( &world.checksum, cm_models[0].name, multiplayer );
+	com_models[1] = Mod_ForName( name, true );
 	world.loading = false;
-
-	if( checksum ) *checksum = world.checksum;
 }
 
 /*
@@ -479,16 +495,7 @@ int Mod_FrameCount( model_t *mod )
 {
 	if( !mod ) return 1;
 
-	switch( mod->type )
-	{
-	case mod_sprite:
-	case mod_studio:
-		return mod->numframes;
-	case mod_brush:
-		return 2; // regular and alternate animation
-	default:
-		return 1;
-	}
+	return mod->numframes;
 }
 
 /*
@@ -633,9 +640,46 @@ Mod_Handle
 model_t *Mod_Handle( int handle )
 {
 	if( handle < 0 || handle >= MAX_MODELS )
-	{
-		MsgDev( D_NOTE, "Mod_Handle: bad handle #%i\n", handle );
 		return NULL;
-	}
+
 	return com_models[handle];
+}
+
+/*
+==================
+Mod_ValidateCRC
+
+==================
+*/
+qboolean Mod_ValidateCRC( const char *name, CRC32_t crc )
+{
+	model_info_t	*p;
+	model_t		*mod;
+
+	mod = Mod_FindName( name, true );
+	p = &cm_modinfo[mod - cm_models];
+
+	if( !FBitSet( p->flags, FCRC_CHECKSUM_DONE ))
+		return true;
+	if( p->initialCRC == crc )
+		return true;
+	return false;
+}
+
+/*
+==================
+Mod_NeedCRC
+
+==================
+*/
+void Mod_NeedCRC( const char *name, qboolean needCRC )
+{
+	model_t		*mod;
+	model_info_t	*p;
+
+	mod = Mod_FindName( name, true );
+	p = &cm_modinfo[mod - cm_models];
+
+	if( needCRC ) SetBits( p->flags, FCRC_SHOULD_CHECKSUM );
+	else ClearBits( p->flags, FCRC_SHOULD_CHECKSUM );
 }
