@@ -441,6 +441,17 @@ static player_info_t *pfnPlayerInfo( int index )
 
 /*
 ===============
+pfnMod_ForName
+
+===============
+*/
+static model_t *pfnMod_ForName( const char *model, int crash )
+{
+	return Mod_ForName( model, crash, false );
+}
+
+/*
+===============
 pfnGetPlayerState
 
 ===============
@@ -2180,7 +2191,7 @@ void R_StudioRenderShadow( int iSprite, float *p1, float *p2, float *p3, float *
 	if( !p1 || !p2 || !p3 || !p4 )
 		return;
 
-	if( TriSpriteTexture( Mod_Handle( iSprite ), 0 ))
+	if( TriSpriteTexture( CL_ModelHandle( iSprite ), 0 ))
 	{
 		TriRenderMode( kRenderTransAlpha );
 		TriColor4f( 0.0f, 0.0f, 0.0f, 1.0f );
@@ -2747,7 +2758,8 @@ static model_t *R_StudioSetupPlayerModel( int index )
 
 	state = &cl.player_models[index];
 
-	if(( host.developer || !Host_IsLocalGame( )) && info->model[0] )
+	// g-cont: force for "dev-mode", non-local games and menu preview
+	if(( host.developer || !Host_IsLocalGame( ) || !RI.drawWorld ) && info->model[0] )
 	{
 		if( Q_strcmp( state->name, info->model ))
 		{
@@ -2757,7 +2769,7 @@ static model_t *R_StudioSetupPlayerModel( int index )
 			Q_snprintf( state->modelname, sizeof( state->modelname ), "models/player/%s/%s.mdl", info->model, info->model );
 
 			if( FS_FileExists( state->modelname, false ))
-				state->model = Mod_ForName( state->modelname, false );
+				state->model = Mod_ForName( state->modelname, false, true );
 			else state->model = NULL;
 
 			if( !state->model )
@@ -3452,7 +3464,7 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 		if( pplayer->weaponmodel )
 		{
 			cl_entity_t	saveent = *RI.currententity;
-			model_t		*pweaponmodel = Mod_Handle( pplayer->weaponmodel );
+			model_t		*pweaponmodel = CL_ModelHandle( pplayer->weaponmodel );
 
 			m_pStudioHeader = (studiohdr_t *)Mod_StudioExtradata( pweaponmodel );
 
@@ -4003,9 +4015,9 @@ static engine_studio_api_t gStudioAPI =
 	Mod_Calloc,
 	Mod_CacheCheck,
 	Mod_LoadCacheFile,
-	Mod_ForName,
+	pfnMod_ForName,
 	Mod_StudioExtradata,
-	Mod_Handle,
+	CL_ModelHandle,
 	pfnGetCurrentEntity,
 	pfnPlayerInfo,
 	R_StudioGetPlayerState,

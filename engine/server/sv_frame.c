@@ -117,12 +117,6 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 			// to prevent adds it twice through portals
 			SETVISBIT( ents->sended, e );
 
-			if( netclient && netclient->modelindex )
-			{
-				// update playermodel if this was changed
-				state->modelindex = netclient->modelindex;
-                              }
-
 			if( SV_IsValidEdict( ent->v.aiment ) && FBitSet( ent->v.aiment->v.effects, EF_MERGE_VISIBILITY ))
 			{
 				if( cl != NULL && cl->num_viewents < MAX_VIEWENTS )
@@ -764,16 +758,6 @@ void SV_UpdateToReliableMessages( void )
 		}
 	}
 
-	// 1% chanse for simulate random network bugs
-	if( sv.write_bad_message && COM_RandomLong( 0, 512 ) == 404 )
-	{
-		// just for network debugging (send only for local client)
-		MSG_BeginServerCmd( &sv.reliable_datagram, svc_bad );
-		MSG_WriteLong( &sv.reliable_datagram, COM_RandomLong( 1, 65536 ));	// send some random data
-		MSG_WriteString( &sv.reliable_datagram, host.finalmsg );		// send final message
-		sv.write_bad_message = false;
-	}
-
 	// clear the server datagram if it overflowed.
 	if( MSG_CheckOverflow( &sv.datagram ))
 	{
@@ -997,5 +981,7 @@ void SV_InactivateClients( void )
 
 		// clear netchan message (but keep other buffers)
 		MSG_Clear( &cl->netchan.message );
+		MSG_Clear( &cl->datagram );
+		COM_ClearCustomizationList( &cl->customdata, false );
 	}
 }

@@ -509,7 +509,7 @@ void Mod_StudioGetAttachment( const edict_t *e, int iAtt, float *origin, float *
 	vec3_t			angles2;
 	model_t			*mod;
 
-	mod = Mod_Handle( e->v.modelindex );
+	mod = SV_ModelHandle( e->v.modelindex );
 	mod_studiohdr = (studiohdr_t *)Mod_StudioExtradata( mod );
 	if( !mod_studiohdr ) return;
 
@@ -558,7 +558,7 @@ void Mod_GetBonePosition( const edict_t *e, int iBone, float *origin, float *ang
 {
 	model_t	*mod;
 
-	mod = Mod_Handle( e->v.modelindex );
+	mod = SV_ModelHandle( e->v.modelindex );
 	mod_studiohdr = (studiohdr_t *)Mod_StudioExtradata( mod );
 	if( !mod_studiohdr ) return;
 

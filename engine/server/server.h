@@ -152,6 +152,7 @@ typedef struct server_s
 	char		files_precache[MAX_CUSTOM][MAX_QPATH];
 	char		event_precache[MAX_EVENTS][MAX_QPATH];
 	byte		model_precache_flags[MAX_MODELS];
+	model_t		*models[MAX_MODELS];
 
 	sv_static_entity_t	static_entities[MAX_STATIC_ENTITIES];
 	int		num_static_entities;
@@ -188,7 +189,6 @@ typedef struct server_s
 	model_t		*worldmodel;	// pointer to world
 
 	qboolean		simulating;
-	qboolean		write_bad_message;	// just for debug
 	qboolean		paused;
 } server_t;
 
@@ -238,7 +238,6 @@ typedef struct sv_client_s
 	double		cmdtime;
 	double		ignorecmdtime;
 
-	int		modelindex;		// custom playermodel index
 	int		packet_loss;
 	float		latency;
 
@@ -451,7 +450,6 @@ extern	convar_t		*sv_check_errors;
 extern	convar_t		*sv_reconnect_limit;
 extern	convar_t		*sv_lighting_modulate;
 extern	convar_t		*hostname;
-extern	convar_t		*sv_maxclients;
 extern	convar_t		*sv_novis;
 extern	convar_t		*sv_hostmap;
 extern	convar_t		*sv_sendvelocity;
@@ -487,11 +485,10 @@ void Master_Packet( void );
 //
 // sv_init.c
 //
-void SV_InitGame( void );
 void SV_ActivateServer( void );
-void SV_DeactivateServer( void );
 void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, qboolean loadGame );
-qboolean SV_SpawnServer( const char *server, const char *startspot );
+qboolean SV_SpawnServer( const char *server, const char *startspot, qboolean background );
+model_t *SV_ModelHandle( int modelindex );
 
 //
 // sv_phys.c
@@ -648,7 +645,6 @@ void SV_ServerLog_f( sv_client_t *cl );
 void SV_ClearSaveDir( void );
 void SV_SaveGame( const char *pName );
 qboolean SV_LoadGame( const char *pName );
-void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start );
 int SV_LoadGameState( char const *level, qboolean createPlayers );
 void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
 const char *SV_GetLatestSave( void );

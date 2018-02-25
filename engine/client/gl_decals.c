@@ -749,12 +749,12 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	{
 		ent = CL_GetEntityByIndex( entityIndex );
 
-		if( modelIndex > 0 ) model = Mod_Handle( modelIndex );
-		else if( ent != NULL ) model = Mod_Handle( ent->curstate.modelindex );
+		if( modelIndex > 0 ) model = CL_ModelHandle( modelIndex );
+		else if( ent != NULL ) model = CL_ModelHandle( ent->curstate.modelindex );
 		else return;
 	}
 	else if( modelIndex > 0 )
-		model = Mod_Handle( modelIndex );
+		model = CL_ModelHandle( modelIndex );
 	else model = cl.worldmodel;
 
 	if( !model ) return;

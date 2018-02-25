@@ -765,14 +765,18 @@ qboolean SV_AllowPushRotate( edict_t *ent )
 {
 	model_t	*mod;
 
-	mod = Mod_Handle( ent->v.modelindex );
+	mod = SV_ModelHandle( ent->v.modelindex );
+
 	if( !mod || mod->type != mod_brush )
 		return true;
 
 	if( !FBitSet( host.features, ENGINE_PHYSICS_PUSHER_EXT ))
 		return false;
 
-	return (mod->flags & MODEL_HAS_ORIGIN) ? true : false;
+	if( FBitSet( mod->flags, MODEL_HAS_ORIGIN ))
+		return true;
+
+	return false;
 }
 
 /*
@@ -2012,7 +2016,7 @@ static server_physics_api_t gPhysicsAPI =
 	SV_LinkEdict,
 	SV_GetServerTime,
 	SV_GetFrameTime,
-	Mod_Handle,
+	SV_ModelHandle,
 	SV_GetHeadNode,
 	SV_ServerState,
 	Host_Error,

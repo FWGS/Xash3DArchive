@@ -524,7 +524,7 @@ byte *Mod_GetPVSForPoint( const vec3_t p )
 	mnode_t	*node;
 	mleaf_t	*leaf = NULL;
 
-	Assert( worldmodel != NULL );
+	ASSERT( worldmodel != NULL );
 
 	node = worldmodel->nodes;
 
@@ -589,9 +589,12 @@ within radius pixels of the given point.
 */
 int Mod_FatPVS( const vec3_t org, float radius, byte *visbuffer, int visbytes, qboolean merge, qboolean fullvis )
 {
-	mleaf_t	*leaf = Mod_PointInLeaf( org, worldmodel->nodes );
 	int	bytes = world.visbytes;
+	mleaf_t	*leaf = NULL;
 
+	ASSERT( worldmodel != NULL );
+
+	leaf = Mod_PointInLeaf( org, worldmodel->nodes );
 	bytes = Q_min( bytes, visbytes );
 
 	// enable full visibility for some reasons
@@ -1856,7 +1859,8 @@ static void Mod_LoadTextures( dbspmodel_t *bmod )
 		// if texture is completely missed
 		if( !tx->gl_texturenum )
 		{
-			MsgDev( D_ERROR, "couldn't load %s.mip\n", mt->name );
+			if( host.type != HOST_DEDICATED )
+				MsgDev( D_ERROR, "couldn't load %s.mip\n", mt->name );
 			tx->gl_texturenum = tr.defaultTexture;
 		}
 

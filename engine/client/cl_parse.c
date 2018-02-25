@@ -559,7 +559,7 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 	// setup the new static entity
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
-	ent->model = Mod_Handle( state.modelindex );
+	ent->model = CL_ModelHandle( state.modelindex );
 	ent->curstate.framerate = 1.0f;
 	CL_ResetLatchedVars( ent, true );
 
@@ -1267,19 +1267,24 @@ prceache model from server
 */
 void CL_PrecacheModel( sizebuf_t *msg )
 {
-	int	modelIndex;
+	const char	*s;
+	int		i;
 
-	modelIndex = MSG_ReadUBitLong( msg, MAX_MODEL_BITS );
+	i = MSG_ReadUBitLong( msg, MAX_MODEL_BITS );
+	s = MSG_ReadString( msg );
 
-	if( modelIndex < 0 || modelIndex >= MAX_MODELS )
-		Host_Error( "CL_PrecacheModel: bad modelindex %i\n", modelIndex );
+	if( i < 0 || i >= MAX_MODELS )
+		Host_Error( "CL_PrecacheModel: bad modelindex %i\n", i );
 
-	Q_strncpy( cl.model_precache[modelIndex], MSG_ReadString( msg ), sizeof( cl.model_precache[0] ));
+	if( i == WORLD_INDEX )
+		cl.models[i] = Mod_LoadWorld( s, false );
+	else cl.models[i] = Mod_FindName( s, false );
 
-	// when we loading map all resources is precached sequentially
-	if( !cl.video_prepped ) return;
-
-	Mod_RegisterModel( cl.model_precache[modelIndex], modelIndex );
+	if( i >= cl.nummodels )
+	{
+		cl.nummodels = i + 1;
+		cl.nummodels = Q_min( cl.nummodels, MAX_MODELS );
+	}
 }
 
 /*
@@ -1370,12 +1375,9 @@ void CL_PrecacheBSPModels( const char *pfilename )
 
 		if( p->type == t_model && p->szFileName[0] == '*' )
 		{
-			Q_strncpy( cl.model_precache[p->nIndex], p->szFileName, sizeof( cl.model_precache[0] ));
+			cl.models[p->nIndex] = Mod_ForName( p->szFileName, false, false );
 
-			// when we loading map all resources is precached sequentially
-			if( cl.video_prepped ) Mod_RegisterModel( cl.model_precache[p->nIndex], p->nIndex );
-
-			if( !Mod_Handle( p->nIndex ))
+			if( cl.models[p->nIndex] == NULL )
 			{
 				MsgDev( D_ERROR, "model %s not found\n", p->szFileName );
 
@@ -1481,12 +1483,11 @@ void CL_RegisterResources ( sizebuf_t *msg )
 		CL_SendConsistencyInfo( msg );
 
 	// All done precaching.
-	cl.worldmodel = Mod_Handle( 1 ); // get world pointer
-	cl.video_prepped = true;
-	cl.audio_prepped = true;
+	cl.worldmodel = CL_ModelHandle( 1 ); // get world pointer
 
 	if( cl.worldmodel && cl.maxclients > 0 )
 	{
+		ASSERT( clgame.entities != NULL );
 		clgame.entities->model = cl.worldmodel;
 		CL_PrecacheBSPModels( cl.worldmodel->name );
 
@@ -1499,6 +1500,8 @@ void CL_RegisterResources ( sizebuf_t *msg )
 
 			// invalidate all decal indexes
 			memset( cl.decal_index, 0, sizeof( cl.decal_index ));
+			cl.video_prepped = true;
+			cl.audio_prepped = true;
 
 			CL_ClearWorld ();
 
@@ -1942,7 +1945,7 @@ void CL_ParseStudioDecal( sizebuf_t *msg )
 		cl_entity_t *ent = CL_GetEntityByIndex( entityIndex );
 
 		if( ent && !ent->model && modelIndex != 0 )
-			ent->model = Mod_Handle( modelIndex );
+			ent->model = CL_ModelHandle( modelIndex );
 
 		clgame.drawFuncs.R_StudioDecalShoot( decalTexture, ent, start, pos, flags, &state );
 	}

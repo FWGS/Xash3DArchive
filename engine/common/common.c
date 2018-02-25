@@ -314,6 +314,19 @@ qboolean COM_ParseVector( char **pfile, float *v, size_t size )
 
 /*
 =============
+COM_CheckString
+
+=============
+*/
+int COM_CheckString( const char *string )
+{
+	if( !string || (byte)*string <= ' ' )
+		return 0;
+	return 1;
+}
+
+/*
+=============
 COM_FileSize
 
 =============
@@ -673,7 +686,6 @@ void pfnGetModelBounds( model_t *mod, float *mins, float *maxs )
 	}
 	else
 	{
-		MsgDev( D_ERROR, "Mod_GetBounds: NULL model\n" );
 		if( mins ) VectorClear( mins );
 		if( maxs ) VectorClear( maxs );
 	}
@@ -881,7 +893,7 @@ qboolean COM_IsSafeFileToDownload( const char *filename )
 	const char	*ext;
 	int		i;
 
-	if( !filename )
+	if( !COM_CheckString( filename ))
 		return false;
 
 	if( !Q_strncmp( filename, "!MD5", 4 ))

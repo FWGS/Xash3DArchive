@@ -164,7 +164,7 @@ passed through this
 */
 void R_BeamSetup( BEAM *pbeam, vec3_t start, vec3_t end, int modelIndex, float life, float width, float amplitude, float brightness, float speed )
 {
-	model_t	*sprite = Mod_Handle( modelIndex );
+	model_t	*sprite = CL_ModelHandle( modelIndex );
 
 	if( !sprite ) return;
 
@@ -172,7 +172,7 @@ void R_BeamSetup( BEAM *pbeam, vec3_t start, vec3_t end, int modelIndex, float l
 	pbeam->modelIndex = modelIndex;
 	pbeam->frame = 0;
 	pbeam->frameRate = 0;
-	pbeam->frameCount = Mod_FrameCount( sprite );
+	pbeam->frameCount = sprite->numframes;
 
 	VectorCopy( start, pbeam->source );
 	VectorCopy( end, pbeam->target );
@@ -1065,20 +1065,18 @@ Update beam vars and draw it
 */
 void R_BeamDraw( BEAM *pbeam, float frametime )
 {
-	model_t	*sprite;
+	model_t	*model;
 	vec3_t	delta;
 
+	model = CL_ModelHandle( pbeam->modelIndex );
 	SetBits( pbeam->flags, FBEAM_ISACTIVE );
 
-	if( Mod_GetType( pbeam->modelIndex ) != mod_sprite )
+	if( !model || model->type != mod_sprite )
 	{
 		pbeam->flags &= ~FBEAM_ISACTIVE; // force to ignore
 		pbeam->die = cl.time;
 		return;
 	}
-
-	sprite = Mod_Handle( pbeam->modelIndex );
-	if( !sprite ) return;
 
 	// update frequency
 	pbeam->freq += frametime;
@@ -1182,7 +1180,7 @@ void R_BeamDraw( BEAM *pbeam, float frametime )
 
 	TriRenderMode( FBitSet( pbeam->flags, FBEAM_SOLID ) ? kRenderNormal : kRenderTransAdd );
 
-	if( !TriSpriteTexture( sprite, (int)(pbeam->frame + pbeam->frameRate * cl.time) % pbeam->frameCount ))
+	if( !TriSpriteTexture( model, (int)(pbeam->frame + pbeam->frameRate * cl.time) % pbeam->frameCount ))
 	{
 		ClearBits( pbeam->flags, FBEAM_ISACTIVE );
 		return;
@@ -1590,9 +1588,12 @@ BEAM *R_BeamEnts( int startEnt, int endEnt, int modelIndex, float life, float wi
 {
 	cl_entity_t	*start, *end;
 	BEAM		*pbeam;
+	model_t		*mod;
+
+	mod = CL_ModelHandle( modelIndex );
 
 	// need a valid model.
-	if( Mod_GetType( modelIndex ) != mod_sprite )
+	if( !mod || mod->type != mod_sprite )
 		return NULL;
 
 	start = R_BeamGetEntity( startEnt );
@@ -1960,9 +1961,10 @@ void CL_ReadLineFile_f( void )
 	char		*afile, *pfile;
 	vec3_t		p1, p2;
 	int		count, modelIndex;
-	char		filename[64];
+	char		filename[MAX_QPATH];
+	model_t		*model;
 	string		token;
-	
+
 	Q_snprintf( filename, sizeof( filename ), "maps/%s.lin", clgame.mapname );
 	afile = FS_LoadFile( filename, NULL, false );
 
@@ -1976,7 +1978,7 @@ void CL_ReadLineFile_f( void )
 
 	count = 0;
 	pfile = afile;
-	modelIndex = CL_FindModelIndex( "sprites/laserbeam.spr" );
+	model = CL_LoadModel( "sprites/laserbeam.spr", &modelIndex );
 
 	while( 1 )
 	{
@@ -2017,8 +2019,8 @@ void CL_ReadLineFile_f( void )
 		
 		if( !R_BeamPoints( p1, p2, modelIndex, 99999, 2, 0, 255, 0, 0, 0, 255.0f, 0.0f, 0.0f ))
 		{
-			if( Mod_GetType( modelIndex ) != mod_sprite )
-				MsgDev( D_ERROR, "CL_ReadLineFile: failed to load sprites/laserbeam.spr!\n" );
+			if( !model || model->type != mod_sprite )
+				MsgDev( D_ERROR, "CL_ReadLineFile: failed to load \"sprites/laserbeam.spr\"!\n" );
 			else MsgDev( D_ERROR, "CL_ReadLineFile: not enough free beams!\n" );
 			break;
 		}

@@ -23,40 +23,6 @@ server_t		sv;	// local server
 server_static_t	svs;	// persistant server info
 svgame_static_t	svgame;	// persistant game info
 
-const char *check_exts[7] =
-{
-	".cfg",
-	".lst",
-	".exe",
-	".vbs",
-	".com",
-	".bat",
-	".dll",
-};
-
-/*
-================
-SV_IsGenericFileAllowed
-
-some files is not allowed to be sended to client
-================
-*/
-qboolean SV_IsGenericFileAllowed( const char *filename )
-{
-	const char	*ext = FS_FileExtension( filename );
-	int		i;
-
-	for( i = 0; i < ARRAYSIZE( check_exts ); i++ )
-	{
-		if( !Q_stricmp( ext, check_exts[i] ))
-		{
-			MsgDev( D_WARN, "Can't precache %s files:  %s\n", check_exts[i], filename );
-			return false;
-		}
-	}
-	return true;
-}
-
 /*
 ================
 SV_ModelIndex
@@ -69,7 +35,7 @@ int SV_ModelIndex( const char *filename )
 	char	name[64];
 	int	i;
 
-	if( !filename || !filename[0] )
+	if( !COM_CheckString( filename ))
 		return 0;
 
 	Q_strncpy( name, filename, sizeof( name ));
@@ -116,7 +82,7 @@ int SV_SoundIndex( const char *filename )
 	int	i;
 
 	// don't precache sentence names!
-	if( !filename || !filename[0] || filename[0] == '!' )
+	if( !COM_CheckString( filename ))
 		return 0;
 
 	Q_strncpy( name, filename, sizeof( name ));
@@ -162,7 +128,7 @@ int SV_EventIndex( const char *filename )
 	char	name[64];
 	int	i;
 
-	if( !filename || !filename[0] )
+	if( !COM_CheckString( filename ))
 		return 0;
 
 	Q_strncpy( name, filename, sizeof( name ));
@@ -206,7 +172,7 @@ int SV_GenericIndex( const char *filename )
 	char	name[64];
 	int	i;
 
-	if( !filename || !filename[0] )
+	if( !COM_CheckString( filename ))
 		return 0;
 
 	Q_strncpy( name, filename, sizeof( name ));
@@ -235,6 +201,20 @@ int SV_GenericIndex( const char *filename )
 	Q_strncpy( sv.files_precache[i], name, sizeof( sv.files_precache[i] ));
 
 	return i;
+}
+
+/*
+================
+SV_ModelHandle
+
+register unique model for a server and client
+================
+*/
+model_t *SV_ModelHandle( int modelindex )
+{
+	if( modelindex < 0 || modelindex >= MAX_MODELS )
+		return NULL;
+	return sv.models[modelindex];
 }
 
 void SV_AddResource( resourcetype_t type, const char *name, int size, byte flags, int index )
@@ -272,28 +252,7 @@ void SV_CreateGenericResources( void )
 
 	while( ( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
-		if( Q_strlen( token ) <= 0 )
-			break;
-
-		if ( Q_strstr( token, ".." ) )
-		{
-			Con_Printf( "Can't precache resource with invalid relative path %s\n", token );
-			continue;
-		}
-
-		if ( Q_strstr( token, ":" ) )
-		{
-			Con_Printf( "Can't precache resource with absolute path %s\n", token );
-			continue;
-		}
-
-		if ( Q_strstr( token, "\\" ) )
-		{
-			Con_Printf( "Can't precache resource with invalid relative path %s\n", token );
-			continue;
-		}
-
-		if( !SV_IsGenericFileAllowed( token ))
+		if( !COM_IsSafeFileToDownload( token ))
 			continue;
 
 		MsgDev( D_REPORT, "  %s\n", token );
@@ -427,7 +386,10 @@ void SV_CreateBaseline( void )
 	qboolean		player;
 	int		entnum;
 
-	playermodel = SV_ModelIndex( "models/player.mdl" );
+	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		playermodel = SV_ModelIndex( DEFAULT_PLAYER_PATH_QUAKE );
+	else playermodel = SV_ModelIndex( DEFAULT_PLAYER_PATH_HALFLIFE );
+
 	memset( &nullstate, 0, sizeof( nullstate ));
 
 	for( entnum = 0; entnum < svgame.numEntities; entnum++ )
@@ -648,8 +610,7 @@ void SV_DeactivateServer( void )
 	if( !svs.initialized || sv.state == ss_dead )
 		return;
 
-	sv.state = ss_dead;
-
+	svgame.globals->time = sv.time;
 	svgame.dllFuncs.pfnServerDeactivate();
 
 	SV_FreeEdicts ();
@@ -671,6 +632,12 @@ void SV_DeactivateServer( void )
 	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
 	svgame.globals->startspot = 0;
 	svgame.globals->mapname = 0;
+
+	// clear states
+	sv.changelevel = false;
+	sv.background = false;
+	sv.loadgame = false;
+	sv.state = ss_dead;
 }
 
 /*
@@ -719,130 +686,6 @@ void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLan
 
 	// relese all intermediate entities
 	SV_FreeOldEntities ();
-}
-
-/*
-================
-SV_SpawnServer
-
-Change the server to a new map, taking all connected
-clients along with it.
-================
-*/
-qboolean SV_SpawnServer( const char *mapname, const char *startspot )
-{
-	int	i, current_skill;
-	qboolean	loadgame, paused;
-	qboolean	background, changelevel;
-
-	// save state
-	loadgame = sv.loadgame;
-	background = sv.background;
-	changelevel = sv.changelevel;
-	paused = sv.paused;
-
-	if( sv.state == ss_dead )
-		SV_InitGame(); // the game is just starting
-
-	NET_Config(( svs.maxclients > 1 )); // init network stuff
-	ClearBits( sv_maxclients->flags, FCVAR_CHANGED );
-
-	if( !svs.initialized )
-		return false;
-
-	Log_Open();
-	Log_Printf( "Loading map \"%s\"\n", mapname );
-	Log_PrintServerVars();
-
-	svgame.globals->changelevel = false; // will be restored later if needed
-	svs.timestart = Sys_DoubleTime();
-	svs.spawncount++; // any partially connected client will be restarted
-
-	if( startspot )
-	{
-		MsgDev( D_INFO, "Spawn Server: %s [%s]\n", mapname, startspot );
-	}
-	else
-	{
-		MsgDev( D_INFO, "Spawn Server: %s\n", mapname );
-	}
-
-	sv.state = ss_dead;
-	Host_SetServerState( sv.state );
-	memset( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure
-
-	// restore state
-	sv.paused = paused;
-	sv.loadgame = loadgame;
-	sv.background = background;
-	sv.changelevel = changelevel;
-	sv.time = 1.0f;			// server spawn time it's always 1.0 second
-	svgame.globals->time = sv.time;
-	
-	// initialize buffers
-	MSG_Init( &sv.signon, "Signon", sv.signon_buf, sizeof( sv.signon_buf ));
-	MSG_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));
-	MSG_Init( &sv.datagram, "Datagram", sv.datagram_buf, sizeof( sv.datagram_buf ));
-	MSG_Init( &sv.reliable_datagram, "Reliable Datagram", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
-	MSG_Init( &sv.spec_datagram, "Spectator Datagram", sv.spectator_buf, sizeof( sv.spectator_buf ));
-
-	// leave slots at start for clients only
-	for( i = 0; i < svs.maxclients; i++ )
-	{
-		// needs to reconnect
-		if( svs.clients[i].state > cs_connected )
-			svs.clients[i].state = cs_connected;
-	}
-
-	// make cvars consistant
-	if( coop.value ) Cvar_SetValue( "deathmatch", 0 );
-	current_skill = Q_rint( skill.value );
-	current_skill = bound( 0, current_skill, 3 );
-
-	Cvar_SetValue( "skill", (float)current_skill );
-
-	if( sv.background )
-	{
-		// tell the game parts about background state
-		Cvar_FullSet( "sv_background", "1", FCVAR_READ_ONLY );
-		Cvar_FullSet( "cl_background", "1", FCVAR_READ_ONLY );
-	}
-	else
-	{
-		Cvar_FullSet( "sv_background", "0", FCVAR_READ_ONLY );
-		Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
-	}
-
-	// make sure what server name doesn't contain path and extension
-	FS_FileBase( mapname, sv.name );
-
-	if( startspot )
-		Q_strncpy( sv.startspot, startspot, sizeof( sv.startspot ));
-	else sv.startspot[0] = '\0';
-
-	Q_snprintf( sv.model_precache[1], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
-	SetBits( sv.model_precache_flags[1], RES_FATALIFMISSING );
-	Mod_LoadWorld( sv.model_precache[1], NS_SERVER );
-	sv.worldmodel = Mod_Handle( 1 ); // get world pointer
-
-	CRC32_MapFile( &sv.worldmapCRC, sv.model_precache[1], svs.maxclients > 1 );
-
-	for( i = 1; i < sv.worldmodel->numsubmodels; i++ )
-	{
-		SetBits( sv.model_precache_flags[i+1], RES_FATALIFMISSING );
-		Q_sprintf( sv.model_precache[i+1], "*%i", i );
-		Mod_RegisterModel( sv.model_precache[i+1], i+1 );
-	}
-
-	// precache and static commands can be issued during map initialization
-	sv.state = ss_loading;
-
-	Host_SetServerState( sv.state );
-
-	// clear physics interaction links
-	SV_ClearWorld();
-
-	return true;
 }
 
 /*
@@ -932,6 +775,127 @@ void SV_InitGame( void )
 	svs.initialized = true;
 }
 
+/*
+================
+SV_SpawnServer
+
+Change the server to a new map, taking all connected
+clients along with it.
+================
+*/
+qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean background )
+{
+	int	i, current_skill;
+	qboolean	loadgame, paused;
+	qboolean	changelevel;
+
+	// save state
+	loadgame = sv.loadgame;
+	changelevel = sv.changelevel;
+	paused = sv.paused;
+
+	if( sv.state == ss_dead )
+		SV_InitGame(); // the game is just starting
+
+	NET_Config(( svs.maxclients > 1 )); // init network stuff
+	ClearBits( sv_maxclients->flags, FCVAR_CHANGED );
+
+	if( !svs.initialized )
+		return false;
+
+	Log_Open();
+	Log_Printf( "Loading map \"%s\"\n", mapname );
+	Log_PrintServerVars();
+
+	svgame.globals->changelevel = false; // will be restored later if needed
+	svs.timestart = Sys_DoubleTime();
+	svs.spawncount++; // any partially connected client will be restarted
+
+	if( startspot )
+	{
+		MsgDev( D_INFO, "Spawn Server: %s [%s]\n", mapname, startspot );
+	}
+	else
+	{
+		MsgDev( D_INFO, "Spawn Server: %s\n", mapname );
+	}
+
+	sv.state = ss_dead;
+	Host_SetServerState( sv.state );
+	memset( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure
+
+	// restore state
+	sv.paused = paused;
+	sv.loadgame = loadgame;
+	sv.background = background;
+	sv.changelevel = changelevel;
+	sv.time = 1.0f;			// server spawn time it's always 1.0 second
+	svgame.globals->time = sv.time;
+	
+	// initialize buffers
+	MSG_Init( &sv.signon, "Signon", sv.signon_buf, sizeof( sv.signon_buf ));
+	MSG_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));
+	MSG_Init( &sv.datagram, "Datagram", sv.datagram_buf, sizeof( sv.datagram_buf ));
+	MSG_Init( &sv.reliable_datagram, "Reliable Datagram", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
+	MSG_Init( &sv.spec_datagram, "Spectator Datagram", sv.spectator_buf, sizeof( sv.spectator_buf ));
+
+	// leave slots at start for clients only
+	for( i = 0; i < svs.maxclients; i++ )
+	{
+		// needs to reconnect
+		if( svs.clients[i].state > cs_connected )
+			svs.clients[i].state = cs_connected;
+	}
+
+	// make cvars consistant
+	if( coop.value ) Cvar_SetValue( "deathmatch", 0 );
+	current_skill = Q_rint( skill.value );
+	current_skill = bound( 0, current_skill, 3 );
+
+	Cvar_SetValue( "skill", (float)current_skill );
+
+	if( sv.background )
+	{
+		// tell the game parts about background state
+		Cvar_FullSet( "sv_background", "1", FCVAR_READ_ONLY );
+		Cvar_FullSet( "cl_background", "1", FCVAR_READ_ONLY );
+	}
+	else
+	{
+		Cvar_FullSet( "sv_background", "0", FCVAR_READ_ONLY );
+		Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
+	}
+
+	// make sure what server name doesn't contain path and extension
+	FS_FileBase( mapname, sv.name );
+
+	if( startspot )
+		Q_strncpy( sv.startspot, startspot, sizeof( sv.startspot ));
+	else sv.startspot[0] = '\0';
+
+	Q_snprintf( sv.model_precache[WORLD_INDEX], sizeof( sv.model_precache[0] ), "maps/%s.bsp", sv.name );
+	SetBits( sv.model_precache_flags[WORLD_INDEX], RES_FATALIFMISSING );
+	sv.worldmodel = sv.models[WORLD_INDEX] = Mod_LoadWorld( sv.model_precache[WORLD_INDEX], true );
+	CRC32_MapFile( &sv.worldmapCRC, sv.model_precache[WORLD_INDEX], svs.maxclients > 1 );
+
+	for( i = WORLD_INDEX; i < sv.worldmodel->numsubmodels; i++ )
+	{
+		Q_sprintf( sv.model_precache[i+1], "*%i", i );
+		sv.models[i+1] = Mod_ForName( sv.model_precache[i+1], false, false );
+		SetBits( sv.model_precache_flags[i+1], RES_FATALIFMISSING );
+	}
+
+	// precache and static commands can be issued during map initialization
+	sv.state = ss_loading;
+
+	Host_SetServerState( sv.state );
+
+	// clear physics interaction links
+	SV_ClearWorld();
+
+	return true;
+}
+
 qboolean SV_Active( void )
 {
 	return svs.initialized;
@@ -940,13 +904,6 @@ qboolean SV_Active( void )
 int SV_GetMaxClients( void )
 {
 	return svs.maxclients;
-}
-
-void SV_ForceError( void )
-{
-	// this is only for singleplayer testing
-	if( svs.maxclients != 1 ) return;
-	sv.write_bad_message = true;
 }
 
 void SV_InitGameProgs( void )
@@ -963,40 +920,4 @@ void SV_FreeGameProgs( void )
 
 	// unload progs (free cvars and commands)
 	SV_UnloadProgs();
-}
-
-qboolean SV_NewGame( const char *mapName, qboolean loadGame )
-{
-	if( !loadGame )
-	{
-		if( !SV_MapIsValid( mapName, GI->sp_entity, NULL ))
-			return false;
-
-		SV_ClearSaveDir ();
-		SV_Shutdown( true );
-	}
-	else
-	{
-		S_StopAllSounds (true);
-		SV_DeactivateServer ();
-	}
-
-	sv.loadgame = loadGame;
-	sv.background = false;
-	sv.changelevel = false;
-
-	SCR_BeginLoadingPlaque( false );
-
-	if( !SV_SpawnServer( mapName, NULL ))
-		return false;
-
-	SV_LevelInit( mapName, NULL, NULL, loadGame );
-	sv.loadgame = loadGame;
-
-	SV_ActivateServer();
-
-	if( sv.state != ss_active )
-		return false;
-
-	return true;
 }

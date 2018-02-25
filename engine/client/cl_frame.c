@@ -267,7 +267,7 @@ void CL_ProcessEntityUpdate( cl_entity_t *ent )
 {
 	qboolean	parametric;
 
-	ent->model = Mod_Handle( ent->curstate.modelindex );
+	ent->model = CL_ModelHandle( ent->curstate.modelindex );
 	ent->index = ent->curstate.number;
 
 	// g-cont. make sure what it's no broke XashXT physics

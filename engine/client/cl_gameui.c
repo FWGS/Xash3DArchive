@@ -656,9 +656,8 @@ for drawing playermodel previews
 */
 static void pfnSetPlayerModel( cl_entity_t *ent, const char *path )
 {
-	Mod_RegisterModel( path, MAX_MODELS - 1 );
-	ent->curstate.modelindex = MAX_MODELS - 1;
-	ent->model = Mod_Handle( MAX_MODELS - 1 );
+	ent->model = Mod_ForName( path, false, false );
+	ent->curstate.modelindex = MAX_MODELS; // unreachable index
 }
 
 /*
@@ -866,18 +865,6 @@ static void pfnChangeInstance( const char *newInstance, const char *szFinalMessa
 
 /*
 =========
-pfnHostNewGame
-
-=========
-*/
-static void pfnHostNewGame( const char *mapName )
-{
-	if( !mapName || !*mapName ) return;
-	Host_NewGame( mapName, false );
-}
-
-/*
-=========
 pfnHostEndGame
 
 =========
@@ -885,7 +872,7 @@ pfnHostEndGame
 static void pfnHostEndGame( const char *szFinalMessage )
 {
 	if( !szFinalMessage ) szFinalMessage = "";
-	Host_EndGame( szFinalMessage );
+	Host_EndGame( true, szFinalMessage );
 }
 
 /*

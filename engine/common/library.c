@@ -833,7 +833,7 @@ void Com_FreeLibrary( void *hInstance )
 	if( !hInst || !hInst->hInstance )
 		return; // already freed
 
-	if( host.state == HOST_CRASHED )
+	if( host.status == HOST_CRASHED )
 	{
 		// we need to hold down all modules, while MSVC can find error
 		MsgDev( D_NOTE, "Sys_FreeLibrary: hold %s for debugging\n", hInst->dllName );

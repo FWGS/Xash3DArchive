@@ -172,6 +172,46 @@ qboolean SV_SetPlayer( void )
 
 /*
 ==================
+SV_ValidateMap
+
+check map for typically errors
+==================
+*/
+qboolean SV_ValidateMap( const char *pMapName, qboolean check_spawn )
+{
+	char	*spawn_entity;
+	int	flags;
+
+	// determine spawn entity classname
+	if( !check_spawn || svs.maxclients == 1 )
+		spawn_entity = GI->sp_entity;
+	else spawn_entity = GI->mp_entity;
+
+	flags = SV_MapIsValid( pMapName, spawn_entity, NULL );
+
+	if( FBitSet( flags, MAP_INVALID_VERSION ))
+	{
+		MsgDev( D_ERROR, "map %s is invalid or not supported\n", pMapName );
+		return false;
+	}
+
+	if( !FBitSet( flags, MAP_IS_EXIST ))
+	{
+		MsgDev( D_ERROR, "map %s doesn't exist\n", pMapName );
+		return false;
+	}
+
+	if( check_spawn && !FBitSet( flags, MAP_HAS_SPAWNPOINT ))
+	{
+		MsgDev( D_ERROR, "map %s doesn't have a valid spawnpoint\n", pMapName );
+		return false;
+	}
+
+	return true;
+}
+
+/*
+==================
 SV_Map_f
 
 Goes directly to a given map without any savegame archiving.
@@ -180,9 +220,7 @@ For development work
 */
 void SV_Map_f( void )
 {
-	char	*spawn_entity;
-	string	mapname;
-	int	flags;
+	char	mapname[MAX_QPATH];
 
 	if( Cmd_Argc() != 2 )
 	{
@@ -193,49 +231,17 @@ void SV_Map_f( void )
 	// hold mapname to other place
 	Q_strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
 	FS_StripExtension( mapname );
-	
-	// determine spawn entity classname
-	if( svs.maxclients == 1 )
-		spawn_entity = GI->sp_entity;
-	else spawn_entity = GI->mp_entity;
 
-	flags = SV_MapIsValid( mapname, spawn_entity, NULL );
-
-	if( FBitSet( flags, MAP_INVALID_VERSION ))
-	{
-		MsgDev( D_ERROR, "map %s is invalid or not supported\n", mapname );
+	if( !SV_ValidateMap( mapname, true ))
 		return;
-	}
-
-	if( !FBitSet( flags, MAP_IS_EXIST ))
-	{
-		MsgDev( D_ERROR, "map %s doesn't exist\n", mapname );
-		return;
-	}
-
-	if( !FBitSet( flags, MAP_HAS_SPAWNPOINT ))
-	{
-		MsgDev( D_ERROR, "map %s doesn't have a valid spawnpoint\n", mapname );
-		return;
-	}
 
 	// changing singleplayer to multiplayer or back. refresh the player count
 	if( FBitSet( sv_maxclients->flags, FCVAR_CHANGED ))
 		Host_ShutdownServer();
 
-	SCR_BeginLoadingPlaque( false );
-
-	sv.changelevel = false;
-	sv.background = false;
-	sv.loadgame = false; // set right state
-	SV_ClearSaveDir ();	// delete all temporary *.hl files
-
 	Cvar_DirectSet( sv_hostmap, mapname );
 
-	SV_DeactivateServer();
-	SV_SpawnServer( mapname, NULL );
-	SV_LevelInit( mapname, NULL, NULL, false );
-	SV_ActivateServer ();
+	COM_LoadLevel( mapname, false );
 }
 
 /*
@@ -247,8 +253,7 @@ Set background map (enable physics in menu)
 */
 void SV_MapBackground_f( void )
 {
-	string	mapname;
-	int	flags;
+	char	mapname[MAX_QPATH];
 
 	if( Cmd_Argc() != 2 )
 	{
@@ -266,42 +271,19 @@ void SV_MapBackground_f( void )
 	Q_strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
 	FS_StripExtension( mapname );
 
-	flags = SV_MapIsValid( mapname, GI->sp_entity, NULL );
-
-	if( FBitSet( flags, MAP_INVALID_VERSION ))
-	{
-		MsgDev( D_ERROR, "map %s is invalid or not supported\n", mapname );
+	if( !SV_ValidateMap( mapname, false ))
 		return;
-	}
 
-	if( !FBitSet( flags, MAP_IS_EXIST ))
-	{
-		MsgDev( D_ERROR, "map %s doesn't exist\n", mapname );
-		return;
-	}
-
-	// background maps allow without spawnpoints (just throw warning)
-	if( !FBitSet( flags, MAP_HAS_SPAWNPOINT ))
-		MsgDev( D_WARN, "map %s doesn't have a valid spawnpoint\n", mapname );
-		
 	Q_strncpy( host.finalmsg, "", MAX_STRING );
 	SV_Shutdown( true );
-	NET_Config ( false ); // close network sockets
-
-	sv.changelevel = false;
-	sv.background = true;
-	sv.loadgame = false; // set right state
+	NET_Config( false ); // close network sockets
 
 	// reset all multiplayer cvars
 	Cvar_FullSet( "maxplayers", "1", FCVAR_LATCH );
 	Cvar_SetValue( "deathmatch", 0 );
 	Cvar_SetValue( "coop", 0 );
 
-	SCR_BeginLoadingPlaque( true );
-
-	SV_SpawnServer( mapname, NULL );
-	SV_LevelInit( mapname, NULL, NULL, false );
-	SV_ActivateServer ();
+	COM_LoadLevel( mapname, true );
 }
 
 /*
@@ -318,7 +300,7 @@ void SV_NewGame_f( void )
 		return;
 	}
 
-	Host_NewGame( GI->startmap, false );
+	COM_NewGame( GI->startmap );
 }
 
 /*
@@ -339,9 +321,9 @@ void SV_HazardCourse_f( void )
 	if( FS_FileExists( va( "media/%s.avi", GI->trainmap ), false ))
 	{
 		Cbuf_AddText( va( "wait; movie %s\n", GI->trainmap ));
-		Host_EndGame( "The End" );
+		Host_EndGame( true, DEFAULT_ENDGAME_MESSAGE );
 	}
-	else Host_NewGame( GI->trainmap, false );
+	else COM_NewGame( GI->trainmap );
 }
 
 /*
@@ -529,17 +511,11 @@ void SV_ChangeLevel_f( void )
 		return;
 	}
 
-	SCR_BeginLoadingPlaque( false );
-
 	if( sv.background )
-	{
-		// just load map
-		Cbuf_AddText( va( "map %s\n", mapname ));
-		return;
-	}
-
-	if( c == 2 ) SV_ChangeLevel( false, Cmd_Argv( 1 ), NULL );
-	else SV_ChangeLevel( true, Cmd_Argv( 1 ), Cmd_Argv( 2 ));
+		COM_LoadLevel( mapname, false );
+	else if( c == 2 )
+		COM_ChangeLevel( Cmd_Argv( 1 ), NULL );
+	else COM_ChangeLevel( Cmd_Argv( 1 ), Cmd_Argv( 2 ));
 }
 
 /*
@@ -554,15 +530,7 @@ void SV_Restart_f( void )
 	if( sv.state != ss_active )
 		return;
 
-	// just sending console command
-	if( sv.background )
-	{
-		Cbuf_AddText( va( "map_background %s\n", sv.name ));
-	}
-	else
-	{
-		Cbuf_AddText( va( "map %s\n", sv.name ));
-	}
+	COM_LoadLevel( sv.name, sv.background );
 }
 
 /*
@@ -574,15 +542,8 @@ continue from latest savedgame
 */
 void SV_Reload_f( void )
 {
-	const char	*savefile;
-
-	if( sv.state != ss_active || sv.background )
-		return;
-
-	savefile = SV_GetLatestSave();
-
-	if( savefile ) SV_LoadGame( savefile );
-	else SV_NewGame( sv_hostmap->string, false );
+	if( !SV_LoadGame( SV_GetLatestSave( )))
+		COM_LoadLevel( sv_hostmap->string, false );
 }
 
 /*

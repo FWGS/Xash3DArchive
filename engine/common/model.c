@@ -25,10 +25,9 @@ GNU General Public License for more details.
 #include "client.h"
 #include "server.h"			// LUMP_ error codes
 
-static model_t	*com_models[MAX_MODELS];	// shared replacement modeltable
-static model_info_t	cm_modinfo[MAX_MODELS];
-static model_t	cm_models[MAX_MODELS];
-static int	cm_nummodels = 0;
+static model_info_t	mod_crcinfo[MAX_MODELS];
+static model_t	mod_known[MAX_MODELS];
+static int	mod_numknown = 0;
 byte		*com_studiocache;		// cache for submodels
 convar_t		*mod_studiocache;
 convar_t		*r_wadtextures;
@@ -54,7 +53,7 @@ static void Mod_Modellist_f( void )
 	Msg( "\n" );
 	Msg( "-----------------------------------\n" );
 
-	for( i = nummodels = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
+	for( i = nummodels = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
 	{
 		if( !mod->name[0] )
 			continue; // free slot
@@ -75,8 +74,8 @@ Mod_FreeUserData
 */
 static void Mod_FreeUserData( model_t *mod )
 {
-	// already freed?
-	if( !mod || !mod->name[0] )
+	// ignore submodels and freed models
+	if( !mod->name[0] || mod->name[0] == '*' )
 		return;
 
 	if( host.type == HOST_DEDICATED )
@@ -108,6 +107,7 @@ static void Mod_FreeModel( model_t *mod )
 	if( !mod || !mod->name[0] )
 		return;
 
+	Msg( "release %s\n", mod->name );
 	Mod_FreeUserData( mod );
 
 	// select the properly unloader
@@ -126,6 +126,8 @@ static void Mod_FreeModel( model_t *mod )
 		Mod_UnloadAliasModel( mod );
 		break;
 	}
+
+	memset( mod, 0, sizeof( *mod ));
 }
 
 /*
@@ -148,36 +150,59 @@ void Mod_Init( void )
 	Mod_InitStudioHull ();
 }
 
-void Mod_ClearAll( qboolean keep_playermodel )
+/*
+================
+Mod_FreeAll
+================
+*/
+void Mod_FreeAll( void )
 {
-	model_t	*plr = com_models[MAX_MODELS-1];
 	model_t	*mod;
 	int	i;
 
-	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
-	{
-		if( keep_playermodel && mod == plr )
-			continue;
-
+	for( i = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
 		Mod_FreeModel( mod );
-		memset( mod, 0, sizeof( *mod ));
-	}
-
-	// g-cont. may be just leave unchanged?
-	if( !keep_playermodel ) cm_nummodels = 0;
+	mod_numknown = 0;
 }
 
+/*
+================
+Mod_ClearAll
+
+clear all models as unreferenced
+but don't touch the real data
+================
+*/
+void Mod_ClearAll( void )
+{
+	model_t	*mod;
+	int	i;
+
+	for( i = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
+		mod->needload = NL_UNREFERENCED;
+}
+
+/*
+================
+Mod_ClearUserData
+================
+*/
 void Mod_ClearUserData( void )
 {
 	int	i;
 
-	for( i = 0; i < cm_nummodels; i++ )
-		Mod_FreeUserData( &cm_models[i] );
+	for( i = 0; i < mod_numknown; i++ )
+		Mod_FreeUserData( &mod_known[i] );
 }
 
+/*
+================
+Mod_Shutdown
+================
+*/
 void Mod_Shutdown( void )
 {
-	Mod_ClearAll( false );
+	Mod_FreeAll();
 	Mem_FreePool( &com_studiocache );
 }
 
@@ -194,48 +219,46 @@ Mod_FindName
 
 ==================
 */
-model_t *Mod_FindName( const char *filename, qboolean create )
+model_t *Mod_FindName( const char *filename, qboolean trackCRC )
 {
+	char	modname[MAX_QPATH];
 	model_t	*mod;
-	char	name[64];
 	int	i;
 	
-	if( !filename || !filename[0] )
+	if( !COM_CheckString( filename ))
 		return NULL;
 
-	if( *filename == '!' ) filename++;
-	Q_strncpy( name, filename, sizeof( name ));
-	COM_FixSlashes( name );
-		
+	Q_strncpy( modname, filename, sizeof( modname ));
+
 	// search the currently loaded models
-	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
+	for( i = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
 	{
-		if( !mod->name[0] ) continue;
-		if( !Q_stricmp( mod->name, name ))
+		if( !Q_stricmp( mod->name, modname ))
 		{
-			// prolonge registration
-			mod->needload = world.load_sequence;
+			if( mod->mempool )
+				mod->needload = NL_PRESENT;
+			else mod->needload = NL_NEEDS_LOADED;
+
 			return mod;
 		}
 	}
 
-	if( !create ) return NULL;			
-
 	// find a free model slot spot
-	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
+	for( i = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
 		if( !mod->name[0] ) break; // this is a valid spot
 
-	if( i == cm_nummodels )
+	if( i == mod_numknown )
 	{
-		if( cm_nummodels == MAX_MODELS )
+		if( mod_numknown == MAX_MODELS )
 			Host_Error( "Mod_ForName: MAX_MODELS limit exceeded\n" );
-		cm_nummodels++;
+		mod_numknown++;
 	}
 
 	// copy name, so model loader can find model file
-	Q_strncpy( mod->name, name, sizeof( mod->name ));
-	cm_modinfo[i].initialCRC = 0;
-	cm_modinfo[i].flags = 0;
+	Q_strncpy( mod->name, modname, sizeof( mod->name ));
+	if( trackCRC ) mod_crcinfo[i].flags = FCRC_SHOULD_CHECKSUM;
+	else mod_crcinfo[i].flags = 0;
+	mod_crcinfo[i].initialCRC = 0;
 
 	return mod;
 }
@@ -264,7 +287,10 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 
 	// check if already loaded (or inline bmodel)
 	if( mod->mempool || mod->name[0] == '*' )
+	{
+		mod->needload = NL_PRESENT;
 		return mod;
+	}
 
 	// store modelname to show error
 	Q_strncpy( tempname, mod->name, sizeof( tempname ));
@@ -341,7 +367,8 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		}
 	}
 
-	p = &cm_modinfo[mod - cm_models];
+	p = &mod_crcinfo[mod - mod_known];
+	mod->needload = NL_PRESENT;
 
 	if( FBitSet( p->flags, FCRC_SHOULD_CHECKSUM ))
 	{
@@ -374,12 +401,35 @@ Mod_ForName
 Loads in a model for the given name
 ==================
 */
-model_t *Mod_ForName( const char *name, qboolean crash )
+model_t *Mod_ForName( const char *name, qboolean crash, qboolean trackCRC )
 {
-	model_t	*mod;
-	
-	mod = Mod_FindName( name, true );
+	model_t	*mod = Mod_FindName( name, trackCRC );
 	return Mod_LoadModel( mod, crash );
+}
+
+/*
+==================
+Mod_PurgeStudioCache
+
+free studio cache on change level
+==================
+*/
+void Mod_PurgeStudioCache( void )
+{
+	int	i;
+
+	// we should release all the world submodels
+	// and clear studio sequences
+	for( i = 1; i < mod_numknown; i++ )
+	{
+		if( mod_known[i].type == mod_studio )
+			mod_known[i].submodels = NULL;
+		if( mod_known[i].name[0] == '*' )
+			Mod_FreeModel( &mod_known[i] );
+	}
+
+	Mem_EmptyPool( com_studiocache );
+	Mod_ClearStudioCache();
 }
 
 /*
@@ -389,37 +439,32 @@ Mod_LoadWorld
 Loads in the map and all submodels
 ==================
 */
-void Mod_LoadWorld( const char *name, netsrc_t source )
+model_t *Mod_LoadWorld( const char *name, qboolean preload )
 {
-	int	i;
+	model_t	*pworld;
 
-	// invalidate representation table
-	if( source == NS_SERVER || !Host_ServerState())
-		memset( com_models, 0, sizeof( com_models ));
+	// already loaded?
+	if( !Q_stricmp( mod_known->name, name ))
+		return mod_known;
 
-	if( !Q_stricmp( cm_models[0].name, name ))
-	{
-		// map already loaded
-		com_models[1] = cm_models;
-		return;
-	}
+	// free sequence files on studiomodels
+	Mod_PurgeStudioCache();
 
-	// clear all studio submodels on restart
-	for( i = 1; i < cm_nummodels; i++ )
-	{
-		if( cm_models[i].type == mod_studio )
-			cm_models[i].submodels = NULL;
-	}
+	// release previois map
+	Mod_FreeModel( mod_known );	// world is stuck on slot #0 always
 
-	// purge all submodels
-	Mod_FreeModel( &cm_models[0] );	// unload the previois map
-	Mem_EmptyPool( com_studiocache );	// purge studio cache
-	world.load_sequence++;		// now all models are invalid
+	world.load_sequence++;	// now all models are invalid
+	Mod_ClearAll();
 
 	// load the newmap
 	world.loading = true;
-	com_models[1] = Mod_ForName( name, true );
+	pworld = Mod_FindName( name, false );
+	if( preload ) Mod_LoadModel( pworld, true );
 	world.loading = false;
+
+	ASSERT( pworld == mod_known );
+
+	return pworld;
 }
 
 /*
@@ -434,10 +479,11 @@ void Mod_FreeUnused( void )
 	model_t	*mod;
 	int	i;
 
-	for( i = 0, mod = cm_models; i < cm_nummodels; i++, mod++ )
+	Msg( "Mod_FreeUnused()\n" );
+
+	for( i = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
 	{
-		if( !mod->name[0] ) continue;
-		if( mod->needload != world.load_sequence )
+		if( mod->needload == NL_UNREFERENCED )
 			Mod_FreeModel( mod );
 	}
 }
@@ -449,80 +495,6 @@ void Mod_FreeUnused( void )
 
 ===============================================================================
 */
-/*
-===================
-Mod_GetType
-===================
-*/
-modtype_t Mod_GetType( int handle )
-{
-	model_t	*mod = Mod_Handle( handle );
-
-	if( !mod ) return mod_bad;
-	return mod->type;
-}
-
-/*
-===================
-Mod_GetFrames
-===================
-*/
-void Mod_GetFrames( int handle, int *numFrames )
-{
-	model_t	*mod = Mod_Handle( handle );
-
-	if( !numFrames ) return;
-	if( !mod )
-	{
-		*numFrames = 1;
-		return;
-	}
-
-	if( mod->type == mod_brush )
-		*numFrames = 2; // regular and alternate animation
-	else *numFrames = mod->numframes;
-	if( *numFrames < 1 ) *numFrames = 1;
-}
-
-/*
-===================
-Mod_FrameCount
-
-model_t as input
-===================
-*/
-int Mod_FrameCount( model_t *mod )
-{
-	if( !mod ) return 1;
-
-	return mod->numframes;
-}
-
-/*
-===================
-Mod_GetBounds
-===================
-*/
-void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs )
-{
-	model_t	*cmod;
-
-	if( handle <= 0 ) return;
-	cmod = Mod_Handle( handle );
-
-	if( cmod )
-	{
-		if( mins ) VectorCopy( cmod->mins, mins );
-		if( maxs ) VectorCopy( cmod->maxs, maxs );
-	}
-	else
-	{
-		MsgDev( D_ERROR, "Mod_GetBounds: NULL model %i\n", handle );
-		if( mins ) VectorClear( mins );
-		if( maxs ) VectorClear( maxs );
-	}
-}
-
 /*
 ===============
 Mod_Calloc
@@ -559,50 +531,23 @@ Mod_LoadCacheFile
 */
 void Mod_LoadCacheFile( const char *filename, cache_user_t *cu )
 {
+	char	modname[MAX_QPATH];
+	size_t	size;
 	byte	*buf;
-	string	name;
-	size_t	i, j, size;
 
 	Assert( cu != NULL );
 
-	if( !filename || !filename[0] ) return;
+	if( !COM_CheckString( filename ))
+		return;
 
-	// eliminate '!' symbol (i'm doesn't know what this doing)
-	for( i = j = 0; i < Q_strlen( filename ); i++ )
-	{
-		if( filename[i] == '!' ) continue;
-		else if( filename[i] == '\\' ) name[j] = '/';
-		else name[j] = Q_tolower( filename[i] );
-		j++;
-	}
-	name[j] = '\0';
+	Q_strncpy( modname, filename, sizeof( modname ));
+	COM_FixSlashes( modname );
 
-	buf = FS_LoadFile( name, &size, false );
+	buf = FS_LoadFile( modname, &size, false );
 	if( !buf || !size ) Host_Error( "LoadCacheFile: ^1can't load %s^7\n", filename );
 	cu->data = Mem_Alloc( com_studiocache, size );
 	memcpy( cu->data, buf, size );
 	Mem_Free( buf );
-}
-
-/*
-===================
-Mod_RegisterModel
-
-register model with shared index
-===================
-*/
-qboolean Mod_RegisterModel( const char *name, int index )
-{
-	model_t	*mod;
-
-	if( index < 0 || index > MAX_MODELS )
-		return false;
-
-	// this array used for acess to servermodels
-	mod = Mod_ForName( name, false );
-	com_models[index] = mod;
-
-	return ( mod != NULL );
 }
 
 /*
@@ -633,20 +578,6 @@ void *Mod_StudioExtradata( model_t *mod )
 
 /*
 ==================
-Mod_Handle
-
-==================
-*/
-model_t *Mod_Handle( int handle )
-{
-	if( handle < 0 || handle >= MAX_MODELS )
-		return NULL;
-
-	return com_models[handle];
-}
-
-/*
-==================
 Mod_ValidateCRC
 
 ==================
@@ -657,7 +588,7 @@ qboolean Mod_ValidateCRC( const char *name, CRC32_t crc )
 	model_t		*mod;
 
 	mod = Mod_FindName( name, true );
-	p = &cm_modinfo[mod - cm_models];
+	p = &mod_crcinfo[mod - mod_known];
 
 	if( !FBitSet( p->flags, FCRC_CHECKSUM_DONE ))
 		return true;
@@ -678,7 +609,7 @@ void Mod_NeedCRC( const char *name, qboolean needCRC )
 	model_info_t	*p;
 
 	mod = Mod_FindName( name, true );
-	p = &cm_modinfo[mod - cm_models];
+	p = &mod_crcinfo[mod - mod_known];
 
 	if( needCRC ) SetBits( p->flags, FCRC_SHOULD_CHECKSUM );
 	else ClearBits( p->flags, FCRC_SHOULD_CHECKSUM );

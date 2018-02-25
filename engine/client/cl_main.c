@@ -1306,18 +1306,18 @@ void CL_Disconnect( void )
 void CL_Disconnect_f( void )
 {
 	if( Host_IsLocalClient( ))
-		Host_EndGame( "disconnected from server\n" );
+		Host_EndGame( true, "disconnected from server\n" );
 	else CL_Disconnect();
 }
 
 void CL_Crashed( void )
 {
 	// already freed
-	if( host.state == HOST_CRASHED ) return;
+	if( host.status == HOST_CRASHED ) return;
 	if( host.type != HOST_NORMAL ) return;
 	if( !cls.initialized ) return;
 
-	host.state = HOST_CRASHED;
+	host.status = HOST_CRASHED;
 
 	CL_Stop_f(); // stop any demos
 
@@ -1704,31 +1704,26 @@ Call before entering a new level, or after changing dlls
 */
 void CL_PrepVideo( void )
 {
-	string	name, mapname;
-	int	i, mdlcount;
+	int	i;
 
-	if( !cl.model_precache[1][0] )
+	if( !cl.models[WORLD_INDEX] )
 		return; // no map loaded
 
 	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
 	MsgDev( D_NOTE, "CL_PrepVideo: %s\n", clgame.mapname );
 
 	// let the render dll load the map
-	Q_strncpy( mapname, cl.model_precache[1], MAX_STRING ); 
-	Mod_LoadWorld( mapname, NS_CLIENT );
-	cl.worldmodel = Mod_Handle( 1 ); // get world pointer
+	world.loading = true;
+	cl.worldmodel = Mod_LoadModel( cl.models[WORLD_INDEX], true );
+	world.loading = false;
 	Cvar_SetValue( "scr_loading", 25.0f );
 
 	SCR_UpdateScreen();
 
-	for( i = 0, mdlcount = 0; i < MAX_MODELS && cl.model_precache[i+1][0]; i++ )
-		mdlcount++; // total num models
-
-	for( i = 0; i < MAX_MODELS && cl.model_precache[i+1][0]; i++ )
+	for( i = WORLD_INDEX; i < cl.nummodels - 1; i++ )
 	{
-		Q_strncpy( name, cl.model_precache[i+1], MAX_STRING );
-		Mod_RegisterModel( name, i+1 );
-		Cvar_SetValue( "scr_loading", scr_loading->value + 75.0f / mdlcount );
+		Mod_LoadModel( cl.models[i+1], false );
+		Cvar_SetValue( "scr_loading", scr_loading->value + 75.0f / cl.nummodels );
 		if( cl_allow_levelshots->value || host.developer > 3 || cl.background )
 			SCR_UpdateScreen();
 	}
@@ -2185,7 +2180,7 @@ void CL_Precache_f( void )
 	CL_PrepVideo();
 
 	MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
-	MSG_WriteString( &cls.netchan.message, va( "begin %i\n", spawncount ));
+	MSG_WriteString( &cls.netchan.message, va( "spawn %i\n", spawncount ));
 }
 
 qboolean CL_PrecacheResources( void )
@@ -2229,12 +2224,19 @@ qboolean CL_PrecacheResources( void )
 		case t_skin:
 			break;
 		case t_model:
+			if( pResource->nIndex >= cl.nummodels )
+			{
+				cl.nummodels = pResource->nIndex + 1;
+				cl.nummodels = Q_min( cl.nummodels, MAX_MODELS );
+			}
+
 			if( pResource->szFileName[0] != '*' )
 			{
-				Q_strncpy( cl.model_precache[pResource->nIndex], pResource->szFileName, sizeof( cl.model_precache[0] ));
-				Mod_RegisterModel( pResource->szFileName, pResource->nIndex );
+				if( pResource->nIndex == WORLD_INDEX )
+					cl.models[pResource->nIndex] = Mod_LoadWorld( pResource->szFileName, true );
+				else cl.models[pResource->nIndex] = Mod_ForName( pResource->szFileName, false, true );
 
-				if( !Mod_Handle( pResource->nIndex ))
+				if( cl.models[pResource->nIndex] == NULL )
 				{
 					if( pResource->ucFlags != 0 )
 						MsgDev( D_WARN, "model %s not found and not available\n", pResource->szFileName );

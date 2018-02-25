@@ -329,7 +329,7 @@ void CL_ClipPMoveToEntity( physent_t *pe, const vec3_t start, vec3_t mins, vec3_
 
 static void CL_CopyEntityToPhysEnt( physent_t *pe, entity_state_t *state, qboolean visent )
 {
-	model_t	*mod = Mod_Handle( state->modelindex );
+	model_t	*mod = CL_ModelHandle( state->modelindex );
 
 	pe->player = 0;
 
@@ -359,7 +359,7 @@ static void CL_CopyEntityToPhysEnt( physent_t *pe, entity_state_t *state, qboole
 	}
 	else
 	{
-		if( pe->solid != SOLID_BSP && Mod_GetType( state->modelindex ) == mod_studio )
+		if( pe->solid != SOLID_BSP && ( mod != NULL ) && ( mod->type == mod_studio ))
 			pe->studiomodel = mod;
 		else pe->model = mod;
 	}
@@ -432,7 +432,7 @@ void CL_AddLinksToPmove( frame_t *frame )
 		if( !state->modelindex )
 			continue;
 
-		model = Mod_Handle( state->modelindex );
+		model = CL_ModelHandle( state->modelindex );
 		if( !model ) continue;
 
 		if(( state->owner != 0 ) && ( state->owner == cl.playernum + 1 ))

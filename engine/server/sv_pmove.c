@@ -58,7 +58,7 @@ void SV_ClipPMoveToEntity( physent_t *pe, const vec3_t start, vec3_t mins, vec3_
 
 qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 {
-	model_t	*mod = Mod_Handle( ed->v.modelindex );
+	model_t	*mod = SV_ModelHandle( ed->v.modelindex );
 
 	if( !mod ) return false;
 	pe->player = false;
@@ -283,6 +283,7 @@ void SV_AddLaddersToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3
 {
 	link_t	*l, *next;
 	edict_t	*check;
+	model_t	*mod;
 	physent_t	*pe;
 	
 	// get water edicts
@@ -294,8 +295,10 @@ void SV_AddLaddersToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3
 		if( check->v.solid != SOLID_NOT || check->v.skin != CONTENTS_LADDER )
 			continue;
 
+		mod = SV_ModelHandle( check->v.modelindex );
+
 		// only brushes can have special contents
-		if( Mod_GetType( check->v.modelindex ) != mod_brush )
+		if( !mod || mod->type != mod_brush )
 			continue;
 
 		if( !BoundsIntersect( pmove_mins, pmove_maxs, check->v.absmin, check->v.absmax ))

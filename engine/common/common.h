@@ -105,6 +105,7 @@ typedef enum
 
 #include "system.h"
 #include "com_model.h"
+#include "com_strings.h"
 #include "crtlib.h"
 #include "cvar.h"
 
@@ -127,8 +128,6 @@ typedef enum
 #define CIN_MAIN		0
 #define CIN_LOGO		1
 
-#define CUSTOM_RES_PATH	"custom.hpk"
-
 #define MAX_NUM_ARGVS	128
 
 // config strings are a general means of communication from
@@ -150,6 +149,7 @@ typedef enum
 #define GI		SI.GameInfo
 #define FS_Gamedir()	SI.GameInfo->gamedir
 #define FS_Title()		SI.GameInfo->title
+#define GameState		(&host.game)
 
 #ifdef _DEBUG
 void DBG_AssertFunction( qboolean fExpr, const char* szExpr, const char* szFile, int szLine, const char* szMessage );
@@ -162,6 +162,7 @@ extern convar_t	*gl_vsync;
 extern convar_t	*scr_loading;
 extern convar_t	*scr_download;
 extern convar_t	*cmd_scripting;
+extern convar_t	*sv_maxclients;
 extern convar_t	*cl_allow_levelshots;
 extern convar_t	*vid_displayfrequency;
 extern convar_t	*host_limitlocal;
@@ -243,7 +244,27 @@ typedef enum
 	HOST_SLEEP,	// sleeped by different reason, e.g. minimize window
 	HOST_NOFOCUS,	// same as HOST_FRAME, but disable mouse
 	HOST_CRASHED	// an exception handler called
-} host_state;
+} host_status_t;
+
+typedef enum 
+{
+	STATE_RUNFRAME = 0,
+	STATE_LOAD_LEVEL,
+	STATE_LOAD_GAME,
+	STATE_CHANGELEVEL,
+	STATE_GAME_SHUTDOWN,
+} host_state_t;
+
+typedef struct
+{
+	host_state_t	curstate;
+	host_state_t	nextstate;
+	char		levelName[MAX_QPATH];
+	char		landmarkName[MAX_QPATH];
+	qboolean		backgroundMap;
+	qboolean		loadGame;
+	qboolean		newGame;		// unload the server.dll before start a new map
+} game_status_t;
 
 typedef enum
 {
@@ -309,7 +330,8 @@ typedef struct host_parm_s
 	HANDLE			hMutex;
 	LPTOP_LEVEL_EXCEPTION_FILTER	oldFilter;
 
-	host_state	state;		// global host state
+	host_status_t	status;		// global host state
+	game_status_t	game;		// game manager
 	uint		type;		// running at
 	jmp_buf		abortframe;	// abort current frame
 	dword		errorframe;	// to prevent multiple host error
@@ -404,6 +426,7 @@ void COM_NormalizeAngles( vec3_t angles );
 int COM_FileSize( const char *filename );
 void COM_FixSlashes( char *pname );
 void COM_FreeFile( void *buffer );
+int COM_CheckString( const char *string );
 int COM_CompareFileTime( const char *filename1, const char *filename2, int *iCompare );
 search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly );
 file_t *FS_Open( const char *filepath, const char *mode, qboolean gamedironly );
@@ -652,8 +675,7 @@ void Host_SetServerState( int state );
 int Host_ServerState( void );
 int Host_CompareFileTime( long ft1, long ft2 );
 void Host_NewInstance( const char *name, const char *finalmsg );
-qboolean Host_NewGame( const char *mapName, qboolean loadGame );
-void Host_EndGame( const char *message, ... );
+void Host_EndGame( qboolean abort, const char *message, ... );
 void Host_AbortCurrentFrame( void );
 void Host_RestartAmbientSounds( void );
 void Host_RestartDecals( void );
@@ -667,8 +689,19 @@ void Host_ShutdownServer( void );
 void Host_Print( const char *txt );
 void Host_Error( const char *error, ... );
 void Host_PrintEngineFeatures( void );
+void Host_Frame( float time );
 void Host_InitDecals( void );
 void Host_Credits( void );
+
+//
+// host_state.c
+//
+void COM_InitHostState( void );
+void COM_NewGame( char const *pMapName );
+void COM_LoadLevel( char const *pMapName, qboolean background );
+void COM_LoadGame( char const *pSaveFileName );
+void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName );
+void COM_Frame( float time );
 
 /*
 ==============================================================
@@ -840,6 +873,7 @@ int flags, struct modelstate_s *state );
 void Log_Printf( const char *fmt, ... );
 struct sizebuf_s *SV_GetReliableDatagram( void );
 void SV_BroadcastCommand( const char *fmt, ... );
+void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start );
 qboolean SV_RestoreCustomDecal( struct decallist_s *entry, edict_t *pEdict, qboolean adjacent );
 void SV_BroadcastPrintf( struct sv_client_s *ignore, int level, char *fmt, ... );
 int R_CreateDecalList( struct decallist_s *pList, qboolean changelevel );
@@ -850,6 +884,8 @@ qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *posi
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
 void CL_ServerCommand( qboolean reliable, char *fmt, ... );
+void SV_ActivateServer( void );
+void SV_DeactivateServer( void );
 const char *CL_MsgInfo( int cmd );
 void SV_DrawDebugTriangles( void );
 void SV_DrawOrthoTriangles( void );
@@ -868,10 +904,13 @@ qboolean SV_NewGame( const char *mapName, qboolean loadGame );
 void SV_ClipPMoveToEntity( struct physent_s *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, struct pmtrace_s *tr );
 void CL_ClipPMoveToEntity( struct physent_s *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, struct pmtrace_s *tr );
 void CL_Particle( const vec3_t origin, int color, float life, int zpos, int zvel ); // debug thing
+void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, qboolean loadGame );
+qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean background );
 void SV_SysError( const char *error_string );
+qboolean SV_LoadGame( const char *pName );
+void SV_ClearSaveDir( void );
 void SV_InitGameProgs( void );
 void SV_FreeGameProgs( void );
-void SV_ForceError( void );
 void CL_WriteMessageHistory( void );
 void CL_SendCmd( void );
 void CL_Disconnect( void );

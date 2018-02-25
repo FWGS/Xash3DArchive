@@ -92,24 +92,10 @@ void Host_PrintEngineFeatures( void )
 
 /*
 ================
-Host_NewGame
-================
-*/
-qboolean Host_NewGame( const char *mapName, qboolean loadGame )
-{
-	qboolean	iRet;
-
-	iRet = SV_NewGame( mapName, loadGame );
-
-	return iRet;
-}
-
-/*
-================
 Host_EndGame
 ================
 */
-void Host_EndGame( const char *message, ... )
+void Host_EndGame( qboolean abort, const char *message, ... )
 {
 	va_list		argptr;
 	static char	string[MAX_SYSPATH];
@@ -132,9 +118,9 @@ void Host_EndGame( const char *message, ... )
 	CL_ClearEdicts ();
 
 	// release all models
-	Mod_ClearAll( true );
+	Mod_FreeAll();
 
-	Host_AbortCurrentFrame ();
+	if( abort ) Host_AbortCurrentFrame ();
 }
 
 /*
@@ -173,13 +159,13 @@ void Host_CheckSleep( void )
 	}
 	else
 	{
-		if( host.state == HOST_NOFOCUS )
+		if( host.status == HOST_NOFOCUS )
 		{
 			if( Host_ServerState() && CL_IsInGame( ))
 				Sys_Sleep( 1 ); // listenserver
 			else Sys_Sleep( 20 ); // sleep 20 ms otherwise
 		}
-		else if( host.state == HOST_SLEEP )
+		else if( host.status == HOST_SLEEP )
 		{
 			// completely sleep in minimized state
 			Sys_Sleep( 20 );
@@ -687,7 +673,7 @@ void Host_Error( const char *error, ... )
 	}
 
 	// host is shutting down. don't invoke infinite loop
-	if( host.state == HOST_SHUTDOWN ) return;
+	if( host.status == HOST_SHUTDOWN ) return;
 
 	if( recursive )
 	{ 
@@ -711,7 +697,7 @@ void Host_Error( const char *error, ... )
 	CL_ClearEdicts ();
 
 	// release all models
-	Mod_ClearAll( false );
+	Mod_FreeAll();
 
 	recursive = false;
 	Host_AbortCurrentFrame();
@@ -731,12 +717,6 @@ void Sys_Error_f( void )
 
 	if( !*error ) error = "Invoked sys error";
 	Sys_Error( "%s\n", error );
-}
-
-void Net_Error_f( void )
-{
-	Q_strncpy( host.finalmsg, Cmd_Argv( 1 ), sizeof( host.finalmsg ));
-	SV_ForceError();
 }
 
 /*
@@ -777,7 +757,7 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 	host.oldFilter = SetUnhandledExceptionFilter( Sys_Crash );
 	host.hInst = GetModuleHandle( NULL );
 	host.change_game = bChangeGame;
-	host.state = HOST_INIT; // initialzation started
+	host.status = HOST_INIT; // initialzation started
 	host.developer = host.old_developer = 0;
 	host.config_executed = false;
 
@@ -886,6 +866,9 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 	// get default screen res
 	VID_InitDefaultResolution();
 
+	// init host state machine
+	COM_InitHostState();
+
 	// startup cmds and cvars subsystem
 	Cmd_Init();
 	Cvar_Init();
@@ -947,7 +930,6 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 		Cmd_AddCommand ( "sys_error", Sys_Error_f, "just throw a fatal error to test shutdown procedures");
 		Cmd_AddCommand ( "host_error", Host_Error_f, "just throw a host error to test shutdown procedures");
 		Cmd_AddCommand ( "crash", Host_Crash_f, "a way to force a bus error for development reasons");
-		Cmd_AddCommand ( "net_error", Net_Error_f, "send network bad message from random place");
           }
 
 	host_maxfps = Cvar_Get( "fps_max", "72", FCVAR_ARCHIVE, "host fps upper limit" );
@@ -1024,7 +1006,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	while( !host.crashed )
 	{
 		newtime = Sys_DoubleTime ();
-		Host_Frame( newtime - oldtime );
+		COM_Frame( newtime - oldtime );
 		oldtime = newtime;
 	}
 
@@ -1042,7 +1024,7 @@ void EXPORT Host_Shutdown( void )
 	if( host.shutdown_issued ) return;
 	host.shutdown_issued = true;
 
-	if( host.state != HOST_ERR_FATAL ) host.state = HOST_SHUTDOWN; // prepare host to normal shutdown
+	if( host.status != HOST_ERR_FATAL ) host.status = HOST_SHUTDOWN; // prepare host to normal shutdown
 	if( !host.change_game ) Q_strncpy( host.finalmsg, "Server shutdown", sizeof( host.finalmsg ));
 
 	if( host.type == HOST_NORMAL )

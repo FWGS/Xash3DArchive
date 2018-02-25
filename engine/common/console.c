@@ -2083,8 +2083,9 @@ void Con_DrawConsole( void )
 			Key_SetKeyDest( key_console );
 		}
 		break;
-	case ca_connected:
 	case ca_connecting:
+	case ca_connected:
+	case ca_validate:
 		// force to show console always for -dev 3 and higher 
 		if( con.vislines )
 		{
@@ -2174,7 +2175,7 @@ void Con_RunConsole( void )
 	}
 	else con.showlines = 0; // none visible
 
-	if( cls.state == ca_connecting || cls.state == ca_connected || cl.first_frame )
+	if( cls.state == ca_connecting || cls.state == ca_connected || cls.state == ca_validate || cl.first_frame )
 		host.realframetime = 0.000001f; // don't accumulate frametime
 
 	lines_per_frame = fabs( scr_conspeed->value ) * host.realframetime;

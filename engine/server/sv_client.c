@@ -1782,26 +1782,6 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 		else cl->cl_updaterate = 0.0;
 	}
 
-	if( svs.maxclients > 1 )
-	{
-		const char *model = Info_ValueForKey( cl->userinfo, "model" );
-
-		// apply custom playermodel
-		if( Q_strlen( model ) && Q_stricmp( model, "player" ))
-		{
-			const char *path = va( "models/player/%s/%s.mdl", model, model );
-			if( FS_FileExists( path, false ))
-			{
-				Mod_RegisterModel( path, SV_ModelIndex( path )); // register model
-				SV_SetModel( ent, path );
-				cl->modelindex = ent->v.modelindex;
-			}
-			else cl->modelindex = 0;
-		}
-		else cl->modelindex = 0;
-	}
-	else cl->modelindex = 0;
-
 	// call prog code to allow overrides
 	svgame.dllFuncs.pfnClientUserInfoChanged( cl->edict, cl->userinfo );
 
@@ -2248,6 +2228,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	usercmd_t		cmds[CMD_BACKUP];
 	float		packet_loss;
 	edict_t		*player;
+	model_t		*model;
 
 	player = cl->edict;
 
@@ -2349,9 +2330,11 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	// the message probably arrived 1/2 through client's frame loop
 	frame->ping_time -= ( cl->lastcmd.msec * 0.5f ) / 1000.0f;
 	frame->ping_time = Q_max( 0.0f, frame->ping_time );
+	model = SV_ModelHandle( player->v.modelindex );
 
-	if( Mod_GetType( player->v.modelindex ) == mod_studio )
+	if( model && model->type == mod_studio )
 	{
+		// g-cont. yes we using svgame.globals->time instead of sv.time
 		if( player->v.animtime > svgame.globals->time + sv.frametime )
 			player->v.animtime = svgame.globals->time + sv.frametime;
 	}

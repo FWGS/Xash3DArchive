@@ -1460,7 +1460,7 @@ static render_api_t gRenderAPI =
 	pfnFileBufferCRC32,
 	COM_CompareFileTime,
 	Host_Error,
-	Mod_Handle,
+	CL_ModelHandle,
 	pfnTime,
 	Cvar_Set,
 	S_FadeMusicVolume,

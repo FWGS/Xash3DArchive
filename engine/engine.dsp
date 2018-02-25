@@ -151,6 +151,10 @@ SOURCE=.\client\cl_cmds.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\client\cl_custom.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\client\cl_demo.c
 # End Source File
 # Begin Source File
@@ -327,7 +331,7 @@ SOURCE=.\common\host.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\common\host_cmd.c
+SOURCE=.\common\host_state.c
 # End Source File
 # Begin Source File
 

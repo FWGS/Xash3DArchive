@@ -89,7 +89,7 @@ void V_SetupViewModel( void )
 	view->curstate.colormap = (info->topcolor & 0xFFFF)|((info->bottomcolor << 8) & 0xFFFF);
 	view->curstate.number = cl.playernum + 1;
 	view->index = cl.playernum + 1;
-	view->model = Mod_Handle( cl.local.viewmodel );
+	view->model = CL_ModelHandle( cl.local.viewmodel );
 	view->curstate.modelindex = cl.local.viewmodel;
 	view->curstate.sequence = cl.local.weaponsequence;
 	view->curstate.rendermode = kRenderNormal;
@@ -271,10 +271,10 @@ qboolean V_PreRender( void )
 	if( !glw_state.initialized )
 		return false;
 
-	if( host.state == HOST_NOFOCUS )
+	if( host.status == HOST_NOFOCUS )
 		return false;
 
-	if( host.state == HOST_SLEEP )
+	if( host.status == HOST_SLEEP )
 		return false;
 
 	// if the screen is disabled (loading plaque is up)

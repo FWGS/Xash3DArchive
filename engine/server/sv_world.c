@@ -126,7 +126,7 @@ qboolean SV_CheckSphereIntersection( edict_t *ent, const vec3_t start, const vec
 	if( !FBitSet( ent->v.flags, FL_CLIENT|FL_FAKECLIENT ))
 		return true;
 
-	if(( mod = Mod_Handle( ent->v.modelindex )) == NULL )
+	if(( mod = SV_ModelHandle( ent->v.modelindex )) == NULL )
 		return true;
 
 	if(( pstudiohdr = (studiohdr_t *)Mod_StudioExtradata( mod )) == NULL )
@@ -229,7 +229,7 @@ hull_t *SV_HullForBsp( edict_t *ent, const vec3_t mins, const vec3_t maxs, vec3_
 	}
 
 	// decide which clipping hull to use, based on the size
-	model = Mod_Handle( ent->v.modelindex );
+	model = SV_ModelHandle( ent->v.modelindex );
 
 	if( !model || model->type != mod_brush )
 		Host_Error( "Entity %i (%s) SOLID_BSP with a non bsp model %s\n", NUM_FOR_EDICT( ent ), SV_ClassName( ent ), STRING( ent->v.model ));
@@ -329,7 +329,7 @@ hull_t *SV_HullForStudioModel( edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t of
 	vec3_t		size;
 	model_t		*mod;
 
-	if(( mod = Mod_Handle( ent->v.modelindex )) == NULL )
+	if(( mod = SV_ModelHandle( ent->v.modelindex )) == NULL )
 	{
 		*numhitboxes = 1;
 		return SV_HullForEntity( ent, mins, maxs, offset );
@@ -505,6 +505,7 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 	edict_t	*touch;
 	hull_t	*hull;
 	vec3_t	test, offset;
+	model_t	*mod;
 
 	// touch linked edicts
 	for( l = node->trigger_edicts.next; l != &node->trigger_edicts; l = next )
@@ -533,16 +534,16 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 			if( !BoundsIntersect( ent->v.absmin, ent->v.absmax, touch->v.absmin, touch->v.absmax ))
 				continue;
 
-			// check brush triggers accuracy
-			if( Mod_GetType( touch->v.modelindex ) == mod_brush )
-			{
-				model_t *mod = Mod_Handle( touch->v.modelindex );
+			mod = SV_ModelHandle( touch->v.modelindex );
 
+			// check brush triggers accuracy
+			if( mod && mod->type == mod_brush )
+			{
 				// force to select bsp-hull
 				hull = SV_HullForBsp( touch, ent->v.mins, ent->v.maxs, offset );
 
 				// support for rotational triggers
-				if(( mod->flags & MODEL_HAS_ORIGIN ) && !VectorIsNull( touch->v.angles ))
+				if( FBitSet( mod->flags, MODEL_HAS_ORIGIN ) && !VectorIsNull( touch->v.angles ))
 				{
 					matrix4x4	matrix;
 					Matrix4x4_CreateFromEntity( matrix, touch->v.angles, offset, 1.0f );
@@ -561,7 +562,7 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 		}
 
 		// never touch the triggers when "playersonly" is active
-		if( !( sv.hostflags & SVF_PLAYERSONLY ))
+		if( !FBitSet( sv.hostflags, SVF_PLAYERSONLY ))
 		{
 			svgame.globals->time = sv.time;
 			svgame.dllFuncs.pfnTouch( touch, ent );
@@ -724,20 +725,20 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 				continue;
 		}
 
+		mod = SV_ModelHandle( touch->v.modelindex );
+
 		// only brushes can have special contents
-		if( Mod_GetType( touch->v.modelindex ) != mod_brush )
+		if( !mod || mod->type != mod_brush )
 			continue;
 
 		if( !BoundsIntersect( origin, origin, touch->v.absmin, touch->v.absmax ))
 			continue;
 
-		mod = Mod_Handle( touch->v.modelindex );
-
 		// check water brushes accuracy
 		hull = SV_HullForBsp( touch, vec3_origin, vec3_origin, offset );
 
 		// support for rotational water
-		if(( mod->flags & MODEL_HAS_ORIGIN ) && !VectorIsNull( touch->v.angles ))
+		if( FBitSet( mod->flags, MODEL_HAS_ORIGIN ) && !VectorIsNull( touch->v.angles ))
 		{
 			matrix4x4	matrix;
 			Matrix4x4_CreateFromEntity( matrix, touch->v.angles, offset, 1.0f );
@@ -869,7 +870,7 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 	trace->fraction = 1.0f;
 	trace->allsolid = 1;
 
-	model = Mod_Handle( ent->v.modelindex );
+	model = SV_ModelHandle( ent->v.modelindex );
 
 	if( model && model->type == mod_studio )
 	{
@@ -984,6 +985,120 @@ void SV_ClipMoveToEntity( edict_t *ent, const vec3_t start, vec3_t mins, vec3_t 
 
 /*
 ==================
+SV_PortalCSG
+
+a portal is flush with a world surface behind it. this causes problems. namely that we can't pass through the portal plane
+if the bsp behind it prevents out origin from getting through. so if the trace was clipped and ended infront of the portal,
+continue the trace to the edges of the portal cutout instead.
+==================
+*/
+void SV_PortalCSG( edict_t *portal, const vec3_t trace_mins, const vec3_t trace_maxs, const vec3_t start, const vec3_t end, trace_t *trace )
+{
+	vec4_t	planes[6];	//far, near, right, left, up, down
+	int	plane, k;
+	vec3_t	worldpos;
+	float	bestfrac;
+	int	hitplane;
+	model_t	*model;
+	float	portalradius;
+	
+	// only run this code if we impacted on the portal's parent.
+	if( trace->fraction == 1.0f && !trace->startsolid )
+		return;
+
+	// decide which clipping hull to use, based on the size
+	model = SV_ModelHandle( portal->v.modelindex );
+
+	if( !model || model->type != mod_brush )
+		return;
+
+	// make sure we use a sane valid position.
+	if( trace->startsolid ) VectorCopy( start, worldpos );
+	else VectorCopy( trace->endpos, worldpos );
+
+	// determine the csg area. normals should be facing in
+	AngleVectors( portal->v.angles, planes[1], planes[3], planes[5] );
+	VectorNegate(planes[1], planes[0]);
+	VectorNegate(planes[3], planes[2]);
+	VectorNegate(planes[5], planes[4]);
+
+	portalradius = model->radius * 0.5f;
+	planes[0][3] = DotProduct( portal->v.origin, planes[0] ) - (4.0f / 32.0f);
+	planes[1][3] = DotProduct( portal->v.origin, planes[1] ) - (4.0f / 32.0f);	//an epsilon beyond the portal
+	planes[2][3] = DotProduct( portal->v.origin, planes[2] ) - portalradius;
+	planes[3][3] = DotProduct( portal->v.origin, planes[3] ) - portalradius;
+	planes[4][3] = DotProduct( portal->v.origin, planes[4] ) - portalradius;
+	planes[5][3] = DotProduct( portal->v.origin, planes[5] ) - portalradius;
+
+	// if we're actually inside the csg region
+	for( plane = 0; plane < 6; plane++ )
+	{
+		float	d = DotProduct( worldpos, planes[plane] );
+		vec3_t	nearest;
+
+		for( k = 0; k < 3; k++ )
+			nearest[k] = (planes[plane][k]>=0) ? trace_maxs[k] : trace_mins[k];
+
+		// front plane gets further away with side
+		if( !plane )
+		{
+			planes[plane][3] -= DotProduct( nearest, planes[plane] );
+		}	
+		else if( plane > 1 )
+		{
+			// side planes get nearer with size
+			planes[plane][3] += 24; // DotProduct( nearest, planes[plane] );
+		}
+
+		if( d - planes[plane][3] >= 0 )
+			continue;	// endpos is inside
+		else return; // end is already outside
+	}
+
+	// yup, we're inside, the trace shouldn't end where it actually did
+	bestfrac = 1;
+	hitplane = -1;
+
+	for( plane = 0; plane < 6; plane++ )
+	{
+		float	ds = DotProduct( start, planes[plane] ) - planes[plane][3];
+		float	de = DotProduct( end, planes[plane] ) - planes[plane][3];
+		float	frac;
+
+		if( ds >= 0 && de < 0 )
+		{
+			frac = (ds) / (ds - de);
+			if( frac < bestfrac )
+			{
+				if( frac < 0 )
+					frac = 0;
+				bestfrac = frac;
+				hitplane = plane;
+			}
+		}
+	}
+
+	trace->startsolid = trace->allsolid = false;
+
+	// if we cross the front of the portal, don't shorten the trace,
+	// that will artificially clip us
+	if( hitplane == 0 && trace->fraction > bestfrac )
+		return;
+
+	// okay, elongate to clip to the portal hole properly.
+	VectorLerp( start, bestfrac, end, trace->endpos );
+	trace->fraction = bestfrac;
+
+	if( hitplane >= 0 )
+	{
+		VectorCopy( planes[hitplane], trace->plane.normal );
+		trace->plane.dist = planes[hitplane][3];
+		if( hitplane == 1 ) trace->ent = portal;
+	}
+}
+
+/*
+==================
 SV_CustomClipMoveToEntity
 
 A part of physics engine implementation
@@ -1019,6 +1134,7 @@ generic clip function
 static qboolean SV_ClipToEntity( edict_t *touch, moveclip_t *clip )
 {
 	trace_t	trace;
+	model_t	*mod;
 
 	if( touch->v.groupinfo != 0 && SV_IsValidEdict( clip->passedict ) && clip->passedict->v.groupinfo != 0 )
 	{
@@ -1057,7 +1173,9 @@ static qboolean SV_ClipToEntity( edict_t *touch, moveclip_t *clip )
 			return true;
 	}
 
-	if( Mod_GetType( touch->v.modelindex ) == mod_brush && clip->flags & FMOVE_IGNORE_GLASS )
+	mod = SV_ModelHandle( touch->v.modelindex );
+
+	if( mod && mod->type == mod_brush && FBitSet( clip->flags, FMOVE_IGNORE_GLASS ))
 	{
 		// we ignore brushes with rendermode != kRenderNormal and without FL_WORLDBRUSH set
 		if( touch->v.rendermode != kRenderNormal && !FBitSet( touch->v.flags, FL_WORLDBRUSH ))
@@ -1098,7 +1216,7 @@ static qboolean SV_ClipToEntity( edict_t *touch, moveclip_t *clip )
 
 	// make sure we don't hit the world if we're inside the portal
 	if( touch->v.solid == SOLID_PORTAL )
-		World_PortalCSG( touch, clip->mins, clip->maxs, clip->start, clip->end, &clip->trace );
+		SV_PortalCSG( touch, clip->mins, clip->maxs, clip->start, clip->end, &clip->trace );
 
 	if( touch->v.solid == SOLID_CUSTOM )
 		SV_CustomClipMoveToEntity( touch, clip->start, clip->mins, clip->maxs, clip->end, &trace );
@@ -1335,7 +1453,7 @@ msurface_t *SV_TraceSurface( edict_t *ent, const vec3_t start, const vec3_t end 
 	vec3_t		start_l, end_l;
 	vec3_t		offset;
 
-	bmodel = Mod_Handle( ent->v.modelindex );
+	bmodel = SV_ModelHandle( ent->v.modelindex );
 	if( !bmodel || bmodel->type != mod_brush )
 		return NULL;
 

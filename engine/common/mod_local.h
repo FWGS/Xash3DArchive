@@ -53,6 +53,8 @@ GNU General Public License for more details.
 #define FATPVS_RADIUS		8.0f	// FatPVS use radius smaller than the FatPHS
 #define FATPHS_RADIUS		16.0f
 
+#define WORLD_INDEX			(1)	// world index is always 1
+
 // model flags (stored in model_t->flags)
 #define MODEL_CONVEYOR		BIT( 0 )
 #define MODEL_HAS_ORIGIN		BIT( 1 )
@@ -89,10 +91,9 @@ typedef struct
 } model_info_t;
 
 // values for model_t's needload
-#define NL_PRESENT		0
+#define NL_UNREFERENCED	0		// this model can be freed after sequence precaching is done
 #define NL_NEEDS_LOADED	1
-#define NL_UNREFERENCED	2		// this model can be freed after sequence precaching is done
-#define NL_CLIENT		3		// client-side models are static
+#define NL_PRESENT		2
 
 typedef struct
 {
@@ -131,27 +132,23 @@ extern convar_t		*r_wadtextures;
 // model.c
 //
 void Mod_Init( void );
-void Mod_ClearAll( qboolean keep_playermodel );
+void Mod_FreeAll( void );
 void Mod_Shutdown( void );
 void Mod_ClearUserData( void );
-void Mod_GetBounds( int handle, vec3_t mins, vec3_t maxs );
-void Mod_GetFrames( int handle, int *numFrames );
-void Mod_LoadWorld( const char *name, netsrc_t type );
-int Mod_FrameCount( model_t *mod );
+model_t *Mod_LoadWorld( const char *name, qboolean preload );
 void *Mod_Calloc( int number, size_t size );
 void *Mod_CacheCheck( struct cache_user_s *c );
 void Mod_LoadCacheFile( const char *path, struct cache_user_s *cu );
 void *Mod_AliasExtradata( model_t *mod );
 void *Mod_StudioExtradata( model_t *mod );
-model_t *Mod_FindName( const char *name, qboolean create );
-model_t *Mod_LoadModel( model_t *mod, qboolean world );
-model_t *Mod_ForName( const char *name, qboolean world );
-qboolean Mod_RegisterModel( const char *name, int index );
+model_t *Mod_FindName( const char *name, qboolean trackCRC );
+model_t *Mod_LoadModel( model_t *mod, qboolean crash );
+model_t *Mod_ForName( const char *name, qboolean crash, qboolean trackCRC );
 qboolean Mod_ValidateCRC( const char *name, CRC32_t crc );
 void Mod_NeedCRC( const char *name, qboolean needCRC );
-modtype_t Mod_GetType( int handle );
-model_t *Mod_Handle( int handle );
+void Mod_PurgeStudioCache( void );
 void Mod_FreeUnused( void );
+void Mod_ClearAll( void );
 
 //
 // mod_bmodel.c
@@ -187,5 +184,6 @@ void R_StudioCalcBonePosition( int frame, float s, void *pbone, void *panim, vec
 void *R_StudioGetAnim( void *m_pStudioHeader, void *m_pSubModel, void *pseqdesc );
 void Mod_StudioComputeBounds( void *buffer, vec3_t mins, vec3_t maxs, qboolean ignore_sequences );
 int Mod_HitgroupForStudioHull( int index );
+void Mod_ClearStudioCache( void );
 
 #endif//MOD_LOCAL_H

@@ -422,7 +422,7 @@ qboolean Sys_FreeLibrary( dll_info_t *dll )
 	if( !dll || !dll->link )
 		return false;
 
-	if( host.state == HOST_CRASHED )
+	if( host.status == HOST_CRASHED )
 	{
 		// we need to hold down all modules, while MSVC can find error
 		MsgDev( D_NOTE, "Sys_FreeLibrary: hold %s for debugging\n", dll->name );
@@ -466,7 +466,7 @@ void Sys_WaitForQuit( void )
 long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo )
 {
 	// save config
-	if( host.state != HOST_CRASHED )
+	if( host.status != HOST_CRASHED )
 	{
 		// check to avoid recursive call
 		error_on_exit = true;
@@ -474,20 +474,17 @@ long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo )
 
 		if( host.type == HOST_NORMAL )
 			CL_Crashed(); // tell client about crash
-		else host.state = HOST_CRASHED;
+		else host.status = HOST_CRASHED;
 
-		Msg( "Sys_Crash: call %p at address %p\n", pInfo->ExceptionRecord->ExceptionAddress, pInfo->ExceptionRecord->ExceptionCode );
-
-		if( host.developer <= 0 )
-		{
-			// no reason to call debugger in release build - just exit
-			Sys_Quit();
-			return EXCEPTION_CONTINUE_EXECUTION;
-		}
-
+		Msg( "unhandled exception: %p at address %p\n", pInfo->ExceptionRecord->ExceptionAddress, pInfo->ExceptionRecord->ExceptionCode );
+#ifdef NDEBUG
+		// no reason to call debugger in release build - just exit
+		Sys_Quit();
+		return EXCEPTION_CONTINUE_EXECUTION;
+#endif
 		// all other states keep unchanged to let debugger find bug
 		Con_DestroyConsole();
-          }
+	}
 
 	if( host.oldFilter )
 		return host.oldFilter( pInfo );
@@ -507,14 +504,14 @@ void Sys_Error( const char *error, ... )
 	va_list	argptr;
 	char	text[MAX_SYSPATH];
          
-	if( host.state == HOST_ERR_FATAL )
+	if( host.status == HOST_ERR_FATAL )
 		return; // don't multiple executes
 
 	// make sure what console received last message
 	if( host.change_game ) Sys_Sleep( 200 );
 
 	error_on_exit = true;
-	host.state = HOST_ERR_FATAL;	
+	host.status = HOST_ERR_FATAL;	
 	va_start( argptr, error );
 	Q_vsprintf( text, error, argptr );
 	va_end( argptr );

@@ -267,10 +267,11 @@ typedef struct
 	entity_state_t	instanced_baseline[MAX_CUSTOM_BASELINES];
 	int		instanced_baseline_count;
 
-	char		model_precache[MAX_MODELS][MAX_QPATH];
 	char		sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char		event_precache[MAX_EVENTS][MAX_QPATH];
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
+	model_t		*models[MAX_MODELS+1];		// precached models (plus one slot for menu preview)
+	int		nummodels;
 
 	consistency_t	consistency_list[MAX_MODELS];
 	int		num_consistency;
@@ -807,10 +808,12 @@ void CL_TextMessageParse( byte *pMemFile, int fileSize );
 client_textmessage_t *CL_TextMessageGet( const char *pName );
 int pfnDecalIndexFromName( const char *szDecalName );
 int pfnIndexFromTrace( struct pmtrace_s *pTrace );
+model_t *CL_ModelHandle( int modelindex );
 void NetAPI_CancelAllRequests( void );
 int CL_FindModelIndex( const char *m );
 cl_entity_t *CL_GetLocalPlayer( void );
 model_t *CL_LoadClientSprite( const char *filename );
+model_t *CL_LoadModel( const char *modelname, int *index );
 HSPRITE pfnSPR_Load( const char *szPicName );
 HSPRITE pfnSPR_LoadExt( const char *szPicName, uint texFlags );
 void PicAdjustSize( float *x, float *y, float *w, float *h );

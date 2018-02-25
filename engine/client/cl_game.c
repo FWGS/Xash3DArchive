@@ -115,6 +115,20 @@ cl_entity_t *CL_GetEntityByIndex( int index )
 }
 
 /*
+================
+CL_ModelHandle
+
+get model handle by index
+================
+*/
+model_t *CL_ModelHandle( int modelindex )
+{
+	if( modelindex < 0 || modelindex >= MAX_MODELS )
+		return NULL;
+	return cl.models[modelindex];
+}
+
+/*
 ====================
 CL_IsThirdPerson
 
@@ -2217,9 +2231,12 @@ int CL_FindModelIndex( const char *m )
 	if( !m || !m[0] )
 		return 0;
 
-	for( i = 1; i < MAX_MODELS && cl.model_precache[i][0]; i++ )
+	for( i = 1; i < cl.nummodels; i++ )
 	{
-		if( !Q_stricmp( cl.model_precache[i], m ))
+		if( !cl.models[i] )
+			continue;
+
+		if( !Q_stricmp( cl.models[i]->name, m ))
 			return i;
 	}
 
@@ -2431,13 +2448,16 @@ CL_LoadModel
 */
 model_t *CL_LoadModel( const char *modelname, int *index )
 {
-	int	idx;
+	int	i;
 
-	idx = CL_FindModelIndex( modelname );
-	if( !idx ) return NULL;
-	if( index ) *index = idx;
-	
-	return Mod_Handle( idx );
+	if( index ) *index = -1;
+
+	if(( i = CL_FindModelIndex( modelname )) == 0 )
+		return NULL;
+
+	if( index ) *index = i;
+
+	return CL_ModelHandle( i );
 }
 
 int CL_AddEntity( int entityType, cl_entity_t *pEnt )

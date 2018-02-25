@@ -1914,10 +1914,10 @@ SV_ChangeLevel
 */
 void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start )
 {
-	string		level;
-	string		oldlevel;
-	string		_startspot;
-	char		*startspot;
+	char		level[MAX_QPATH];
+	char		oldlevel[MAX_QPATH];
+	char		_startspot[MAX_QPATH];
+	char		*startspot = NULL;
 	SAVERESTOREDATA	*pSaveData = NULL;
 	
 	if( sv.state != ss_active )
@@ -1926,22 +1926,15 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 		return;
 	}
 
-	if( !start )
-	{
-		startspot = NULL;
-	}
-	else
+	if( start )
 	{
 		Q_strncpy( _startspot, start, MAX_STRING );
 		startspot = _startspot;
 	}
 
-	// init network stuff
 	Q_strncpy( level, mapname, MAX_STRING );
 	Q_strncpy( oldlevel, sv.name, MAX_STRING );
-	sv.background = false;
-	sv.changelevel = true;	// NOTE: this is used to indicate changelevel for classic Quake changelevel
-				// because demos wan't properly update clock on a new level while recording
+	sv.changelevel = true;
 
 	if( loadfromsavedgame )
 	{
@@ -1956,8 +1949,8 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 	SV_InactivateClients ();
 	SV_DeactivateServer ();
 
-	if( !SV_SpawnServer( level, startspot ))
-		return;
+	if( !SV_SpawnServer( level, startspot, false ))
+		return;	// ???
 
 	if( loadfromsavedgame )
 	{
@@ -2119,36 +2112,26 @@ int SV_SaveReadHeader( file_t *pFile, GAME_HEADER *pHeader )
 
 qboolean SV_LoadGame( const char *pPath )
 {
-	file_t		*pFile;
 	qboolean		validload = false;
 	GAME_HEADER	gameHeader;
+	file_t		*pFile;
 	int		flags;
-	string		name;
 
 	if( host.type == HOST_DEDICATED )
 		return false;
 
-	if( !pPath || !pPath[0] )
+	if( !COM_CheckString( pPath ))
 		return false;
-
-	FS_FileBase( pPath, name );
 
 	// silently ignore if missed
 	if( !FS_FileExists( pPath, true ))
 		return false;
 
-	if( sv.background || svs.maxclients > 1 )
-		SV_Shutdown( true );
-	sv.background = false;
-
-	SCR_BeginLoadingPlaque ( false );
-	S_StopBackgroundTrack();
-
-	MsgDev( D_INFO, "Loading game from %s...\n", pPath );
 	SV_ClearSaveDir();
+	SV_InitGameProgs();
 
-	if( !svs.initialized ) SV_InitGame ();
-	if( !svs.initialized ) return false;
+	if( !svgame.hInstance )
+		return false;
 
 	pFile = FS_Open( pPath, "rb", true );
 
@@ -2176,20 +2159,20 @@ qboolean SV_LoadGame( const char *pPath )
 			validload = false;
 		}
 	}
-	else MsgDev( D_ERROR, "File not found or failed to open.\n" );
 
 	if( !validload )
 	{
-		Q_snprintf( host.finalmsg, MAX_STRING, "Couldn't load %s.sav\n", name );
-		SV_Shutdown( false );
+		MsgDev( D_ERROR, "Couldn't load %s\n", pPath );
 		return false;
 	}
 
+	MsgDev( D_INFO, "Loading game from %s...\n", pPath );
 	Cvar_FullSet( "maxplayers", "1", FCVAR_LATCH );
 	Cvar_SetValue( "deathmatch", 0 );
 	Cvar_SetValue( "coop", 0 );
+	COM_LoadGame( gameHeader.mapName );
 
-	return Host_NewGame( gameHeader.mapName, true );
+	return true;
 }
 
 /*
@@ -2201,7 +2184,9 @@ void SV_SaveGetName( int lastnum, char *filename )
 {
 	int	a, b, c;
 
-	if( !filename ) return;
+	if( !COM_CheckString( filename ))
+		return;
+
 	if( lastnum < 0 || lastnum > 999 )
 	{
 		// bound
@@ -2223,7 +2208,7 @@ void SV_SaveGame( const char *pName )
 	string	savename;
 	int	n;
 
-	if( !pName || !*pName )
+	if( !COM_CheckString( pName ))
 		return;
 
 	// can we save at this point?
@@ -2233,7 +2218,7 @@ void SV_SaveGame( const char *pName )
 	if( !Q_stricmp( pName, "new" ))
 	{
 		// scan for a free filename
-		for( n = 0; n < 999; n++ )
+		for( n = 0; n < 1000; n++ )
 		{
 			SV_SaveGetName( n, savename );
 
@@ -2243,17 +2228,16 @@ void SV_SaveGame( const char *pName )
 
 		if( n == 1000 )
 		{
-			Msg( "^3ERROR: no free slots for savegame\n" );
+			Msg( "^3ERROR^7: no free slots for savegame\n" );
 			return;
 		}
 	}
 	else Q_strncpy( savename, pName, sizeof( savename ));
 
-	// HACKHACK: unload previous image from memory
+	// unload previous image from memory (it's will be overwritten)
 	GL_FreeImage( va( "save/%s.bmp", savename ));
 
 	comment[0] = '\0';
-
 	SV_BuildSaveComment( comment, sizeof( comment ));
 	SV_SaveGameSlot( savename, comment );
 
@@ -2282,9 +2266,9 @@ used for reload game after player death
 const char *SV_GetLatestSave( void )
 {
 	search_t	*f = FS_Search( "save/*.sav", true, true );	// lookup only in gamedir
-	int	i, found = 0;
+	char	savename[MAX_QPATH];
 	long	newest = 0, ft;
-	string	savename;	
+	int	i, found = 0;
 
 	if( !f ) return NULL;
 
@@ -2295,7 +2279,7 @@ const char *SV_GetLatestSave( void )
 		// found a match?
 		if( ft > 0 )
 		{
-			// should we use the matche?
+			// should we use the matched?
 			if( !found || Host_CompareFileTime( newest, ft ) < 0 )
 			{
 				newest = ft;

@@ -2058,9 +2058,9 @@ void GL_RebuildLightmaps( void )
 
 	LM_InitBlock();	
 
-	for( i = 1; i < MAX_MODELS; i++ )
+	for( i = 1; i < cl.nummodels; i++ )
 	{
-		if(( m = Mod_Handle( i )) == NULL )
+		if(( m = CL_ModelHandle( i )) == NULL )
 			continue;
 
 		if( m->name[0] == '*' || m->type != mod_brush )
@@ -2121,9 +2121,9 @@ void GL_BuildLightmaps( void )
 
 	LM_InitBlock();	
 
-	for( i = 1; i < MAX_MODELS; i++ )
+	for( i = 1; i < cl.nummodels; i++ )
 	{
-		if(( m = Mod_Handle( i )) == NULL )
+		if(( m = CL_ModelHandle( i )) == NULL )
 			continue;
 
 		if( m->name[0] == '*' || m->type != mod_brush )

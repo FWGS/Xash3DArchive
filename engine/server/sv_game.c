@@ -105,7 +105,7 @@ void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max, qboolean 
 		if( min[i] > max[i] )
 		{
 			MsgDev( D_ERROR, "SV_SetMinMaxSize: %s backwards mins/maxs\n", SV_ClassName( e ));
-			SV_LinkEdict( e, false ); // just relink edict and exit
+			if( relink ) SV_LinkEdict( e, false ); // just relink edict and exit
 			return;
 		}
 	}
@@ -137,27 +137,29 @@ void SV_CopyTraceToGlobal( trace_t *trace )
 
 void SV_SetModel( edict_t *ent, const char *name )
 {
-	vec3_t	mins = { 0.0f, 0.0f, 0.0f };
-	vec3_t	maxs = { 0.0f, 0.0f, 0.0f };
+	model_t	*mod;
 	int	i;
 
-	i = SV_ModelIndex( name );
-	if( i == 0 ) return;
+	// check to see if model was properly precached
+	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
+	{
+		if( !Q_stricmp( sv.model_precache[i], name ))
+			break;
+	}
+
+	if( i == MAX_MODELS )
+	{
+		MsgDev( D_ERROR, "SetModel: %s not precached\n", name );
+		return;
+	}
 
 	ent->v.model = MAKE_STRING( sv.model_precache[i] );
 	ent->v.modelindex = i;
+	mod = sv.models[i];
 
-	// studio models will be ignored here
-	switch( Mod_GetType( ent->v.modelindex ))
-	{
-	case mod_alias:
-	case mod_brush:
-	case mod_sprite:
-		Mod_GetBounds( ent->v.modelindex, mins, maxs );
-		break;
-	}
-
-	SV_SetMinMaxSize( ent, mins, maxs, true );
+	// set the model size
+	if( mod ) SV_SetMinMaxSize( ent, mod->mins, mod->maxs, true );
+	else SV_SetMinMaxSize( ent, vec3_origin, vec3_origin, true );
 }
 
 float SV_AngleMod( float ideal, float current, float speed )
@@ -1022,7 +1024,7 @@ pfnPrecacheModel
 int pfnPrecacheModel( const char *s )
 {
 	qboolean	optional = false;
-	int	modelIndex;
+	int	i;
 
 	if( *s == '!' )
 	{
@@ -1030,13 +1032,13 @@ int pfnPrecacheModel( const char *s )
 		*s++;
 	}
 
-	modelIndex = SV_ModelIndex( s );
-	Mod_RegisterModel( s, modelIndex );
+	i = SV_ModelIndex( s );
+	sv.models[i] = Mod_ForName( s, false, true );
 
 	if( !optional )
-		SetBits( sv.model_precache_flags[modelIndex], RES_FATALIFMISSING );
+		SetBits( sv.model_precache_flags[i], RES_FATALIFMISSING );
 
-	return modelIndex;
+	return i;
 }
 
 /*
@@ -1100,11 +1102,11 @@ pfnModelFrames
 */
 int pfnModelFrames( int modelIndex )
 {
-	int	numFrames = 0;
+	model_t	*pmodel = SV_ModelHandle( modelIndex );
 
-	Mod_GetFrames( modelIndex, &numFrames );
-
-	return numFrames;
+	if( pmodel != NULL )
+		return pmodel->numframes;
+	return 1;
 }
 
 /*
@@ -1473,7 +1475,7 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 	if( !SV_ClientFromEdict( pClient, true ))
 		return svgame.edicts;
 
-	mod = Mod_Handle( pEdict->v.modelindex );
+	mod = SV_ModelHandle( pEdict->v.modelindex );
 
 	// portals & monitors
 	// NOTE: this specific break "radiaton tick" in normal half-life. use only as feature
@@ -2122,6 +2124,7 @@ pfnTraceModel
 static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edict_t *pent, TraceResult *ptr )
 {
 	float	*mins, *maxs;
+	model_t	*model;
 	trace_t	trace;
 
 	if( !ptr ) return;
@@ -2137,6 +2140,7 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 
 	mins = sv.worldmodel->hulls[hullNumber].clip_mins;
 	maxs = sv.worldmodel->hulls[hullNumber].clip_maxs;
+	model = SV_ModelHandle( pent->v.modelindex );
 
 	if( pent->v.solid == SOLID_CUSTOM )
 	{
@@ -2144,7 +2148,7 @@ static void pfnTraceModel( const float *v1, const float *v2, int hullNumber, edi
 		// even if our callbacks is not initialized
 		SV_CustomClipMoveToEntity( pent, v1, mins, maxs, v2, &trace );
 	}
-	else if( Mod_GetType( pent->v.modelindex ) == mod_brush )
+	else if( model && model->type == mod_brush )
 	{
 		int oldmovetype = pent->v.movetype;
 		int oldsolid = pent->v.solid;
@@ -3080,7 +3084,7 @@ static void *pfnGetModelPtr( edict_t *pEdict )
 	if( !SV_IsValidEdict( pEdict ))
 		return NULL;
 
-	mod = Mod_Handle( pEdict->v.modelindex );
+	mod = SV_ModelHandle( pEdict->v.modelindex );
 	return Mod_StudioExtradata( mod );
 }
 
@@ -4786,6 +4790,7 @@ void SV_UnloadProgs( void )
 {
 	SV_DeactivateServer ();
 	Delta_Shutdown ();
+	Mod_ClearUserData ();
 
 	Mem_FreePool( &svgame.stringspool );
 
