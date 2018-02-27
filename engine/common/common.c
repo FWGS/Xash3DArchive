@@ -344,16 +344,10 @@ COM_AddAppDirectoryToSearchPath
 */
 void COM_AddAppDirectoryToSearchPath( const char *pszBaseDir, const char *appName )
 {
-	string	dir;
-
-	if( !pszBaseDir || !appName )
-	{
-		MsgDev( D_ERROR, "COM_AddDirectorySearchPath: bad directory or appname\n" );
+	if( !COM_CheckString( pszBaseDir ))
 		return;
-	}
 
-	Q_snprintf( dir, sizeof( dir ), "%s/%s", pszBaseDir, appName );
-	FS_AddGameDirectory( dir, FS_GAMEDIR_PATH );
+	FS_AddGameDirectory( pszBaseDir, FS_GAMEDIR_PATH );
 }
 
 /*

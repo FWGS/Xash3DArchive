@@ -477,12 +477,11 @@ void SV_FreeOldEntities( void )
 	int	i;
 
 	// at end of frame kill all entities which supposed to it 
-	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
+	for( i = svs.maxclients + 1; i < svgame.numEntities; i++ )
 	{
 		ent = EDICT_NUM( i );
-		if( ent->free ) continue;
 
-		if( ent->v.flags & FL_KILLME )
+		if( !ent->free && FBitSet( ent->v.flags, FL_KILLME ))
 			SV_FreeEdict( ent );
 	}
 
@@ -497,38 +496,47 @@ SV_ActivateServer
 activate server on changed map, run physics
 ================
 */
-void SV_ActivateServer( void )
+void SV_ActivateServer( int runPhysics )
 {
-	int	i, numFrames;
+	int		i, numFrames;
+	byte		msg_buf[MAX_INIT_MSG];
+	sizebuf_t		msg;
+	sv_client_t	*cl;
 
 	if( !svs.initialized )
 		return;
 
-	// Activate the DLL server code
-	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svgame.globals->maxClients );
+	MSG_Init( &msg, "NewServer", msg_buf, sizeof( msg_buf ));
 
-	if( sv.loadgame || svgame.globals->changelevel )
-	{
-		sv.frametime = bound( 0.001, sv_changetime.value, 0.1 );
-		numFrames = 1;
-	}
-	else if( svs.maxclients <= 1 )
+	// always clearing newunit variable
+	Cvar_SetValue( "sv_newunit", 0 );
+
+	// relese all intermediate entities
+	SV_FreeOldEntities ();
+
+	// Activate the DLL server code
+	svgame.globals->time = sv.time;
+	svgame.dllFuncs.pfnServerActivate( svgame.edicts, svgame.numEntities, svs.maxclients );
+
+	// parse user-specified resources
+	SV_CreateGenericResources();
+
+	sv.state = ss_active;
+
+	if( runPhysics )
 	{
 		sv.frametime = bound( 0.1, sv_spawntime.value, 0.8 );
-		numFrames = 2;
+		numFrames = (svs.maxclients <= 1) ? 2 : 8;
 	}
 	else
 	{
-		sv.frametime = 0.1f;
-		numFrames = 8;
+		sv.frametime = bound( 0.001, sv_changetime.value, 0.1 );
+		numFrames = 0;
 	}
 
 	// run some frames to allow everything to settle
 	for( i = 0; i < numFrames; i++ )
 		SV_Physics();
-
-	// parse user-specified resources
-	SV_CreateGenericResources();
 
 	// create a baseline for more efficient communications
 	SV_CreateBaseline();
@@ -540,18 +548,26 @@ void SV_ActivateServer( void )
 	sv.num_consistency = SV_TransferConsistencyInfo();
 
 	// send serverinfo to all connected clients
-	for( i = 0; i < svs.maxclients; i++ )
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
-		if( svs.clients[i].state >= cs_connected )
-		{
-			Netchan_Clear( &svs.clients[i].netchan );
-			svs.clients[i].delta_sequence = -1;
-		}
+		if( cl->state < cs_connected )
+			continue;
+
+		Netchan_Clear( &cl->netchan );
+		cl->delta_sequence = -1;
+
+		if( svs.maxclients <= 1 )
+			SV_SendServerdata( &msg, cl );
+		else SV_BuildReconnect( &cl->netchan.message );
+
+		Netchan_CreateFragments( &cl->netchan, &msg );
+		Netchan_FragSend( &cl->netchan );
+		MSG_Clear( &msg );
 	}
 
 	// invoke to refresh all movevars
 	memset( &svgame.oldmovevars, 0, sizeof( movevars_t ));
-	svgame.globals->changelevel = false; // changelevel ends here
+	svgame.globals->changelevel = false;
 
 	// setup hostflags
 	sv.hostflags = 0;
@@ -559,9 +575,9 @@ void SV_ActivateServer( void )
 	HPAK_FlushHostQueue();
 
 	// tell what kind of server has been started.
-	if( svgame.globals->maxClients > 1 )
+	if( svs.maxclients > 1 )
 	{
-		MsgDev( D_INFO, "%i player server started\n", svgame.globals->maxClients );
+		MsgDev( D_INFO, "%i player server started\n", svs.maxclients );
 	}
 	else
 	{
@@ -574,11 +590,7 @@ void SV_ActivateServer( void )
 	if( host.type == HOST_DEDICATED )
 		Mod_FreeUnused ();
 
-	sv.state = ss_active;
 	host.movevars_changed = true;
-	sv.changelevel = false;
-	sv.paused = false;
-
 	Host_SetServerState( sv.state );
 
 	MsgDev( D_INFO, "level loaded at %.2f sec\n", Sys_DoubleTime() - svs.timestart );
@@ -629,63 +641,10 @@ void SV_DeactivateServer( void )
 
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = svs.maxclients;
-	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
+	svgame.numEntities = svs.maxclients + 1; // clients + world
 	svgame.globals->startspot = 0;
 	svgame.globals->mapname = 0;
-
-	// clear states
-	sv.changelevel = false;
-	sv.background = false;
-	sv.loadgame = false;
 	sv.state = ss_dead;
-}
-
-/*
-================
-SV_LevelInit
-
-Spawn all entities
-================
-*/
-void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, qboolean loadGame )
-{
-	if( !svs.initialized )
-		return;
-
-	if( loadGame )
-	{
-		if( !SV_LoadGameState( pMapName, 1 ))
-		{
-			SV_SpawnEntities( pMapName, SV_EntityScript( ));
-		}
-
-		if( pOldLevel )
-		{
-			SV_LoadAdjacentEnts( pOldLevel, pLandmarkName );
-		}
-
-		if( sv_newunit.value )
-		{
-			SV_ClearSaveDir();
-		}
-	}
-	else
-	{
-		svgame.dllFuncs.pfnResetGlobalState();
-		SV_SpawnEntities( pMapName, SV_EntityScript( ));
-		svgame.globals->frametime = 0.0f;
-
-		if( sv_newunit.value )
-		{
-			SV_ClearSaveDir();
-		}
-	}
-
-	// always clearing newunit variable
-	Cvar_SetValue( "sv_newunit", 0 );
-
-	// relese all intermediate entities
-	SV_FreeOldEntities ();
 }
 
 /*
@@ -695,34 +654,100 @@ SV_InitGame
 A brand new game has been started
 ==============
 */
-void SV_InitGame( void )
+qboolean SV_InitGame( void )
 {
-	edict_t	*ent;
-	int	i, load = sv.loadgame;
-	
 	if( svs.initialized )
+		return true; // already initialized ?
+
+	// first initialize?
+	if( !SV_LoadProgs( GI->game_dll ))
 	{
-		// cause any connected clients to reconnect
-		Q_strncpy( host.finalmsg, "Server restarted", MAX_STRING );
-		SV_Shutdown( true );
+		MsgDev( D_ERROR, "SV_InitGame: can't initialize %s\n", GI->game_dll );
+		return false; // failed to loading server.dll
+	}
+
+	// alloc baseline slots
+	svs.baselines = Z_Malloc( sizeof( entity_state_t ) * GI->max_edicts );
+	// client frames will be allocated in SV_ClientConnect
+	svs.initialized = true;
+
+	return true;
+}
+
+/*
+==============
+SV_ShutdownGame
+
+prepare to close server
+==============
+*/
+void SV_ShutdownGame( void )
+{
+	if( !GameState->loadGame )
+		SV_ClearGameState();
+
+	S_StopBackgroundTrack();
+
+	if( GameState->newGame )
+	{
+		Host_EndGame( false, DEFAULT_ENDGAME_MESSAGE );
 	}
 	else
 	{
-		// init game after host error
-		if( !svgame.hInstance )
-		{
-			if( !SV_LoadProgs( GI->game_dll ))
-			{
-				MsgDev( D_ERROR, "SV_InitGame: can't initialize %s\n", GI->game_dll );
-				return; // can't loading
-			}
-		}
+		S_StopAllSounds( true );
+		SV_DeactivateServer();
+	}
+}
 
-		// make sure the client is down
-		CL_Drop();
+/*
+================
+SV_AllocClientFrames
+
+allocate delta-compression frames for each client
+================
+*/
+void SV_AllocClientFrames( void )
+{
+	sv_client_t	*cl;
+	int		i;
+
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+	{
+		cl->frames = Z_Realloc( cl->frames, SV_UPDATE_BACKUP * sizeof( client_frame_t ));
+	}
+}
+
+/*
+================
+SV_SetupClients
+
+determine the game type and prepare clients
+================
+*/
+void SV_SetupClients( void )
+{
+	qboolean	changed_maxclients = false;
+
+	// check if clients count was really changed
+	if( svs.maxclients != (int)sv_maxclients->value )
+		changed_maxclients = true;
+	svs.maxclients = sv_maxclients->value;	// copy the actual value from cvar
+
+	if( svs.maxclients == 1 )
+	{
+		if( deathmatch.value )
+		{
+			changed_maxclients = true;
+			svs.maxclients = 8;
+		}
+		else if( coop.value )
+		{
+			changed_maxclients = true;
+			svs.maxclients = 4;
+		}
 	}
 
-	svs.maxclients = sv_maxclients->value;	// copy the actual value from cvar
+	if( !changed_maxclients ) return; // nothing to change
 
 	// dedicated servers are can't be single player and are usually DM
 	if( host.type == HOST_DEDICATED )
@@ -741,13 +766,10 @@ void SV_InitGame( void )
 	SV_UPDATE_BACKUP = ( svs.maxclients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
 	svgame.globals->maxClients = svs.maxclients;
 
-	svs.clients = Z_Malloc( sizeof( sv_client_t ) * svs.maxclients );
+	svs.clients = Z_Realloc( svs.clients, sizeof( sv_client_t ) * svs.maxclients );
 	svs.num_client_entities = svs.maxclients * SV_UPDATE_BACKUP * NUM_PACKET_ENTITIES;
-	svs.packet_entities = Z_Malloc( sizeof( entity_state_t ) * svs.num_client_entities );
-	svs.baselines = Z_Malloc( sizeof( entity_state_t ) * GI->max_edicts );
-	if( !load ) MsgDev( D_INFO, "%s alloced by server packet entities\n", Q_memprint( sizeof( entity_state_t ) * svs.num_client_entities ));
-
-	// client frames will be allocated in SV_DirectConnect
+	svs.packet_entities = Z_Realloc( svs.packet_entities, sizeof( entity_state_t ) * svs.num_client_entities );
+	MsgDev( D_INFO, "%s alloced by server packet entities\n", Q_memprint( sizeof( entity_state_t ) * svs.num_client_entities ));
 
 	// init network stuff
 	NET_Config(( svs.maxclients > 1 ));
@@ -755,24 +777,11 @@ void SV_InitGame( void )
 	// copy gamemode into svgame.globals
 	svgame.globals->deathmatch = deathmatch.value;
 	svgame.globals->coop = coop.value;
+	svgame.numEntities = svs.maxclients + 1; // clients + world
 
-	// heartbeats will always be sent to the id master
-	svs.last_heartbeat = MAX_HEARTBEAT; // send immediately
-
-	// set client fields on player ents
-	for( i = 0; i < svgame.globals->maxClients; i++ )
-	{
-		// setup all the clients
-		ent = EDICT_NUM( i + 1 );
-		svs.clients[i].edict = ent;
-		SV_InitEdict( ent );
-	}
-
-	// get actual movevars
-	SV_UpdateMovevars( true );
-
-	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
-	svs.initialized = true;
+	ClearBits( sv_maxclients->flags, FCVAR_CHANGED );
+	ClearBits( deathmatch.flags, FCVAR_CHANGED );
+	ClearBits( coop.flags, FCVAR_CHANGED );
 }
 
 /*
@@ -786,28 +795,18 @@ clients along with it.
 qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean background )
 {
 	int	i, current_skill;
-	qboolean	loadgame, paused;
-	qboolean	changelevel;
+	edict_t	*ent;
 
-	// save state
-	loadgame = sv.loadgame;
-	changelevel = sv.changelevel;
-	paused = sv.paused;
-
-	if( sv.state == ss_dead )
-		SV_InitGame(); // the game is just starting
-
-	NET_Config(( svs.maxclients > 1 )); // init network stuff
-	ClearBits( sv_maxclients->flags, FCVAR_CHANGED );
-
-	if( !svs.initialized )
+	if( !SV_InitGame( ))
 		return false;
 
 	Log_Open();
 	Log_Printf( "Loading map \"%s\"\n", mapname );
 	Log_PrintServerVars();
 
-	svgame.globals->changelevel = false; // will be restored later if needed
+	SV_SetupClients();
+	SV_AllocClientFrames();
+
 	svs.timestart = Sys_DoubleTime();
 	svs.spawncount++; // any partially connected client will be restarted
 
@@ -824,13 +823,8 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	Host_SetServerState( sv.state );
 	memset( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure
 
-	// restore state
-	sv.paused = paused;
-	sv.loadgame = loadgame;
+	sv.time = svgame.globals->time = 1.0f;	// server spawn time it's always 1.0 second
 	sv.background = background;
-	sv.changelevel = changelevel;
-	sv.time = 1.0f;			// server spawn time it's always 1.0 second
-	svgame.globals->time = sv.time;
 	
 	// initialize buffers
 	MSG_Init( &sv.signon, "Signon", sv.signon_buf, sizeof( sv.signon_buf ));
@@ -839,19 +833,10 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	MSG_Init( &sv.reliable_datagram, "Reliable Datagram", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
 	MSG_Init( &sv.spec_datagram, "Spectator Datagram", sv.spectator_buf, sizeof( sv.spectator_buf ));
 
-	// leave slots at start for clients only
-	for( i = 0; i < svs.maxclients; i++ )
-	{
-		// needs to reconnect
-		if( svs.clients[i].state > cs_connected )
-			svs.clients[i].state = cs_connected;
-	}
-
 	// make cvars consistant
 	if( coop.value ) Cvar_SetValue( "deathmatch", 0 );
 	current_skill = Q_rint( skill.value );
 	current_skill = bound( 0, current_skill, 3 );
-
 	Cvar_SetValue( "skill", (float)current_skill );
 
 	if( sv.background )
@@ -885,10 +870,28 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 		SetBits( sv.model_precache_flags[i+1], RES_FATALIFMISSING );
 	}
 
+	// leave slots at start for clients only
+	for( i = 0; i < svs.maxclients; i++ )
+	{
+		// needs to reconnect
+		if( svs.clients[i].state > cs_connected )
+			svs.clients[i].state = cs_connected;
+
+		ent = EDICT_NUM( i + 1 );
+		svs.clients[i].edict = ent;
+		SV_InitEdict( ent );
+	}
+
+	// heartbeats will always be sent to the id master
+	svs.last_heartbeat = MAX_HEARTBEAT; // send immediately
+
 	// precache and static commands can be issued during map initialization
 	sv.state = ss_loading;
 
 	Host_SetServerState( sv.state );
+
+	// get actual movevars
+	SV_UpdateMovevars( true );
 
 	// clear physics interaction links
 	SV_ClearWorld();
@@ -897,6 +900,11 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 }
 
 qboolean SV_Active( void )
+{
+	return (sv.state != ss_dead);
+}
+
+qboolean SV_Initialized( void )
 {
 	return svs.initialized;
 }
@@ -920,4 +928,50 @@ void SV_FreeGameProgs( void )
 
 	// unload progs (free cvars and commands)
 	SV_UnloadProgs();
+}
+
+/*
+================
+SV_ExecLoadLevel
+
+State machine exec new map
+================
+*/
+void SV_ExecLoadLevel( void )
+{
+	if( SV_SpawnServer( GameState->levelName, NULL, GameState->backgroundMap ))
+	{
+		SV_SpawnEntities( GameState->levelName, SV_EntityScript( ));
+		SV_ActivateServer( true );
+	}
+}
+
+/*
+================
+SV_ExecLoadGame
+
+State machine exec load saved game
+================
+*/
+void SV_ExecLoadGame( void )
+{
+	if( SV_SpawnServer( GameState->levelName, NULL, false ))
+	{
+		if( !SV_LoadGameState( GameState->levelName, false ))
+			SV_SpawnEntities( GameState->levelName, SV_EntityScript( ));
+		sv.loadgame = sv.paused = true; // pause until all clients connect
+		SV_ActivateServer( false );
+	}
+}
+
+/*
+================
+SV_ExecChangeLevel
+
+State machine exec changelevel path
+================
+*/
+void SV_ExecChangeLevel( void )
+{
+	SV_ChangeLevel( GameState->loadGame, GameState->levelName, GameState->landmarkName );
 }

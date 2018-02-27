@@ -839,7 +839,7 @@ int pfnCheckGameDll( void )
 {
 	void	*hInst;
 
-	if( SV_Active( )) return true;
+	if( SV_Initialized( )) return true;
 
 	if(( hInst = Com_LoadLibrary( GI->game_dll, true )) != NULL )
 	{

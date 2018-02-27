@@ -80,7 +80,7 @@ void SV_CheckAllEnts( void )
 	nextcheck = Sys_DoubleTime() + 5.0;
 
 	// check edicts errors
-	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
+	for( i = svs.maxclients + 1; i < svgame.numEntities; i++ )
 	{
 		e = EDICT_NUM( i );
 
@@ -896,7 +896,7 @@ static edict_t *SV_PushMove( edict_t *pusher, float movetime )
 	sv_pushed_t	*p, *pushed_p;
 	edict_t		*check;	
 
-	if( svgame.globals->changelevel || VectorIsNull( pusher->v.velocity ))
+	if( VectorIsNull( pusher->v.velocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -1014,7 +1014,7 @@ static edict_t *SV_PushRotate( edict_t *pusher, float movetime )
 	vec3_t		org, org2, temp;
 	edict_t		*check;
 
-	if( svgame.globals->changelevel || VectorIsNull( pusher->v.avelocity ))
+	if( VectorIsNull( pusher->v.avelocity ))
 	{
 		pusher->v.ltime += movetime;
 		return NULL;
@@ -1800,7 +1800,7 @@ void SV_Physics( void )
 		if( !SV_IsValidEdict( ent ))
 			continue;
 
-		if( i > 0 && i <= svgame.globals->maxClients )
+		if( i > 0 && i <= svs.maxclients )
                    		continue;
 
 		SV_Physics_Entity( ent );

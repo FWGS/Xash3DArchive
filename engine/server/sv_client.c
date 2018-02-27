@@ -535,10 +535,7 @@ qboolean SV_ClientConnect( edict_t *ent, char *userinfo )
 	char	*pszName, *pszAddress;
 	char	szRejectReason[MAX_INFO_STRING];
 
-	// make sure we start with known default
-	if( !sv.loadgame ) ent->v.flags = 0;
 	szRejectReason[0] = '\0';
-
 	pszName = Info_ValueForKey( userinfo, "name" );
 	pszAddress = Info_ValueForKey( userinfo, "ip" );
 
@@ -642,7 +639,6 @@ void SV_FlushRedirect( netadr_t adr, int dest, char *buf )
 	case RD_CLIENT:
 		if( !svs.currentPlayer ) return; // client not set
 		MSG_BeginServerCmd( &svs.currentPlayer->netchan.message, svc_print );
-		MSG_WriteByte( &svs.currentPlayer->netchan.message, PRINT_HIGH );
 		MSG_WriteString( &svs.currentPlayer->netchan.message, buf );
 		break;
 	case RD_NONE:
@@ -1204,35 +1200,7 @@ void SV_PutClientInServer( sv_client_t *cl )
 
 	MSG_Init( &msg, "Spawn", msg_buf, sizeof( msg_buf ));
 
-	if( !sv.loadgame )
-	{	
-		if( Q_atoi( Info_ValueForKey( cl->userinfo, "hltv" )))
-			SetBits( cl->flags, FCL_HLTV_PROXY );
-
-		if( FBitSet( cl->flags, FCL_HLTV_PROXY ))
-			SetBits( ent->v.flags, FL_PROXY );
-		else ent->v.flags = 0;
-
-		ent->v.netname = MAKE_STRING( cl->name );
-		ent->v.colormap = NUM_FOR_EDICT( ent );	// ???
-
-		// fisrt entering
-		svgame.globals->time = sv.time;
-		svgame.dllFuncs.pfnClientPutInServer( ent );
-
-		if( sv.background )	// don't attack player in background mode
-			SetBits( ent->v.flags, FL_GODMODE|FL_NOTARGET );
-
-		cl->pViewEntity = NULL; // reset pViewEntity
-
-		if( svgame.globals->cdAudioTrack )
-		{
-			MSG_BeginServerCmd( &msg, svc_stufftext );
-			MSG_WriteString( &msg, va( "cd loop %3d\n", svgame.globals->cdAudioTrack ));
-			svgame.globals->cdAudioTrack = 0;
-		}
-	}
-	else
+	if( sv.loadgame )
 	{
 		// NOTE: we needs to setup angles on restore here
 		if( ent->v.fixangle == 1 )
@@ -1275,6 +1243,37 @@ void SV_PutClientInServer( sv_client_t *cl )
 		if( sv.viewentity > 0 && sv.viewentity < GI->max_edicts )
 			cl->pViewEntity = EDICT_NUM( sv.viewentity );
 		else cl->pViewEntity = NULL;
+
+		sv.loadgame = false;
+		sv.paused = false;
+	}
+	else
+	{	
+		if( Q_atoi( Info_ValueForKey( cl->userinfo, "hltv" )))
+			SetBits( cl->flags, FCL_HLTV_PROXY );
+
+		if( FBitSet( cl->flags, FCL_HLTV_PROXY ))
+			SetBits( ent->v.flags, FL_PROXY );
+		else ent->v.flags = 0;
+
+		ent->v.netname = MAKE_STRING( cl->name );
+		ent->v.colormap = NUM_FOR_EDICT( ent );	// ???
+
+		// fisrt entering
+		svgame.globals->time = sv.time;
+		svgame.dllFuncs.pfnClientPutInServer( ent );
+
+		if( sv.background )	// don't attack player in background mode
+			SetBits( ent->v.flags, FL_GODMODE|FL_NOTARGET );
+
+		cl->pViewEntity = NULL; // reset pViewEntity
+
+		if( svgame.globals->cdAudioTrack )
+		{
+			MSG_BeginServerCmd( &msg, svc_stufftext );
+			MSG_WriteString( &msg, va( "cd loop %3d\n", svgame.globals->cdAudioTrack ));
+			svgame.globals->cdAudioTrack = 0;
+		}
 	}
 
 	// enable dev-mode to prevent crash cheat-protecting from Invasion mod
@@ -1314,11 +1313,6 @@ void SV_PutClientInServer( sv_client_t *cl )
 		Netchan_CreateFragments( &cl->netchan, &msg );
 		Netchan_FragSend( &cl->netchan );
 	}
-
-	// clear any temp states
-	sv.changelevel = false;
-	sv.loadgame = false;
-	sv.paused = false;
 }
 
 /*
@@ -1351,11 +1345,25 @@ void SV_TogglePause( const char *msg )
 
 	sv.paused ^= 1;
 
-	if( msg ) SV_BroadcastPrintf( NULL, PRINT_HIGH, "%s", msg );
+	if( COM_CheckString( msg ))
+		SV_BroadcastPrintf( NULL, "%s", msg );
 
 	// send notification to all clients
 	MSG_BeginServerCmd( &sv.reliable_datagram, svc_setpause );
 	MSG_WriteOneBit( &sv.reliable_datagram, sv.paused );
+}
+
+/*
+================
+SV_SendReconnect
+
+Tell all the clients that the server is changing levels
+================
+*/
+void SV_BuildReconnect( sizebuf_t *msg )
+{
+	MSG_BeginServerCmd( msg, svc_stufftext );
+	MSG_WriteString( msg, "reconnect\n" );
 }
 
 /*
@@ -1389,7 +1397,16 @@ This will be sent on the initial connection and upon each server load.
 */
 void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl )
 {
+	string	message;
 	int	i;
+
+	// Only send this message to developer console, or multiplayer clients.
+	if(( host.developer ) || ( svs.maxclients > 1 ))
+	{
+		MSG_BeginServerCmd( msg, svc_print );
+		Q_snprintf( message, sizeof( message ), "%c\nBUILD %d SERVER (%i CRC)\nServer # %i\n", 2, Q_buildnum(), 0, svs.spawncount );
+		MSG_WriteString( msg, message );
+	}
 
 	// send the serverdata
 	MSG_BeginServerCmd( msg, svc_serverdata );
@@ -1397,12 +1414,13 @@ void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl )
 	MSG_WriteLong( msg, svs.spawncount );
 	MSG_WriteLong( msg, sv.worldmapCRC );
 	MSG_WriteByte( msg, cl - svs.clients );
-	MSG_WriteByte( msg, svgame.globals->maxClients );
-	MSG_WriteWord( msg, svgame.globals->maxEntities );
+	MSG_WriteByte( msg, svs.maxclients );
+	MSG_WriteWord( msg, GI->max_edicts );
 	MSG_WriteWord( msg, MAX_MODELS );
 	MSG_WriteString( msg, sv.name );
-	MSG_WriteString( msg, STRING( EDICT_NUM( 0 )->v.message )); // Map Message
+	MSG_WriteString( msg, STRING( svgame.edicts->v.message )); // Map Message
 	MSG_WriteOneBit( msg, sv.background ); // tell client about background map
+	MSG_WriteOneBit( msg, svgame.globals->changelevel );
 	MSG_WriteString( msg, GI->gamefolder );
 	MSG_WriteLong( msg, host.features );
 
@@ -1418,6 +1436,21 @@ void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl )
 
 	// now client know delta and can reading encoded messages
 	SV_FullUpdateMovevars( cl, msg );
+
+	// send the user messages registration
+	for( i = 1; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
+		SV_SendUserReg( msg, &svgame.msg[i] );
+
+	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
+	{
+		if( !sv.lightstyles[i].pattern[0] )
+			continue;	// unused style
+
+		MSG_BeginServerCmd( msg, svc_lightstyle );
+		MSG_WriteByte( msg, i ); // stylenum
+		MSG_WriteString( msg, sv.lightstyles[i].pattern );
+		MSG_WriteFloat( msg, sv.lightstyles[i].time );
+	}
 }
 
 /*
@@ -1452,21 +1485,6 @@ void SV_New_f( sv_client_t *cl )
 
 	// send the serverdata
 	SV_SendServerdata( &msg, cl );
-
-	// send the user messages registration
-	for( i = 1; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
-		SV_SendUserReg( &msg, &svgame.msg[i] );
-
-	for( i = 0; i < MAX_LIGHTSTYLES; i++ )
-	{
-		if( !sv.lightstyles[i].pattern[0] )
-			continue;	// unused style
-
-		MSG_BeginServerCmd( &msg, svc_lightstyle );
-		MSG_WriteByte( &msg, i ); // stylenum
-		MSG_WriteString( &msg, sv.lightstyles[i].pattern );
-		MSG_WriteFloat( &msg, sv.lightstyles[i].time );
-	}
 
 	// server info string
 	MSG_BeginServerCmd( &msg, svc_stufftext );
@@ -1662,13 +1680,13 @@ void SV_Pause_f( sv_client_t *cl )
 
 	if( !sv_pausable->value )
 	{
-		SV_ClientPrintf( cl, PRINT_HIGH, "Pause not allowed.\n" );
+		SV_ClientPrintf( cl, "Pause not allowed.\n" );
 		return;
 	}
 
 	if( FBitSet( cl->flags, FCL_HLTV_PROXY ))
 	{
-		SV_ClientPrintf( cl, PRINT_HIGH, "Spectators can not pause.\n" );
+		SV_ClientPrintf( cl, "Spectators can not pause.\n" );
 		return;
 	}
 
@@ -1753,19 +1771,18 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	if( Q_strlen( val ))
 		cl->netchan.rate = bound( MIN_RATE, Q_atoi( val ), MAX_RATE );
 	else cl->netchan.rate = DEFAULT_RATE;
-	
-	// msg command
-	val = Info_ValueForKey( cl->userinfo, "msg" );
-	if( Q_strlen( val )) cl->messagelevel = Q_atoi( val );
 
+	// movement prediction	
 	if( Q_atoi( Info_ValueForKey( cl->userinfo, "cl_nopred" )))
 		ClearBits( cl->flags, FCL_PREDICT_MOVEMENT );
 	else SetBits( cl->flags, FCL_PREDICT_MOVEMENT );
 
+	// lag compensation
 	if( Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lc" )))
 		SetBits( cl->flags, FCL_LAG_COMPENSATION );
 	else ClearBits( cl->flags, FCL_LAG_COMPENSATION );
 
+	// weapon perdiction
 	if( Q_atoi( Info_ValueForKey( cl->userinfo, "cl_lw" )))
 		SetBits( cl->flags, FCL_LOCAL_WEAPONS );
 	else ClearBits( cl->flags, FCL_LOCAL_WEAPONS );
@@ -1830,13 +1847,37 @@ static void SV_Noclip_f( sv_client_t *cl )
 
 	if( pEntity->v.movetype != MOVETYPE_NOCLIP )
 	{
+		SV_ClientPrintf( cl, "noclip ON\n" );
 		pEntity->v.movetype = MOVETYPE_NOCLIP;
-		SV_ClientPrintf( cl, PRINT_HIGH, "noclip ON\n" );
 	}
 	else
 	{
+		SV_ClientPrintf( cl, "noclip OFF\n" );
 		pEntity->v.movetype =  MOVETYPE_WALK;
-		SV_ClientPrintf( cl, PRINT_HIGH, "noclip OFF\n" );
+	}
+}
+
+/*
+==================
+SV_Fly_f
+==================
+*/
+static void SV_Fly_f( sv_client_t *cl )
+{
+	edict_t	*pEntity = cl->edict;
+
+	if( !Cvar_VariableInteger( "sv_cheats" ) || sv.background )
+		return;
+
+	if( pEntity->v.movetype != MOVETYPE_FLY )
+	{
+		SV_ClientPrintf( cl, "flymode ON\n" );
+		pEntity->v.movetype = MOVETYPE_FLY;
+	}
+	else
+	{
+		SV_ClientPrintf( cl, "flymode OFF\n" );
+		pEntity->v.movetype =  MOVETYPE_WALK;
 	}
 }
 
@@ -1855,8 +1896,8 @@ static void SV_Godmode_f( sv_client_t *cl )
 	pEntity->v.flags = pEntity->v.flags ^ FL_GODMODE;
 
 	if( !FBitSet( pEntity->v.flags, FL_GODMODE ))
-		SV_ClientPrintf( cl, PRINT_HIGH, "godmode OFF\n" );
-	else SV_ClientPrintf( cl, PRINT_HIGH, "godmode ON\n" );
+		SV_ClientPrintf( cl, "godmode OFF\n" );
+	else SV_ClientPrintf( cl, "godmode ON\n" );
 }
 
 /*
@@ -1874,8 +1915,8 @@ static void SV_Notarget_f( sv_client_t *cl )
 	pEntity->v.flags = pEntity->v.flags ^ FL_NOTARGET;
 
 	if( !FBitSet( pEntity->v.flags, FL_NOTARGET ))
-		SV_ClientPrintf( cl, PRINT_HIGH, "notarget OFF\n" );
-	else SV_ClientPrintf( cl, PRINT_HIGH, "notarget ON\n" );
+		SV_ClientPrintf( cl, "notarget OFF\n" );
+	else SV_ClientPrintf( cl, "notarget ON\n" );
 }
 
 /*
@@ -2013,7 +2054,7 @@ void SV_Spawn_f( sv_client_t *cl )
 	{
 		MSG_BeginServerCmd( &sv.reliable_datagram, svc_setpause );
 		MSG_WriteByte( &sv.reliable_datagram, sv.paused );
-		SV_ClientPrintf( cl, PRINT_HIGH, "Server is paused.\n" );
+		SV_ClientPrintf( cl, "Server is paused.\n" );
 	}
 }
 
@@ -2037,6 +2078,7 @@ void SV_Begin_f( sv_client_t *cl )
 ucmd_t ucmds[] =
 {
 { "new", SV_New_f },
+{ "fly", SV_Fly_f },
 { "god", SV_Godmode_f },
 { "begin", SV_Begin_f },
 { "spawn", SV_Spawn_f },
@@ -2278,7 +2320,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	cl->packet_loss = packet_loss;
 
 	// check for pause or frozen
-	if( sv.paused || sv.loadgame || sv.background || !CL_IsInGame() || SV_PlayerIsFrozen( player ))
+	if( sv.paused || !CL_IsInGame() || SV_PlayerIsFrozen( player ))
 	{
 		for( i = 0; i < numcmds; i++ )
 		{
@@ -2288,7 +2330,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 			cmds[i].upmove = 0;
 			cmds[i].buttons = 0;
 
-			if( SV_PlayerIsFrozen( player ) || sv.background )
+			if( SV_PlayerIsFrozen( player ))
 				cmds[i].impulse = 0;
 
 			VectorCopy( cmds[i].viewangles, player->v.v_angle );

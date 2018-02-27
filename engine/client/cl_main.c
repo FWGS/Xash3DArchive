@@ -2353,7 +2353,6 @@ void CL_InitLocal( void )
 	bottomcolor = Cvar_Get( "bottomcolor", "0", FCVAR_USERINFO|FCVAR_ARCHIVE, "player bottom color" );
 	cl_lw = Cvar_Get( "cl_lw", "1", FCVAR_ARCHIVE|FCVAR_USERINFO, "enable client weapon predicting" );
 	Cvar_Get( "cl_lc", "1", FCVAR_ARCHIVE|FCVAR_USERINFO, "enable lag compensation" );
-	Cvar_Get( "msg", "0", FCVAR_USERINFO|FCVAR_ARCHIVE, "message filter for server notifications" );
 	Cvar_Get( "password", "", FCVAR_USERINFO, "server password" );
 	Cvar_Get( "team", "", FCVAR_USERINFO, "player team" );
 	Cvar_Get( "skin", "", FCVAR_USERINFO, "player skin" );
@@ -2388,6 +2387,7 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("drop", NULL, "drop current/specified item or weapon" );
 	Cmd_AddCommand ("gametitle", NULL, "show game logo" );
 	Cmd_AddCommand ("god", NULL, "enable godmode" );
+	Cmd_AddCommand ("fly", NULL, "enable fly mode" );
 	Cmd_AddCommand ("fov", NULL, "set client field of view" );
 	Cmd_AddCommand ("log", NULL, "logging server events" );
 		

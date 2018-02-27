@@ -14,29 +14,20 @@ GNU General Public License for more details.
 */
 
 #include "common.h"
-#include "netchan.h"
-#include "protocol.h"
-#include "mod_local.h"
-#include "mathlib.h"
-#include "input.h"
-#include "features.h"
-#include "render_api.h"	// decallist_t
 
 void COM_InitHostState( void )
 {
 	memset( GameState, 0, sizeof( game_status_t ));
-	GameState->curstate = STATE_RUNFRAME;
-	GameState->nextstate = STATE_RUNFRAME;
 }
 
-static void HostState_SetState( host_state_t newState, qboolean clearNext )
+static void Host_SetState( host_state_t newState, qboolean clearNext )
 {
 	if( clearNext )
 		GameState->nextstate = newState;
 	GameState->curstate = newState;
 }
 
-static void HostState_SetNextState( host_state_t nextState )
+static void Host_SetNextState( host_state_t nextState )
 {
 	ASSERT( GameState->curstate == STATE_RUNFRAME );
 	GameState->nextstate = nextState;
@@ -44,8 +35,11 @@ static void HostState_SetNextState( host_state_t nextState )
 
 void COM_NewGame( char const *pMapName )
 {
+	if( GameState->nextstate != STATE_RUNFRAME )
+		return;
+
 	Q_strncpy( GameState->levelName, pMapName, sizeof( GameState->levelName ));
-	HostState_SetNextState( STATE_LOAD_LEVEL );
+	Host_SetNextState( STATE_LOAD_LEVEL );
 
 	GameState->backgroundMap = false;
 	GameState->landmarkName[0] = 0;
@@ -54,8 +48,11 @@ void COM_NewGame( char const *pMapName )
 
 void COM_LoadLevel( char const *pMapName, qboolean background )
 {
+	if( GameState->nextstate != STATE_RUNFRAME )
+		return;
+
 	Q_strncpy( GameState->levelName, pMapName, sizeof( GameState->levelName ));
-	HostState_SetNextState( STATE_LOAD_LEVEL );
+	Host_SetNextState( STATE_LOAD_LEVEL );
 
 	GameState->backgroundMap = background;
 	GameState->landmarkName[0] = 0;
@@ -64,8 +61,11 @@ void COM_LoadLevel( char const *pMapName, qboolean background )
 
 void COM_LoadGame( char const *pMapName )
 {
+	if( GameState->nextstate != STATE_RUNFRAME )
+		return;
+
 	Q_strncpy( GameState->levelName, pMapName, sizeof( GameState->levelName ));
-	HostState_SetNextState( STATE_LOAD_GAME );
+	Host_SetNextState( STATE_LOAD_GAME );
 	GameState->backgroundMap = false;
 	GameState->newGame = false;
 	GameState->loadGame = true;
@@ -73,6 +73,9 @@ void COM_LoadGame( char const *pMapName )
 
 void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName )
 {
+	if( GameState->nextstate != STATE_RUNFRAME )
+		return;
+
 	Q_strncpy( GameState->levelName, pNewLevel, sizeof( GameState->levelName ));
 
 	if( COM_CheckString( pLandmarkName ))
@@ -86,68 +89,27 @@ void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName )
 		GameState->loadGame = false;
 	}
 
-	HostState_SetNextState( STATE_CHANGELEVEL );
+	Host_SetNextState( STATE_CHANGELEVEL );
 	GameState->newGame = false;
 }
 
-void HostState_LoadLevel( void )
+void Host_ShutdownGame( void )
 {
-	if( SV_SpawnServer( GameState->levelName, NULL, GameState->backgroundMap ))
-	{
-		SV_LevelInit( GameState->levelName, NULL, NULL, false );
-		SV_ActivateServer ();
-	}
-
-	HostState_SetState( STATE_RUNFRAME, true );
-}
-
-void HostState_LoadGame( void )
-{
-	if( SV_SpawnServer( GameState->levelName, NULL, false ))
-	{
-		SV_LevelInit( GameState->levelName, NULL, NULL, true );
-		SV_ActivateServer ();
-	}
-
-	HostState_SetState( STATE_RUNFRAME, true );
-}
-
-void HostState_ChangeLevel( void )
-{
-	SV_ChangeLevel( GameState->loadGame, GameState->levelName, GameState->landmarkName );
-	HostState_SetState( STATE_RUNFRAME, true );
-}
-
-void HostState_ShutdownGame( void )
-{
-	if( !GameState->loadGame )
-		SV_ClearSaveDir();
-
-	S_StopBackgroundTrack();
-
-	if( GameState->newGame )
-	{
-		Host_EndGame( false, DEFAULT_ENDGAME_MESSAGE );
-	}
-	else
-	{
-		S_StopAllSounds( true );
-		SV_DeactivateServer();
-	}
+	SV_ShutdownGame();
 
 	switch( GameState->nextstate )
 	{
 	case STATE_LOAD_GAME:
 	case STATE_LOAD_LEVEL:
-		HostState_SetState( GameState->nextstate, true );
+		Host_SetState( GameState->nextstate, true );
 		break;
 	default:
-		HostState_SetState( STATE_RUNFRAME, true );
+		Host_SetState( STATE_RUNFRAME, true );
 		break;
 	}
 }
 
-void HostState_Run( float time )
+void Host_RunFrame( float time )
 {
 	// engine main frame
 	Host_Frame( time );
@@ -161,14 +123,14 @@ void HostState_Run( float time )
 		SCR_BeginLoadingPlaque( GameState->backgroundMap );
 		// intentionally fallthrough
 	case STATE_GAME_SHUTDOWN:
-		HostState_SetState( STATE_GAME_SHUTDOWN, false );
+		Host_SetState( STATE_GAME_SHUTDOWN, false );
 		break;
 	case STATE_CHANGELEVEL:
 		SCR_BeginLoadingPlaque( false );
-		HostState_SetState( GameState->nextstate, true );
+		Host_SetState( GameState->nextstate, true );
 		break;
 	default:
-		HostState_SetState( STATE_RUNFRAME, true );
+		Host_SetState( STATE_RUNFRAME, true );
 		break;
 	}
 }
@@ -185,19 +147,22 @@ void COM_Frame( float time )
 		switch( GameState->curstate )
 		{
 		case STATE_LOAD_LEVEL:
-			HostState_LoadLevel();
+			SV_ExecLoadLevel();
+			Host_SetState( STATE_RUNFRAME, true );
 			break;
 		case STATE_LOAD_GAME:
-			HostState_LoadGame();
+			SV_ExecLoadGame();
+			Host_SetState( STATE_RUNFRAME, true );
 			break;
 		case STATE_CHANGELEVEL:
-			HostState_ChangeLevel();
+			SV_ExecChangeLevel();
+			Host_SetState( STATE_RUNFRAME, true );
 			break;
 		case STATE_RUNFRAME:
-			HostState_Run( time );
+			Host_RunFrame( time );
 			break;
 		case STATE_GAME_SHUTDOWN:
-			HostState_ShutdownGame();
+			Host_ShutdownGame();
 			break;
 		}
 

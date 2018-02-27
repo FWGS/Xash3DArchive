@@ -248,7 +248,7 @@ typedef struct render_interface_s
 	// handle decals which hit mod_studio or mod_sprite
 	void		(*R_StudioDecalShoot)( int decalTexture, struct cl_entity_s *ent, const float *start, const float *pos, int flags, modelstate_t *state );
 	// prepare studio decals for save
-	int		(*R_CreateStudioDecalList)( decallist_t *pList, int count, qboolean changelevel );
+	int		(*R_CreateStudioDecalList)( decallist_t *pList, int count );
 	// clear decals by engine request (e.g. for demo recording or vid_restart)
 	void		(*R_ClearStudioDecals)( void );
 	// grab r_speeds message

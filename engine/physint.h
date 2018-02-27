@@ -142,7 +142,7 @@ typedef struct physics_interface_s
 	// called through save\restore process
 	void		(*pfnCreateEntitiesInTransitionList)( SAVERESTOREDATA*, int levelMask );
 	// called through save\restore process
-	void		(*pfnCreateEntitiesInRestoreList)( SAVERESTOREDATA*, int createPlayers );
+	void		(*pfnCreateEntitiesInRestoreList)( SAVERESTOREDATA* );
 	// allocate custom string (e.g. using user implementation of stringtable, not engine strings)
 	string_t		(*pfnAllocString)( const char *szValue );
 	// make custom string (e.g. using user implementation of stringtable, not engine strings)

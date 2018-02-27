@@ -1060,7 +1060,7 @@ SV_SaveClientState
 write out the list of premanent decals for this level
 =============
 */
-void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
+void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level, int changelevel )
 {
 	string		name;
 	file_t		*pFile;
@@ -1094,7 +1094,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 
 	// g-cont. add space for studiodecals if present
 	decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS * 2 );
-	decalCount = R_CreateDecalList( decalList, svgame.globals->changelevel );
+	decalCount = R_CreateDecalList( decalList );
 
 	// DECALS SECTION
 	sections.offsets[LUMP_DECALS_OFFSET] = FS_Tell( pFile );
@@ -1175,7 +1175,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	}
 
 	// DYNAMIC SOUNDS SECTION (don't go across transition)
-	if( !svgame.globals->changelevel && ( soundCount = S_GetCurrentDynamicSounds( soundInfo, MAX_CHANNELS )) != 0 )
+	if( !changelevel && ( soundCount = S_GetCurrentDynamicSounds( soundInfo, MAX_CHANNELS )) != 0 )
 	{
 		sections.offsets[LUMP_SOUNDS_OFFSET] = FS_Tell( pFile );
 		FS_Write( pFile, &soundCount, sizeof( int ));
@@ -1205,7 +1205,7 @@ void SV_SaveClientState( SAVERESTOREDATA *pSaveData, const char *level )
 	}
 
 	// BACKGROUND MUSIC SECTION (don't go across transition)
-	if( !svgame.globals->changelevel && S_StreamGetCurrentState( curtrack, looptrack, &position ))
+	if( !changelevel && S_StreamGetCurrentState( curtrack, looptrack, &position ))
 	{
 		byte	nameSize;
 
@@ -1440,7 +1440,7 @@ SV_SaveGameState
 save current game state
 =============
 */
-SAVERESTOREDATA *SV_SaveGameState( void )
+SAVERESTOREDATA *SV_SaveGameState( int changelevel )
 {
 	SaveFileSectionsInfo_t	sectionsInfo;
 	SaveFileSections_t		sections;
@@ -1528,12 +1528,12 @@ SAVERESTOREDATA *SV_SaveGameState( void )
 
 	SV_EntityPatchWrite( pSaveData, sv.name );
 
-	SV_SaveClientState( pSaveData, sv.name );
+	SV_SaveClientState( pSaveData, sv.name, changelevel );
 
 	return pSaveData;
 }
 
-int SV_LoadGameState( char const *level, qboolean createPlayers )
+int SV_LoadGameState( char const *level, qboolean changelevel )
 {
 	SAVE_HEADER	header;
 	SAVERESTOREDATA	*pSaveData;
@@ -1578,7 +1578,7 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	// create entity list
 	if( svgame.physFuncs.pfnCreateEntitiesInRestoreList != NULL )
 	{
-		svgame.physFuncs.pfnCreateEntitiesInRestoreList( pSaveData, createPlayers );
+		svgame.physFuncs.pfnCreateEntitiesInRestoreList( pSaveData );
 	}
 	else
 	{
@@ -1586,7 +1586,7 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 		{
 			pEntInfo = &pSaveData->pTable[i];
 
-			if( pEntInfo->classname != 0 && pEntInfo->size && !( pEntInfo->flags & FENTTABLE_REMOVED ))
+			if( pEntInfo->classname != 0 && pEntInfo->size && !FBitSet( pEntInfo->flags, FENTTABLE_REMOVED ))
 			{
 				if( pEntInfo->id == 0 ) // worldspawn
 				{
@@ -1597,11 +1597,11 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 					SV_InitEdict( pent );
 					pent = SV_CreateNamedEntity( pent, pEntInfo->classname );
 				}
-				else if(( pEntInfo->id > 0 ) && ( pEntInfo->id < svgame.globals->maxClients + 1 ))
+				else if(( pEntInfo->id > 0 ) && ( pEntInfo->id < svs.maxclients + 1 ))
 				{
 					edict_t	*ed;
 
-					if(!( pEntInfo->flags & FENTTABLE_PLAYER ))
+					if( !FBitSet( pEntInfo->flags, FENTTABLE_PLAYER ))
 					{
 						MsgDev( D_WARN, "ENTITY IS NOT A PLAYER: %d\n", i );
 						Assert( 0 );
@@ -1609,9 +1609,9 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 
 					ed = EDICT_NUM( pEntInfo->id );
 
-					if( ed && createPlayers )
+					if( ed != NULL )
 					{
-						Assert( ed->free == false );
+						ASSERT( ed->free == false );
 						// create the player
 						pent = SV_CreateNamedEntity( ed, pEntInfo->classname );
 					}
@@ -1653,7 +1653,7 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	pent = pSaveData->pTable[bound( 0, (word)header.viewentity, pSaveData->tableCount )].pent;
 
 	// don't go camera across the levels
-	if( SV_IsValidEdict( pent ) && !svgame.globals->changelevel )
+	if( SV_IsValidEdict( pent ) && !changelevel )
 		sv.viewentity = NUM_FOR_EDICT( pent );
 	else sv.viewentity = 0;
 
@@ -1668,6 +1668,21 @@ int SV_LoadGameState( char const *level, qboolean createPlayers )
 	sv.time = header.time;
 	
 	return 1;
+}
+
+/*
+=============
+SV_ClearGameState
+
+clear current game state
+=============
+*/
+void SV_ClearGameState( void )
+{
+	SV_ClearSaveDir();
+
+	if( svgame.dllFuncs.pfnResetGlobalState != NULL )
+		svgame.dllFuncs.pfnResetGlobalState();
 }
 
 // ripped out from the hl.dll
@@ -1715,7 +1730,7 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 					active = (pEntInfo->flags & levelMask) ? 1 : 0;
 
 					// spawn players
-					if(( pEntInfo->id > 0 ) && ( pEntInfo->id < svgame.globals->maxClients + 1 ))	
+					if(( pEntInfo->id > 0 ) && ( pEntInfo->id < svs.maxclients + 1 ))	
 					{
 						edict_t	*ed = EDICT_NUM( pEntInfo->id );
 
@@ -1942,11 +1957,9 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 		svgame.globals->changelevel = true;
 
 		// save the current level's state
-		pSaveData = SV_SaveGameState();
-		sv.loadgame = true;
+		pSaveData = SV_SaveGameState( true );
 	}
 
-	SV_InactivateClients ();
 	SV_DeactivateServer ();
 
 	if( !SV_SpawnServer( level, startspot, false ))
@@ -1954,20 +1967,24 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 
 	if( loadfromsavedgame )
 	{
-		// Finish saving gamestate
+		// finish saving gamestate
 		SV_SaveFinish( pSaveData );
 
-		svgame.globals->changelevel = true;
-		SV_LevelInit( level, oldlevel, startspot, true );
-		sv.paused = true; // pause until all clients connect
-		sv.loadgame = true;
+		if( !SV_LoadGameState( level, true ))
+			SV_SpawnEntities( level, SV_EntityScript( ));
+		SV_LoadAdjacentEnts( oldlevel, startspot );
+		sv.loadgame = sv.paused = true; // pause until all clients connect
+
+		if( sv_newunit.value )
+			SV_ClearSaveDir();
+		SV_ActivateServer( false );
 	}
 	else
 	{
-		SV_LevelInit( level, NULL, NULL, false );
+		// classic quake changelevel
+		SV_SpawnEntities( level, SV_EntityScript( ));
+		SV_ActivateServer( true );
 	}
-
-	SV_ActivateServer ();
 }
 
 int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
@@ -1979,7 +1996,7 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	int		i, tag, tokenSize;
 	file_t		*pFile;
 
-	pSaveData = SV_SaveGameState();
+	pSaveData = SV_SaveGameState( false );
 	if( !pSaveData ) return 0;
 
 	SV_SaveFinish( pSaveData );
@@ -2127,9 +2144,7 @@ qboolean SV_LoadGame( const char *pPath )
 	if( !FS_FileExists( pPath, true ))
 		return false;
 
-	SV_ClearSaveDir();
 	SV_InitGameProgs();
-
 	if( !svgame.hInstance )
 		return false;
 
@@ -2137,6 +2152,8 @@ qboolean SV_LoadGame( const char *pPath )
 
 	if( pFile )
 	{
+		SV_ClearGameState();
+
 		if( SV_SaveReadHeader( pFile, &gameHeader ))
 		{
 			SV_DirectoryExtract( pFile, gameHeader.mapCount );

@@ -59,8 +59,8 @@ CVAR_DEFINE_AUTO( mapcyclefile, "mapcycle.txt", 0, "name of multiplayer map cycl
 CVAR_DEFINE_AUTO( motdfile, "motd.txt", 0, "name of 'message of the day' file" );
 CVAR_DEFINE_AUTO( logsdir, "logs", 0, "place to store multiplayer logs" );
 CVAR_DEFINE_AUTO( bannedcfgfile, "banned.cfg", 0, "name of list of banned users" );
-CVAR_DEFINE_AUTO( deathmatch, "0", 0, "deathmatch mode in multiplayer game" );
-CVAR_DEFINE_AUTO( coop, "0", 0, "cooperative mode in multiplayer game" );
+CVAR_DEFINE_AUTO( deathmatch, "0", FCVAR_LATCH, "deathmatch mode in multiplayer game" );
+CVAR_DEFINE_AUTO( coop, "0", FCVAR_LATCH, "cooperative mode in multiplayer game" );
 CVAR_DEFINE_AUTO( teamplay, "0", 0, "team mode in multiplayer game" );
 CVAR_DEFINE_AUTO( skill, "1", 0, "skill level in singleplayer game" );
 CVAR_DEFINE_AUTO( temp1, "0", 0, "temporary cvar that used by some mods" );
@@ -418,7 +418,7 @@ void SV_CheckTimeouts( void )
 		{
 			if( !NET_IsLocalAddress( cl->netchan.remote_address ))
 			{
-				SV_BroadcastPrintf( NULL, PRINT_HIGH, "%s timed out\n", cl->name );
+				SV_BroadcastPrintf( NULL, "%s timed out\n", cl->name );
 				SV_DropClient( cl ); 
 				cl->state = cs_free; // don't bother with zombie state
 			}
@@ -825,14 +825,13 @@ void SV_FinalMessage( char *message, qboolean reconnect )
 	
 	MSG_Init( &msg, "FinalMessage", msg_buf, sizeof( msg_buf ));
 	MSG_BeginServerCmd( &msg, svc_print );
-	MSG_WriteByte( &msg, PRINT_HIGH );
 	MSG_WriteString( &msg, va( "%s\n", message ));
 
 	if( reconnect )
 	{
 		MSG_BeginServerCmd( &msg, svc_changing );
 
-		if( sv.loadgame || svs.maxclients > 1 || sv.changelevel )
+		if( svs.maxclients > 1 || sv.changelevel )
 			MSG_WriteOneBit( &msg, 1 ); // changelevel
 		else MSG_WriteOneBit( &msg, 0 );
 	}
@@ -852,6 +851,29 @@ void SV_FinalMessage( char *message, qboolean reconnect )
 			Netchan_Transmit( &cl->netchan, MSG_GetNumBytesWritten( &msg ), MSG_GetData( &msg ));
 }
 
+void SV_FreeClients( void )
+{
+	if( svs.maxclients != 0 )
+	{
+		// free server static data
+		if( svs.clients )
+		{
+			Z_Free( svs.clients );
+			svs.clients = NULL;
+		}
+
+		if( svs.packet_entities )
+		{
+			Z_Free( svs.packet_entities );
+			svs.packet_entities = NULL;
+			svs.num_client_entities = 0;
+			svs.next_client_entities = 0;
+		}
+
+		svs.maxclients = 0;
+	}
+}
+
 /*
 ================
 SV_Shutdown
@@ -863,7 +885,7 @@ before Sys_Quit or Sys_Error
 void SV_Shutdown( qboolean reconnect )
 {
 	// already freed
-	if( !SV_Active( )) return;
+	if( !SV_Initialized( )) return;
 
 	// rcon will be disconnected
 	SV_EndRedirect();
@@ -882,30 +904,17 @@ void SV_Shutdown( qboolean reconnect )
 
 	// free current level
 	memset( &sv, 0, sizeof( sv ));
-	Host_SetServerState( sv.state );
+	Host_SetServerState( ss_dead );
+
+	SV_FreeClients();
 
 	Log_Printf( "Server shutdown\n" );
 	Log_Close();
-
-	// free server static data
-	if( svs.clients )
-	{
-		Z_Free( svs.clients );
-		svs.clients = NULL;
-	}
 
 	if( svs.baselines )
 	{
 		Z_Free( svs.baselines );
 		svs.baselines = NULL;
-	}
-
-	if( svs.packet_entities )
-	{
-		Z_Free( svs.packet_entities );
-		svs.packet_entities = NULL;
-		svs.num_client_entities = 0;
-		svs.next_client_entities = 0;
 	}
 
 	svs.initialized = false;

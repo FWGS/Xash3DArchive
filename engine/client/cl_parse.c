@@ -737,45 +737,66 @@ CL_ParseServerData
 */
 void CL_ParseServerData( sizebuf_t *msg )
 {
-	string	gamefolder;
+	int	i, servercount, checksum;
+	int	playernum, maxclients;
+	char	gamefolder[MAX_QPATH];
 	qboolean	background;
-	int	i;
 
 	MsgDev( D_NOTE, "Serverdata packet received.\n" );
 
 	cls.demowaiting = false;	// server is changed
-	clgame.load_sequence++;	// now all hud sprites are invalid
-
-	// wipe the client_t struct
-	if( !cls.changelevel && !cls.changedemo )
-		CL_ClearState ();
 	cls.state = ca_connected;
+	clgame.load_sequence++;	// now all hud sprites are invalid
+	cls.signon = 0;		// reset signon state
 
 	// Re-init hud video, especially if we changed game directories
 	clgame.dllFuncs.pfnVidInit();
 
 	// parse protocol version number
-	i = MSG_ReadLong( msg );
-	cls.serverProtocol = i;
+	cls.serverProtocol = MSG_ReadLong( msg );
 
-	if( i != PROTOCOL_VERSION )
-		Host_Error( "Server use invalid protocol (%i should be %i)\n", i, PROTOCOL_VERSION );
+	if( cls.serverProtocol != PROTOCOL_VERSION )
+		Host_Error( "Server use invalid protocol (%i should be %i)\n", cls.serverProtocol, PROTOCOL_VERSION );
 
-	cl.servercount = MSG_ReadLong( msg );
-	cl.checksum = MSG_ReadLong( msg );
-	cl.playernum = MSG_ReadByte( msg );
-	cl.maxclients = MSG_ReadByte( msg );
+	servercount = MSG_ReadLong( msg );
+	checksum = MSG_ReadLong( msg );
+	playernum = MSG_ReadByte( msg );
+	maxclients = MSG_ReadByte( msg );
 	clgame.maxEntities = MSG_ReadWord( msg );
 	clgame.maxEntities = bound( 600, clgame.maxEntities, MAX_EDICTS );
 	clgame.maxModels = MSG_ReadWord( msg );
 	Q_strncpy( clgame.mapname, MSG_ReadString( msg ), MAX_STRING );
 	Q_strncpy( clgame.maptitle, MSG_ReadString( msg ), MAX_STRING );
 	background = MSG_ReadOneBit( msg );
+	cls.changelevel = MSG_ReadOneBit( msg );
 	Q_strncpy( gamefolder, MSG_ReadString( msg ), MAX_STRING );
 	host.features = (uint)MSG_ReadLong( msg );
 
 	if( clgame.maxModels > MAX_MODELS )
 		MsgDev( D_WARN, "server model limit is above client model limit %i > %i\n", clgame.maxModels, MAX_MODELS );
+
+	if( cls.changelevel && cls.demoplayback )
+		cls.changedemo = true;
+
+	// wipe the client_t struct
+	CL_ClearState ();
+
+	// fill the client struct
+	cl.servercount = servercount;
+	cl.checksum = checksum;
+	cl.playernum = playernum;
+	cl.maxclients = maxclients;
+
+	// set the background state
+	if( cls.demoplayback && ( cls.demonum != -1 ))
+	{
+		host.mouse_visible = false;
+		cl.background = true;
+	}
+	else cl.background = background;
+
+	if( cls.changedemo )
+		SCR_BeginLoadingPlaque( cl.background );
 
 	if( Con_FixedFont( ))
 	{
@@ -805,15 +826,6 @@ void CL_ParseServerData( sizebuf_t *msg )
 	}
 	else Cvar_Reset( "r_decals" );
 
-	// set the background state
-	if( cls.demoplayback && ( cls.demonum != -1 ))
-	{
-		// re-init mouse
-		host.mouse_visible = false;
-		cl.background = true;
-	}
-	else cl.background = background;
-
 	if( cl.background )	// tell the game parts about background state
 		Cvar_FullSet( "cl_background", "1", FCVAR_READ_ONLY );
 	else Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
@@ -829,13 +841,11 @@ void CL_ParseServerData( sizebuf_t *msg )
 	else if( !cls.demoplayback )
 		Key_SetKeyDest( key_menu );
 
-	cl.viewentity = cl.playernum + 1; // always keep viewent an actual
-
+	// will be changed later
+	cl.viewentity = cl.playernum + 1;
 	gameui.globals->maxClients = cl.maxclients;
 	Q_strncpy( gameui.globals->maptitle, clgame.maptitle, sizeof( gameui.globals->maptitle ));
-
-	if( !cls.changelevel && !cls.changedemo )
-		CL_InitEdicts (); // re-arrange edicts
+	CL_InitEdicts (); // re-arrange edicts
 
 	// get splash name
 	if( cls.demoplayback && ( cls.demonum != -1 ))
@@ -2204,14 +2214,13 @@ ACTION MESSAGES
 =====================
 CL_ParseServerMessage
 
-INTERNAL RESOURCE
+dispatch messages
 =====================
 */
 void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 {
-	char	*s;
-	int	i, cmd, param1, param2;
 	size_t	bufStart, playerbytes;
+	int	cmd, param1, param2;
 
 	cls_message_debug.parsing = true;		// begin parsing
 	starting_count = MSG_GetNumBytesRead( msg );	// updates each frame
@@ -2304,18 +2313,10 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			CL_ParseServerTime( msg );
 			break;
 		case svc_print:
-			i = MSG_ReadByte( msg );
 			MsgDev( D_INFO, "^5%s", MSG_ReadString( msg ));
-			if( i == PRINT_CHAT )
-			{
-				if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
-					S_StartLocalSound( "misc/talk.wav", VOL_NORM, false );
-				else S_StartLocalSound( "common/menu2.wav", VOL_NORM, false );
-			}
 			break;
 		case svc_stufftext:
-			s = MSG_ReadString( msg );
-			Cbuf_AddText( s );
+			Cbuf_AddText( MSG_ReadString( msg ));
 			break;
 		case svc_setangle:
 			CL_ParseSetAngle( msg );

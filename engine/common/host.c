@@ -59,7 +59,7 @@ int Host_CompareFileTime( long ft1, long ft2 )
 
 void Host_ShutdownServer( void )
 {
-	if( !SV_Active( )) return;
+	if( !SV_Initialized( )) return;
 	Q_strncpy( host.finalmsg, "Server was killed", MAX_STRING );
 	SV_Shutdown( false );
 }
@@ -106,7 +106,7 @@ void Host_EndGame( qboolean abort, const char *message, ... )
 
 	MsgDev( D_INFO, "Host_EndGame: %s\n", string );
 	
-	if( SV_Active( ))
+	if( SV_Initialized( ))
 	{
 		Q_snprintf( host.finalmsg, sizeof( host.finalmsg ), "Host_EndGame: %s", string );
 		SV_Shutdown( false );
@@ -442,7 +442,7 @@ void Host_RestartDecals( void )
 
 	// g-cont. add space for studiodecals if present
 	host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS * 2 );
-	host.numdecals = R_CreateDecalList( host.decalList, false );
+	host.numdecals = R_CreateDecalList( host.decalList );
 
 	// remove decals from map
 	R_ClearAllDecals();

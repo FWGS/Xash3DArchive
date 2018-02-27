@@ -1138,7 +1138,7 @@ static int DecalDepthCompare( const void *a, const void *b )
 // Input  : *pList - 
 // Output : int
 //-----------------------------------------------------------------------------
-int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
+int R_CreateDecalList( decallist_t *pList )
 {
 	int	total = 0;
 	int	i, depth;
@@ -1151,7 +1151,7 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 			decal_t	*pdecals;
 			
 			// decal is in use and is not a custom decal
-			if( decal->psurface == NULL || ( decal->flags & FDECAL_DONTSAVE ))	
+			if( decal->psurface == NULL || FBitSet( decal->flags, FDECAL_DONTSAVE ))	
 				 continue;
 
 			// compute depth
@@ -1177,7 +1177,7 @@ int R_CreateDecalList( decallist_t *pList, qboolean changelevel )
 
 		if( clgame.drawFuncs.R_CreateStudioDecalList )
 		{
-			total += clgame.drawFuncs.R_CreateStudioDecalList( pList, total, changelevel );
+			total += clgame.drawFuncs.R_CreateStudioDecalList( pList, total );
 		}
 	}
 

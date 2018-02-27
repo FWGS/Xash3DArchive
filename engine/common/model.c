@@ -107,7 +107,6 @@ static void Mod_FreeModel( model_t *mod )
 	if( !mod || !mod->name[0] )
 		return;
 
-	Msg( "release %s\n", mod->name );
 	Mod_FreeUserData( mod );
 
 	// select the properly unloader
@@ -478,8 +477,6 @@ void Mod_FreeUnused( void )
 {
 	model_t	*mod;
 	int	i;
-
-	Msg( "Mod_FreeUnused()\n" );
 
 	for( i = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
 	{

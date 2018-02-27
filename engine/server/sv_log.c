@@ -166,11 +166,11 @@ void SV_ServerLog_f( sv_client_t *cl )
 
 	if( Cmd_Argc() != 2 )
 	{
-		SV_ClientPrintf( cl, PRINT_HIGH, "usage: log < on|off >\n" );
+		SV_ClientPrintf( cl, "usage: log < on|off >\n" );
 
 		if( svs.log.active )
-			SV_ClientPrintf( cl, PRINT_HIGH, "currently logging\n" );
-		else SV_ClientPrintf( cl, PRINT_HIGH, "not currently logging\n" );
+			SV_ClientPrintf( cl, "currently logging\n" );
+		else SV_ClientPrintf( cl, "not currently logging\n" );
 		return;
 	}
 
@@ -186,6 +186,6 @@ void SV_ServerLog_f( sv_client_t *cl )
 	}
 	else
 	{
-		SV_ClientPrintf( cl, PRINT_HIGH, "log: unknown parameter %s\n", Cmd_Argv( 1 ));
+		SV_ClientPrintf( cl, "log: unknown parameter %s\n", Cmd_Argv( 1 ));
 	}
 }

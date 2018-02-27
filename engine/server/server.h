@@ -246,8 +246,6 @@ typedef struct sv_client_s
 
 	edict_t		*edict;			// EDICT_NUM(clientnum+1)
 	edict_t		*pViewEntity;		// svc_setview member
-	int		messagelevel;		// for filtering printed messages
-
 	edict_t		*viewentity[MAX_VIEWENTS];	// list of portal cameras in player PVS
 	int		num_viewents;		// num of portal cameras that can merge PVS
 
@@ -485,10 +483,11 @@ void Master_Packet( void );
 //
 // sv_init.c
 //
-void SV_ActivateServer( void );
-void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, qboolean loadGame );
+void SV_ActivateServer( int runPhysics );
 qboolean SV_SpawnServer( const char *server, const char *startspot, qboolean background );
 model_t *SV_ModelHandle( int modelindex );
+void SV_DeactivateServer( void );
+char *SV_EntityScript( void );
 
 //
 // sv_phys.c
@@ -519,8 +518,8 @@ void SV_WaterMove( edict_t *ent );
 // sv_send.c
 //
 void SV_SendClientMessages( void );
-void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... );
-void SV_BroadcastPrintf( sv_client_t *ignore, int level, char *fmt, ... );
+void SV_ClientPrintf( sv_client_t *cl, char *fmt, ... );
+void SV_BroadcastPrintf( sv_client_t *ignore, char *fmt, ... );
 void SV_BroadcastCommand( const char *fmt, ... );
 
 //
@@ -536,6 +535,7 @@ const char *SV_GetClientIDString( sv_client_t *cl );
 void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg );
 void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg );
 void SV_GetPlayerStats( sv_client_t *cl, int *ping, int *packet_loss );
+void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl );
 qboolean SV_ClientConnect( edict_t *ent, char *userinfo );
 void SV_ClientThink( sv_client_t *cl, usercmd_t *cmd );
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg );
@@ -543,6 +543,7 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg );
 edict_t *SV_FakeConnect( const char *netname );
 void SV_ExecuteClientCommand( sv_client_t *cl, char *s );
 void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed );
+void SV_BuildReconnect( sizebuf_t *msg );
 qboolean SV_IsPlayerIndex( int idx );
 int SV_CalcPing( sv_client_t *cl );
 void SV_InitClientMove( void );
@@ -572,9 +573,9 @@ int SV_TransferConsistencyInfo( void );
 //
 // sv_frame.c
 //
+void SV_InactivateClients( void );
 void SV_WriteFrameToClient( sv_client_t *client, sizebuf_t *msg );
 void SV_BuildClientFrame( sv_client_t *client );
-void SV_InactivateClients( void );
 void SV_SendMessagesToAll( void );
 void SV_SkipUpdates( void );
 
@@ -625,7 +626,7 @@ char *SV_Localinfo( void );
 
 _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 {
-	if((n >= 0) && (n < svgame.globals->maxEntities))
+	if((n >= 0) && (n < GI->max_edicts))
 		return svgame.edicts + n;
 	Host_Error( "SV_EDICT_NUM: bad number %i (called at %s:%i)\n", n, file, line );
 	return NULL;	
@@ -645,10 +646,12 @@ void SV_ServerLog_f( sv_client_t *cl );
 void SV_ClearSaveDir( void );
 void SV_SaveGame( const char *pName );
 qboolean SV_LoadGame( const char *pName );
-int SV_LoadGameState( char const *level, qboolean createPlayers );
+int SV_LoadGameState( char const *level, qboolean changelevel );
+void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start );
 void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
 const char *SV_GetLatestSave( void );
 void SV_InitSaveRestore( void );
+void SV_ClearGameState( void );
 
 //
 // sv_pmove.c

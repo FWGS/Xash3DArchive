@@ -862,7 +862,7 @@ void SV_SendClientMessages( void )
 		{
 			MSG_Clear( &cl->netchan.message );
 			MSG_Clear( &cl->datagram );
-			SV_BroadcastPrintf( NULL, PRINT_HIGH, "%s overflowed\n", cl->name );
+			SV_BroadcastPrintf( NULL, "%s overflowed\n", cl->name );
 			MsgDev( D_WARN, "reliable overflow for %s\n", cl->name );
 			SV_DropClient( cl );
 			SetBits( cl->flags, FCL_SEND_NET_MESSAGE );

@@ -838,7 +838,7 @@ edict_t *SV_AllocEdict( void )
 	edict_t	*pEdict;
 	int	i;
 
-	for( i = svgame.globals->maxClients + 1; i < svgame.numEntities; i++ )
+	for( i = svs.maxclients + 1; i < svgame.numEntities; i++ )
 	{
 		pEdict = EDICT_NUM( i );
 		// the first couple seconds of server time can involve a lot of
@@ -850,8 +850,8 @@ edict_t *SV_AllocEdict( void )
 		}
 	}
 
-	if( i >= svgame.globals->maxEntities )
-		Sys_Error( "ED_AllocEdict: no free edicts (max is %d)\n", svgame.globals->maxEntities );
+	if( i >= GI->max_edicts )
+		Sys_Error( "ED_AllocEdict: no free edicts (max is %d)\n", GI->max_edicts );
 
 	svgame.numEntities++;
 	pEdict = EDICT_NUM( i );
@@ -1389,15 +1389,15 @@ int SV_CheckClientPVS( int check, qboolean bMergePVS )
 	edict_t		*ent = NULL;
 
 	// cycle to the next one
-	check = bound( 1, check, svgame.globals->maxClients );
+	check = bound( 1, check, svs.maxclients );
 
-	if( check == svgame.globals->maxClients )
+	if( check == svs.maxclients )
 		i = 1; // reset cycle
 	else i = check + 1;
 
 	for( ;; i++ )
 	{
-		if( i == ( svgame.globals->maxClients + 1 ))
+		if( i == ( svs.maxclients + 1 ))
 			i = 1;
 
 		ent = EDICT_NUM( i );
@@ -1580,7 +1580,7 @@ void pfnRemoveEntity( edict_t* e )
 	}
 
 	// never free client or world entity
-	if( NUM_FOR_EDICT( e ) < ( svgame.globals->maxClients + 1 ))
+	if( NUM_FOR_EDICT( e ) < ( svs.maxclients + 1 ))
 	{
 		MsgDev( D_ERROR, "SV_RemoveEntity: can't delete %s\n", (e == EDICT_NUM( 0 )) ? "world" : "client" );
 		return;
@@ -3243,10 +3243,8 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 	switch( ptype )
 	{
 	case print_console:
-		SV_ClientPrintf( client, PRINT_HIGH, "%s", szMsg );
-		break;
 	case print_chat:
-		SV_ClientPrintf( client, PRINT_CHAT, "%s", szMsg );
+		SV_ClientPrintf( client, "%s", szMsg );
 		break;
 	case print_center:
 		MSG_BeginServerCmd( &client->netchan.message, svc_centerprint );
@@ -3263,9 +3261,7 @@ pfnServerPrint
 */
 void pfnServerPrint( const char *szMsg )
 {
-	// while loading in-progress we can sending message only for local client
-	if( sv.state != ss_active ) MsgDev( D_INFO, "%s", szMsg );	
-	else SV_BroadcastPrintf( NULL, PRINT_HIGH, "%s", szMsg );
+	SV_BroadcastPrintf( NULL, "%s", szMsg );
 }
 
 /*
@@ -3488,8 +3484,6 @@ void pfnRunPlayerMove( edict_t *pClient, const float *v_angle, float fmove, floa
 	sv_client_t	*cl, *oldcl;
 	usercmd_t		cmd;
 	uint		seed;
-
-	if( sv.paused ) return;
 
 	if(( cl = SV_ClientFromEdict( pClient, true )) == NULL )
 	{
@@ -4926,10 +4920,10 @@ qboolean SV_LoadProgs( const char *name )
 
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = svs.maxclients;
-	svgame.edicts = Mem_Alloc( svgame.mempool, sizeof( edict_t ) * svgame.globals->maxEntities );
-	svgame.numEntities = svgame.globals->maxClients + 1; // clients + world
+	svgame.edicts = Mem_Alloc( svgame.mempool, sizeof( edict_t ) * GI->max_edicts );
+	svgame.numEntities = svs.maxclients + 1; // clients + world
 
-	for( i = 0, e = svgame.edicts; i < svgame.globals->maxEntities; i++, e++ )
+	for( i = 0, e = svgame.edicts; i < GI->max_edicts; i++, e++ )
 		e->free = true; // mark all edicts as freed
 
 	// clear user messages

@@ -23,12 +23,12 @@ SV_ClientPrintf
 Sends text across to be displayed if the level passes
 =================
 */
-void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... )
+void SV_ClientPrintf( sv_client_t *cl, char *fmt, ... )
 {
 	char	string[MAX_SYSPATH];
 	va_list	argptr;
 
-	if( level < cl->messagelevel || FBitSet( cl->flags, FCL_FAKECLIENT ))
+	if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 		return;
 	
 	va_start( argptr, fmt );
@@ -36,7 +36,6 @@ void SV_ClientPrintf( sv_client_t *cl, int level, char *fmt, ... )
 	va_end( argptr );
 	
 	MSG_BeginServerCmd( &cl->netchan.message, svc_print );
-	MSG_WriteByte( &cl->netchan.message, level );
 	MSG_WriteString( &cl->netchan.message, string );
 }
 
@@ -47,7 +46,7 @@ SV_BroadcastPrintf
 Sends text to all active clients
 =================
 */
-void SV_BroadcastPrintf( sv_client_t *ignore, int level, char *fmt, ... )
+void SV_BroadcastPrintf( sv_client_t *ignore, char *fmt, ... )
 {
 	char		string[MAX_SYSPATH];
 	va_list		argptr;
@@ -66,16 +65,17 @@ void SV_BroadcastPrintf( sv_client_t *ignore, int level, char *fmt, ... )
 
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
-		if( level < cl->messagelevel || FBitSet( cl->flags, FCL_FAKECLIENT ))
+		if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;
 
 		if( cl == ignore || cl->state != cs_spawned )
 			continue;
 
 		MSG_BeginServerCmd( &cl->netchan.message, svc_print );
-		MSG_WriteByte( &cl->netchan.message, level );
 		MSG_WriteString( &cl->netchan.message, string );
 	}
+
+	MsgDev( D_REPORT, string );
 }
 
 /*
@@ -235,12 +235,7 @@ void SV_Map_f( void )
 	if( !SV_ValidateMap( mapname, true ))
 		return;
 
-	// changing singleplayer to multiplayer or back. refresh the player count
-	if( FBitSet( sv_maxclients->flags, FCVAR_CHANGED ))
-		Host_ShutdownServer();
-
 	Cvar_DirectSet( sv_hostmap, mapname );
-
 	COM_LoadLevel( mapname, false );
 }
 
@@ -261,7 +256,7 @@ void SV_MapBackground_f( void )
 		return;
 	}
 
-	if( sv.state == ss_active && !sv.background )
+	if( SV_Active() && !sv.background )
 	{
 		MsgDev( D_ERROR, "can't set background map while game is active\n" );
 		return;
@@ -274,14 +269,10 @@ void SV_MapBackground_f( void )
 	if( !SV_ValidateMap( mapname, false ))
 		return;
 
-	Q_strncpy( host.finalmsg, "", MAX_STRING );
-	SV_Shutdown( true );
-	NET_Config( false ); // close network sockets
-
-	// reset all multiplayer cvars
+	// background map is always run as singleplayer
 	Cvar_FullSet( "maxplayers", "1", FCVAR_LATCH );
-	Cvar_SetValue( "deathmatch", 0 );
-	Cvar_SetValue( "coop", 0 );
+	Cvar_FullSet( "deathmatch", "0", FCVAR_LATCH );
+	Cvar_FullSet( "coop", "0", FCVAR_LATCH );
 
 	COM_LoadLevel( mapname, true );
 }
@@ -512,10 +503,17 @@ void SV_ChangeLevel_f( void )
 	}
 
 	if( sv.background )
+	{
 		COM_LoadLevel( mapname, false );
-	else if( c == 2 )
-		COM_ChangeLevel( Cmd_Argv( 1 ), NULL );
-	else COM_ChangeLevel( Cmd_Argv( 1 ), Cmd_Argv( 2 ));
+	}
+	else
+	{
+		// g-cont: inactivate clients to avoid fired "trigger_changelevel" multiple times
+		SV_InactivateClients ();
+
+		if( c == 2 ) COM_ChangeLevel( Cmd_Argv( 1 ), NULL );
+		else COM_ChangeLevel( Cmd_Argv( 1 ), Cmd_Argv( 2 ));
+	}
 }
 
 /*
@@ -570,8 +568,8 @@ void SV_Kick_f( void )
 	}
 
 	Log_Printf( "Kick: \"%s<%i>\" was kicked\n", svs.currentPlayer->name, svs.currentPlayer->userid );
-	SV_BroadcastPrintf( svs.currentPlayer, PRINT_HIGH, "%s was kicked\n", svs.currentPlayer->name );
-	SV_ClientPrintf( svs.currentPlayer, PRINT_HIGH, "You were kicked from the game\n" );
+	SV_BroadcastPrintf( svs.currentPlayer, "%s was kicked\n", svs.currentPlayer->name );
+	SV_ClientPrintf( svs.currentPlayer, "You were kicked from the game\n" );
 	SV_DropClient( svs.currentPlayer );
 }
 
@@ -589,7 +587,7 @@ void SV_Kill_f( void )
 
 	if( svs.currentPlayer->edict->v.health <= 0.0f )
 	{
-		SV_ClientPrintf( svs.currentPlayer, PRINT_HIGH, "Can't suicide - already dead!\n");
+		SV_ClientPrintf( svs.currentPlayer, "Can't suicide - already dead!\n");
 		return;
 	}
 
@@ -678,9 +676,7 @@ SV_ConSay_f
 */
 void SV_ConSay_f( void )
 {
-	char		*p, text[MAX_SYSPATH];
-	sv_client_t	*client;
-	int		i;
+	char	*p, text[MAX_SYSPATH];
 
 	if( Cmd_Argc() < 2 ) return;
 
@@ -700,14 +696,7 @@ void SV_ConSay_f( void )
 	}
 
 	Q_strncat( text, p, MAX_SYSPATH );
-
-	for( i = 0, client = svs.clients; i < svs.maxclients; i++, client++ )
-	{
-		if( client->state != cs_spawned )
-			continue;
-
-		SV_ClientPrintf( client, PRINT_CHAT, "%s\n", text );
-	}
+	SV_BroadcastPrintf( NULL, "%s\n", text );
 	Log_Printf( "Server say: \"%s\"\n", p );
 }
 
@@ -849,8 +838,8 @@ void SV_PlayersOnly_f( void )
 	sv.hostflags = sv.hostflags ^ SVF_PLAYERSONLY;
 
 	if( !FBitSet( sv.hostflags, SVF_PLAYERSONLY ))
-		SV_BroadcastPrintf( NULL, PRINT_HIGH, "Resume server physic\n" );
-	else SV_BroadcastPrintf( NULL, PRINT_HIGH, "Freeze server physic\n" );
+		SV_BroadcastPrintf( NULL, "Resume game physic\n" );
+	else SV_BroadcastPrintf( NULL, "Freeze game physic\n" );
 }
 
 /*
@@ -871,8 +860,8 @@ void SV_EdictUsage_f( void )
 
 	active = pfnNumberOfEntities(); 
 	Msg( "%5i edicts is used\n", active );
-	Msg( "%5i edicts is free\n", svgame.globals->maxEntities - active );
-	Msg( "%5i total\n", svgame.globals->maxEntities );
+	Msg( "%5i edicts is free\n", GI->max_edicts - active );
+	Msg( "%5i total\n", GI->max_edicts );
 }
 
 /*
@@ -937,7 +926,6 @@ void SV_InitHostCommands( void )
 		Cmd_AddCommand( "map_background", SV_MapBackground_f, "set background map" );
 		Cmd_AddCommand( "load", SV_Load_f, "load a saved game file" );
 		Cmd_AddCommand( "loadquick", SV_QuickLoad_f, "load a quick-saved game file" );
-		Cmd_AddCommand( "killsave", SV_DeleteSave_f, "delete a saved game file and saveshot" );
 	}
 }
 
@@ -961,17 +949,18 @@ void SV_InitOperatorCommands( void )
 	Cmd_AddCommand( "entpatch", SV_EntPatch_f, "write entity patch to allow external editing" );
 	Cmd_AddCommand( "edict_usage", SV_EdictUsage_f, "show info about edicts usage" );
 	Cmd_AddCommand( "entity_info", SV_EntityInfo_f, "show more info about edicts" );
+	Cmd_AddCommand( "shutdownserver", SV_KillServer_f, "shutdown current server" );
 
 	if( host.type == HOST_NORMAL )
 	{
 		Cmd_AddCommand( "save", SV_Save_f, "save the game to a file" );
 		Cmd_AddCommand( "savequick", SV_QuickSave_f, "save the game to the quicksave" );
 		Cmd_AddCommand( "autosave", SV_AutoSave_f, "save the game to 'autosave' file" );
+		Cmd_AddCommand( "killsave", SV_DeleteSave_f, "delete a saved game file and saveshot" );
 	}
 	else if( host.type == HOST_DEDICATED )
 	{
 		Cmd_AddCommand( "say", SV_ConSay_f, "send a chat message to everyone on the server" );
-		Cmd_AddCommand( "killserver", SV_KillServer_f, "shutdown current server" );
 	}
 }
 
@@ -998,6 +987,7 @@ void SV_KillOperatorCommands( void )
 	Cmd_RemoveCommand( "entpatch" );
 	Cmd_RemoveCommand( "edict_usage" );
 	Cmd_RemoveCommand( "entity_info" );
+	Cmd_RemoveCommand( "shutdownserver" );
 
 	if( host.type == HOST_NORMAL )
 	{
@@ -1009,6 +999,5 @@ void SV_KillOperatorCommands( void )
 	else if( host.type == HOST_DEDICATED )
 	{
 		Cmd_RemoveCommand( "say" );
-		Cmd_RemoveCommand( "killserver" );
 	}
 }

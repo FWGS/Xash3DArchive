@@ -96,6 +96,12 @@ sizebuf_t	net_message;
 byte	*net_mempool;
 byte	net_message_buffer[NET_MAX_MESSAGE];
 
+const char *ns_strings[NS_COUNT] =
+{
+	"Client",
+	"Server",
+};
+
 /*
 ===============
 Netchan_Init
@@ -714,7 +720,7 @@ void Netchan_CheckForCompletion( netchan_t *chan, int stream, int intotalbuffers
 	if( c == intotalbuffers )
 	{
 		chan->incomingready[stream] = true;
-		MsgDev( D_NOTE, "\nincoming is complete %i bytes waiting\n", size );
+		MsgDev( D_NOTE, "\n%s: incoming is complete %i bytes waiting\n", ns_strings[chan->sock], size );
 	}
 }
 

@@ -32,6 +32,9 @@ void SV_ClearPhysEnts( void )
 
 qboolean SV_PlayerIsFrozen( edict_t *pClient )
 {
+	if( sv.background )
+		return true; // always freeze client on background
+
 	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 		return false;
 

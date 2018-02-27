@@ -79,12 +79,12 @@ static qboolean Cvar_UpdateInfo( convar_t *var, const char *value, qboolean noti
 			if( FBitSet( var->flags, FCVAR_PROTECTED ))
 			{
 				Log_Printf( "Server cvar \"%s\" = \"%s\"\n", var->name, "***PROTECTED***" );
-				SV_BroadcastPrintf( NULL, PRINT_HIGH, "\"%s\" changed to \"%s\"\n", var->name, "***PROTECTED***" );
+				SV_BroadcastPrintf( NULL, "\"%s\" changed to \"%s\"\n", var->name, "***PROTECTED***" );
 			}
 			else
 			{
 				Log_Printf( "Server cvar \"%s\" = \"%s\"\n", var->name, value );
-				SV_BroadcastPrintf( NULL, PRINT_HIGH, "\"%s\" changed to \"%s\"\n", var->name, value );
+				SV_BroadcastPrintf( NULL, "\"%s\" changed to \"%s\"\n", var->name, value );
 			}
 		}
 	}

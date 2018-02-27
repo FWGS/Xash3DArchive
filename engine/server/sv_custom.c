@@ -177,8 +177,8 @@ void SV_ParseConsistencyResponse( sv_client_t *cl, sizebuf_t *msg )
 		dropmessage[0] = 0;
 		if( svgame.dllFuncs.pfnInconsistentFile( cl->edict, sv.resources[badresindex - 1].szFileName, dropmessage ))
 		{
-			if( Q_strlen( dropmessage ) > 0 )
-				SV_ClientPrintf( cl, PRINT_HIGH, dropmessage );
+			if( COM_CheckString( dropmessage ))
+				SV_ClientPrintf( cl, dropmessage );
 			SV_DropClient( cl );
 		}
 	}

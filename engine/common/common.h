@@ -289,15 +289,6 @@ typedef enum
 	RD_PACKET
 } rdtype_t;
 
-// game print level
-typedef enum
-{
-	PRINT_LOW,	// pickup messages
-	PRINT_MEDIUM,	// death messages
-	PRINT_HIGH,	// critical messages
-	PRINT_CHAT,	// chat messages
-} messagelevel_t;
-
 #include "net_ws.h"
 
 typedef struct host_redirect_s
@@ -766,7 +757,7 @@ float pfnTime( void );
 */
 #define Z_Malloc( size )		Mem_Alloc( host.mempool, size )
 #define Z_Realloc( ptr, size )	Mem_Realloc( host.mempool, ptr, size )
-#define Z_Free( ptr )		if( ptr ) Mem_Free( ptr )
+#define Z_Free( ptr )		if( ptr != NULL ) Mem_Free( ptr )
 
 //
 // crclib.c
@@ -853,9 +844,7 @@ qboolean CL_IsInConsole( void );
 qboolean CL_IsThirdPerson( void );
 qboolean CL_IsIntermission( void );
 qboolean CL_Initialized( void );
-qboolean CL_IsTimeDemo( void );
 char *CL_Userinfo( void );
-float CL_GetLerpFrac( void );
 void CL_CharEvent( int key );
 qboolean CL_DisableVisibility( void );
 int CL_PointContents( const vec3_t point );
@@ -868,15 +857,13 @@ struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
 void SV_StartMusic( const char *curtrack, const char *looptrack, long position );
 void SV_CreateDecal( struct sizebuf_s *msg, const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags, float scale );
-void SV_CreateStudioDecal( struct sizebuf_s *msg, const float *origin, const float *start, int decalIndex, int entityIndex, int modelIndex,
-int flags, struct modelstate_s *state );
+void SV_CreateStudioDecal( struct sizebuf_s *bf, const float *v0, const float *v1, int decal, int ent, int model, int flags, struct modelstate_s *s );
 void Log_Printf( const char *fmt, ... );
 struct sizebuf_s *SV_GetReliableDatagram( void );
 void SV_BroadcastCommand( const char *fmt, ... );
-void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start );
 qboolean SV_RestoreCustomDecal( struct decallist_s *entry, edict_t *pEdict, qboolean adjacent );
-void SV_BroadcastPrintf( struct sv_client_s *ignore, int level, char *fmt, ... );
-int R_CreateDecalList( struct decallist_s *pList, qboolean changelevel );
+void SV_BroadcastPrintf( struct sv_client_s *ignore, char *fmt, ... );
+int R_CreateDecalList( struct decallist_s *pList );
 void R_DecalRemoveAll( int texture );
 void R_ClearAllDecals( void );
 void R_ClearStaticEntities( void );
@@ -884,8 +871,6 @@ qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *posi
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
 void CL_ServerCommand( qboolean reliable, char *fmt, ... );
-void SV_ActivateServer( void );
-void SV_DeactivateServer( void );
 const char *CL_MsgInfo( int cmd );
 void SV_DrawDebugTriangles( void );
 void SV_DrawOrthoTriangles( void );
@@ -895,19 +880,22 @@ void CL_ExtraUpdate( void );
 int CL_GetMaxClients( void );
 int SV_GetMaxClients( void );
 qboolean CL_IsRecordDemo( void );
+qboolean CL_IsTimeDemo( void );
 qboolean CL_IsPlaybackDemo( void );
 qboolean CL_IsBackgroundDemo( void );
 qboolean CL_IsBackgroundMap( void );
+qboolean SV_Initialized( void );
 qboolean CL_LoadProgs( const char *name );
 qboolean SV_GetComment( const char *savename, char *comment );
 qboolean SV_NewGame( const char *mapName, qboolean loadGame );
 void SV_ClipPMoveToEntity( struct physent_s *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, struct pmtrace_s *tr );
 void CL_ClipPMoveToEntity( struct physent_s *pe, const vec3_t start, vec3_t mins, vec3_t maxs, const vec3_t end, struct pmtrace_s *tr );
 void CL_Particle( const vec3_t origin, int color, float life, int zpos, int zvel ); // debug thing
-void SV_LevelInit( const char *pMapName, char const *pOldLevel, char const *pLandmarkName, qboolean loadGame );
-qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean background );
 void SV_SysError( const char *error_string );
-qboolean SV_LoadGame( const char *pName );
+void SV_ShutdownGame( void );
+void SV_ExecLoadLevel( void );
+void SV_ExecLoadGame( void );
+void SV_ExecChangeLevel( void );
 void SV_ClearSaveDir( void );
 void SV_InitGameProgs( void );
 void SV_FreeGameProgs( void );
