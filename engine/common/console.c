@@ -434,7 +434,8 @@ void Con_AddLine( const char *line, int length )
 	byte		*putpos;
 	con_lineinfo_t	*p;
 
-	if( !con.initialized ) return;
+	if( !con.initialized || !con.buffer )
+		return;
 
 	Con_FixTimes();
 	length++;	// reserve space for term
@@ -1011,7 +1012,7 @@ void Con_Print( const char *txt )
 	int		c, mask;
 
 	// client not running
-	if( !con.initialized || !con.buffer || host.type == HOST_DEDICATED )
+	if( !con.initialized || !con.buffer )
 		return;
 
 	if( txt[0] == 2 )
@@ -1054,6 +1055,54 @@ void Con_Print( const char *txt )
 			break;
 		}
 	}
+}
+
+/*
+=============
+Con_Printf
+
+=============
+*/
+void Con_Printf( char *szFmt, ... )
+{
+	static char	buffer[MAX_PRINT_MSG];
+	va_list		args;
+
+	if( host.developer <= 0 )
+		return;
+
+	va_start( args, szFmt );
+	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
+	va_end( args );
+
+	if( buffer[0] == '0' && buffer[1] == '\n' && buffer[2] == '\0' )
+		return; // hlrally spam
+
+	Sys_Print( buffer );
+}
+
+/*
+=============
+Con_DPrintf
+
+=============
+*/
+void Con_DPrintf( char *szFmt, ... )
+{
+	static char	buffer[MAX_PRINT_MSG];
+	va_list		args;
+
+	if( host.developer < D_ERROR )
+		return;
+
+	va_start( args, szFmt );
+	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
+	va_end( args );
+
+	if( buffer[0] == '0' && buffer[1] == '\n' && buffer[2] == '\0' )
+		return; // hlrally spam
+
+	Sys_Print( buffer );
 }
 
 /*
@@ -1913,6 +1962,9 @@ returned.
 int Con_DrawConsoleLine( int y, int lineno )
 {
 	con_lineinfo_t	*li = &CON_LINES( lineno );
+
+	if( *li->start == '\1' )
+		return 0;	// this string will be shown only at notify
 
 	if( y >= con.curFont->charHeight )
 		Con_DrawGenericString( con.curFont->charWidths[' '], y, li->start, g_color_table[7], false, -1 );

@@ -112,7 +112,6 @@ qboolean			fs_ext_path = false;	// attempt to read\write from ./ or ../ pathes
 static const wadtype_t	wad_hints[10];
 
 static void FS_InitMemory( void );
-const char *FS_FileExtension( const char *in );
 static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedironly );
 static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char matchtype );
 static dpackfile_t *FS_AddFileToPack( const char* name, pack_t *pack, long offset, long size );
@@ -394,48 +393,6 @@ void FS_ClearPaths_f( void )
 }
 
 /*
-============
-FS_FileBase
-
-Extracts the base name of a file (no path, no extension, assumes '/' as path separator)
-============
-*/
-void FS_FileBase( const char *in, char *out )
-{
-	int	len, start, end;
-
-	len = Q_strlen( in );
-	if( !len ) return;
-	
-	// scan backward for '.'
-	end = len - 1;
-
-	while( end && in[end] != '.' && in[end] != '/' && in[end] != '\\' )
-		end--;
-	
-	if( in[end] != '.' )
-		end = len-1; // no '.', copy to end
-	else end--; // found ',', copy to left of '.'
-
-	// scan backward for '/'
-	start = len - 1;
-
-	while( start >= 0 && in[start] != '/' && in[start] != '\\' )
-		start--;
-
-	if( start < 0 || ( in[start] != '/' && in[start] != '\\' ))
-		start = 0;
-	else start++;
-
-	// length of new sting
-	len = end - start + 1;
-
-	// Copy partial string
-	Q_strncpy( out, &in[start], len + 1 );
-	out[len] = 0;
-}
-
-/*
 =================
 FS_LoadPackPAK
 
@@ -536,7 +493,7 @@ static qboolean FS_AddWad_Fullpath( const char *wadfile, qboolean *already_loade
 {
 	searchpath_t	*search;
 	wfile_t		*wad = NULL;
-	const char	*ext = FS_FileExtension( wadfile );
+	const char	*ext = COM_FileExtension( wadfile );
 	int		errorcode = WAD_LOAD_COULDNT_OPEN;
 
 	for( search = fs_searchpaths; search; search = search->next )
@@ -589,7 +546,7 @@ static qboolean FS_AddPak_Fullpath( const char *pakfile, qboolean *already_loade
 {
 	searchpath_t	*search;
 	pack_t		*pak = NULL;
-	const char	*ext = FS_FileExtension( pakfile );
+	const char	*ext = COM_FileExtension( pakfile );
 	int		i, errorcode = PAK_LOAD_COULDNT_OPEN;
 	
 	for( search = fs_searchpaths; search; search = search->next )
@@ -621,7 +578,7 @@ static qboolean FS_AddPak_Fullpath( const char *pakfile, qboolean *already_loade
 		// time to add in search list all the wads that contains in current pakfile (if do)
 		for( i = 0; i < pak->numfiles; i++ )
 		{
-			if( !Q_stricmp( FS_FileExtension( pak->files[i].name ), "wad" ))
+			if( !Q_stricmp( COM_FileExtension( pak->files[i].name ), "wad" ))
 			{
 				Q_sprintf( fullpath, "%s/%s", pakfile, pak->files[i].name );
 				FS_AddWad_Fullpath( fullpath, NULL, flags );
@@ -663,7 +620,7 @@ void FS_AddGameDirectory( const char *dir, int flags )
 	// add any PAK package in the directory
 	for( i = 0; i < list.numstrings; i++ )
 	{
-		if( !Q_stricmp( FS_FileExtension( list.strings[i] ), "pak" ))
+		if( !Q_stricmp( COM_FileExtension( list.strings[i] ), "pak" ))
 		{
 			Q_sprintf( fullpath, "%s%s", dir, list.strings[i] );
 			FS_AddPak_Fullpath( fullpath, NULL, flags );
@@ -675,7 +632,7 @@ void FS_AddGameDirectory( const char *dir, int flags )
 	// add any WAD package in the directory
 	for( i = 0; i < list.numstrings; i++ )
 	{
-		if( !Q_stricmp( FS_FileExtension( list.strings[i] ), "wad" ))
+		if( !Q_stricmp( COM_FileExtension( list.strings[i] ), "wad" ))
 		{
 			Q_sprintf( fullpath, "%s%s", dir, list.strings[i] );
 			FS_AddWad_Fullpath( fullpath, NULL, flags );
@@ -702,79 +659,8 @@ FS_AddGameHierarchy
 void FS_AddGameHierarchy( const char *dir, int flags )
 {
 	// Add the common game directory
-	if( dir && *dir ) FS_AddGameDirectory( va( "%s/", dir ), flags );
-}
-
-/*
-============
-FS_FileExtension
-============
-*/
-const char *FS_FileExtension( const char *in )
-{
-	const char *separator, *backslash, *colon, *dot;
-
-	separator = Q_strrchr( in, '/' );
-	backslash = Q_strrchr( in, '\\' );
-
-	if( !separator || separator < backslash )
-		separator = backslash;
-
-	colon = Q_strrchr( in, ':' );
-
-	if( !separator || separator < colon )
-		separator = colon;
-
-	dot = Q_strrchr( in, '.' );
-
-	if( dot == NULL || ( separator && ( dot < separator )))
-		return "";
-
-	return dot + 1;
-}
-
-/*
-============
-FS_FileWithoutPath
-============
-*/
-const char *FS_FileWithoutPath( const char *in )
-{
-	const char *separator, *backslash, *colon;
-
-	separator = Q_strrchr( in, '/' );
-	backslash = Q_strrchr( in, '\\' );
-
-	if( !separator || separator < backslash )
-		separator = backslash;
-
-	colon = Q_strrchr( in, ':' );
-
-	if( !separator || separator < colon )
-		separator = colon;
-
-	return separator ? separator + 1 : in;
-}
-
-/*
-============
-FS_ExtractFilePath
-============
-*/
-void FS_ExtractFilePath( const char *path, char *dest )
-{
-	const char *src = path + Q_strlen( path ) - 1;
-
-	// back up until a \ or the start
-	while( src != path && !(*(src - 1) == '\\' || *(src - 1) == '/' ))
-		src--;
-
-	if( src != path )
-	{
-		memcpy( dest, path, src - path );
-		dest[src - path - 1] = 0; // cutoff backslash
-	}
-	else Q_strcpy( dest, "" ); // file without path
+	if( COM_CheckString( dir ))
+		FS_AddGameDirectory( va( "%s/", dir ), flags );
 }
 
 /*
@@ -828,7 +714,7 @@ Return true if the path should be rejected due to one of the following:
 int FS_CheckNastyPath( const char *path, qboolean isgamedir )
 {
 	// all: never allow an empty path, as for gamedir it would access the parent directory and a non-gamedir path it is just useless
-	if( !path[0] ) return 2;
+	if( !COM_CheckString( path )) return 2;
 
 	// Mac: don't allow Mac-only filenames - : is a directory separator
 	// instead of /, but we rely on / working already, so there's no reason to
@@ -1060,12 +946,12 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		else if( !Q_stricmp( token, "startmap" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->startmap );
-			FS_StripExtension( GameInfo->startmap ); // HQ2:Amen has extension .bsp
+			COM_StripExtension( GameInfo->startmap ); // HQ2:Amen has extension .bsp
 		}
 		else if( !Q_stricmp( token, "trainmap" ) || !Q_stricmp( token, "trainingmap" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->trainmap );
-			FS_StripExtension( GameInfo->trainmap ); // HQ2:Amen has extension .bsp
+			COM_StripExtension( GameInfo->trainmap ); // HQ2:Amen has extension .bsp
 		}
 		else if( !Q_stricmp( token, "url_info" ))
 		{
@@ -1084,7 +970,7 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->iconpath );
 			COM_FixSlashes( GameInfo->iconpath );
-			FS_DefaultExtension( GameInfo->iconpath, ".ico" );
+			COM_DefaultExtension( GameInfo->iconpath, ".ico" );
 		}
 		else if( !Q_stricmp( token, "type" ))
 		{
@@ -1162,6 +1048,11 @@ void FS_ConvertGameInfo( const char *gamedir, const char *gameinfo_path, const c
 	}
 }
 
+/*
+================
+FS_ReadGameInfo
+================
+*/
 static qboolean FS_ReadGameInfo( const char *filepath, const char *gamedir, gameinfo_t *GameInfo )
 {
 	char	*afile, *pfile;
@@ -1233,17 +1124,17 @@ static qboolean FS_ReadGameInfo( const char *filepath, const char *gamedir, game
 		else if( !Q_stricmp( token, "startmap" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->startmap );
-			FS_StripExtension( GameInfo->startmap ); // HQ2:Amen has extension .bsp
+			COM_StripExtension( GameInfo->startmap ); // HQ2:Amen has extension .bsp
 		}
 		else if( !Q_stricmp( token, "trainmap" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->trainmap );
-			FS_StripExtension( GameInfo->trainmap ); // HQ2:Amen has extension .bsp
+			COM_StripExtension( GameInfo->trainmap ); // HQ2:Amen has extension .bsp
 		}
 		else if( !Q_stricmp( token, "icon" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->iconpath );
-			FS_DefaultExtension( GameInfo->iconpath, ".ico" );
+			COM_DefaultExtension( GameInfo->iconpath, ".ico" );
 		}
 		else if( !Q_stricmp( token, "url_info" ))
 		{
@@ -1762,20 +1653,20 @@ static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedir
 
 			// quick reject by filetype
 			if( type == TYP_NONE ) continue;
-			FS_ExtractFilePath( name, wadname );
+			COM_ExtractFilePath( name, wadname );
 			wadfolder[0] = '\0';
 
 			if( Q_strlen( wadname ))
 			{
-				FS_FileBase( wadname, wadname );
+				COM_FileBase( wadname, wadname );
 				Q_strncpy( wadfolder, wadname, sizeof( wadfolder ));
-				FS_DefaultExtension( wadname, ".wad" );
+				COM_DefaultExtension( wadname, ".wad" );
 				anywadname = false;
 			}
 
 			// make wadname from wad fullpath
-			FS_FileBase( search->wad->filename, shortname );
-			FS_DefaultExtension( shortname, ".wad" );
+			COM_FileBase( search->wad->filename, shortname );
+			COM_DefaultExtension( shortname, ".wad" );
 
 			// quick reject by wadname
 			if( !anywadname && Q_stricmp( wadname, shortname ))
@@ -1783,7 +1674,7 @@ static searchpath_t *FS_FindFile( const char *name, int *index, qboolean gamedir
 
 			// NOTE: we can't using long names for wad,
 			// because we using original wad names[16];
-			FS_FileBase( name, shortname );
+			COM_FileBase( name, shortname );
 
 			lump = W_FindLump( search->wad, shortname, type );
 
@@ -2347,49 +2238,6 @@ OTHERS PUBLIC FUNCTIONS
 =============================================================================
 */
 /*
-============
-FS_StripExtension
-============
-*/
-void FS_StripExtension( char *path )
-{
-	size_t	length;
-
-	length = Q_strlen( path ) - 1;
-	while( length > 0 && path[length] != '.' )
-	{
-		length--;
-		if( path[length] == '/' || path[length] == '\\' || path[length] == ':' )
-			return; // no extension
-	}
-
-	if( length ) path[length] = 0;
-}
-
-/*
-==================
-FS_DefaultExtension
-==================
-*/
-void FS_DefaultExtension( char *path, const char *extension )
-{
-	const char	*src;
-
-	// if path doesn't have a .EXT, append extension
-	// (extension should include the .)
-	src = path + Q_strlen( path ) - 1;
-
-	while( *src != '/' && src != path )
-	{
-		// it has an extension
-		if( *src == '.' ) return;                 
-		src--;
-	}
-
-	Q_strcat( path, extension );
-}
-
-/*
 ==================
 FS_FileExists
 
@@ -2484,7 +2332,7 @@ dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 	}
 	dllpath[i] = '\0';
 
-	FS_DefaultExtension( dllpath, ".dll" );	// apply ext if forget
+	COM_DefaultExtension( dllpath, ".dll" );	// apply ext if forget
 	search = FS_FindFile( dllpath, &index, false );
 
 	if( !search )
@@ -2769,21 +2617,21 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 
 			// quick reject by filetype
 			if( type == TYP_NONE ) continue;
-			FS_ExtractFilePath( pattern, wadname );
-			FS_FileBase( pattern, wadpattern );
+			COM_ExtractFilePath( pattern, wadname );
+			COM_FileBase( pattern, wadpattern );
 			wadfolder[0] = '\0';
 
 			if( Q_strlen( wadname ))
 			{
-				FS_FileBase( wadname, wadname );
+				COM_FileBase( wadname, wadname );
 				Q_strncpy( wadfolder, wadname, sizeof( wadfolder ));
-				FS_DefaultExtension( wadname, ".wad" );
+				COM_DefaultExtension( wadname, ".wad" );
 				anywadname = false;
 			}
 
 			// make wadname from wad fullpath
-			FS_FileBase( searchpath->wad->filename, temp2 );
-			FS_DefaultExtension( temp2, ".wad" );
+			COM_FileBase( searchpath->wad->filename, temp2 );
+			COM_DefaultExtension( temp2, ".wad" );
 
 			// quick reject by wadname
 			if( !anywadname && Q_stricmp( wadname, temp2 ))
@@ -2815,7 +2663,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 						{
 							// build path: wadname/lumpname.ext
 							Q_snprintf( temp2, sizeof(temp2), "%s/%s", wadfolder, temp );
-							FS_DefaultExtension( temp2, va(".%s", W_ExtFromType( wad->lumps[i].type )));
+							COM_DefaultExtension( temp2, va(".%s", W_ExtFromType( wad->lumps[i].type )));
 							stringlistappend( &resultlist, temp2 );
 						}
 					}
@@ -2946,7 +2794,7 @@ Extracts file type from extension
 */
 static char W_TypeFromExt( const char *lumpname )
 {
-	const char	*ext = FS_FileExtension( lumpname );
+	const char	*ext = COM_FileExtension( lumpname );
 	const wadtype_t	*type;
 
 	// we not known about filetype, so match only by filename
@@ -2999,7 +2847,7 @@ char W_HintFromSuf( const char *lumpname )
 	const wadtype_t	*hint;
 
 	// trying to extract hint from the name
-	FS_FileBase( lumpname, barename );
+	COM_FileBase( lumpname, barename );
 	namelen = Q_strlen( barename );
 
 	if( namelen <= HINT_NAMELEN )
@@ -3037,7 +2885,7 @@ static dlumpinfo_t *W_FindLump( wfile_t *wad, const char *name, const char match
 		return NULL;
 
 	// trying to extract hint from the name
-	FS_FileBase( name, barename );
+	COM_FileBase( name, barename );
 	namelen = Q_strlen( barename );
 
 	if( namelen > HINT_NAMELEN )
@@ -3209,7 +3057,7 @@ wfile_t *W_Open( const char *filename, int *error )
 
 	// NOTE: FS_Open is load wad file from the first pak in the list (while fs_ext_path is false)
 	if( fs_ext_path ) wad->handle = FS_Open( filename, "rb", false );
-	else wad->handle = FS_Open( FS_FileWithoutPath( filename ), "rb", false );
+	else wad->handle = FS_Open( COM_FileWithoutPath( filename ), "rb", false );
 
 	if( wad->handle == NULL )
 	{

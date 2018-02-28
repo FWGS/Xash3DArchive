@@ -449,7 +449,7 @@ void R_SetupSky( const char *skyboxname )
 	}
 
 	Q_snprintf( loadname, sizeof( loadname ), "gfx/env/%s", skyboxname );
-	FS_StripExtension( loadname );
+	COM_StripExtension( loadname );
 
 	// kill the underline suffix to find them manually later
 	if( loadname[Q_strlen( loadname ) - 1] == '_' )
@@ -459,40 +459,34 @@ void R_SetupSky( const char *skyboxname )
 	// to prevent infinite recursion if default skybox was missed
 	if( result == SKYBOX_MISSED && Q_stricmp( loadname, "gfx/env/desert" ))
 	{
-		MsgDev( D_ERROR, "R_SetupSky: missed or incomplete skybox '%s'\n", skyboxname );
+		MsgDev( D_ERROR, "missed or incomplete skybox '%s'\n", skyboxname );
 		R_SetupSky( "desert" ); // force to default
 		return; 
 	}
 
 	// release old skybox
 	R_UnloadSkybox();
+	Con_DPrintf( "SKY:  " );
 
-	if( result == SKYBOX_HLSTYLE )
+	for( i = 0; i < 6; i++ )
 	{
-		for( i = 0; i < 6; i++ )
-		{
+		if( result == SKYBOX_HLSTYLE )
 			Q_snprintf( sidename, sizeof( sidename ), "%s%s", loadname, r_skyBoxSuffix[i] );
-			tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY, NULL );
-			if( !tr.skyboxTextures[i] ) break;
-		}
-	}
-	else if( result == SKYBOX_Q1STYLE )
-	{
-		for( i = 0; i < 6; i++ )
-		{
-			Q_snprintf( sidename, sizeof( sidename ), "%s_%s", loadname, r_skyBoxSuffix[i] );
-			tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY, NULL );
-			if( !tr.skyboxTextures[i] ) break;
-		}
+		else Q_snprintf( sidename, sizeof( sidename ), "%s_%s", loadname, r_skyBoxSuffix[i] );
+
+		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY, NULL );
+		if( !tr.skyboxTextures[i] ) break;
+		Con_DPrintf( "%s%s, ", skyboxname, r_skyBoxSuffix[i] );
 	}
 
 	if( i == 6 )
 	{
 		SetBits( world.flags, FWORLD_CUSTOM_SKYBOX );
+		Con_DPrintf( "done\n" );
 		return; // loaded
 	}
 
-	MsgDev( D_ERROR, "R_SetupSky: couldn't load skybox '%s'\n", skyboxname );
+	MsgDev( D_ERROR, "couldn't load skybox '%s'\n", skyboxname );
 	R_UnloadSkybox();
 }
 

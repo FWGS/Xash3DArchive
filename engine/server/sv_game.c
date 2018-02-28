@@ -863,7 +863,7 @@ edict_t *SV_AllocEdict( void )
 LINK_ENTITY_FUNC SV_GetEntityClass( const char *pszClassName )
 {
 	// allocate edict private memory (passed by dlls)
-	return (LINK_ENTITY_FUNC)Com_GetProcAddress( svgame.hInstance, pszClassName );
+	return (LINK_ENTITY_FUNC)COM_GetProcAddress( svgame.hInstance, pszClassName );
 }
 
 edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
@@ -1132,29 +1132,91 @@ pfnChangeLevel
 
 =================
 */
-void pfnChangeLevel( const char* s1, const char* s2 )
+void pfnChangeLevel( const char *level, const char *landmark )
 {
+	int		flags, smooth = false;
 	static uint	last_spawncount = 0;
+	char		mapname[MAX_QPATH];
+	char		*spawn_entity;
 
-	if( !s1 || s1[0] <= ' ' || sv.background )
-		return;
-
-	// make sure we don't issue two changelevels at one time
-	if( svs.changelevel_next_time > host.realtime )
-		return;
-
-	svs.changelevel_next_time = host.realtime + 0.5f;		// rest 0.5f secs if failed
+	if( !COM_CheckString( level ) || sv.state != ss_active )
+		return; // ???
 
 	// make sure we don't issue two changelevels
 	if( svs.spawncount == last_spawncount )
 		return;
-
 	last_spawncount = svs.spawncount;
+
+	// hold mapname to other place
+	Q_strncpy( mapname, level, sizeof( mapname ));
+	COM_StripExtension( mapname );
+
+	if( COM_CheckString( landmark ))
+		smooth = true;
+
+	// determine spawn entity classname
+	if( svs.maxclients == 1 )
+		spawn_entity = GI->sp_entity;
+	else spawn_entity = GI->mp_entity;
+
+	flags = SV_MapIsValid( mapname, spawn_entity, landmark );
+
+	if( FBitSet( flags, MAP_INVALID_VERSION ))
+	{
+		MsgDev( D_ERROR, "changelevel: %s is invalid or not supported\n", mapname );
+		return;
+	}
+	
+	if( !FBitSet( flags, MAP_IS_EXIST ))
+	{
+		MsgDev( D_ERROR, "changelevel: map %s doesn't exist\n", mapname );
+		return;
+	}
+
+	if( smooth && !FBitSet( flags, MAP_HAS_LANDMARK ))
+	{
+		if( sv_validate_changelevel->value )
+		{
+			// NOTE: we find valid map but specified landmark it's doesn't exist
+			// run simple changelevel like in q1, throw warning
+			MsgDev( D_WARN, "changelevel: %s doesn't contain landmark [%s]. smooth transition was disabled\n", mapname, landmark );
+			smooth = false;
+		}
+	}
+
+	if( svs.maxclients > 1 )
+		smooth = false; // multiplayer doesn't support smooth transition
+
+	if( smooth && !Q_stricmp( sv.name, level ))
+	{
+		MsgDev( D_ERROR, "can't changelevel with same map. Ignored.\n" );
+		return;	
+	}
+
+	if( !smooth && !FBitSet( flags, MAP_HAS_SPAWNPOINT ))
+	{
+		if( sv_validate_changelevel->value )
+		{
+			MsgDev( D_ERROR, "changelevel: %s doesn't have a valid spawnpoint. Ignored.\n", mapname );
+			return;	
+		}
+	}
+
+	// bad changelevel position invoke enables in one-way transition
+	if( sv.framecount < 15 )
+	{
+		if( sv_validate_changelevel->value )
+		{
+			MsgDev( D_WARN, "an infinite changelevel was detected and will be disabled until a next save\\restore\n" );
+			return; // lock with svs.spawncount here
+		}
+	}
 
 	SV_SkipUpdates ();
 
-	if( !s2 ) Cbuf_AddText( va( "changelevel %s\n", s1 ));	// Quake changlevel
-	else Cbuf_AddText( va( "changelevel %s %s\n", s1, s2 ));	// Half-Life changelevel
+	// changelevel will be executed on a next frame
+	if( smooth ) COM_ChangeLevel( mapname, landmark );	// Smoothed Half-Life changelevel
+	else COM_ChangeLevel( mapname, NULL );			// Classic Quake changlevel
 }
 
 /*
@@ -2814,11 +2876,11 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 
 	if( level == at_warning )
 	{
-		Sys_Print( va( "^3Warning:^7 %s", buffer ));
+		Con_Printf( "^3Warning:^7 %s", buffer );
 	}
 	else if( level == at_error )
 	{
-		Sys_Print( va( "^1Error:^7 %s", buffer ));
+		Con_Printf( "^1Error:^7 %s", buffer );
 	} 
 	else if( level == at_logged )
 	{
@@ -2826,7 +2888,7 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	}
 	else
 	{
-		Sys_Print( buffer );
+		Con_Printf( buffer );
 	}
 }
 
@@ -2994,7 +3056,7 @@ pfnPEntityOfEntOffset
 */
 edict_t* pfnPEntityOfEntOffset( int iEntOffset )
 {
-	return (&((edict_t*)svgame.vp)[iEntOffset]);
+	return (&((edict_t *)svgame.vp)[iEntOffset]);
 }
 
 /*
@@ -3018,9 +3080,11 @@ int pfnIndexOfEdict( const edict_t *pEdict )
 {
 	int	number;
 
+	if( !pEdict ) return 0; // world ?
+
 	number = NUM_FOR_EDICT( pEdict );
-	if( number < 0 || number >= svgame.numEntities )
-		return 0;	// out of range
+	if( number < 0 || number > GI->max_edicts )
+		Host_Error( "bad entity number %d\n", number );
 	return number;
 }
 
@@ -3032,41 +3096,47 @@ pfnPEntityOfEntIndex
 */
 edict_t* pfnPEntityOfEntIndex( int iEntIndex )
 {
-	if( iEntIndex < 0 || iEntIndex >= svgame.numEntities )
-		return NULL; // out of range
+	if( iEntIndex >= 0 && iEntIndex < GI->max_edicts )
+	{
+		edict_t	*pEdict = EDICT_NUM( iEntIndex );
 
-	return EDICT_NUM( iEntIndex );
+		if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+			return pEdict; // just get access to array
+
+		if( SV_IsValidEdict( pEdict ) && pEdict->pvPrivateData )
+			return pEdict;
+
+		// g-cont: clients can be acessed even without private data!
+		if( SV_IsValidEdict( pEdict ) && SV_IsPlayerIndex( iEntIndex ))
+			return pEdict;
+	}
+
+	return NULL;
 }
 
 /*
 =============
 pfnFindEntityByVars
 
-debug routine
+debug thing
 =============
 */
 edict_t* pfnFindEntityByVars( entvars_t *pvars )
 {
-	edict_t	*e;
+	edict_t	*pEdict;
 	int	i;
 
 	// don't pass invalid arguments
 	if( !pvars ) return NULL;
 
-	for( i = 0; i < svgame.numEntities; i++ )
+	for( i = 0; i < GI->max_edicts; i++ )
 	{
-		e = EDICT_NUM( i );
-
-		if( &e->v == pvars )
-		{
-			if( e->v.pContainingEntity != e )
-			{
-				MsgDev( D_NOTE, "fixing pContainingEntity for %s\n", SV_ClassName( e ));
-				e->v.pContainingEntity = e;
-			}
-			return e;	// found it
-		}
+		pEdict = EDICT_NUM( i );
+		// g-cont: we should compare pointers
+		if( &pEdict->v == pvars )
+			return pEdict; // found it
 	}
+
 	return NULL;
 }
 
@@ -3200,7 +3270,7 @@ pfnFunctionFromName
 */
 dword pfnFunctionFromName( const char *pName )
 {
-	return Com_FunctionFromName( svgame.hInstance, pName );
+	return COM_FunctionFromName( svgame.hInstance, pName );
 }
 
 /*
@@ -3211,7 +3281,7 @@ pfnNameForFunction
 */
 const char *pfnNameForFunction( dword function )
 {
-	return Com_NameForFunction( svgame.hInstance, function );
+	return COM_NameForFunction( svgame.hInstance, function );
 }
 
 /*
@@ -4765,7 +4835,6 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	svgame.movevars.fog_settings = 0;
 
 	svgame.globals->maxEntities = GI->max_edicts;
-	svgame.globals->maxClients = svs.maxclients;
 	svgame.globals->mapname = MAKE_STRING( sv.name );
 	svgame.globals->startspot = MAKE_STRING( sv.startspot );
 	svgame.globals->time = sv.time;
@@ -4782,6 +4851,9 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 
 void SV_UnloadProgs( void )
 {
+	if( !svgame.hInstance )
+		return;
+
 	SV_DeactivateServer ();
 	Delta_Shutdown ();
 	Mod_ClearUserData ();
@@ -4795,6 +4867,10 @@ void SV_UnloadProgs( void )
 	Cvar_FullSet( "host_gameloaded", "0", FCVAR_READ_ONLY );
 	Cvar_FullSet( "sv_background", "0", FCVAR_READ_ONLY );
 
+	// free entity baselines
+	Z_Free( svs.baselines );
+	svs.baselines = NULL;
+
 	// remove server cmds
 	SV_KillOperatorCommands();
 
@@ -4805,7 +4881,7 @@ void SV_UnloadProgs( void )
 
 	Mod_ResetStudioAPI ();
 
-	Com_FreeLibrary( svgame.hInstance );
+	COM_FreeLibrary( svgame.hInstance );
 	Mem_FreePool( &svgame.mempool );
 	memset( &svgame, 0, sizeof( svgame ));
 }
@@ -4828,7 +4904,7 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.pmove = &gpMove;
 	svgame.globals = &gpGlobals;
 	svgame.mempool = Mem_AllocPool( "Server Edicts Zone" );
-	svgame.hInstance = Com_LoadLibrary( name, true );
+	svgame.hInstance = COM_LoadLibrary( name, true );
 	if( !svgame.hInstance ) return false;
 
 	// make sure what new dll functions is cleared
@@ -4840,23 +4916,23 @@ qboolean SV_LoadProgs( const char *name )
 	// make local copy of engfuncs to prevent overwrite it with bots.dll
 	memcpy( &gpEngfuncs, &gEngfuncs, sizeof( gpEngfuncs ));
 
-	GetEntityAPI = (APIFUNCTION)Com_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
-	GetEntityAPI2 = (APIFUNCTION2)Com_GetProcAddress( svgame.hInstance, "GetEntityAPI2" );
-	GiveNewDllFuncs = (NEW_DLL_FUNCTIONS_FN)Com_GetProcAddress( svgame.hInstance, "GetNewDLLFunctions" );
+	GetEntityAPI = (APIFUNCTION)COM_GetProcAddress( svgame.hInstance, "GetEntityAPI" );
+	GetEntityAPI2 = (APIFUNCTION2)COM_GetProcAddress( svgame.hInstance, "GetEntityAPI2" );
+	GiveNewDllFuncs = (NEW_DLL_FUNCTIONS_FN)COM_GetProcAddress( svgame.hInstance, "GetNewDLLFunctions" );
 
 	if( !GetEntityAPI && !GetEntityAPI2 )
 	{
-		Com_FreeLibrary( svgame.hInstance );
+		COM_FreeLibrary( svgame.hInstance );
          		MsgDev( D_NOTE, "SV_LoadProgs: failed to get address of GetEntityAPI proc\n" );
 		svgame.hInstance = NULL;
 		return false;
 	}
 
-	GiveFnptrsToDll = (GIVEFNPTRSTODLL)Com_GetProcAddress( svgame.hInstance, "GiveFnptrsToDll" );
+	GiveFnptrsToDll = (GIVEFNPTRSTODLL)COM_GetProcAddress( svgame.hInstance, "GiveFnptrsToDll" );
 
 	if( !GiveFnptrsToDll )
 	{
-		Com_FreeLibrary( svgame.hInstance );
+		COM_FreeLibrary( svgame.hInstance );
 		MsgDev( D_NOTE, "SV_LoadProgs: failed to get address of GiveFnptrsToDll proc\n" );
 		svgame.hInstance = NULL;
 		return false;
@@ -4888,7 +4964,7 @@ qboolean SV_LoadProgs( const char *name )
 			// fallback to old API
 			if( !GetEntityAPI( &svgame.dllFuncs, version ))
 			{
-				Com_FreeLibrary( svgame.hInstance );
+				COM_FreeLibrary( svgame.hInstance );
 				MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
 				svgame.hInstance = NULL;
 				return false;
@@ -4898,7 +4974,7 @@ qboolean SV_LoadProgs( const char *name )
 	}
 	else if( !GetEntityAPI( &svgame.dllFuncs, version ))
 	{
-		Com_FreeLibrary( svgame.hInstance );
+		COM_FreeLibrary( svgame.hInstance );
 		MsgDev( D_ERROR, "SV_LoadProgs: couldn't get entity API\n" );
 		svgame.hInstance = NULL;
 		return false;
@@ -4921,6 +4997,7 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.globals->maxEntities = GI->max_edicts;
 	svgame.globals->maxClients = svs.maxclients;
 	svgame.edicts = Mem_Alloc( svgame.mempool, sizeof( edict_t ) * GI->max_edicts );
+	svs.baselines = Z_Malloc( sizeof( entity_state_t ) * GI->max_edicts );
 	svgame.numEntities = svs.maxclients + 1; // clients + world
 
 	for( i = 0, e = svgame.edicts; i < GI->max_edicts; i++, e++ )

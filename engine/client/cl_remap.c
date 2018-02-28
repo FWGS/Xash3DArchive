@@ -154,8 +154,8 @@ void CL_UpdateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomcolor
 
 	// build name of original texture
 	Q_strncpy( mdlname, RI.currentmodel->name, sizeof( mdlname ));
-	FS_FileBase( ptexture->name, name );
-	FS_StripExtension( mdlname );
+	COM_FileBase( ptexture->name, name );
+	COM_StripExtension( mdlname );
 
 	Q_snprintf( texname, sizeof( texname ), "#%s/%s.mdl", mdlname, name );
 	index = GL_FindTexture( texname );

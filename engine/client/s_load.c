@@ -179,7 +179,7 @@ sfx_t *S_FindName( const char *pname, int *pfInCache )
 	COM_FixSlashes( name );
 
 	// see if already loaded
-	hash = Com_HashKey( name, MAX_SFX_HASH );
+	hash = COM_HashKey( name, MAX_SFX_HASH );
 	for( sfx = s_sfxHashList[hash]; sfx; sfx = sfx->hashNext )
 	{
 		if( !Q_strcmp( sfx->name, name ))
@@ -214,7 +214,7 @@ sfx_t *S_FindName( const char *pname, int *pfInCache )
 	if( pfInCache ) *pfInCache = false;
 	Q_strncpy( sfx->name, name, MAX_STRING );
 	sfx->touchFrame = s_registration_sequence;
-	sfx->hashValue = Com_HashKey( sfx->name, MAX_SFX_HASH );
+	sfx->hashValue = COM_HashKey( sfx->name, MAX_SFX_HASH );
 
 	// link it in
 	sfx->hashNext = s_sfxHashList[sfx->hashValue];

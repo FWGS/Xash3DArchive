@@ -151,11 +151,11 @@ typedef struct dll_user_s
 } dll_user_t;
 
 dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath );
-void *Com_LoadLibrary( const char *dllname, int build_ordinals_table );
-void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolean directpath );
-void *Com_GetProcAddress( void *hInstance, const char *name );
-const char *Com_NameForFunction( void *hInstance, dword function );
-dword Com_FunctionFromName( void *hInstance, const char *pName );
-void Com_FreeLibrary( void *hInstance );
+void *COM_LoadLibrary( const char *dllname, int build_ordinals_table );
+void *COM_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolean directpath );
+void *COM_GetProcAddress( void *hInstance, const char *name );
+const char *COM_NameForFunction( void *hInstance, dword function );
+dword COM_FunctionFromName( void *hInstance, const char *pName );
+void COM_FreeLibrary( void *hInstance );
 
 #endif//LIBRARY_H

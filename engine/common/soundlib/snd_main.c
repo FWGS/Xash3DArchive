@@ -56,7 +56,7 @@ loading and unpack to wav any known sound
 */
 wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 {
-          const char	*ext = FS_FileExtension( filename );
+	const char	*ext = COM_FileExtension( filename );
 	string		path, loadname;
 	qboolean		anyformat = true;
 	int		filesize = 0;
@@ -74,7 +74,7 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 		{
 			if( !Q_stricmp( format->ext, ext ))
 			{
-				FS_StripExtension( loadname );
+				COM_StripExtension( loadname );
 				anyformat = false;
 				break;
 			}
@@ -150,7 +150,7 @@ open and reading basic info from sound stream
 */
 stream_t *FS_OpenStream( const char *filename )
 {
-          const char	*ext = FS_FileExtension( filename );
+	const char	*ext = COM_FileExtension( filename );
 	string		path, loadname;
 	qboolean		anyformat = true;
 	const streamfmt_t	*format;
@@ -167,7 +167,7 @@ stream_t *FS_OpenStream( const char *filename )
 		{
 			if( !Q_stricmp( format->ext, ext ))
 			{
-				FS_StripExtension( loadname );
+				COM_StripExtension( loadname );
 				anyformat = false;
 				break;
 			}

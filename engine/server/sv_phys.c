@@ -1815,6 +1815,9 @@ void SV_Physics( void )
 	// animate lightstyles (used for GetEntityIllum)
 	SV_RunLightStyles ();
 
+	// increase framecount
+	sv.framecount++;
+
 	if( sv_skyspeed.value )
 	{
 		// evaluate sky rotation.
@@ -2057,7 +2060,7 @@ qboolean SV_InitPhysicsAPI( void )
 {
 	static PHYSICAPI	pPhysIface;
 
-	pPhysIface = (PHYSICAPI)Com_GetProcAddress( svgame.hInstance, "Server_GetPhysicsInterface" );
+	pPhysIface = (PHYSICAPI)COM_GetProcAddress( svgame.hInstance, "Server_GetPhysicsInterface" );
 	if( pPhysIface )
 	{
 		if( pPhysIface( SV_PHYSICS_INTERFACE_VERSION, &gPhysicsAPI, &svgame.physFuncs ))

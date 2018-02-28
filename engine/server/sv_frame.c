@@ -602,7 +602,6 @@ void SV_WriteEntitiesToClient( sv_client_t *cl, sizebuf_t *msg )
 
 	memset( frame_ents.sended, 0, sizeof( frame_ents.sended ));
 	ClearBits( sv.hostflags, SVF_MERGE_VISIBILITY );
-	sv.net_framenum++;	// now all portal-through entities are invalidate
 
 	// clear everything in this snapshot
 	frame_ents.num_entities = c_fullsend = c_notsend = 0;

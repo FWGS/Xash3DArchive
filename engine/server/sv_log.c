@@ -159,10 +159,10 @@ SV_ServerLog_f
 
 ====================
 */
-void SV_ServerLog_f( sv_client_t *cl )
+qboolean SV_ServerLog_f( sv_client_t *cl )
 {
 	if( svs.maxclients <= 1 )
-		return;
+		return false;
 
 	if( Cmd_Argc() != 2 )
 	{
@@ -171,7 +171,7 @@ void SV_ServerLog_f( sv_client_t *cl )
 		if( svs.log.active )
 			SV_ClientPrintf( cl, "currently logging\n" );
 		else SV_ClientPrintf( cl, "not currently logging\n" );
-		return;
+		return true;
 	}
 
 	if( !Q_stricmp( Cmd_Argv( 1 ), "off" ))
@@ -188,4 +188,6 @@ void SV_ServerLog_f( sv_client_t *cl )
 	{
 		SV_ClientPrintf( cl, "log: unknown parameter %s\n", Cmd_Argv( 1 ));
 	}
+
+	return true;
 }

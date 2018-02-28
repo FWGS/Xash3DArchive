@@ -1310,7 +1310,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	}
 
 	// see if already loaded
-	hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
+	hash = COM_HashKey( name, TEXTURES_HASH_SIZE );
 
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
@@ -1370,7 +1370,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
-	hash = Com_HashKey( tex->name, TEXTURES_HASH_SIZE );
+	hash = COM_HashKey( tex->name, TEXTURES_HASH_SIZE );
 	tex->nextHash = r_texturesHashTable[hash];
 	r_texturesHashTable[hash] = tex;
 
@@ -1406,7 +1406,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	// create complexname from layer names
 	for( i = 0; i < numLayers; i++ )
 	{
-		FS_FileBase( names[i], basename );
+		COM_FileBase( names[i], basename );
 		Q_strncat( name, va( "%s", basename ), sizeof( name ));
 		if( i != ( numLayers - 1 )) Q_strncat( name, "|", sizeof( name ));
 	}
@@ -1420,7 +1420,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	}
 
 	// see if already loaded
-	hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
+	hash = COM_HashKey( name, TEXTURES_HASH_SIZE );
 
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
@@ -1541,7 +1541,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
-	hash = Com_HashKey( tex->name, TEXTURES_HASH_SIZE );
+	hash = COM_HashKey( tex->name, TEXTURES_HASH_SIZE );
 	tex->nextHash = r_texturesHashTable[hash];
 	r_texturesHashTable[hash] = tex;
 
@@ -1569,7 +1569,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	}
 
 	// see if already loaded
-	hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
+	hash = COM_HashKey( name, TEXTURES_HASH_SIZE );
 
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
@@ -1604,7 +1604,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 		}
 
 		tex = &r_textures[i];
-		hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
+		hash = COM_HashKey( name, TEXTURES_HASH_SIZE );
 		Q_strncpy( tex->name, name, sizeof( tex->name ));
 		tex->texnum = i;	// texnum is used for fast acess into r_textures array too
 		tex->flags = flags;
@@ -1626,7 +1626,7 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	if( !update )
           {
 		// add to hash table
-		hash = Com_HashKey( tex->name, TEXTURES_HASH_SIZE );
+		hash = COM_HashKey( tex->name, TEXTURES_HASH_SIZE );
 		tex->nextHash = r_texturesHashTable[hash];
 		r_texturesHashTable[hash] = tex;
 	}
@@ -1789,7 +1789,7 @@ int GL_FindTexture( const char *name )
 	}
 
 	// see if already loaded
-	hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
+	hash = COM_HashKey( name, TEXTURES_HASH_SIZE );
 
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
@@ -1822,7 +1822,7 @@ void GL_FreeImage( const char *name )
 	}
 
 	// see if already loaded
-	hash = Com_HashKey( name, TEXTURES_HASH_SIZE );
+	hash = COM_HashKey( name, TEXTURES_HASH_SIZE );
 
 	for( tex = r_texturesHashTable[hash]; tex != NULL; tex = tex->nextHash )
 	{
@@ -1870,7 +1870,7 @@ void R_FreeImage( gltexture_t *image )
 	}
 
 	// remove from hash table
-	hash = Com_HashKey( image->name, TEXTURES_HASH_SIZE );
+	hash = COM_HashKey( image->name, TEXTURES_HASH_SIZE );
 	prev = &r_texturesHashTable[hash];
 
 	while( 1 )
@@ -2729,7 +2729,7 @@ void R_InitImages( void )
 
 	// create unused 0-entry
 	Q_strncpy( r_textures->name, "*unused*", sizeof( r_textures->name ));
-	hash = Com_HashKey( r_textures->name, TEXTURES_HASH_SIZE );
+	hash = COM_HashKey( r_textures->name, TEXTURES_HASH_SIZE );
 	r_textures->nextHash = r_texturesHashTable[hash];
 	r_texturesHashTable[hash] = r_textures;
 	r_numTextures = 1;

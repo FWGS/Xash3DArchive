@@ -100,8 +100,8 @@ void HPAK_CreatePak( const char *filename, resource_t *pResource, byte *pData, f
 	}
 
 	Q_strncpy( pakname, filename, sizeof( pakname ));
-	FS_StripExtension( pakname );
-	FS_DefaultExtension( pakname, ".hpk" );
+	COM_StripExtension( pakname );
+	COM_DefaultExtension( pakname, ".hpk" );
 
 	MsgDev( D_INFO, "creating HPAK %s.\n", pakname );
 
@@ -249,8 +249,8 @@ void HPAK_AddLump( qboolean bUseQueue, const char *name, resource_t *pResource, 
 	}
 
 	Q_strncpy( srcname, name, sizeof( srcname ));
-	FS_StripExtension( srcname );
-	FS_DefaultExtension( srcname, ".hpk" );
+	COM_StripExtension( srcname );
+	COM_DefaultExtension( srcname, ".hpk" );
 
 	file_src = FS_Open( srcname, "rb", false );
 
@@ -262,8 +262,8 @@ void HPAK_AddLump( qboolean bUseQueue, const char *name, resource_t *pResource, 
 	}
 
 	Q_strncpy( dstname, srcname, sizeof( dstname ));
-	FS_StripExtension( dstname );
-	FS_DefaultExtension( dstname, ".hp2" );
+	COM_StripExtension( dstname );
+	COM_DefaultExtension( dstname, ".hp2" );
 
 	file_dst = FS_Open( dstname, "w+b", false );
 
@@ -379,8 +379,8 @@ static qboolean HPAK_Validate( const char *filename, qboolean quiet )
 		return true;
 
 	Q_strncpy( pakname, filename, sizeof( pakname ));
-	FS_StripExtension( pakname );
-	FS_DefaultExtension( pakname, ".hpk" );
+	COM_StripExtension( pakname );
+	COM_DefaultExtension( pakname, ".hpk" );
 
 	f = FS_Open( pakname, "rb", false );
 	if( !f )
@@ -480,8 +480,8 @@ void HPAK_CheckIntegrity( const char *filename )
 		return;
 
 	Q_strncpy( pakname, filename, sizeof( pakname ));
-	FS_StripExtension( pakname );
-	FS_DefaultExtension( pakname, ".hpk" );
+	COM_StripExtension( pakname );
+	COM_DefaultExtension( pakname, ".hpk" );
 
 	HPAK_ValidatePak( pakname );
 }
@@ -498,8 +498,8 @@ void HPAK_CheckSize( const char *filename )
 		return;
 
 	Q_strncpy( pakname, filename, sizeof( pakname ));
-	FS_StripExtension( pakname );
-	FS_DefaultExtension( pakname, ".hpk" );
+	COM_StripExtension( pakname );
+	COM_DefaultExtension( pakname, ".hpk" );
 
 	if( FS_FileSize( pakname, false ) > ( maxsize * 1000000 ))
 	{
@@ -532,8 +532,8 @@ qboolean HPAK_ResourceForHash( const char *filename, byte *hash, resource_t *pRe
 	}
 
 	Q_strncpy( pakname, filename, sizeof( pakname ));
-	FS_StripExtension( pakname );
-	FS_DefaultExtension( pakname, ".hpk" );
+	COM_StripExtension( pakname );
+	COM_DefaultExtension( pakname, ".hpk" );
 
 	f = FS_Open( pakname, "rb", false );
 	if( !f ) return false;
@@ -581,8 +581,8 @@ static qboolean HPAK_ResourceForIndex( const char *filename, int index, resource
 		return false;
 
 	Q_strncpy( pakname, filename, sizeof( pakname ));
-	FS_StripExtension( pakname );
-	FS_DefaultExtension( pakname, ".hpk" );
+	COM_StripExtension( pakname );
+	COM_DefaultExtension( pakname, ".hpk" );
 
 	f = FS_Open( pakname, "rb", false );
 	if( !f )
@@ -668,8 +668,8 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 	}
 
 	Q_strncpy( pakname, filename, sizeof( pakname ));
-	FS_StripExtension( pakname );
-	FS_DefaultExtension( pakname, ".hpk" );
+	COM_StripExtension( pakname );
+	COM_DefaultExtension( pakname, ".hpk" );
 
 	f = FS_Open( pakname, "rb", false );
 	if( !f ) return false;
@@ -750,8 +750,8 @@ void HPAK_RemoveLump( const char *name, resource_t *pResource )
 	HPAK_FlushHostQueue();
 
 	Q_strncpy( read_path, name, sizeof( read_path ));
-	FS_StripExtension( read_path );
-	FS_DefaultExtension( read_path, ".hpk" );
+	COM_StripExtension( read_path );
+	COM_DefaultExtension( read_path, ".hpk" );
 
 	file_src = FS_Open( read_path, "rb", false );
 	if( !file_src )
@@ -761,8 +761,8 @@ void HPAK_RemoveLump( const char *name, resource_t *pResource )
 	}
 
 	Q_strncpy( save_path, read_path, sizeof( save_path ));
-	FS_StripExtension( save_path );
-	FS_DefaultExtension( save_path, ".hp2" );
+	COM_StripExtension( save_path );
+	COM_DefaultExtension( save_path, ".hp2" );
 	file_dst = FS_Open( save_path, "w+b", false );
 
 	if( !file_dst )
@@ -881,8 +881,8 @@ void HPAK_List_f( void )
 	HPAK_FlushHostQueue();
 
 	Q_strncpy( pakname, Cmd_Argv( 1 ), sizeof( pakname ));
-	FS_StripExtension( pakname );
-	FS_DefaultExtension( pakname, ".hpk" );
+	COM_StripExtension( pakname );
+	COM_DefaultExtension( pakname, ".hpk" );
 	Msg( "Contents for %s.\n", pakname );
 
 	f = FS_Open( pakname, "rb", false );
@@ -927,7 +927,7 @@ void HPAK_List_f( void )
 	for( nCurrent = 0; nCurrent < directory.count; nCurrent++ )
 	{
 		entry = &directory.entries[nCurrent];
-		FS_FileBase( entry->resource.szFileName, lumpname );
+		COM_FileBase( entry->resource.szFileName, lumpname );
 		type = HPAK_TypeFromIndex( entry->resource.type );
 		size = Q_memprint( entry->resource.nDownloadSize );
 
@@ -973,8 +973,8 @@ void HPAK_Extract_f( void )
 	HPAK_FlushHostQueue();
 
 	Q_strncpy( pakname, Cmd_Argv( 1 ), sizeof( pakname ));
-	FS_StripExtension( pakname );
-	FS_DefaultExtension( pakname, ".hpk" );
+	COM_StripExtension( pakname );
+	COM_DefaultExtension( pakname, ".hpk" );
 	Msg( "Contents for %s.\n", pakname );
 
 	f = FS_Open( pakname, "rb", false );
@@ -1023,7 +1023,7 @@ void HPAK_Extract_f( void )
 		if( nIndex != -1 && nIndex != nCurrent )
 			continue;
 
-		FS_FileBase( entry->resource.szFileName, lumpname );
+		COM_FileBase( entry->resource.szFileName, lumpname );
 		type = HPAK_TypeFromIndex( entry->resource.type );
 		size = Q_memprint( entry->resource.nDownloadSize );
 

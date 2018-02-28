@@ -653,7 +653,7 @@ static void NET_AdjustLag( void )
 	dt = bound( 0.0, dt, 0.1 );
 	lasttime = host.realtime;
 
-	if( host.developer >= D_ERROR || !net_fakelag->value )
+	if( host.developer || !net_fakelag->value )
 	{
 		if( net_fakelag->value != net.fakelag )
 		{
@@ -668,7 +668,7 @@ static void NET_AdjustLag( void )
 	}
 	else
 	{
-		MsgDev( D_INFO, "Server must enable dev-mode to activate fakelag\n" );
+		Con_Printf( "Server must enable dev-mode to activate fakelag\n" );
 		Cvar_SetValue( "fakelag", 0.0 );
 		net.fakelag = 0.0f;
 	}
@@ -1181,8 +1181,7 @@ NET_OpenIP
 */
 static void NET_OpenIP( void )
 {
-	int		port, sv_port = 0, cl_port = 0;
-	static qboolean	bFirst = true;
+	int	port, sv_port = 0, cl_port = 0;
 
 	if( net.ip_sockets[NS_SERVER] == INVALID_SOCKET )
 	{
@@ -1209,12 +1208,6 @@ static void NET_OpenIP( void )
 		if( net.ip_sockets[NS_CLIENT] == INVALID_SOCKET )
 			net.ip_sockets[NS_CLIENT] = NET_IPSocket( net_ipname->string, PORT_ANY, false );
 		cl_port = port;
-	}
-
-	if( bFirst )
-	{
-		MsgDev( D_INFO, "NET Ports:  server %i, client %i\n", sv_port, cl_port );
-		bFirst = false;
 	}
 }
 
@@ -1261,7 +1254,7 @@ void NET_GetLocalAddress( void )
 			else
 			{
 				net_local.port = address.sin_port;
-				Msg( "Server IP address %s\n", NET_AdrToString( net_local ));
+				Con_Printf( "Server IP address %s\n", NET_AdrToString( net_local ));
 				Cvar_FullSet( "net_address", va( NET_AdrToString( net_local )), FCVAR_READ_ONLY );
 			}
 		}
@@ -1272,7 +1265,7 @@ void NET_GetLocalAddress( void )
 	}
 	else
 	{
-		MsgDev( D_INFO, "TCP/IP Disabled.\n" );
+		Con_Printf( "TCP/IP Disabled.\n" );
 	}
 }
 
@@ -1428,9 +1421,7 @@ void NET_Init( void )
 		return;
 	}
 
-	i = pWSAStartup( MAKEWORD( 1, 1 ), &net.winsockdata );
-
-	if( i )
+	if( pWSAStartup( MAKEWORD( 1, 1 ), &net.winsockdata ))
 	{
 		MsgDev( D_ERROR, "network initialization failed.\n" );
 		NET_FreeWinSock();

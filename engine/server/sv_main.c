@@ -59,8 +59,8 @@ CVAR_DEFINE_AUTO( mapcyclefile, "mapcycle.txt", 0, "name of multiplayer map cycl
 CVAR_DEFINE_AUTO( motdfile, "motd.txt", 0, "name of 'message of the day' file" );
 CVAR_DEFINE_AUTO( logsdir, "logs", 0, "place to store multiplayer logs" );
 CVAR_DEFINE_AUTO( bannedcfgfile, "banned.cfg", 0, "name of list of banned users" );
-CVAR_DEFINE_AUTO( deathmatch, "0", FCVAR_LATCH, "deathmatch mode in multiplayer game" );
-CVAR_DEFINE_AUTO( coop, "0", FCVAR_LATCH, "cooperative mode in multiplayer game" );
+CVAR_DEFINE_AUTO( deathmatch, "0", 0, "deathmatch mode in multiplayer game" );
+CVAR_DEFINE_AUTO( coop, "0", 0, "cooperative mode in multiplayer game" );
 CVAR_DEFINE_AUTO( teamplay, "0", 0, "team mode in multiplayer game" );
 CVAR_DEFINE_AUTO( skill, "1", 0, "skill level in singleplayer game" );
 CVAR_DEFINE_AUTO( temp1, "0", 0, "temporary cvar that used by some mods" );
@@ -816,10 +816,10 @@ not just stuck on the outgoing message list, because the server is going
 to totally exit after returning from this function.
 ==================
 */
-void SV_FinalMessage( char *message, qboolean reconnect )
+void SV_FinalMessage( const char *message, qboolean reconnect )
 {
+	byte		msg_buf[64];
 	sv_client_t	*cl;
-	byte		msg_buf[1024];
 	sizebuf_t		msg;
 	int		i;
 	
@@ -827,18 +827,8 @@ void SV_FinalMessage( char *message, qboolean reconnect )
 	MSG_BeginServerCmd( &msg, svc_print );
 	MSG_WriteString( &msg, va( "%s\n", message ));
 
-	if( reconnect )
-	{
-		MSG_BeginServerCmd( &msg, svc_changing );
-
-		if( svs.maxclients > 1 || sv.changelevel )
-			MSG_WriteOneBit( &msg, 1 ); // changelevel
-		else MSG_WriteOneBit( &msg, 0 );
-	}
-	else
-	{
-		MSG_BeginServerCmd( &msg, svc_disconnect );
-	}
+	if( reconnect ) SV_BuildReconnect( &msg );
+	else MSG_BeginServerCmd( &msg, svc_disconnect );
 
 	// send it twice
 	// stagger the packets to crutch operating system limited buffers
@@ -882,7 +872,7 @@ Called when each game quits,
 before Sys_Quit or Sys_Error
 ================
 */
-void SV_Shutdown( qboolean reconnect )
+void SV_Shutdown( const char *finalmsg )
 {
 	// already freed
 	if( !SV_Initialized( )) return;
@@ -890,32 +880,22 @@ void SV_Shutdown( qboolean reconnect )
 	// rcon will be disconnected
 	SV_EndRedirect();
 
-	if( host.type == HOST_DEDICATED )
-		MsgDev( D_INFO, "SV_Shutdown: %s\n", host.finalmsg );
-
 	if( svs.clients )
-		SV_FinalMessage( host.finalmsg, reconnect );
+		SV_FinalMessage( finalmsg, false );
 
 	if( public_server->value && svs.maxclients != 1 )
 		Master_Shutdown();
 
-	if( !reconnect ) SV_UnloadProgs ();
-	else SV_DeactivateServer ();
+	NET_Config( false );
+	SV_UnloadProgs ();
 
 	// free current level
 	memset( &sv, 0, sizeof( sv ));
-	Host_SetServerState( ss_dead );
 
 	SV_FreeClients();
 
 	Log_Printf( "Server shutdown\n" );
 	Log_Close();
-
-	if( svs.baselines )
-	{
-		Z_Free( svs.baselines );
-		svs.baselines = NULL;
-	}
 
 	svs.initialized = false;
 }

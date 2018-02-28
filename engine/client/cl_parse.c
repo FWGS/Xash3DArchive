@@ -33,7 +33,7 @@ const char *svc_strings[svc_lastmsg+1] =
 	"svc_nop",
 	"svc_disconnect",
 	"svc_event",
-	"svc_changing",
+	"svc_version",
 	"svc_setview",
 	"svc_sound",
 	"svc_time",
@@ -173,7 +173,7 @@ void CL_WriteErrorMessage( int current_count, sizebuf_t *msg )
 	FS_Write( fp, MSG_GetData( msg ), MSG_GetMaxBytes( msg ));
 	FS_Close( fp );
 
-	MsgDev( D_INFO, "Wrote erroneous message to %s\n", buffer_file );
+	Con_Printf( "Wrote erroneous message to %s\n", buffer_file );
 }
 
 /*
@@ -185,9 +185,9 @@ list last 32 messages for debugging net troubleshooting
 */
 void CL_WriteMessageHistory( void )
 {
-	int	i, thecmd;
 	oldcmd_t	*old, *failcommand;
 	sizebuf_t	*msg = &net_message;
+	int	i, thecmd;
 
 	if( !cls.initialized || cls.state == ca_disconnected )
 		return;
@@ -195,7 +195,7 @@ void CL_WriteMessageHistory( void )
 	if( !cls_message_debug.parsing )
 		return;
 
-	MsgDev( D_INFO, "Last %i messages parsed.\n", MSG_COUNT );
+	Con_Printf( "Last %i messages parsed.\n", MSG_COUNT );
 
 	// finish here
 	thecmd = cls_message_debug.currentcmd - 1;
@@ -205,19 +205,14 @@ void CL_WriteMessageHistory( void )
 	{
 		thecmd &= MSG_MASK;
 		old = &cls_message_debug.oldcmd[thecmd];
-
-		MsgDev( D_INFO,"%i %04i %s\n", old->frame_number, old->starting_offset, CL_MsgInfo( old->command ));
-
+		Con_Printf( "%i %04i %s\n", old->frame_number, old->starting_offset, CL_MsgInfo( old->command ));
 		thecmd++;
 	}
 
 	failcommand = &cls_message_debug.oldcmd[thecmd];
-	MsgDev( D_INFO, "BAD:  %3i:%s\n", MSG_GetNumBytesRead( msg ) - 1, CL_MsgInfo( failcommand->command ));
-
-	if( host.developer >= 3 )
-	{
+	Con_Printf( "BAD:  %3i:%s\n", MSG_GetNumBytesRead( msg ) - 1, CL_MsgInfo( failcommand->command ));
+	if( host.developer >= 2 )
 		CL_WriteErrorMessage( MSG_GetNumBytesRead( msg ) - 1, msg );
-	}
 	cls_message_debug.parsing = false;
 }
 
@@ -743,6 +738,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	qboolean	background;
 
 	MsgDev( D_NOTE, "Serverdata packet received.\n" );
+	cls.timestart = Sys_DoubleTime();
 
 	cls.demowaiting = false;	// server is changed
 	cls.state = ca_connected;
@@ -1204,7 +1200,7 @@ void CL_ParseRestore( sizebuf_t *msg )
 	for( i = 0; i < mapCount; i++ )
 	{
 		pMapName = MSG_ReadString( msg );
-		MsgDev( D_INFO, "Loading decals from %s\n", pMapName );
+		Con_Printf( "Loading decals from %s\n", pMapName );
 	}
 }
 
@@ -1503,7 +1499,7 @@ void CL_RegisterResources ( sizebuf_t *msg )
 
 		if( cls.state != ca_disconnected )
 		{
-			MsgDev( D_INFO, "Setting up renderer...\n" );
+			Con_Printf( "Setting up renderer...\n" );
 
 			// load tempent sprites (glowshell, muzzleflashes etc)
 			CL_LoadClientSprites ();
@@ -2277,30 +2273,10 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			CL_ParseEvent( msg );
 			cl.frames[cl.parsecountmod].graphdata.event += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
-		case svc_changing:
-			if( MSG_ReadOneBit( msg ))
-			{
-				cls.changelevel = true;
-				S_StopAllSounds( true );
-
-				if( cls.demoplayback )
-				{
-					SCR_BeginLoadingPlaque( cl.background );
-					cls.changedemo = true;
-				}
-			}
-			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
-
-			CL_ClearState ();
-			CL_InitEdicts (); // re-arrange edicts
-
-			if( cls.demoplayback )
-			{
-				cl.background = (cls.demonum != -1) ? true : false;
-				cls.state = ca_connected;
-			}
-			else cls.state = ca_connecting;
-			cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
+		case svc_version:
+			param1 = MSG_ReadLong( msg );
+			if( param1 != PROTOCOL_VERSION )
+				Host_Error( "Server is protocol %i instead of %i\n", param1, PROTOCOL_VERSION );
 			break;
 		case svc_setview:
 			CL_ParseViewEntity( msg );
@@ -2313,7 +2289,9 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			CL_ParseServerTime( msg );
 			break;
 		case svc_print:
-			MsgDev( D_INFO, "^5%s", MSG_ReadString( msg ));
+			if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+				MsgDev( D_INFO, "%s", MSG_ReadString( msg ));
+			else MsgDev( D_INFO, "^5%s", MSG_ReadString( msg ));
 			break;
 		case svc_stufftext:
 			Cbuf_AddText( MSG_ReadString( msg ));

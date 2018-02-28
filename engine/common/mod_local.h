@@ -97,8 +97,6 @@ typedef struct
 
 typedef struct
 {
-	int		load_sequence;	// increace each map change
-
 	qboolean		loading;		// true if worldmodel is loading
 	int		flags;		// misc flags
 
@@ -148,7 +146,6 @@ qboolean Mod_ValidateCRC( const char *name, CRC32_t crc );
 void Mod_NeedCRC( const char *name, qboolean needCRC );
 void Mod_PurgeStudioCache( void );
 void Mod_FreeUnused( void );
-void Mod_ClearAll( void );
 
 //
 // mod_bmodel.c
@@ -183,6 +180,8 @@ void R_StudioCalcBoneQuaternion( int frame, float s, void *pbone, void *panim, f
 void R_StudioCalcBonePosition( int frame, float s, void *pbone, void *panim, vec3_t adj, vec3_t pos );
 void *R_StudioGetAnim( void *m_pStudioHeader, void *m_pSubModel, void *pseqdesc );
 void Mod_StudioComputeBounds( void *buffer, vec3_t mins, vec3_t maxs, qboolean ignore_sequences );
+void Mod_StudioLoadTextures( model_t *mod, void *data );
+void Mod_StudioUnloadTextures( void *data );
 int Mod_HitgroupForStudioHull( int index );
 void Mod_ClearStudioCache( void );
 

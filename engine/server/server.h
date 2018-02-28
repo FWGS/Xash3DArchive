@@ -136,10 +136,11 @@ typedef struct server_s
 	double		time;		// sv.time += sv.frametime
 	double		time_residual;	// unclamped
 	float		frametime;	// 1.0 / sv_fps->value
-	int		net_framenum;	// to avoid send edicts twice through portals
+	int		framecount;	// count physic frames
 
 	int		hostflags;	// misc server flags: predicting etc
 	CRC32_t		worldmapCRC;
+	int		progsCRC;
 
 	string		name;		// map name
 	string		startspot;	// player_start name on nextmap
@@ -378,7 +379,6 @@ typedef struct
 	char		serverinfo[MAX_SERVERINFO_STRING];
 	char		localinfo[MAX_LOCALINFO_STRING];
 
-	double		changelevel_next_time;	// don't execute multiple changelevels at once time
 	int		spawncount;		// incremented each server start
 						// used to check late spawns
 	sv_client_t	*clients;			// [svs.maxclients]
@@ -458,7 +458,7 @@ extern	convar_t		*public_server;
 //
 // sv_main.c
 //
-void SV_FinalMessage( char *message, qboolean reconnect );
+void SV_FinalMessage( const char *message, qboolean reconnect );
 void SV_DropClient( sv_client_t *drop );
 void SV_UpdateMovevars( qboolean initialize );
 int SV_ModelIndex( const char *name );
@@ -638,7 +638,7 @@ _inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
 void Log_Close( void );
 void Log_Open( void );
 void Log_PrintServerVars( void );
-void SV_ServerLog_f( sv_client_t *cl );
+qboolean SV_ServerLog_f( sv_client_t *cl );
 
 //
 // sv_save.c

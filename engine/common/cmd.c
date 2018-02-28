@@ -328,8 +328,8 @@ void Cmd_Echo_f( void )
 	int	i;
 	
 	for( i = 1; i < Cmd_Argc(); i++ )
-		Sys_Print( Cmd_Argv( i ));
-	Sys_Print( "\n" );
+		Con_Printf( Cmd_Argv( i ));
+	Con_Printf( "\n" );
 }
 
 /*

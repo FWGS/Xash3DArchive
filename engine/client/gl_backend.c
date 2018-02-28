@@ -596,8 +596,8 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 
 	// make sure what we have right extension
 	Q_strncpy( basename, base, MAX_STRING );
-	FS_StripExtension( basename );
-	FS_DefaultExtension( basename, ".tga" );
+	COM_StripExtension( basename );
+	COM_DefaultExtension( basename, ".tga" );
 
 	// write image as 6 sides
 	result = FS_SaveImage( basename, r_shot );
@@ -706,7 +706,7 @@ rebuild_page:
 		if( FBitSet( image->flags, TF_DEPTHMAP ) && !FBitSet( image->flags, TF_NOCOMPARE ))
 			pglTexParameteri( image->target, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB );
 
-		FS_FileBase( image->name, shortname );
+		COM_FileBase( image->name, shortname );
 		if( Q_strlen( shortname ) > 18 )
 		{
 			// cutoff too long names, it looks ugly

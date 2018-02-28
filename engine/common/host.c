@@ -29,7 +29,6 @@ HINSTANCE		hCurrent;	// hinstance of current .dll
 host_parm_t	host;	// host parms
 sysinfo_t		SI;
 
-convar_t	*host_serverstate;
 convar_t	*host_gameloaded;
 convar_t	*host_clientloaded;
 convar_t	*host_limitlocal;
@@ -37,12 +36,6 @@ convar_t	*host_maxfps;
 convar_t	*host_framerate;
 convar_t	*con_gamemaps;
 convar_t	*build, *ver;
-
-// these cvars will be duplicated on each client across network
-int Host_ServerState( void )
-{
-	return Cvar_VariableInteger( "host_serverstate" );
-}
 
 int Host_CompareFileTime( long ft1, long ft2 )
 {
@@ -59,9 +52,7 @@ int Host_CompareFileTime( long ft1, long ft2 )
 
 void Host_ShutdownServer( void )
 {
-	if( !SV_Initialized( )) return;
-	Q_strncpy( host.finalmsg, "Server was killed", MAX_STRING );
-	SV_Shutdown( false );
+	SV_Shutdown( "Server was killed\n" );
 }
 
 /*
@@ -105,13 +96,8 @@ void Host_EndGame( qboolean abort, const char *message, ... )
 	va_end( argptr );
 
 	MsgDev( D_INFO, "Host_EndGame: %s\n", string );
-	
-	if( SV_Initialized( ))
-	{
-		Q_snprintf( host.finalmsg, sizeof( host.finalmsg ), "Host_EndGame: %s", string );
-		SV_Shutdown( false );
-	}
 
+	SV_Shutdown( "\n" );	
 	CL_Disconnect();
 
 	// recreate world if needs
@@ -137,16 +123,6 @@ void Host_AbortCurrentFrame( void )
 
 /*
 ==================
-Host_SetServerState
-==================
-*/
-void Host_SetServerState( int state )
-{
-	Cvar_FullSet( "host_serverstate", va( "%i", state ), FCVAR_READ_ONLY );
-}
-
-/*
-==================
 Host_CheckSleep
 ==================
 */
@@ -161,7 +137,7 @@ void Host_CheckSleep( void )
 	{
 		if( host.status == HOST_NOFOCUS )
 		{
-			if( Host_ServerState() && CL_IsInGame( ))
+			if( SV_Active() && CL_IsInGame( ))
 				Sys_Sleep( 1 ); // listenserver
 			else Sys_Sleep( 20 ); // sleep 20 ms otherwise
 		}
@@ -248,7 +224,7 @@ void Host_Exec_f( void )
 	}
 
 	Q_strncpy( cfgpath, Cmd_Argv( 1 ), sizeof( cfgpath )); 
-	FS_DefaultExtension( cfgpath, ".cfg" ); // append as default
+	COM_DefaultExtension( cfgpath, ".cfg" ); // append as default
 
 	f = FS_LoadFile( cfgpath, &len, false );
 	if( !f )
@@ -340,7 +316,7 @@ qboolean Host_RegisterDecal( const char *name, int *count )
 	if( !name || !*name )
 		return 0;
 
-	FS_FileBase( name, shortname );
+	COM_FileBase( name, shortname );
 
 	for( i = 1; i < MAX_DECALS && host.draw_decals[i][0]; i++ )
 	{
@@ -690,7 +666,7 @@ void Host_Error( const char *error, ... )
 	// clearing cmd buffer to prevent execute any commands
 	Cbuf_Clear();
 
-	SV_Shutdown( false );
+	Host_ShutdownServer();
 	CL_Drop(); // drop clients
 
 	// recreate world if needs
@@ -810,9 +786,9 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 
 	// we can specified custom name, from Sys_NewInstance
 	if( GetModuleFileName( NULL, szTemp, sizeof( szTemp )) && !host.change_game )
-		FS_FileBase( szTemp, SI.exeName );
+		COM_FileBase( szTemp, SI.exeName );
 
-	FS_ExtractFilePath( szTemp, szRootPath );
+	COM_ExtractFilePath( szTemp, szRootPath );
 	if( Q_stricmp( host.rootdir, szRootPath ))
 	{
 		Q_strncpy( host.rootdir, szRootPath, sizeof( host.rootdir ));
@@ -934,7 +910,6 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 
 	host_maxfps = Cvar_Get( "fps_max", "72", FCVAR_ARCHIVE, "host fps upper limit" );
 	host_framerate = Cvar_Get( "host_framerate", "0", 0, "locks frame timing to this value in seconds" );  
-	host_serverstate = Cvar_Get( "host_serverstate", "0", FCVAR_READ_ONLY, "displays current server state" );
 	host_gameloaded = Cvar_Get( "host_gameloaded", "0", FCVAR_READ_ONLY, "inidcates a loaded game.dll" );
 	host_clientloaded = Cvar_Get( "host_clientloaded", "0", FCVAR_READ_ONLY, "inidcates a loaded client.dll" );
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
@@ -1030,7 +1005,7 @@ void EXPORT Host_Shutdown( void )
 	if( host.type == HOST_NORMAL )
 		Host_WriteConfig();
 
-	SV_Shutdown( false );
+	SV_Shutdown( "" );
 	CL_Shutdown();
 
 	Mod_Shutdown();

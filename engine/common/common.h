@@ -402,12 +402,12 @@ void FS_AllowDirectPaths( qboolean enable );
 void FS_AddGameDirectory( const char *dir, int flags );
 void FS_AddGameHierarchy( const char *dir, int flags );
 void FS_LoadGameInfo( const char *rootfolder );
-void FS_FileBase( const char *in, char *out );
-const char *FS_FileExtension( const char *in );
-void FS_DefaultExtension( char *path, const char *extension );
-void FS_ExtractFilePath( const char *path, char *dest );
+void COM_FileBase( const char *in, char *out );
+const char *COM_FileExtension( const char *in );
+void COM_DefaultExtension( char *path, const char *extension );
+void COM_ExtractFilePath( const char *path, char *dest );
 const char *FS_GetDiskPath( const char *name, qboolean gamedironly );
-const char *FS_FileWithoutPath( const char *in );
+const char *COM_FileWithoutPath( const char *in );
 byte *W_LoadLump( wfile_t *wad, const char *lumpname, size_t *lumpsizeptr, const char type );
 void W_Close( wfile_t *wad );
 byte *FS_LoadFile( const char *path, long *filesizeptr, qboolean gamedironly );
@@ -435,7 +435,7 @@ qboolean FS_FileExists( const char *filename, qboolean gamedironly );
 qboolean FS_FileCopy( file_t *pOutput, file_t *pInput, int fileSize );
 qboolean FS_Delete( const char *path );
 int FS_UnGetc( file_t *file, byte c );
-void FS_StripExtension( char *path );
+void COM_StripExtension( char *path );
 long FS_Tell( file_t *file );
 qboolean FS_Eof( file_t *file );
 int FS_Close( file_t *file );
@@ -662,8 +662,6 @@ int Q_buildnum( void );
 // host.c
 //
 void EXPORT Host_Shutdown( void );
-void Host_SetServerState( int state );
-int Host_ServerState( void );
 int Host_CompareFileTime( long ft1, long ft2 );
 void Host_NewInstance( const char *name, const char *finalmsg );
 void Host_EndGame( qboolean abort, const char *message, ... );
@@ -708,7 +706,7 @@ void Host_ClientFrame( void );
 qboolean CL_Active( void );
 
 void SV_Init( void );
-void SV_Shutdown( qboolean reconnect );
+void SV_Shutdown( const char *finalmsg );
 void Host_ServerFrame( void );
 qboolean SV_Active( void );
 
@@ -773,7 +771,7 @@ void MD5Init( MD5Context_t *ctx );
 void MD5Update( MD5Context_t *ctx, const byte *buf, uint len );
 void MD5Final( byte digest[16], MD5Context_t *ctx );
 qboolean MD5_HashFile( byte digest[16], const char *pszFileName, uint seed[4] );
-uint Com_HashKey( const char *string, uint hashSize );
+uint COM_HashKey( const char *string, uint hashSize );
 char *MD5_Print( byte hash[16] );
 
 //

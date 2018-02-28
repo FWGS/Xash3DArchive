@@ -195,13 +195,13 @@ void CL_SignonReply( void )
 	{
 	case 1:
 		// g-cont. my favorite message :-)
-		MsgDev( D_INFO, "CL_SignonReply: %i\n", cls.signon );
+		Con_Printf( "CL_SignonReply: %i\n", cls.signon );
 		CL_ServerCommand( true, "begin" );
 		if( host.developer >= D_REPORT )
 			Mem_PrintStats();
 		break;
 	case 2:
-		MsgDev( D_INFO, "client connected at %.2f sec\n", Sys_DoubleTime() - cls.timestart );
+		Con_Printf( "client connected at %.2f sec\n", Sys_DoubleTime() - cls.timestart );
 		if( cl.proxy_redirect && !cls.spectator )
 			CL_Disconnect();
 		cl.proxy_redirect = false;
@@ -311,13 +311,13 @@ void CL_ComputeClientInterpolationAmount( usercmd_t *cmd )
 
 	if(( interpolation_msec + 1 ) < min_interp )
 	{
-		MsgDev( D_INFO, "ex_interp forced up to %i msec\n", interpolation_msec );
+		Con_Printf( "ex_interp forced up to %i msec\n", interpolation_msec );
 		interpolation_msec = min_interp;
 		forced = true;
 	}
 	else if(( interpolation_msec - 1 ) > max_interp )
 	{
-		MsgDev( D_INFO, "ex_interp forced down to %i msec\n", interpolation_msec );
+		Con_Printf( "ex_interp forced down to %i msec\n", interpolation_msec );
 		interpolation_msec = max_interp;
 		forced = true;
 	}
@@ -882,7 +882,7 @@ void CL_BeginUpload_f( void )
 
 	if( Q_strlen( name ) != 36 || Q_strnicmp( name, "!MD5", 4 ))
 	{
-		MsgDev( D_INFO, "Ingoring upload of non-customization\n" );
+		Con_Printf( "Ingoring upload of non-customization\n" );
 		return;
 	}
 
@@ -1006,7 +1006,7 @@ void CL_SendConnectPacket( void )
 
 	if( !NET_StringToAdr( cls.servername, &adr ))
 	{
-		MsgDev( D_INFO, "CL_SendConnectPacket: bad server address\n");
+		Con_Printf( "CL_SendConnectPacket: bad server address\n");
 		cls.connect_time = 0;
 		return;
 	}
@@ -1090,13 +1090,8 @@ void CL_Connect_f( void )
 
 	Q_strncpy( server, Cmd_Argv( 1 ), sizeof( server ));
 
-	if( Host_ServerState())
-	{	
-		// if running a local server, kill it and reissue
-		Q_strncpy( host.finalmsg, "Server quit", MAX_STRING );
-		SV_Shutdown( false );
-	}
-
+	// if running a local server, kill it and reissue
+	if( SV_Active( )) Host_ShutdownServer();
 	NET_Config( true ); // allow remote
 
 	Msg( "server %s\n", server );
@@ -1337,7 +1332,7 @@ void CL_LocalServers_f( void )
 {
 	netadr_t	adr;
 
-	MsgDev( D_INFO, "Scanning for servers on the local network area...\n" );
+	Con_Printf( "Scanning for servers on the local network area...\n" );
 	NET_Config( true ); // allow remote
 	
 	// send a broadcast packet
@@ -1357,11 +1352,11 @@ void CL_InternetServers_f( void )
 	netadr_t	adr;
 	char	fullquery[512] = "1\xFF" "0.0.0.0:0\0" "\\gamedir\\";
 
-	MsgDev( D_INFO, "Scanning for servers on the internet area...\n" );
+	Con_Printf( "Scanning for servers on the internet area...\n" );
 	NET_Config( true ); // allow remote
 
 	if( !NET_StringToAdr( MASTERSERVER_ADR, &adr ) )
-		MsgDev( D_INFO, "Can't resolve adr: %s\n", MASTERSERVER_ADR );
+		MsgDev( D_ERROR, "Can't resolve adr: %s\n", MASTERSERVER_ADR );
 
 	Q_strcpy( &fullquery[22], GI->gamedir );
 
@@ -1537,7 +1532,7 @@ void CL_ParseStatusMessage( netadr_t from, sizebuf_t *msg )
 	CL_FixupColorStringsForInfoString( s, infostring );
 
 	// more info about servers
-	MsgDev( D_INFO, "Server: %s, Game: %s\n", NET_AdrToString( from ), Info_ValueForKey( infostring, "gamedir" ));
+	Con_Printf( "Server: %s, Game: %s\n", NET_AdrToString( from ), Info_ValueForKey( infostring, "gamedir" ));
 
 	UI_AddServerToList( from, infostring );
 }
@@ -1790,7 +1785,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	{
 		if( cls.state == ca_connected )
 		{
-			MsgDev( D_INFO, "dup connect received. ignored\n");
+			MsgDev( D_ERROR, "dup connect received. ignored\n");
 			return;
 		}
 
@@ -1875,7 +1870,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 					if( nr->timeout <= host.realtime )
 						SetBits( nr->resp.error, NET_ERROR_TIMEOUT );
 
-					MsgDev( D_INFO, "serverlist call: %s\n", NET_AdrToString( from ));
+					Con_Printf( "serverlist call: %s\n", NET_AdrToString( from ));
 					nr->pfnFunc( &nr->resp );
 
 					// throw the list, now it will be stored in user area
@@ -2074,7 +2069,7 @@ A file has been received via the fragmentation/reassembly layer, put it in the r
 void CL_ProcessFile( qboolean successfully_received, const char *filename )
 {
 	if( successfully_received )
-		MsgDev( D_INFO, "received %s\n", filename );
+		Con_Printf( "received %s\n", filename );
 	else MsgDev( D_WARN, "failed to download %s", filename );
 }
 
@@ -2387,7 +2382,6 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("drop", NULL, "drop current/specified item or weapon" );
 	Cmd_AddCommand ("gametitle", NULL, "show game logo" );
 	Cmd_AddCommand ("god", NULL, "enable godmode" );
-	Cmd_AddCommand ("fly", NULL, "enable fly mode" );
 	Cmd_AddCommand ("fov", NULL, "set client field of view" );
 	Cmd_AddCommand ("log", NULL, "logging server events" );
 		
@@ -2612,7 +2606,7 @@ void CL_Shutdown( void )
 	if( !cls.initialized ) return;
 	cls.initialized = false;
 
-	MsgDev( D_INFO, "CL_Shutdown()\n" );
+	Con_Printf( "CL_Shutdown()\n" );
 
 	Host_WriteOpenGLConfig ();
 	Host_WriteVideoConfig ();

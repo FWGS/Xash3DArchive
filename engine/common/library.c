@@ -268,7 +268,7 @@ static int BuildImportTable( MEMORYMODULE *module )
 			void	*handle;
 
 			libname = (LPCSTR)CALCULATE_ADDRESS( codeBase, importDesc->Name );
-			handle = Com_LoadLibraryExt( libname, false, true );
+			handle = COM_LoadLibraryExt( libname, false, true );
 
 			if( handle == NULL )
 			{
@@ -297,13 +297,13 @@ static int BuildImportTable( MEMORYMODULE *module )
 				if( IMAGE_SNAP_BY_ORDINAL( *thunkRef ))
 				{
 					LPCSTR	funcName = (LPCSTR)IMAGE_ORDINAL( *thunkRef );
-					*funcRef = (DWORD)Com_GetProcAddress( handle, funcName );
+					*funcRef = (DWORD)COM_GetProcAddress( handle, funcName );
 				}
 				else
 				{
 					PIMAGE_IMPORT_BY_NAME thunkData = (PIMAGE_IMPORT_BY_NAME)CALCULATE_ADDRESS( codeBase, *thunkRef );
 					LPCSTR	funcName = (LPCSTR)&thunkData->Name;
-					*funcRef = (DWORD)Com_GetProcAddress( handle, funcName );
+					*funcRef = (DWORD)COM_GetProcAddress( handle, funcName );
 				}
 
 				if( *funcRef == 0 )
@@ -340,9 +340,7 @@ static void MemoryFreeLibrary( void *hInstance )
 			for( i = 0; i < module->numModules; i++ )
 			{
 				if( module->modules[i] != NULL )
-				{
-					Com_FreeLibrary( module->modules[i] );
-				}
+					COM_FreeLibrary( module->modules[i] );
 			}
 			Mem_Free( module->modules ); // Mem_Realloc end
 		}
@@ -742,7 +740,7 @@ qboolean LibraryLoadSymbols( dll_user_t *hInst )
 			void	*fn_offset;
 
 			index = hInst->ordinals[i];
-			fn_offset = (void *)Com_GetProcAddress( hInst, "GiveFnptrsToDll" );
+			fn_offset = (void *)COM_GetProcAddress( hInst, "GiveFnptrsToDll" );
 			hInst->funcBase = (dword)(fn_offset) - hInst->funcs[index];
 			break;
 		}
@@ -762,12 +760,12 @@ table_error:
 
 /*
 ================
-Com_LoadLibrary
+COM_LoadLibrary
 
 smart dll loader - can loading dlls from pack or wad files
 ================
 */
-void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolean directpath )
+void *COM_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolean directpath )
 {
 	dll_user_t *hInst;
 
@@ -789,7 +787,7 @@ void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolea
 	if( !hInst->hInstance )
 	{
 		MsgDev( D_NOTE, "Sys_LoadLibrary: Loading %s - failed\n", dllname );
-		Com_FreeLibrary( hInst );
+		COM_FreeLibrary( hInst );
 		return NULL;
 	}
 
@@ -799,7 +797,7 @@ void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolea
 		if( !LibraryLoadSymbols( hInst ))
 		{
 			MsgDev( D_NOTE, "Sys_LoadLibrary: Loading %s - failed\n", dllname );
-			Com_FreeLibrary( hInst );
+			COM_FreeLibrary( hInst );
 			return NULL;
 		}
 	}
@@ -809,12 +807,12 @@ void *Com_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolea
 	return hInst;
 }
 
-void *Com_LoadLibrary( const char *dllname, int build_ordinals_table )
+void *COM_LoadLibrary( const char *dllname, int build_ordinals_table )
 {
-	return Com_LoadLibraryExt( dllname, build_ordinals_table, false );
+	return COM_LoadLibraryExt( dllname, build_ordinals_table, false );
 }
 
-void *Com_GetProcAddress( void *hInstance, const char *name )
+void *COM_GetProcAddress( void *hInstance, const char *name )
 {
 	dll_user_t *hInst = (dll_user_t *)hInstance;
 
@@ -826,7 +824,7 @@ void *Com_GetProcAddress( void *hInstance, const char *name )
 	return (void *)GetProcAddress( hInst->hInstance, GetMSVCName( name ));
 }
 
-void Com_FreeLibrary( void *hInstance )
+void COM_FreeLibrary( void *hInstance )
 {
 	dll_user_t *hInst = (dll_user_t *)hInstance;
 
@@ -852,7 +850,7 @@ void Com_FreeLibrary( void *hInstance )
 	Mem_Free( hInst );	// done
 }
 
-dword Com_FunctionFromName( void *hInstance, const char *pName )
+dword COM_FunctionFromName( void *hInstance, const char *pName )
 {
 	dll_user_t	*hInst = (dll_user_t *)hInstance;
 	int		i, index;
@@ -872,7 +870,7 @@ dword Com_FunctionFromName( void *hInstance, const char *pName )
 	return 0;
 }
 
-const char *Com_NameForFunction( void *hInstance, dword function )
+const char *COM_NameForFunction( void *hInstance, dword function )
 {
 	dll_user_t	*hInst = (dll_user_t *)hInstance;
 	int		i, index;

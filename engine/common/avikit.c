@@ -625,7 +625,7 @@ movie_state_t *AVI_LoadVideo( const char *filename, qboolean load_audio )
 
 	// open cinematic
 	Q_snprintf( path, sizeof( path ), "media/%s", filename );
-	FS_DefaultExtension( path, ".avi" );
+	COM_DefaultExtension( path, ".avi" );
 	fullpath = FS_GetDiskPath( path, false );
 
 	if( FS_FileExists( path, false ) && !fullpath )

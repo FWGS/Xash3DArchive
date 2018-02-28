@@ -50,21 +50,20 @@ static void Mod_Modellist_f( void )
 	int	i, nummodels;
 	model_t	*mod;
 
-	Msg( "\n" );
-	Msg( "-----------------------------------\n" );
+	Con_Printf( "\n" );
+	Con_Printf( "-----------------------------------\n" );
 
 	for( i = nummodels = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
 	{
 		if( !mod->name[0] )
 			continue; // free slot
-
-		Msg( "%s%s\n", mod->name, (mod->type == mod_bad) ? " (DEFAULTED)" : "" );
+		Con_Printf( "%s\n", mod->name );
 		nummodels++;
 	}
 
-	Msg( "-----------------------------------\n" );
-	Msg( "%i total models\n", nummodels );
-	Msg( "\n" );
+	Con_Printf( "-----------------------------------\n" );
+	Con_Printf( "%i total models\n", nummodels );
+	Con_Printf( "\n" );
 }
 
 /*
@@ -166,23 +165,6 @@ void Mod_FreeAll( void )
 
 /*
 ================
-Mod_ClearAll
-
-clear all models as unreferenced
-but don't touch the real data
-================
-*/
-void Mod_ClearAll( void )
-{
-	model_t	*mod;
-	int	i;
-
-	for( i = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
-		mod->needload = NL_UNREFERENCED;
-}
-
-/*
-================
 Mod_ClearUserData
 ================
 */
@@ -234,7 +216,7 @@ model_t *Mod_FindName( const char *filename, qboolean trackCRC )
 	{
 		if( !Q_stricmp( mod->name, modname ))
 		{
-			if( mod->mempool )
+			if( mod->mempool || mod->name[0] == '*' )
 				mod->needload = NL_PRESENT;
 			else mod->needload = NL_NEEDS_LOADED;
 
@@ -257,6 +239,7 @@ model_t *Mod_FindName( const char *filename, qboolean trackCRC )
 	Q_strncpy( mod->name, modname, sizeof( mod->name ));
 	if( trackCRC ) mod_crcinfo[i].flags = FCRC_SHOULD_CHECKSUM;
 	else mod_crcinfo[i].flags = 0;
+	mod->needload = NL_NEEDS_LOADED;
 	mod_crcinfo[i].initialCRC = 0;
 
 	return mod;
@@ -291,6 +274,8 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		return mod;
 	}
 
+	ASSERT( mod->needload == NL_NEEDS_LOADED );
+
 	// store modelname to show error
 	Q_strncpy( tempname, mod->name, sizeof( tempname ));
 	COM_FixSlashes( tempname );
@@ -307,8 +292,8 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		return NULL;
 	}
 
-	MsgDev( D_NOTE, "Mod_LoadModel: %s\n", mod->name );
-	mod->needload = world.load_sequence; // register mod
+	Con_DPrintf( "loading %s\n", mod->name );
+	mod->needload = NL_PRESENT;
 	mod->type = mod_bad;
 	loadmodel = mod;
 
@@ -425,6 +410,7 @@ void Mod_PurgeStudioCache( void )
 			mod_known[i].submodels = NULL;
 		if( mod_known[i].name[0] == '*' )
 			Mod_FreeModel( &mod_known[i] );
+		mod_known[i].needload = NL_UNREFERENCED;
 	}
 
 	Mem_EmptyPool( com_studiocache );
@@ -452,9 +438,6 @@ model_t *Mod_LoadWorld( const char *name, qboolean preload )
 	// release previois map
 	Mod_FreeModel( mod_known );	// world is stuck on slot #0 always
 
-	world.load_sequence++;	// now all models are invalid
-	Mod_ClearAll();
-
 	// load the newmap
 	world.loading = true;
 	pworld = Mod_FindName( name, false );
@@ -480,7 +463,7 @@ void Mod_FreeUnused( void )
 
 	for( i = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
 	{
-		if( mod->needload == NL_UNREFERENCED )
+		if( mod->needload == NL_UNREFERENCED && COM_CheckString( mod->name ))
 			Mod_FreeModel( mod );
 	}
 }

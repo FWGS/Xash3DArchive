@@ -171,7 +171,7 @@ int SumBytes( SaveFileSectionsInfo_t *section )
 
 void SV_InitSaveRestore( void )
 {
-	pfnSaveGameComment = Com_GetProcAddress( svgame.hInstance, "SV_SaveGameComment" );
+	pfnSaveGameComment = COM_GetProcAddress( svgame.hInstance, "SV_SaveGameComment" );
 }
 
 /*
@@ -713,7 +713,7 @@ void SV_DirectoryCopy( const char *pPath, file_t *pFile )
 		pCopy = FS_Open( t->filenames[i], "rb", true );
 
 		// filename can only be as long as a map name + extension
-		Q_strncpy( szName, FS_FileWithoutPath( t->filenames[i] ), SAVENAME_LENGTH );		
+		Q_strncpy( szName, COM_FileWithoutPath( t->filenames[i] ), SAVENAME_LENGTH );		
 		FS_Write( pFile, szName, SAVENAME_LENGTH );
 		FS_Write( pFile, &fileSize, sizeof( int ));
 		FS_FileCopy( pFile, pCopy, fileSize );
@@ -1960,6 +1960,7 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 		pSaveData = SV_SaveGameState( true );
 	}
 
+	SV_InactivateClients ();
 	SV_DeactivateServer ();
 
 	if( !SV_SpawnServer( level, startspot, false ))
@@ -1982,6 +1983,7 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 	else
 	{
 		// classic quake changelevel
+		svgame.dllFuncs.pfnResetGlobalState();
 		SV_SpawnEntities( level, SV_EntityScript( ));
 		SV_ActivateServer( true );
 	}

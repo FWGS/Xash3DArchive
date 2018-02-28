@@ -203,9 +203,9 @@ byte CRC32_BlockSequence( byte *base, int length, int sequence )
 
 qboolean CRC32_File( dword *crcvalue, const char *filename )
 {
-	file_t	*f;
 	char	buffer[1024];
 	int	num_bytes;
+	file_t	*f;
 
 	f = FS_Open( filename, "rb", false );
 	if( !f ) return false;
@@ -588,12 +588,12 @@ char *MD5_Print( byte hash[16] )
 
 /*
 =================
-Com_HashKey
+COM_HashKey
 
 returns hash key for string
 =================
 */
-uint Com_HashKey( const char *string, uint hashSize )
+uint COM_HashKey( const char *string, uint hashSize )
 {
 	uint	i, hashKey = 0;
 

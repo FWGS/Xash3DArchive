@@ -455,7 +455,7 @@ void R_NewMap( void )
 		string	mapname, filepath;
 
 		Q_strncpy( mapname, cl.worldmodel->name, sizeof( mapname ));
-		FS_StripExtension( mapname );
+		COM_StripExtension( mapname );
 		Q_sprintf( filepath, "%s_detail.txt", mapname );
 
 		R_ParseDetailTextures( filepath );

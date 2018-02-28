@@ -148,6 +148,163 @@ long COM_RandomLong( long lLow, long lHigh )
 }
 
 /*
+============
+COM_FileBase
+
+Extracts the base name of a file (no path, no extension, assumes '/' as path separator)
+============
+*/
+void COM_FileBase( const char *in, char *out )
+{
+	int	len, start, end;
+
+	len = Q_strlen( in );
+	if( !len ) return;
+	
+	// scan backward for '.'
+	end = len - 1;
+
+	while( end && in[end] != '.' && in[end] != '/' && in[end] != '\\' )
+		end--;
+	
+	if( in[end] != '.' )
+		end = len-1; // no '.', copy to end
+	else end--; // found ',', copy to left of '.'
+
+	// scan backward for '/'
+	start = len - 1;
+
+	while( start >= 0 && in[start] != '/' && in[start] != '\\' )
+		start--;
+
+	if( start < 0 || ( in[start] != '/' && in[start] != '\\' ))
+		start = 0;
+	else start++;
+
+	// length of new sting
+	len = end - start + 1;
+
+	// Copy partial string
+	Q_strncpy( out, &in[start], len + 1 );
+	out[len] = 0;
+}
+
+/*
+============
+COM_FileExtension
+============
+*/
+const char *COM_FileExtension( const char *in )
+{
+	const char *separator, *backslash, *colon, *dot;
+
+	separator = Q_strrchr( in, '/' );
+	backslash = Q_strrchr( in, '\\' );
+
+	if( !separator || separator < backslash )
+		separator = backslash;
+
+	colon = Q_strrchr( in, ':' );
+
+	if( !separator || separator < colon )
+		separator = colon;
+
+	dot = Q_strrchr( in, '.' );
+
+	if( dot == NULL || ( separator && ( dot < separator )))
+		return "";
+
+	return dot + 1;
+}
+
+/*
+============
+COM_FileWithoutPath
+============
+*/
+const char *COM_FileWithoutPath( const char *in )
+{
+	const char *separator, *backslash, *colon;
+
+	separator = Q_strrchr( in, '/' );
+	backslash = Q_strrchr( in, '\\' );
+
+	if( !separator || separator < backslash )
+		separator = backslash;
+
+	colon = Q_strrchr( in, ':' );
+
+	if( !separator || separator < colon )
+		separator = colon;
+
+	return separator ? separator + 1 : in;
+}
+
+/*
+============
+COM_ExtractFilePath
+============
+*/
+void COM_ExtractFilePath( const char *path, char *dest )
+{
+	const char *src = path + Q_strlen( path ) - 1;
+
+	// back up until a \ or the start
+	while( src != path && !(*(src - 1) == '\\' || *(src - 1) == '/' ))
+		src--;
+
+	if( src != path )
+	{
+		memcpy( dest, path, src - path );
+		dest[src - path - 1] = 0; // cutoff backslash
+	}
+	else Q_strcpy( dest, "" ); // file without path
+}
+
+/*
+============
+COM_StripExtension
+============
+*/
+void COM_StripExtension( char *path )
+{
+	size_t	length;
+
+	length = Q_strlen( path ) - 1;
+	while( length > 0 && path[length] != '.' )
+	{
+		length--;
+		if( path[length] == '/' || path[length] == '\\' || path[length] == ':' )
+			return; // no extension
+	}
+
+	if( length ) path[length] = 0;
+}
+
+/*
+==================
+COM_DefaultExtension
+==================
+*/
+void COM_DefaultExtension( char *path, const char *extension )
+{
+	const char	*src;
+
+	// if path doesn't have a .EXT, append extension
+	// (extension should include the .)
+	src = path + Q_strlen( path ) - 1;
+
+	while( *src != '/' && src != path )
+	{
+		// it has an extension
+		if( *src == '.' ) return;                 
+		src--;
+	}
+
+	Q_strcat( path, extension );
+}
+
+/*
 ==============
 COM_IsSingleChar
 
@@ -764,54 +921,6 @@ void pfnCVarDirectSet( cvar_t *var, const char *szValue )
 
 /*
 =============
-Con_Printf
-
-=============
-*/
-void Con_Printf( char *szFmt, ... )
-{
-	static char	buffer[16384];	// must support > 1k messages
-	va_list		args;
-
-	if( host.developer < D_INFO )
-		return;
-
-	va_start( args, szFmt );
-	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
-	va_end( args );
-
-	if( buffer[0] == '0' && buffer[1] == '\n' && buffer[2] == '\0' )
-		return; // hlrally spam
-
-	Sys_Print( buffer );
-}
-
-/*
-=============
-Con_DPrintf
-
-=============
-*/
-void Con_DPrintf( char *szFmt, ... )
-{
-	static char	buffer[16384];	// must support > 1k messages
-	va_list		args;
-
-	if( host.developer < D_ERROR )
-		return;
-
-	va_start( args, szFmt );
-	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
-	va_end( args );
-
-	if( buffer[0] == '0' && buffer[1] == '\n' && buffer[2] == '\0' )
-		return; // hlrally spam
-
-	Sys_Print( buffer );
-}
-
-/*
-=============
 COM_CompareFileTime
 
 =============
@@ -913,7 +1022,7 @@ qboolean COM_IsSafeFileToDownload( const char *filename )
 	if( Q_strlen( first ) != 4 )
 		return false;
 
-	ext = FS_FileExtension( lwrfilename );
+	ext = COM_FileExtension( lwrfilename );
 
 	for( i = 0; i < ARRAYSIZE( file_exts ); i++ )
 	{

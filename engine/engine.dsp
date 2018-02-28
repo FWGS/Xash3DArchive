@@ -587,6 +587,10 @@ SOURCE=.\client\client.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\common\com_strings.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\common\common.h
 # End Source File
 # Begin Source File

@@ -53,28 +53,27 @@ void SV_BroadcastPrintf( sv_client_t *ignore, char *fmt, ... )
 	sv_client_t	*cl;
 	int		i;
 
-	if( sv.state == ss_dead )
-		return;
-
 	va_start( argptr, fmt );
 	Q_vsprintf( string, fmt, argptr );
 	va_end( argptr );
 	
-	// echo to console
-	if( host.type == HOST_DEDICATED ) Msg( "%s", string );
 
-	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+	if( sv.state == ss_active )
 	{
-		if( FBitSet( cl->flags, FCL_FAKECLIENT ))
-			continue;
+		for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+		{
+			if( FBitSet( cl->flags, FCL_FAKECLIENT ))
+				continue;
 
-		if( cl == ignore || cl->state != cs_spawned )
-			continue;
+			if( cl == ignore || cl->state != cs_spawned )
+				continue;
 
-		MSG_BeginServerCmd( &cl->netchan.message, svc_print );
-		MSG_WriteString( &cl->netchan.message, string );
+			MSG_BeginServerCmd( &cl->netchan.message, svc_print );
+			MSG_WriteString( &cl->netchan.message, string );
+		}
 	}
 
+	// echo to console
 	MsgDev( D_REPORT, string );
 }
 
@@ -230,7 +229,7 @@ void SV_Map_f( void )
 
 	// hold mapname to other place
 	Q_strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
-	FS_StripExtension( mapname );
+	COM_StripExtension( mapname );
 
 	if( !SV_ValidateMap( mapname, true ))
 		return;
@@ -264,7 +263,7 @@ void SV_MapBackground_f( void )
 
 	// hold mapname to other place
 	Q_strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
-	FS_StripExtension( mapname );
+	COM_StripExtension( mapname );
 
 	if( !SV_ValidateMap( mapname, false ))
 		return;
@@ -415,105 +414,6 @@ void SV_AutoSave_f( void )
 	}
 
 	SV_SaveGame( "autosave" );
-}
-
-/*
-==================
-SV_ChangeLevel_f
-
-Saves the state of the map just being exited and goes to a new map.
-==================
-*/
-void SV_ChangeLevel_f( void )
-{
-	string	mapname;
-	char	*spawn_entity;
-	int	flags, c = Cmd_Argc();
-
-	if( c < 2 )
-	{
-		Msg( "Usage: changelevel <map> [landmark]\n" );
-		return;
-	}
-
-	// hold mapname to other place
-	Q_strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
-	FS_StripExtension( mapname );
-
-	// determine spawn entity classname
-	if( svs.maxclients == 1 )
-		spawn_entity = GI->sp_entity;
-	else spawn_entity = GI->mp_entity;
-
-	flags = SV_MapIsValid( mapname, spawn_entity, Cmd_Argv( 2 ));
-
-	if( FBitSet( flags, MAP_INVALID_VERSION ))
-	{
-		MsgDev( D_ERROR, "map %s is invalid or not supported\n", mapname );
-		return;
-	}
-	
-	if( !FBitSet( flags, MAP_IS_EXIST ))
-	{
-		MsgDev( D_ERROR, "map %s doesn't exist\n", mapname );
-		return;
-	}
-
-	if( c >= 3 && !FBitSet( flags, MAP_HAS_LANDMARK ))
-	{
-		if( sv_validate_changelevel->value )
-		{
-			// NOTE: we find valid map but specified landmark it's doesn't exist
-			// run simple changelevel like in q1, throw warning
-			MsgDev( D_WARN, "map %s is exist but doesn't contain landmark with name %s. smooth transition disabled\n",
-			mapname, Cmd_Argv( 2 ));
-			c = 2; // reduce args
-		}
-	}
-
-	if( c >= 3 && !Q_stricmp( sv.name, Cmd_Argv( 1 )))
-	{
-		MsgDev( D_ERROR, "can't changelevel with same map. Ignored.\n" );
-		return;	
-	}
-
-	if( c == 2 && !FBitSet( flags, MAP_HAS_SPAWNPOINT ))
-	{
-		if( sv_validate_changelevel->value )
-		{
-			MsgDev( D_ERROR, "map %s doesn't have a valid spawnpoint. Ignored.\n", mapname );
-			return;	
-		}
-	}
-
-	// bad changelevel position invoke enables in one-way transition
-	if( sv.net_framenum < 15 )
-	{
-		if( sv_validate_changelevel->value )
-		{
-			MsgDev( D_WARN, "an infinite changelevel detected and will be disabled until a next save\\restore\n" );
-			return; // lock with svs.spawncount here
-		}
-	}
-
-	if( sv.state != ss_active )
-	{
-		MsgDev( D_ERROR, "only the server may changelevel\n" );
-		return;
-	}
-
-	if( sv.background )
-	{
-		COM_LoadLevel( mapname, false );
-	}
-	else
-	{
-		// g-cont: inactivate clients to avoid fired "trigger_changelevel" multiple times
-		SV_InactivateClients ();
-
-		if( c == 2 ) COM_ChangeLevel( Cmd_Argv( 1 ), NULL );
-		else COM_ChangeLevel( Cmd_Argv( 1 ), Cmd_Argv( 2 ));
-	}
 }
 
 /*
@@ -817,12 +717,7 @@ Kick everyone off, possibly in preparation for a new game
 */
 void SV_KillServer_f( void )
 {
-	if( !svs.initialized )
-		return;
-
-	Q_strncpy( host.finalmsg, "Server was killed", MAX_STRING );
-	SV_Shutdown( false );
-	NET_Config ( false ); // close network sockets
+	Host_ShutdownServer();
 }
 
 /*
@@ -917,7 +812,6 @@ is available always
 void SV_InitHostCommands( void )
 {
 	Cmd_AddCommand( "map", SV_Map_f, "start new level" );
-	Cmd_AddCommand( "changelevel", SV_ChangeLevel_f, "changing level" );
 
 	if( host.type == HOST_NORMAL )
 	{

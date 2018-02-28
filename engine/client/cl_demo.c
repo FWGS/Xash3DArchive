@@ -130,7 +130,7 @@ void CL_StartupDemoHeader( void )
 		return;
 	}
 
-	MsgDev( D_INFO, "Spooling demo header.\n" );
+	Con_Printf( "Spooling demo header.\n" );
 }
 
 /*
@@ -353,7 +353,7 @@ void CL_WriteDemoHeader( const char *name )
 	long	savepos;
 	long	curpos;
 	
-	MsgDev( D_INFO, "recording to %s.\n", name );
+	Con_Printf( "recording to %s.\n", name );
 	cls.demofile = FS_Open( name, "wb", false );
 	cls.demotime = 0.0;
 
@@ -479,9 +479,7 @@ void CL_StopRecord( void )
 	demo.header.host_fps = 0.0;
 
 	frames = cls.td_lastframe - cls.td_startframe;
-
-	Msg( "Completed demo\n" );
-	MsgDev( D_INFO, "Recording time: %02d:%02d, frames %i\n", (int)(cls.demotime / 60.0f ), (int)fmod( cls.demotime, 60.0f ), frames );
+	Con_Printf( "Completed demo\nRecording time: %02d:%02d, frames %i\n", (int)(cls.demotime / 60.0f), (int)fmod(cls.demotime, 60.0f), frames );
 	cls.demotime = 0.0;
 }
 
@@ -1094,7 +1092,7 @@ Called when a demo finishes
 */
 qboolean CL_NextDemo( void )
 {
-	string	str;
+	char	str[MAX_QPATH];
 
 	if( cls.demonum == -1 )
 		return false; // don't play demos
@@ -1105,14 +1103,13 @@ qboolean CL_NextDemo( void )
 		cls.demonum = 0;
 		if( !cls.demos[cls.demonum][0] )
 		{
-			MsgDev( D_INFO, "no demos listed with startdemos\n" );
+			Con_Printf( "no demos listed with startdemos\n" );
 			cls.demonum = -1;
 			return false;
 		}
 	}
 
 	Q_snprintf( str, MAX_STRING, "playdemo %s\n", cls.demos[cls.demonum] );
-
 	Cbuf_InsertText( str );
 	cls.demonum++;
 
@@ -1393,7 +1390,7 @@ void CL_StartDemos_f( void )
 
 	if( cls.key_dest != key_menu )
 	{
-		MsgDev( D_INFO, "startdemos is not valid from the console\n" );
+		Con_Printf( "'startdemos' is not valid from the console\n" );
 		return;
 	}
 
@@ -1404,7 +1401,7 @@ void CL_StartDemos_f( void )
 		c = MAX_DEMOS;
 	}
 
-	MsgDev( D_INFO, "%i demo%s in loop\n", c, (c > 1) ? "s" : "" );
+	Con_Printf( "%i demo%s in loop\n", c, (c > 1) ? "s" : "" );
 
 	for( i = 1; i < c + 1; i++ )
 		Q_strncpy( cls.demos[i-1], Cmd_Argv( i ), sizeof( cls.demos[0] ));
@@ -1430,7 +1427,7 @@ void CL_Demos_f( void )
 {
 	if( cls.key_dest != key_menu )
 	{
-		MsgDev( D_INFO, "demos is not valid from the console\n" );
+		Con_Printf( "'demos' is not valid from the console\n" );
 		return;
 	}
 

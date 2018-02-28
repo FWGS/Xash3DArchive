@@ -333,9 +333,12 @@ print centerscreen message
 */
 void CL_CenterPrint( const char *text, float y )
 {
-	char	*s;
-	int	width = 0;
 	int	length = 0;
+	int	width = 0;
+	char	*s;
+
+	if( !COM_CheckString( text ))
+		return;
 
 	clgame.centerPrint.lines = 1;
 	clgame.centerPrint.totalWidth = 0;
@@ -1437,7 +1440,7 @@ static client_sprite_t *pfnSPR_GetList( char *psz, int *piCount )
 	if( piCount ) *piCount = 0;
 
 	if( !clgame.itemspath[0] )	// typically it's sprites\*.txt
-		FS_ExtractFilePath( psz, clgame.itemspath );
+		COM_ExtractFilePath( psz, clgame.itemspath );
 
 	afile = FS_LoadFile( psz, NULL, false );
 	if( !afile ) return NULL;
@@ -1839,9 +1842,7 @@ prints directly into console (can skip notify)
 */
 static void pfnConsolePrint( const char *string )
 {
-	if( !string || !*string ) return;
-	if( *string != 1 ) Con_Print( (char *)string ); // show notify
-	else Con_NPrintf( 0, (char *)string + 1 ); // skip notify
+	Con_Printf( "%s", string );
 }
 
 /*
@@ -1854,7 +1855,6 @@ like trigger_multiple message in q1
 */
 static void pfnCenterPrint( const char *string )
 {
-	if( !string || !*string ) return; // someone stupid joke
 	CL_CenterPrint( string, 0.25f );
 }
 
@@ -3707,7 +3707,7 @@ void CL_UnloadProgs( void )
 	Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
 	Cvar_FullSet( "host_clientloaded", "0", FCVAR_READ_ONLY );
 
-	Com_FreeLibrary( clgame.hInstance );
+	COM_FreeLibrary( clgame.hInstance );
 	Mem_FreePool( &cls.mempool );
 	Mem_FreePool( &clgame.mempool );
 	memset( &clgame, 0, sizeof( clgame ));
@@ -3732,15 +3732,15 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.mempool = Mem_AllocPool( "Client Edicts Zone" );
 	clgame.entities = NULL;
 
-	clgame.hInstance = Com_LoadLibrary( name, false );
+	clgame.hInstance = COM_LoadLibrary( name, false );
 	if( !clgame.hInstance ) return false;
 
 	// clear exports
 	for( func = cdll_exports; func && func->name; func++ )
 		*func->func = NULL;
 
-	// trying to get single export named 'F'
-	if(( GetClientAPI = (void *)Com_GetProcAddress( clgame.hInstance, "GetClientAPI" )) != NULL )
+	// trying to get single export
+	if(( GetClientAPI = (void *)COM_GetProcAddress( clgame.hInstance, "GetClientAPI" )) != NULL )
 	{
 		MsgDev( D_NOTE, "CL_LoadProgs: found single callback export\n" );		
 
@@ -3765,13 +3765,13 @@ qboolean CL_LoadProgs( const char *name )
 			continue;	// already get through 'F'
 
 		// functions are cleared before all the extensions are evaluated
-		if(!( *func->func = (void *)Com_GetProcAddress( clgame.hInstance, func->name )))
+		if(( *func->func = (void *)COM_GetProcAddress( clgame.hInstance, func->name )) == NULL )
 		{
           		MsgDev( D_NOTE, "CL_LoadProgs: failed to get address of %s proc\n", func->name );
 
 			if( critical_exports )
 			{
-				Com_FreeLibrary( clgame.hInstance );
+				COM_FreeLibrary( clgame.hInstance );
 				clgame.hInstance = NULL;
 				return false;
 			}
@@ -3793,13 +3793,13 @@ qboolean CL_LoadProgs( const char *name )
 
 		// functions are cleared before all the extensions are evaluated
 		// NOTE: new exports can be missed without stop the engine
-		if(!( *func->func = (void *)Com_GetProcAddress( clgame.hInstance, func->name )))
-          		MsgDev( D_NOTE, "CL_LoadProgs: failed to get address of %s proc\n", func->name );
+		if(( *func->func = (void *)COM_GetProcAddress( clgame.hInstance, func->name )) == NULL )
+			MsgDev( D_NOTE, "CL_LoadProgs: failed to get address of %s proc\n", func->name );
 	}
 
 	if( !clgame.dllFuncs.pfnInitialize( &gEngfuncs, CLDLL_INTERFACE_VERSION ))
 	{
-		Com_FreeLibrary( clgame.hInstance );
+		COM_FreeLibrary( clgame.hInstance );
 		MsgDev( D_NOTE, "CL_LoadProgs: can't init client API\n" );
 		clgame.hInstance = NULL;
 		return false;

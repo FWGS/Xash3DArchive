@@ -1236,7 +1236,7 @@ static qboolean Mod_LoadColoredLighting( dbspmodel_t *bmod )
 	size_t	litdatasize;
 	byte	*in;
 
-	FS_FileBase( loadmodel->name, modelname );
+	COM_FileBase( loadmodel->name, modelname );
 	Q_snprintf( path, sizeof( path ), "maps/%s.lit", modelname );
 
 	// make sure what deluxemap is actual
@@ -1244,7 +1244,7 @@ static qboolean Mod_LoadColoredLighting( dbspmodel_t *bmod )
 		return false;
 
 	if( iCompare < 0 ) // this may happens if level-designer used -onlyents key for hlcsg
-		MsgDev( D_WARN, "Mod_LoadColoredLighting: %s probably is out of date\n", path );
+		MsgDev( D_WARN, "%s probably is out of date\n", path );
 
 	in = FS_LoadFile( path, &litdatasize, false );
 
@@ -1252,7 +1252,6 @@ static qboolean Mod_LoadColoredLighting( dbspmodel_t *bmod )
 
 	if( *(uint *)in != IDDELUXEMAPHEADER || *((uint *)in + 1) != DELUXEMAP_VERSION )
 	{
-		MsgDev( D_ERROR, "Mod_LoadColoredLighting: %s is not a lightmap file\n", path );
 		Mem_Free( in );
 		return false;
 	}
@@ -1260,7 +1259,6 @@ static qboolean Mod_LoadColoredLighting( dbspmodel_t *bmod )
 	// skip header bytes
 	litdatasize -= 8;
 
-	MsgDev( D_INFO, "Mod_LoadColoredLighting: %s loaded\n", path );
 	loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, litdatasize );
 	memcpy( loadmodel->lightdata, in + 8, litdatasize );
 	SetBits( loadmodel->flags, MODEL_COLORED_LIGHTING );
@@ -1286,7 +1284,7 @@ static void Mod_LoadDeluxemap( dbspmodel_t *bmod )
 	if( !FBitSet( host.features, ENGINE_LOAD_DELUXEDATA ))
 		return;
 
-	FS_FileBase( loadmodel->name, modelname );
+	COM_FileBase( loadmodel->name, modelname );
 	Q_snprintf( path, sizeof( path ), "maps/%s.dlit", modelname );
 
 	// make sure what deluxemap is actual
@@ -1294,7 +1292,7 @@ static void Mod_LoadDeluxemap( dbspmodel_t *bmod )
 		return;
 
 	if( iCompare < 0 ) // this may happens if level-designer used -onlyents key for hlcsg
-		MsgDev( D_WARN, "Mod_LoadDeluxemap: %s probably is out of date\n", path );
+		MsgDev( D_WARN, "%s probably is out of date\n", path );
 
 	in = FS_LoadFile( path, &deluxdatasize, false );
 
@@ -1302,7 +1300,6 @@ static void Mod_LoadDeluxemap( dbspmodel_t *bmod )
 
 	if( *(uint *)in != IDDELUXEMAPHEADER || *((uint *)in + 1) != DELUXEMAP_VERSION )
 	{
-		MsgDev( D_ERROR, "Mod_LoadDeluxemap: %s is not a deluxemap file\n", path );
 		Mem_Free( in );
 		return;
 	}
@@ -1312,12 +1309,11 @@ static void Mod_LoadDeluxemap( dbspmodel_t *bmod )
 
 	if( deluxdatasize != bmod->lightdatasize )
 	{
-		MsgDev( D_ERROR, "Mod_LoadDeluxemap: %s has mismatched size (%i should be %i)\n", path, deluxdatasize, bmod->lightdatasize );
+		MsgDev( D_ERROR, "%s has mismatched size (%i should be %i)\n", path, deluxdatasize, bmod->lightdatasize );
 		Mem_Free( in );
 		return;
 	}
 
-	MsgDev( D_INFO, "Mod_LoadDeluxemap: %s loaded\n", path );
 	bmod->deluxedata_out = Mem_Alloc( loadmodel->mempool, deluxdatasize );
 	memcpy( bmod->deluxedata_out, in + 8, deluxdatasize );
 	bmod->deluxdatasize = deluxdatasize;
@@ -1544,7 +1540,7 @@ static void Mod_LoadEntities( dbspmodel_t *bmod )
 				for( pszWadFile = strtok( wadstring, ";" ); pszWadFile != NULL; pszWadFile = strtok( NULL, ";" ))
 				{
 					COM_FixSlashes( pszWadFile );
-					FS_FileBase( pszWadFile, token );
+					COM_FileBase( pszWadFile, token );
 
 					// make sure what wad is really exist
 					if( FS_FileExists( va( "%s.wad", token ), false ))
@@ -1852,7 +1848,7 @@ static void Mod_LoadTextures( dbspmodel_t *bmod )
 			int	size = (int)sizeof( mip_t ) + ((mt->width * mt->height * 85)>>6);
 
 			if( custom_palette ) size += sizeof( short ) + 768;
-			Q_snprintf( texname, sizeof( texname ), "#%s.mip", mt->name );
+			Q_snprintf( texname, sizeof( texname ), "#%s:%s.mip", loadstat.name, mt->name );
 			tx->gl_texturenum = GL_LoadTexture( texname, (byte *)mt, size, 0, filter );
 		}
 
@@ -1867,7 +1863,7 @@ static void Mod_LoadTextures( dbspmodel_t *bmod )
 		// check for luma texture
 		if( FBitSet( R_GetTexture( tx->gl_texturenum )->flags, TF_HAS_LUMA ))
 		{
-			Q_snprintf( texname, sizeof( texname ), "#%s_luma.mip", mt->name );
+			Q_snprintf( texname, sizeof( texname ), "#%s:%s_luma.mip", loadstat.name, mt->name );
 
 			if( mt->offsets[0] > 0 )
 			{
@@ -2461,7 +2457,6 @@ static void Mod_LoadLightVecs( dbspmodel_t *bmod )
 
 	bmod->deluxedata_out = Mem_Alloc( loadmodel->mempool, bmod->deluxdatasize );
 	memcpy( bmod->deluxedata_out, bmod->deluxdata, bmod->deluxdatasize );
-	MsgDev( D_INFO, "Mod_LoadLightVecs: loaded\n" );
 }
 
 /*
@@ -2480,7 +2475,6 @@ static void Mod_LoadShadowmap( dbspmodel_t *bmod )
 
 	bmod->shadowdata_out = Mem_Alloc( loadmodel->mempool, bmod->shadowdatasize );
 	memcpy( bmod->shadowdata_out, bmod->shadowdata, bmod->shadowdatasize );
-	MsgDev( D_INFO, "Mod_LoadShadowmap: loaded\n" );
 }
 
 /*
@@ -2612,11 +2606,11 @@ qboolean Mod_LoadBmodelLumps( const byte *mod_base, qboolean isworld )
 
 	if( loadstat.numerrors )
 	{
-		MsgDev( D_INFO, "Mod_Load%s: %i error(s), %i warning(s)\n", isworld ? "World" : "Brush", loadstat.numerrors, loadstat.numwarnings );
+		Con_DPrintf( "Mod_Load%s: %i error(s), %i warning(s)\n", isworld ? "World" : "Brush", loadstat.numerrors, loadstat.numwarnings );
 		return false; // there were errors, we can't load this map
 	}	
 	else if( loadstat.numwarnings )
-		MsgDev( D_INFO, "Mod_Load%s: %i warning(s)\n", isworld ? "World" : "Brush", loadstat.numwarnings );
+		Con_DPrintf( "Mod_Load%s: %i warning(s)\n", isworld ? "World" : "Brush", loadstat.numwarnings );
 
 	// load into heap
 	Mod_LoadEntities( bmod );
@@ -2697,13 +2691,13 @@ qboolean Mod_TestBmodelLumps( const char *name, const byte *mod_base, qboolean s
 	if( loadstat.numerrors )
 	{
 		if( !FBitSet( flags, LUMP_SILENT ))
-			MsgDev( D_INFO, "Mod_LoadWorld: %i error(s), %i warning(s)\n", loadstat.numerrors, loadstat.numwarnings );
+			Con_Printf( "Mod_LoadWorld: %i error(s), %i warning(s)\n", loadstat.numerrors, loadstat.numwarnings );
 		return false; // there were errors, we can't load this map
 	}	
 	else if( loadstat.numwarnings )
 	{
 		if( !FBitSet( flags, LUMP_SILENT ))
-			MsgDev( D_INFO, "Mod_LoadWorld: %i warning(s)\n", loadstat.numwarnings );
+			Con_Printf( "Mod_LoadWorld: %i warning(s)\n", loadstat.numwarnings );
 	}
 
 	return true;

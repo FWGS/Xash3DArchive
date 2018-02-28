@@ -148,24 +148,6 @@ void R_StudioInit( void )
 }
 
 /*
-===============
-R_StudioTexName
-
-extract texture filename from modelname
-===============
-*/
-const char *R_StudioTexName( model_t *mod )
-{
-	static char	texname[64];
-
-	Q_strncpy( texname, mod->name, sizeof( texname ));
-	FS_StripExtension( texname );
-	Q_strncat( texname, "T.mdl", sizeof( texname ));
-
-	return texname;
-}
-
-/*
 ================
 R_GetEntityRenderMode
 
@@ -192,32 +174,6 @@ int R_GetEntityRenderMode( cl_entity_t *ent )
 			return kRenderTransAlpha;
 	}
 	return ent->curstate.rendermode;
-}
-
-/*
-================
-R_StudioBodyVariations
-
-calc studio body variations
-================
-*/
-static int R_StudioBodyVariations( model_t *mod )
-{
-	studiohdr_t	*pstudiohdr;
-	mstudiobodyparts_t	*pbodypart;
-	int		i, count = 1;
-
-	pstudiohdr = (studiohdr_t *)Mod_StudioExtradata( mod );
-	if( !pstudiohdr ) return 0;
-
-	pbodypart = (mstudiobodyparts_t *)((byte *)pstudiohdr + pstudiohdr->bodypartindex);
-
-	// each body part has nummodels variations so there are as many total variations as there
-	// are in a matrix of each part by each other part
-	for( i = 0; i < pstudiohdr->numbodyparts; i++ )
-		count = count * pbodypart[i].nummodels;
-
-	return count;
 }
 
 /*
@@ -821,8 +777,8 @@ void *R_StudioGetAnim( studiohdr_t *m_pStudioHeader, model_t *m_pSubModel, mstud
 	{
 		string	filepath, modelname, modelpath;
 
-		FS_FileBase( m_pSubModel->name, modelname );
-		FS_ExtractFilePath( m_pSubModel->name, modelpath );
+		COM_FileBase( m_pSubModel->name, modelname );
+		COM_ExtractFilePath( m_pSubModel->name, modelpath );
 
 		// NOTE: here we build real sub-animation filename because stupid user may rename model without recompile
 		Q_snprintf( filepath, sizeof( filepath ), "%s/%s%i%i.mdl", modelpath, modelname, pseqdesc->seqgroup / 10, pseqdesc->seqgroup % 10 );
@@ -3801,8 +3757,8 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 	}
 
 	Q_strncpy( mdlname, mod->name, sizeof( mdlname ));
-	FS_FileBase( ptexture->name, name );
-	FS_StripExtension( mdlname );
+	COM_FileBase( ptexture->name, name );
+	COM_StripExtension( mdlname );
 
 	// loading texture filter for studiomodel
 	if( !FBitSet( ptexture->flags, STUDIO_NF_COLORMAP ))
@@ -3824,27 +3780,27 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 
 	if( !ptexture->index )
 	{
-		MsgDev( D_WARN, "%s has null texture %s\n", mod->name, ptexture->name );
 		ptexture->index = tr.defaultTexture;
 	}
-	else
+	else if( tx )
 	{
 		// duplicate texnum for easy acess 
-		if( tx ) tx->gl_texturenum = ptexture->index;
+		tx->gl_texturenum = ptexture->index;
 	}
 }
 
 /*
 =================
-R_StudioLoadTextures
+Mod_StudioLoadTextures
 =================
 */
-void R_StudioLoadTextures( model_t *mod, studiohdr_t *phdr )
+void Mod_StudioLoadTextures( model_t *mod, void *data )
 {
+	studiohdr_t	*phdr = (studiohdr_t *)data;
 	mstudiotexture_t	*ptexture;
 	int		i;
 
-	if( host.type == HOST_DEDICATED )
+	if( !phdr || host.type == HOST_DEDICATED )
 		return;
 
 	ptexture = (mstudiotexture_t *)(((byte *)phdr) + phdr->textureindex);
@@ -3857,157 +3813,27 @@ void R_StudioLoadTextures( model_t *mod, studiohdr_t *phdr )
 
 /*
 =================
-R_StudioLoadHeader
+Mod_StudioLoadTextures
 =================
 */
-studiohdr_t *R_StudioLoadHeader( model_t *mod, const void *buffer )
+void Mod_StudioUnloadTextures( void *data )
 {
-	byte		*pin;
-	studiohdr_t	*phdr;
-	int		i;
-
-	if( !buffer ) return NULL;
-
-	pin = (byte *)buffer;
-	phdr = (studiohdr_t *)pin;
-	i = phdr->version;
-
-	if( i != STUDIO_VERSION )
-	{
-		MsgDev( D_ERROR, "%s has wrong version number (%i should be %i)\n", mod->name, i, STUDIO_VERSION );
-		return NULL;
-	}	
-
-	return (studiohdr_t *)buffer;
-}
-
-/*
-=================
-Mod_LoadStudioModel
-=================
-*/
-void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
-{
-	studiohdr_t	*phdr;
-
-	if( loaded ) *loaded = false;
-	loadmodel->mempool = Mem_AllocPool( va( "^2%s^7", loadmodel->name ));
-	loadmodel->type = mod_studio;
-
-	phdr = R_StudioLoadHeader( mod, buffer );
-	if( !phdr ) return;	// bad model
-
-	if( phdr->numtextures == 0 )
-	{
-		studiohdr_t	*thdr;
-		byte		*in, *out;
-		void		*buffer2 = NULL;
-		size_t		size1, size2;
-
-		buffer2 = FS_LoadFile( R_StudioTexName( mod ), NULL, false );
-		thdr = R_StudioLoadHeader( mod, buffer2 );
-
-		if( !thdr )
-		{
-			MsgDev( D_WARN, "Mod_LoadStudioModel: %s missing textures file\n", mod->name ); 
-			if( buffer2 ) Mem_Free( buffer2 );
-		}
-                    else
-                    {
-			R_StudioLoadTextures( mod, thdr );
-
-			// give space for textures and skinrefs
-			size1 = thdr->numtextures * sizeof( mstudiotexture_t );
-			size2 = thdr->numskinfamilies * thdr->numskinref * sizeof( short );
-			mod->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length + size1 + size2 );
-			memcpy( loadmodel->cache.data, buffer, phdr->length ); // copy main mdl buffer
-			phdr = (studiohdr_t *)loadmodel->cache.data; // get the new pointer on studiohdr
-			phdr->numskinfamilies = thdr->numskinfamilies;
-			phdr->numtextures = thdr->numtextures;
-			phdr->numskinref = thdr->numskinref;
-			phdr->textureindex = phdr->length;
-			phdr->skinindex = phdr->textureindex + size1;
-
-			in = (byte *)thdr + thdr->textureindex;
-			out = (byte *)phdr + phdr->textureindex;
-			memcpy( out, in, size1 + size2 );	// copy textures + skinrefs
-			phdr->length += size1 + size2;
-			Mem_Free( buffer2 ); // release T.mdl
-		}
-	}
-	else
-	{
-		// NOTE: don't modify source buffer because it's used for CRC computing
-		loadmodel->cache.data = Mem_Alloc( loadmodel->mempool, phdr->length );
-		memcpy( loadmodel->cache.data, buffer, phdr->length );
-		phdr = (studiohdr_t *)loadmodel->cache.data; // get the new pointer on studiohdr
-		R_StudioLoadTextures( mod, phdr );
-
-		// NOTE: we wan't keep raw textures in memory. just cutoff model pointer above texture base
-		loadmodel->cache.data = Mem_Realloc( loadmodel->mempool, loadmodel->cache.data, phdr->texturedataindex );
-		phdr = (studiohdr_t *)loadmodel->cache.data; // get the new pointer on studiohdr
-		phdr->length = phdr->texturedataindex;	// update model size
-	}
-
-	// setup bounding box
-	if( !VectorCompare( vec3_origin, phdr->bbmin ))
-	{
-		// clipping bounding box
-		VectorCopy( phdr->bbmin, loadmodel->mins );
-		VectorCopy( phdr->bbmax, loadmodel->maxs );
-	}
-	else if( !VectorCompare( vec3_origin, phdr->min ))
-	{
-		// movement bounding box
-		VectorCopy( phdr->min, loadmodel->mins );
-		VectorCopy( phdr->max, loadmodel->maxs );
-	}
-	else
-	{
-		// well compute bounds from vertices and round to nearest even values
-		Mod_StudioComputeBounds( phdr, loadmodel->mins, loadmodel->maxs, true );
-		RoundUpHullSize( loadmodel->mins );
-		RoundUpHullSize( loadmodel->maxs );
-	}
-
-	loadmodel->numframes = R_StudioBodyVariations( loadmodel );
-	loadmodel->radius = RadiusFromBounds( loadmodel->mins, loadmodel->maxs );
-	loadmodel->flags = phdr->flags; // copy header flags
-
-	if( loaded ) *loaded = true;
-}
-
-/*
-=================
-Mod_UnloadStudioModel
-=================
-*/
-void Mod_UnloadStudioModel( model_t *mod )
-{
-	studiohdr_t	*pstudio;
+	studiohdr_t	*phdr = (studiohdr_t *)data;
 	mstudiotexture_t	*ptexture;
 	int		i;
 
-	Assert( mod != NULL );
+	if( !phdr || host.type == HOST_DEDICATED )
+		return;
 
-	if( mod->type != mod_studio )
-		return; // not a studio
-
-	pstudio = mod->cache.data;
-	if( !pstudio ) return; // already freed
-
-	ptexture = (mstudiotexture_t *)(((byte *)pstudio) + pstudio->textureindex);
+	ptexture = (mstudiotexture_t *)(((byte *)phdr) + phdr->textureindex);
 
 	// release all textures
-	for( i = 0; i < pstudio->numtextures; i++ )
+	for( i = 0; i < phdr->numtextures; i++ )
 	{
 		if( ptexture[i].index == tr.defaultTexture )
 			continue;
 		GL_FreeTexture( ptexture[i].index );
 	}
-
-	Mem_FreePool( &mod->mempool );
-	memset( mod, 0, sizeof( *mod ));
 }
 		
 static engine_studio_api_t gStudioAPI =

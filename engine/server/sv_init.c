@@ -238,8 +238,8 @@ void SV_CreateGenericResources( void )
 	string	filename, token;
 
 	Q_strncpy( filename, sv.model_precache[1], sizeof( filename ));
-	FS_StripExtension( filename );
-	FS_DefaultExtension( filename, ".res" );
+	COM_StripExtension( filename );
+	COM_DefaultExtension( filename, ".res" );
 	COM_FixSlashes( filename );
 
 	afile = FS_LoadFile( filename, NULL, false );
@@ -344,8 +344,8 @@ char *SV_EntityScript( void )
 
 	// check for entfile too
 	Q_strncpy( entfilename, sv.worldmodel->name, sizeof( entfilename ));
-	FS_StripExtension( entfilename );
-	FS_DefaultExtension( entfilename, ".ent" );
+	COM_StripExtension( entfilename );
+	COM_DefaultExtension( entfilename, ".ent" );
 
 	// make sure what entity patch is never than bsp
 	ft1 = FS_FileTime( sv.worldmodel->name, false );
@@ -576,13 +576,8 @@ void SV_ActivateServer( int runPhysics )
 
 	// tell what kind of server has been started.
 	if( svs.maxclients > 1 )
-	{
-		MsgDev( D_INFO, "%i player server started\n", svs.maxclients );
-	}
-	else
-	{
-		MsgDev( D_INFO, "Game started\n" );
-	}
+		Con_Printf( "%i player server started\n", svs.maxclients );
+	else Con_Printf( "Game started\n" );
 
 	Log_Printf( "Started map \"%s\" (CRC \"%i\")\n", sv.name, sv.worldmapCRC );
 
@@ -591,20 +586,18 @@ void SV_ActivateServer( int runPhysics )
 		Mod_FreeUnused ();
 
 	host.movevars_changed = true;
-	Host_SetServerState( sv.state );
 
 	MsgDev( D_INFO, "level loaded at %.2f sec\n", Sys_DoubleTime() - svs.timestart );
 
 	if( svs.maxclients > 1 )
 	{
-		char *mapchangecfgfile = Cvar_VariableString( "mapchangecfgfile" );
-		if( *mapchangecfgfile ) Cbuf_AddText( va( "exec %s\n", mapchangecfgfile ));
+		char	*cycle = Cvar_VariableString( "mapchangecfgfile" );
+
+		if( COM_CheckString( cycle ))
+			Cbuf_AddText( va( "exec %s\n", cycle ));
 
 		if( public_server->value )
-		{
-			MsgDev( D_INFO, "Adding your server to master server list\n" );
 			Master_Add( );
-		}
 	}
 }
 
@@ -666,8 +659,6 @@ qboolean SV_InitGame( void )
 		return false; // failed to loading server.dll
 	}
 
-	// alloc baseline slots
-	svs.baselines = Z_Malloc( sizeof( entity_state_t ) * GI->max_edicts );
 	// client frames will be allocated in SV_ClientConnect
 	svs.initialized = true;
 
@@ -731,23 +722,12 @@ void SV_SetupClients( void )
 	// check if clients count was really changed
 	if( svs.maxclients != (int)sv_maxclients->value )
 		changed_maxclients = true;
+
 	svs.maxclients = sv_maxclients->value;	// copy the actual value from cvar
-
-	if( svs.maxclients == 1 )
-	{
-		if( deathmatch.value )
-		{
-			changed_maxclients = true;
-			svs.maxclients = 8;
-		}
-		else if( coop.value )
-		{
-			changed_maxclients = true;
-			svs.maxclients = 4;
-		}
-	}
-
 	if( !changed_maxclients ) return; // nothing to change
+
+	// if clients count was changed we need to run full shutdown procedure
+//	Host_ShutdownServer();
 
 	// dedicated servers are can't be single player and are usually DM
 	if( host.type == HOST_DEDICATED )
@@ -764,7 +744,6 @@ void SV_SetupClients( void )
 	// feedback for cvar
 	Cvar_FullSet( "maxplayers", va( "%d", svs.maxclients ), FCVAR_LATCH );
 	SV_UPDATE_BACKUP = ( svs.maxclients == 1 ) ? SINGLEPLAYER_BACKUP : MULTIPLAYER_BACKUP;
-	svgame.globals->maxClients = svs.maxclients;
 
 	svs.clients = Z_Realloc( svs.clients, sizeof( sv_client_t ) * svs.maxclients );
 	svs.num_client_entities = svs.maxclients * SV_UPDATE_BACKUP * NUM_PACKET_ENTITIES;
@@ -773,15 +752,8 @@ void SV_SetupClients( void )
 
 	// init network stuff
 	NET_Config(( svs.maxclients > 1 ));
-
-	// copy gamemode into svgame.globals
-	svgame.globals->deathmatch = deathmatch.value;
-	svgame.globals->coop = coop.value;
 	svgame.numEntities = svs.maxclients + 1; // clients + world
-
 	ClearBits( sv_maxclients->flags, FCVAR_CHANGED );
-	ClearBits( deathmatch.flags, FCVAR_CHANGED );
-	ClearBits( coop.flags, FCVAR_CHANGED );
 }
 
 /*
@@ -797,15 +769,15 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	int	i, current_skill;
 	edict_t	*ent;
 
+	SV_SetupClients();
+	SV_AllocClientFrames();
+
 	if( !SV_InitGame( ))
 		return false;
 
 	Log_Open();
 	Log_Printf( "Loading map \"%s\"\n", mapname );
 	Log_PrintServerVars();
-
-	SV_SetupClients();
-	SV_AllocClientFrames();
 
 	svs.timestart = Sys_DoubleTime();
 	svs.spawncount++; // any partially connected client will be restarted
@@ -819,10 +791,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 		MsgDev( D_INFO, "Spawn Server: %s\n", mapname );
 	}
 
-	sv.state = ss_dead;
-	Host_SetServerState( sv.state );
 	memset( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure
-
 	sv.time = svgame.globals->time = 1.0f;	// server spawn time it's always 1.0 second
 	sv.background = background;
 	
@@ -839,6 +808,11 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	current_skill = bound( 0, current_skill, 3 );
 	Cvar_SetValue( "skill", (float)current_skill );
 
+	// copy gamemode into svgame.globals
+	svgame.globals->deathmatch = deathmatch.value;
+	svgame.globals->coop = coop.value;
+	svgame.globals->maxClients = svs.maxclients;
+
 	if( sv.background )
 	{
 		// tell the game parts about background state
@@ -851,8 +825,14 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 		Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
 	}
 
+	// force normal player collisions for single player
+	if( svs.maxclients == 1 ) Cvar_SetValue( "sv_clienttrace", 1 );
+
 	// make sure what server name doesn't contain path and extension
-	FS_FileBase( mapname, sv.name );
+	COM_FileBase( mapname, sv.name );
+
+	// precache and static commands can be issued during map initialization
+	sv.state = ss_loading;
 
 	if( startspot )
 		Q_strncpy( sv.startspot, startspot, sizeof( sv.startspot ));
@@ -862,6 +842,14 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	SetBits( sv.model_precache_flags[WORLD_INDEX], RES_FATALIFMISSING );
 	sv.worldmodel = sv.models[WORLD_INDEX] = Mod_LoadWorld( sv.model_precache[WORLD_INDEX], true );
 	CRC32_MapFile( &sv.worldmapCRC, sv.model_precache[WORLD_INDEX], svs.maxclients > 1 );
+
+	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ) && FS_FileExists( "progs.dat", false ))
+	{
+		file_t *f = FS_Open( "progs.dat", "rb", false );
+		FS_Seek( f, sizeof( int ), SEEK_SET );
+		FS_Read( f, &sv.progsCRC, sizeof( int ));
+		FS_Close( f );
+	}
 
 	for( i = WORLD_INDEX; i < sv.worldmodel->numsubmodels; i++ )
 	{
@@ -884,11 +872,6 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 
 	// heartbeats will always be sent to the id master
 	svs.last_heartbeat = MAX_HEARTBEAT; // send immediately
-
-	// precache and static commands can be issued during map initialization
-	sv.state = ss_loading;
-
-	Host_SetServerState( sv.state );
 
 	// get actual movevars
 	SV_UpdateMovevars( true );

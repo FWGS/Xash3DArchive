@@ -37,7 +37,7 @@ const char *clc_strings[clc_lastmsg+1] =
 typedef struct ucmd_s
 {
 	const char	*name;
-	void		(*func)( sv_client_t *cl );
+	qboolean		(*func)( sv_client_t *cl );
 } ucmd_t;
 
 static int	g_userid = 1;
@@ -1404,7 +1404,7 @@ void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl )
 	if(( host.developer ) || ( svs.maxclients > 1 ))
 	{
 		MSG_BeginServerCmd( msg, svc_print );
-		Q_snprintf( message, sizeof( message ), "%c\nBUILD %d SERVER (%i CRC)\nServer # %i\n", 2, Q_buildnum(), 0, svs.spawncount );
+		Q_snprintf( message, sizeof( message ), "%c\nBUILD %d SERVER (%i CRC)\nServer # %i\n", 2, Q_buildnum(), sv.progsCRC, svs.spawncount );
 		MSG_WriteString( msg, message );
 	}
 
@@ -1468,7 +1468,7 @@ Sends the first message from the server to a connected client.
 This will be sent on the initial connection and upon each server load.
 ================
 */
-void SV_New_f( sv_client_t *cl )
+static qboolean SV_New_f( sv_client_t *cl )
 {
 	byte		msg_buf[MAX_INIT_MSG];
 	sv_client_t	*cur;
@@ -1478,10 +1478,7 @@ void SV_New_f( sv_client_t *cl )
 	MSG_Init( &msg, "New", msg_buf, sizeof( msg_buf ));
 
 	if( cl->state != cs_connected )
-	{
-		MsgDev( D_INFO, "'new' is not valid from the console\n" );
-		return;
-	}
+		return false;
 
 	// send the serverdata
 	SV_SendServerdata( &msg, cl );
@@ -1503,6 +1500,8 @@ void SV_New_f( sv_client_t *cl )
 
 	Netchan_CreateFragments( &cl->netchan, &msg );
 	Netchan_FragSend( &cl->netchan );
+
+	return true;
 }
 
 /*
@@ -1510,23 +1509,19 @@ void SV_New_f( sv_client_t *cl )
 SV_WriteModels_f
 ==================
 */
-void SV_WriteModels_f( sv_client_t *cl )
+static qboolean SV_WriteModels_f( sv_client_t *cl )
 {
 	int	start;
 	string	cmd;
 
 	if( cl->state != cs_connected )
-	{
-		MsgDev( D_INFO, "'modellist' is not valid from the console\n" );
-		return;
-	}
+		return false;
 
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "'modellist' from different level\n" );
 		SV_New_f( cl );
-		return;
+		return true;
 	}
 	
 	start = Q_atoi( Cmd_Argv( 2 ));
@@ -1549,6 +1544,8 @@ void SV_WriteModels_f( sv_client_t *cl )
 	// send next command
 	MSG_BeginServerCmd( &cl->netchan.message, svc_stufftext );
 	MSG_WriteString( &cl->netchan.message, cmd );
+
+	return true;
 }
 
 /*
@@ -1556,23 +1553,19 @@ void SV_WriteModels_f( sv_client_t *cl )
 SV_WriteSounds_f
 ==================
 */
-void SV_WriteSounds_f( sv_client_t *cl )
+static qboolean SV_WriteSounds_f( sv_client_t *cl )
 {
 	int	start;
 	string	cmd;
 
 	if( cl->state != cs_connected )
-	{
-		MsgDev( D_INFO, "'soundlist' is not valid from the console\n" );
-		return;
-	}
+		return false;
 
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "'soundlist' from different level\n" );
 		SV_New_f( cl );
-		return;
+		return true;
 	}
 	
 	start = Q_atoi( Cmd_Argv( 2 ));
@@ -1595,6 +1588,8 @@ void SV_WriteSounds_f( sv_client_t *cl )
 	// send next command
 	MSG_BeginServerCmd( &cl->netchan.message, svc_stufftext );
 	MSG_WriteString( &cl->netchan.message, cmd );
+
+	return true;
 }
 
 /*
@@ -1602,23 +1597,19 @@ void SV_WriteSounds_f( sv_client_t *cl )
 SV_WriteEvents_f
 ==================
 */
-void SV_WriteEvents_f( sv_client_t *cl )
+static qboolean SV_WriteEvents_f( sv_client_t *cl )
 {
 	int	start;
 	string	cmd;
 
 	if( cl->state != cs_connected )
-	{
-		MsgDev( D_INFO, "'eventlist' is not valid from the console\n" );
-		return;
-	}
+		return false;
 
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		MsgDev( D_INFO, "'eventlist' from different level\n" );
 		SV_New_f( cl );
-		return;
+		return true;
 	}
 	
 	start = Q_atoi( Cmd_Argv( 2 ));
@@ -1641,6 +1632,8 @@ void SV_WriteEvents_f( sv_client_t *cl )
 	// send next command
 	MSG_BeginServerCmd( &cl->netchan.message, svc_stufftext );
 	MSG_WriteString( &cl->netchan.message, cmd );
+
+	return true;
 }
 
 /*
@@ -1650,9 +1643,10 @@ SV_Disconnect_f
 The client is going to disconnect, so remove the connection immediately
 =================
 */
-void SV_Disconnect_f( sv_client_t *cl )
+static qboolean SV_Disconnect_f( sv_client_t *cl )
 {
 	SV_DropClient( cl );	
+	return true;
 }
 
 /*
@@ -1662,9 +1656,10 @@ SV_ShowServerinfo_f
 Dumps the serverinfo info string
 ==================
 */
-void SV_ShowServerinfo_f( sv_client_t *cl )
+static qboolean SV_ShowServerinfo_f( sv_client_t *cl )
 {
 	Info_Print( svs.serverinfo );
+	return true;
 }
 
 /*
@@ -1672,30 +1667,32 @@ void SV_ShowServerinfo_f( sv_client_t *cl )
 SV_Pause_f
 ==================
 */
-void SV_Pause_f( sv_client_t *cl )
+static qboolean SV_Pause_f( sv_client_t *cl )
 {
 	string	message;
 
-	if( UI_CreditsActive( )) return;
+	if( UI_CreditsActive( ))
+		return true;
 
 	if( !sv_pausable->value )
 	{
 		SV_ClientPrintf( cl, "Pause not allowed.\n" );
-		return;
+		return true;
 	}
 
 	if( FBitSet( cl->flags, FCL_HLTV_PROXY ))
 	{
 		SV_ClientPrintf( cl, "Spectators can not pause.\n" );
-		return;
+		return true;
 	}
 
 	if( !sv.paused ) Q_snprintf( message, MAX_STRING, "^2%s^7 paused the game\n", cl->name );
 	else Q_snprintf( message, MAX_STRING, "^2%s^7 unpaused the game\n", cl->name );
 
 	SV_TogglePause( message );
-}
 
+	return true;
+}
 
 /*
 =================
@@ -1713,7 +1710,8 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	sv_client_t	*current;
 	char		*val;
 
-	if( !userinfo || !userinfo[0] ) return; // ignored
+	if( !COM_CheckString( userinfo ))
+		return;
 
 	val = Info_ValueForKey( cl->userinfo, "name" );
 	Q_strncpy( name2, val, sizeof( name2 ));
@@ -1812,12 +1810,13 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 SV_UpdateUserinfo_f
 ==================
 */
-static void SV_UpdateUserinfo_f( sv_client_t *cl )
+static qboolean SV_UpdateUserinfo_f( sv_client_t *cl )
 {
 	Q_strncpy( cl->userinfo, Cmd_Argv( 1 ), sizeof( cl->userinfo ));
 
 	if( cl->state >= cs_connected )
 		SetBits( cl->flags, FCL_RESEND_USERINFO ); // needs for update client info
+	return true;
 }
 
 /*
@@ -1825,12 +1824,13 @@ static void SV_UpdateUserinfo_f( sv_client_t *cl )
 SV_SetInfo_f
 ==================
 */
-static void SV_SetInfo_f( sv_client_t *cl )
+static qboolean SV_SetInfo_f( sv_client_t *cl )
 {
 	Info_SetValueForKey( cl->userinfo, Cmd_Argv( 1 ), Cmd_Argv( 2 ), MAX_INFO_STRING );
 
 	if( cl->state >= cs_connected )
 		SetBits( cl->flags, FCL_RESEND_USERINFO ); // needs for update client info
+	return true;
 }
 
 /*
@@ -1838,12 +1838,12 @@ static void SV_SetInfo_f( sv_client_t *cl )
 SV_Noclip_f
 ==================
 */
-static void SV_Noclip_f( sv_client_t *cl )
+static qboolean SV_Noclip_f( sv_client_t *cl )
 {
 	edict_t	*pEntity = cl->edict;
 
 	if( !Cvar_VariableInteger( "sv_cheats" ) || sv.background )
-		return;
+		return true;
 
 	if( pEntity->v.movetype != MOVETYPE_NOCLIP )
 	{
@@ -1855,30 +1855,8 @@ static void SV_Noclip_f( sv_client_t *cl )
 		SV_ClientPrintf( cl, "noclip OFF\n" );
 		pEntity->v.movetype =  MOVETYPE_WALK;
 	}
-}
 
-/*
-==================
-SV_Fly_f
-==================
-*/
-static void SV_Fly_f( sv_client_t *cl )
-{
-	edict_t	*pEntity = cl->edict;
-
-	if( !Cvar_VariableInteger( "sv_cheats" ) || sv.background )
-		return;
-
-	if( pEntity->v.movetype != MOVETYPE_FLY )
-	{
-		SV_ClientPrintf( cl, "flymode ON\n" );
-		pEntity->v.movetype = MOVETYPE_FLY;
-	}
-	else
-	{
-		SV_ClientPrintf( cl, "flymode OFF\n" );
-		pEntity->v.movetype =  MOVETYPE_WALK;
-	}
+	return true;
 }
 
 /*
@@ -1886,18 +1864,20 @@ static void SV_Fly_f( sv_client_t *cl )
 SV_Godmode_f
 ==================
 */
-static void SV_Godmode_f( sv_client_t *cl )
+static qboolean SV_Godmode_f( sv_client_t *cl )
 {
 	edict_t	*pEntity = cl->edict;
 
 	if( !Cvar_VariableInteger( "sv_cheats" ) || sv.background )
-		return;
+		return true;
 
 	pEntity->v.flags = pEntity->v.flags ^ FL_GODMODE;
 
 	if( !FBitSet( pEntity->v.flags, FL_GODMODE ))
 		SV_ClientPrintf( cl, "godmode OFF\n" );
 	else SV_ClientPrintf( cl, "godmode ON\n" );
+
+	return true;
 }
 
 /*
@@ -1905,18 +1885,20 @@ static void SV_Godmode_f( sv_client_t *cl )
 SV_Notarget_f
 ==================
 */
-static void SV_Notarget_f( sv_client_t *cl )
+static qboolean SV_Notarget_f( sv_client_t *cl )
 {
 	edict_t	*pEntity = cl->edict;
 
 	if( !Cvar_VariableInteger( "sv_cheats" ) || sv.background )
-		return;
+		return true;
 
 	pEntity->v.flags = pEntity->v.flags ^ FL_NOTARGET;
 
 	if( !FBitSet( pEntity->v.flags, FL_NOTARGET ))
 		SV_ClientPrintf( cl, "notarget OFF\n" );
 	else SV_ClientPrintf( cl, "notarget ON\n" );
+
+	return true;
 }
 
 /*
@@ -1924,27 +1906,26 @@ static void SV_Notarget_f( sv_client_t *cl )
 SV_SendRes_f
 ==================
 */
-void SV_SendRes_f( sv_client_t *cl )
+static qboolean SV_SendRes_f( sv_client_t *cl )
 {
 	byte	buffer[MAX_INIT_MSG];
 	sizebuf_t	msg;
 
 	if( cl->state != cs_connected )
-	{
-		MsgDev( D_INFO, "'sendres' is not valid from the console\n" );
-		return;
-	}
+		return false;
 
 	MSG_Init( &msg, "SendResources", buffer, sizeof( buffer ));
 
 	if( svs.maxclients > 1 && FBitSet( cl->flags, FCL_SEND_RESOURCES ))
-		return;
+		return true;
 
 	SetBits( cl->flags, FCL_SEND_RESOURCES );
 	SV_SendResources( cl, &msg );
 
 	Netchan_CreateFragments( &cl->netchan, &msg );
 	Netchan_FragSend( &cl->netchan );
+
+	return true;
 }
 
 /*
@@ -1952,23 +1933,22 @@ void SV_SendRes_f( sv_client_t *cl )
 SV_DownloadFile_f
 ==================
 */
-void SV_DownloadFile_f( sv_client_t *cl )
+static qboolean SV_DownloadFile_f( sv_client_t *cl )
 {
-	char *name;
-	char szModuleC[20] = "!ModuleC.dll";
+	char	*name;
 
 	if( Cmd_Argc() < 2 )
-		return;
+		return true;
 
 	name = Cmd_Argv( 1 );
 
-	if( !name || !name[0] )
-		return;
+	if( !COM_CheckString( name ))
+		return true;
 
 	if( !COM_IsSafeFileToDownload( name ) || !sv_allow_download.value )
 	{
 		SV_FailDownload( cl, name );
-		return;
+		return true;
 	}
 
 	if( cl->state == cs_spawned )
@@ -1976,7 +1956,7 @@ void SV_DownloadFile_f( sv_client_t *cl )
 		if( name[0] != '!' )
 		{
 			SV_FailDownload( cl, name );
-			return;
+			return true;
 		}
 	}
 	else
@@ -1988,12 +1968,12 @@ void SV_DownloadFile_f( sv_client_t *cl )
 				if( Netchan_CreateFileFragments( &cl->netchan, name ))
 				{
 					Netchan_FragSend( &cl->netchan );
-					return;
+					return true;
 				}
 			}
 
 			SV_FailDownload( cl, name );
-			return;
+			return true;
 		}
 	}
 
@@ -2024,6 +2004,8 @@ void SV_DownloadFile_f( sv_client_t *cl )
 	{
 		SV_FailDownload( cl, name );
 	}
+
+	return true;
 }
 
 /*
@@ -2031,20 +2013,16 @@ void SV_DownloadFile_f( sv_client_t *cl )
 SV_Spawn_f
 ==================
 */
-void SV_Spawn_f( sv_client_t *cl )
+static qboolean SV_Spawn_f( sv_client_t *cl )
 {
 	if( cl->state != cs_connected )
-	{
-		MsgDev( D_INFO, "'spawn' is not valid from the console\n" );
-		return;
-	}
+		return false;
 
 	// handle the case of a level changing while a client was connecting
 	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
 	{
-		Msg( "'spawn' from different level\n" );
 		SV_New_f( cl );
-		return;
+		return true;
 	}
 
 	SV_PutClientInServer( cl );
@@ -2056,6 +2034,7 @@ void SV_Spawn_f( sv_client_t *cl )
 		MSG_WriteByte( &sv.reliable_datagram, sv.paused );
 		SV_ClientPrintf( cl, "Server is paused.\n" );
 	}
+	return true;
 }
 
 /*
@@ -2063,22 +2042,19 @@ void SV_Spawn_f( sv_client_t *cl )
 SV_Begin_f
 ==================
 */
-void SV_Begin_f( sv_client_t *cl )
+static qboolean SV_Begin_f( sv_client_t *cl )
 {
 	if( cl->state != cs_connected )
-	{
-		MsgDev( D_INFO, "'begin' is not valid from the console\n" );
-		return;
-	}
+		return false;
 
 	// now client is spawned
 	cl->state = cs_spawned;
+	return true;
 }
 
 ucmd_t ucmds[] =
 {
 { "new", SV_New_f },
-{ "fly", SV_Fly_f },
 { "god", SV_Godmode_f },
 { "begin", SV_Begin_f },
 { "spawn", SV_Spawn_f },
@@ -2116,8 +2092,9 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 	{
 		if( !Q_strcmp( Cmd_Argv( 0 ), u->name ))
 		{
-			MsgDev( D_NOTE, "ucmd->%s()\n", u->name );
-			if( u->func ) u->func( cl );
+			if( !u->func( cl ))
+				Con_Printf( "'%s' is not valid from the console\n", u->name );
+			else MsgDev( D_NOTE, "ucmd->%s()\n", u->name );
 			break;
 		}
 	}
