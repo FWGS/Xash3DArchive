@@ -305,6 +305,17 @@ void COM_DefaultExtension( char *path, const char *extension )
 }
 
 /*
+==================
+COM_ReplaceExtension
+==================
+*/
+void COM_ReplaceExtension( char *path, const char *extension )
+{
+	COM_StripExtension( path );
+	COM_DefaultExtension( path, extension );
+}
+
+/*
 ==============
 COM_IsSingleChar
 
@@ -878,7 +889,7 @@ pfnCvar_RegisterVariable
 cvar_t *pfnCvar_RegisterClientVariable( const char *szName, const char *szValue, int flags )
 {
 	if( FBitSet( flags, FCVAR_GLCONFIG ))
-		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( "enable or disable %s", szName ));
+		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( CVAR_GLCONFIG_DESCRIPTION, szName ));
 	return (cvar_t *)Cvar_Get( szName, szValue, flags|FCVAR_CLIENTDLL, "client cvar" );
 }
 
@@ -891,7 +902,7 @@ pfnCvar_RegisterVariable
 cvar_t *pfnCvar_RegisterGameUIVariable( const char *szName, const char *szValue, int flags )
 {
 	if( FBitSet( flags, FCVAR_GLCONFIG ))
-		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( "enable or disable %s", szName ));
+		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( CVAR_GLCONFIG_DESCRIPTION, szName ));
 	return (cvar_t *)Cvar_Get( szName, szValue, flags|FCVAR_GAMEUIDLL, "GameUI cvar" );
 }
 

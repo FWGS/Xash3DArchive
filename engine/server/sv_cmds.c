@@ -56,7 +56,6 @@ void SV_BroadcastPrintf( sv_client_t *ignore, char *fmt, ... )
 	va_start( argptr, fmt );
 	Q_vsprintf( string, fmt, argptr );
 	va_end( argptr );
-	
 
 	if( sv.state == ss_active )
 	{
@@ -74,7 +73,7 @@ void SV_BroadcastPrintf( sv_client_t *ignore, char *fmt, ... )
 	}
 
 	// echo to console
-	MsgDev( D_REPORT, string );
+	Con_DPrintf( string );
 }
 
 /*

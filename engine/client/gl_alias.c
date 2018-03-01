@@ -1023,7 +1023,7 @@ void GL_DrawAliasFrame( aliashdr_t *paliashdr )
 		do
 		{
 			// texture coordinates come from the draw list
-			if( glState.activeTMU > 0 )
+			if( GL_Support( GL_ARB_MULTITEXTURE ) && glState.activeTMU > 0 )
 			{
 				GL_MultiTexCoord2f( GL_TEXTURE0, ((float *)order)[0], ((float *)order)[1] );
 				GL_MultiTexCoord2f( GL_TEXTURE1, ((float *)order)[0], ((float *)order)[1] );
@@ -1145,7 +1145,7 @@ void R_AliasLerpMovement( cl_entity_t *e )
 	if( e->player || e->curstate.movetype != MOVETYPE_STEP )
 		return; // monsters only
 
-	// Msg( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, g_studio.time );
+	// Con_Printf( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, g_studio.time );
 	VectorLerp( e->latched.prevorigin, f, e->curstate.origin, e->origin );
 
 	if( !VectorCompare( e->curstate.angles, e->latched.prevangles ))
@@ -1381,7 +1381,7 @@ void R_DrawAliasModel( cl_entity_t *e )
 	else GL_Bind( GL_TEXTURE0, m_pAliasHeader->gl_texturenum[skin][anim] );
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
-	if( m_pAliasHeader->fb_texturenum[skin][anim] )
+	if( GL_Support( GL_ARB_MULTITEXTURE ) && m_pAliasHeader->fb_texturenum[skin][anim] )
 	{
 		GL_Bind( GL_TEXTURE1, m_pAliasHeader->fb_texturenum[skin][anim] );
 		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ADD );
@@ -1390,7 +1390,7 @@ void R_DrawAliasModel( cl_entity_t *e )
 	pglShadeModel( GL_SMOOTH );
 	R_SetupAliasFrame( e, m_pAliasHeader );
 
-	if( m_pAliasHeader->fb_texturenum[skin][anim] )
+	if( GL_Support( GL_ARB_MULTITEXTURE ) && m_pAliasHeader->fb_texturenum[skin][anim] )
 		GL_CleanUpTextureUnits( 1 );
 
 	pglShadeModel( GL_FLAT );

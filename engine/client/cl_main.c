@@ -165,7 +165,7 @@ with new cls.state
 void CL_CheckClientState( void )
 {
 	// first update is the pre-final signon stage
-	if(( cls.state == ca_connected || cls.state == ca_validate ) && ( cls.signon == ( SIGNONS - 1 )))
+	if(( cls.state == ca_connected || cls.state == ca_validate ) && ( cls.signon == SIGNONS ))
 	{	
 		cls.state = ca_active;
 		cls.changelevel = false;		// changelevel is done
@@ -175,7 +175,8 @@ void CL_CheckClientState( void )
 		SCR_MakeLevelShot();		// make levelshot if needs
 		Cvar_SetValue( "scr_loading", 0.0f );	// reset progress bar	
 		Netchan_ReportFlow( &cls.netchan );
- 
+
+		Con_Printf( "client connected at %.2f sec\n", Sys_DoubleTime() - cls.timestart ); 
 		if(( cls.demoplayback || cls.disable_servercount != cl.servercount ) && cl.video_prepped )
 			SCR_EndLoadingPlaque(); // get rid of loading plaque
 		cl.first_frame = true;
@@ -191,17 +192,17 @@ An svc_signonnum has been received, perform a client side setup
 */
 void CL_SignonReply( void )
 {
+	Con_Printf( "CL_SignonReply: %i\n", cls.signon );
+
 	switch( cls.signon )
 	{
 	case 1:
 		// g-cont. my favorite message :-)
-		Con_Printf( "CL_SignonReply: %i\n", cls.signon );
 		CL_ServerCommand( true, "begin" );
 		if( host.developer >= D_REPORT )
 			Mem_PrintStats();
 		break;
 	case 2:
-		Con_Printf( "client connected at %.2f sec\n", Sys_DoubleTime() - cls.timestart );
 		if( cl.proxy_redirect && !cls.spectator )
 			CL_Disconnect();
 		cl.proxy_redirect = false;
@@ -1084,7 +1085,7 @@ void CL_Connect_f( void )
 
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: connect <server>\n" );
+		Con_Printf( S_USAGE "connect <server>\n" );
 		return;	
 	}
 
@@ -1094,7 +1095,7 @@ void CL_Connect_f( void )
 	if( SV_Active( )) Host_ShutdownServer();
 	NET_Config( true ); // allow remote
 
-	Msg( "server %s\n", server );
+	Con_Printf( "server %s\n", server );
 	CL_Disconnect();
 
 	cls.state = ca_connecting;
@@ -1118,9 +1119,9 @@ void CL_Rcon_f( void )
 	netadr_t	to;
 	int	i;
 
-	if( !rcon_client_password->string )
+	if( !COM_CheckString( rcon_client_password->string ))
 	{
-		Msg( "You must set 'rcon_password' before issuing an rcon command.\n" );
+		Con_Printf( "You must set 'rcon_password' before issuing an rcon command.\n" );
 		return;
 	}
 
@@ -1148,9 +1149,9 @@ void CL_Rcon_f( void )
 	}
 	else
 	{
-		if( !Q_strlen( rcon_address->string ))
+		if( !COM_CheckString( rcon_address->string ))
 		{
-			Msg( "You must either be connected or set the 'rcon_address' cvar to issue rcon commands\n" );
+			Con_Printf( "You must either be connected or set the 'rcon_address' cvar to issue rcon commands\n" );
 			return;
 		}
 
@@ -1369,57 +1370,6 @@ void CL_InternetServers_f( void )
 }
 
 /*
-====================
-CL_Packet_f
-
-packet <destination> <contents>
-Contents allows \n escape character
-====================
-*/
-void CL_Packet_f( void )
-{
-	char	send[2048];
-	char	*in, *out;
-	int	i, l;
-	netadr_t	adr;
-
-	if( Cmd_Argc() != 3 )
-	{
-		Msg( "packet <destination> <contents>\n" );
-		return;
-	}
-
-	NET_Config( true ); // allow remote
-
-	if( !NET_StringToAdr( Cmd_Argv( 1 ), &adr ))
-	{
-		Msg( "Bad address\n" );
-		return;
-	}
-
-	if( adr.port == 0 ) adr.port = MSG_BigShort( PORT_SERVER );
-
-	in = Cmd_Argv( 2 );
-	out = send + 4;
-	send[0] = send[1] = send[2] = send[3] = (char)0xFF;
-
-	l = Q_strlen( in );
-
-	for( i = 0; i < l; i++ )
-	{
-		if( in[i] == '\\' && in[i+1] == 'n' )
-		{
-			*out++ = '\n';
-			i++;
-		}
-		else *out++ = in[i];
-	}
-	*out = 0;
-
-	NET_SendPacket( NS_CLIENT, out - send, send, adr );
-}
-
-/*
 =================
 CL_Reconnect_f
 
@@ -1439,7 +1389,7 @@ void CL_Reconnect_f( void )
 		return;
 	}
 
-	if( cls.servername[0] )
+	if( COM_CheckString( cls.servername ))
 	{
 		if( cls.state >= ca_connected )
 			CL_Disconnect();
@@ -1449,7 +1399,7 @@ void CL_Reconnect_f( void )
 		cls.state = ca_connecting;
 		cls.signon = 0;
 
-		Msg( "reconnecting...\n" );
+		Con_Printf( "reconnecting...\n" );
 	}
 }
 
@@ -1807,7 +1757,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		// remote command from gui front end
 		if( !NET_IsLocalAddress( from ))
 		{
-			Msg( "Command packet from remote host. Ignored.\n" );
+			Con_Printf( "Command packet from remote host. Ignored.\n" );
 			return;
 		}
 
@@ -1820,7 +1770,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	else if( !Q_strcmp( c, "print" ))
 	{
 		// print command from somewhere
-		Msg( "%s", MSG_ReadString( msg ));
+		Con_Printf( "%s", MSG_ReadString( msg ));
 	}
 	else if( !Q_strcmp( c, "ping" ))
 	{
@@ -2048,7 +1998,7 @@ void CL_ReadPackets( void )
 		{
 			if( ++cl.timeoutcount > 5 ) // timeoutcount saves debugger
 			{
-				Msg( "\nServer connection timed out.\n" );
+				Con_Printf( "\nServer connection timed out.\n" );
 				CL_Disconnect();
 				return;
 			}
@@ -2116,15 +2066,15 @@ void CL_SetInfo_f( void )
 
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "User info settings:\n" );
+		Con_Printf( "User info settings:\n" );
 		Info_Print( cls.userinfo );
-		Msg( "Total %i symbols\n", Q_strlen( cls.userinfo ));
+		Con_Printf( "Total %i symbols\n", Q_strlen( cls.userinfo ));
 		return;
 	}
 
 	if( Cmd_Argc() != 3 )
 	{
-		Msg( "usage: setinfo [ <key> <value> ]\n" );
+		Con_Printf( S_USAGE "setinfo [ <key> <value> ]\n" );
 		return;
 	}
 
@@ -2152,9 +2102,9 @@ CL_Physinfo_f
 */
 void CL_Physinfo_f( void )
 {
-	Msg( "Phys info settings:\n" );
+	Con_Printf( "Phys info settings:\n" );
 	Info_Print( cls.physinfo );
-	Msg( "Total %i symbols\n", Q_strlen( cls.physinfo ));
+	Con_Printf( "Total %i symbols\n", Q_strlen( cls.physinfo ));
 }
 
 /*
@@ -2280,7 +2230,7 @@ void CL_FullServerinfo_f( void )
 {
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: fullserverinfo <complete info string>\n" );
+		Con_Printf( S_USAGE "fullserverinfo <complete info string>\n" );
 		return;
 	}
 
@@ -2427,10 +2377,6 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("reconnect", CL_Reconnect_f, "reconnect to current level" );
 
 	Cmd_AddCommand ("rcon", CL_Rcon_f, "sends a command to the server console (rcon_password and rcon_address required)" );
-
-	// this is dangerous to leave in
-// 	Cmd_AddCommand ("packet", CL_Packet_f, "send a packet with custom contents" );
-
 	Cmd_AddCommand ("precache", CL_Precache_f, "precache specified resource (by index)" );
 }
 

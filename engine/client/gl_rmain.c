@@ -823,7 +823,12 @@ void R_DrawEntitiesOnList( void )
 	{
 		RI.currententity = tr.trans_entities[i];
 		RI.currentmodel = RI.currententity->model;
-		tr.blend = CL_FxBlend( RI.currententity ) / 255.0f;
+
+		// handle studiomodels with custom rendermodes on texture
+		if( RI.currententity->curstate.rendermode != kRenderNormal )
+			tr.blend = CL_FxBlend( RI.currententity ) / 255.0f;
+		else tr.blend = 1.0f; // draw as solid but sorted by distance
+
 		if( tr.blend <= 0.0f ) continue;
 	
 		Assert( RI.currententity != NULL );
@@ -1085,7 +1090,7 @@ void R_EndFrame( void )
 
 	if( !pwglSwapBuffers( glw_state.hDC ))
 	{
-		Msg( "Error: WGL: failed to swap buffers\n" );
+		Con_Printf( S_ERROR "failed to swap buffers\n" );
 		Host_NewInstance( va("#%s", GI->gamefolder ), "stopped" );
 	}
 }

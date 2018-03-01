@@ -1970,15 +1970,15 @@ void CL_ReadLineFile_f( void )
 
 	if( !afile )
 	{
-		MsgDev( D_ERROR, "couldn't open %s\n", filename );
+		Con_Printf( S_ERROR "couldn't open %s\n", filename );
 		return;
 	}
 	
-	Msg( "Reading %s...\n", filename );
+	Con_Printf( "Reading %s...\n", filename );
 
 	count = 0;
 	pfile = afile;
-	model = CL_LoadModel( "sprites/laserbeam.spr", &modelIndex );
+	model = CL_LoadModel( DEFAULT_LASERBEAM_PATH, &modelIndex );
 
 	while( 1 )
 	{
@@ -1999,7 +1999,7 @@ void CL_ReadLineFile_f( void )
 
 		if( token[0] != '-' )
 		{
-			MsgDev( D_ERROR, "%s is corrupted\n", filename );
+			Con_Printf( S_ERROR "%s is corrupted\n", filename );
 			break;
 		}
 
@@ -2020,14 +2020,14 @@ void CL_ReadLineFile_f( void )
 		if( !R_BeamPoints( p1, p2, modelIndex, 99999, 2, 0, 255, 0, 0, 0, 255.0f, 0.0f, 0.0f ))
 		{
 			if( !model || model->type != mod_sprite )
-				MsgDev( D_ERROR, "CL_ReadLineFile: failed to load \"sprites/laserbeam.spr\"!\n" );
-			else MsgDev( D_ERROR, "CL_ReadLineFile: not enough free beams!\n" );
+				Con_Printf( S_ERROR "failed to load \"%s\"!\n", DEFAULT_LASERBEAM_PATH );
+			else Con_Printf( S_ERROR "not enough free beams!\n" );
 			break;
 		}
 	}
 
 	Mem_Free( afile );
 
-	if( count ) Msg( "%i lines read\n", count );
-	else Msg( "map %s has no leaks!\n", clgame.mapname );
+	if( count ) Con_Printf( "%i lines read\n", count );
+	else Con_Printf( "map %s has no leaks!\n", clgame.mapname );
 }

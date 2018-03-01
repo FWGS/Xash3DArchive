@@ -93,7 +93,7 @@ int R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags )
 
 	if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 	{
-		if( surf->flags & SURF_WATERCSG && !( e->curstate.effects & EF_NOWATERCSG ))
+		if( FBitSet( surf->flags, SURF_WATERCSG ) && !FBitSet( e->curstate.effects, EF_NOWATERCSG ))
 			return CULL_OTHER;
 	}
 
@@ -104,7 +104,10 @@ int R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags )
 	if( RI.currententity == clgame.entities && surf->visframe != tr.framecount )
 		return CULL_VISFRAME;
 
-	if( r_faceplanecull->value && !FBitSet( surf->flags, SURF_DRAWTURB ))
+	// only static ents can be culled by frustum
+	if( !R_StaticEntity( e )) frustum = NULL;
+
+	if( r_faceplanecull->value )
 	{
 		if( !VectorIsNull( surf->plane->normal ))
 		{
@@ -117,7 +120,6 @@ int R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags )
 
 				if( e == clgame.entities ) orthonormal[2] = surf->plane->normal[2];
 				else Matrix4x4_VectorRotate( RI.objectMatrix, surf->plane->normal, orthonormal );
-
 				dist = orthonormal[2];
 			}
 			else dist = PlaneDiff( tr.modelorg, surf->plane );

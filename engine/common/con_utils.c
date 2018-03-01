@@ -984,6 +984,7 @@ void Host_WriteOpenGLConfig( void )
 		FS_Printf( f, "//\t\t\tCopyright XashXT Group %s ©\n", Q_timestamp( TIME_YEAR_ONLY ));
 		FS_Printf( f, "//\t\t    opengl.cfg - archive of opengl extension cvars\n");
 		FS_Printf( f, "//=======================================================================\n" );
+		FS_Printf( f, "\n" );
 		Cmd_WriteOpenGLVariables( f );
 		FS_Close( f );	
 	}                                                

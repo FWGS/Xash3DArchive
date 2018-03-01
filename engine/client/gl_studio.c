@@ -28,7 +28,7 @@ GNU General Public License for more details.
 #define MAX_LOCALLIGHTS	4
 
 CVAR_DEFINE_AUTO( r_glowshellfreq, "2.2", 0, "glowing shell frequency update" );
-CVAR_DEFINE_AUTO( r_shadows, "0", 0, "enable shadows from studiomodels" );
+CVAR_DEFINE_AUTO( r_shadows, "0", 0, "cast shadows from models" );
 
 static vec3_t hullcolor[8] = 
 {
@@ -160,7 +160,7 @@ int R_GetEntityRenderMode( cl_entity_t *ent )
 	mstudiotexture_t	*ptexture;
 	int		i;
 
-	if( !( phdr = Mod_StudioExtradata( ent->model )))
+	if(( phdr = Mod_StudioExtradata( ent->model )) == NULL )
 		return ent->curstate.rendermode;
 
 	ptexture = (mstudiotexture_t *)((byte *)phdr + phdr->textureindex);
@@ -170,8 +170,8 @@ int R_GetEntityRenderMode( cl_entity_t *ent )
 		// g-cont. this is not fully proper but better than was
 		if( FBitSet( ptexture->flags, STUDIO_NF_ADDITIVE ))
 			return kRenderTransAdd;
-		if( FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
-			return kRenderTransAlpha;
+//		if( FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
+//			return kRenderTransAlpha;
 	}
 	return ent->curstate.rendermode;
 }
@@ -586,7 +586,7 @@ void R_StudioLerpMovement( cl_entity_t *e, double time, vec3_t origin, vec3_t an
 	if( g_studio.interpolate && ( time < e->curstate.animtime + 1.0f ) && ( e->curstate.animtime != e->latched.prevanimtime ))
 		f = ( time - e->curstate.animtime ) / ( e->curstate.animtime - e->latched.prevanimtime );
 
-	// Msg( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, g_studio.time );
+	// Con_Printf( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, g_studio.time );
 	VectorLerp( e->latched.prevorigin, f, e->curstate.origin, origin );
 
 	if( !VectorCompare( e->curstate.angles, e->latched.prevangles ))

@@ -97,6 +97,12 @@ typedef struct
 
 typedef struct
 {
+	msurface_t	*surf;
+	int		cull;
+} sortedface_t;
+
+typedef struct
+{
 	qboolean		loading;		// true if worldmodel is loading
 	int		flags;		// misc flags
 
@@ -105,7 +111,7 @@ typedef struct
 	char		compiler[256];	// map compiler
 
 	// translucent sorted array
-	msurface_t	**draw_surfaces;	// used for sorting translucent surfaces
+	sortedface_t	*draw_surfaces;	// used for sorting translucent surfaces
 	int		max_surfaces;	// max surfaces per submodel (for all models)
 
 	// visibility info

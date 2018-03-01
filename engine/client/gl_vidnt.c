@@ -38,7 +38,6 @@ convar_t	*gl_detailscale;
 convar_t	*gl_check_errors;
 convar_t	*gl_polyoffset;
 convar_t	*gl_wireframe;
-convar_t	*gl_max_size;
 convar_t	*gl_finish;
 convar_t	*gl_nosort;
 convar_t	*gl_vsync;
@@ -254,18 +253,6 @@ static dllfunc_t opengl_110funcs[] =
 { NULL					, NULL }
 };
 
-static dllfunc_t drawrangeelementsfuncs[] =
-{
-{ "glDrawRangeElements"			, (void **)&pglDrawRangeElements },
-{ NULL					, NULL }
-};
-
-static dllfunc_t drawrangeelementsextfuncs[] =
-{
-{ "glDrawRangeElementsEXT"			, (void **)&pglDrawRangeElementsEXT },
-{ NULL					, NULL }
-};
-
 static dllfunc_t debugoutputfuncs[] =
 {
 { "glDebugMessageControlARB"			, (void **)&pglDebugMessageControlARB },
@@ -296,141 +283,6 @@ static dllfunc_t texture3dextfuncs[] =
 { NULL					, NULL }
 };
 
-static dllfunc_t shaderobjectsfuncs[] =
-{
-{ "glDeleteObjectARB"			, (void **)&pglDeleteObjectARB },
-{ "glGetHandleARB"				, (void **)&pglGetHandleARB },
-{ "glDetachObjectARB"			, (void **)&pglDetachObjectARB },
-{ "glCreateShaderObjectARB"			, (void **)&pglCreateShaderObjectARB },
-{ "glShaderSourceARB"			, (void **)&pglShaderSourceARB },
-{ "glCompileShaderARB"			, (void **)&pglCompileShaderARB },
-{ "glCreateProgramObjectARB"			, (void **)&pglCreateProgramObjectARB },
-{ "glAttachObjectARB"			, (void **)&pglAttachObjectARB },
-{ "glLinkProgramARB"			, (void **)&pglLinkProgramARB },
-{ "glUseProgramObjectARB"			, (void **)&pglUseProgramObjectARB },
-{ "glValidateProgramARB"			, (void **)&pglValidateProgramARB },
-{ "glUniform1fARB"				, (void **)&pglUniform1fARB },
-{ "glUniform2fARB"				, (void **)&pglUniform2fARB },
-{ "glUniform3fARB"				, (void **)&pglUniform3fARB },
-{ "glUniform4fARB"				, (void **)&pglUniform4fARB },
-{ "glUniform1iARB"				, (void **)&pglUniform1iARB },
-{ "glUniform2iARB"				, (void **)&pglUniform2iARB },
-{ "glUniform3iARB"				, (void **)&pglUniform3iARB },
-{ "glUniform4iARB"				, (void **)&pglUniform4iARB },
-{ "glUniform1fvARB"				, (void **)&pglUniform1fvARB },
-{ "glUniform2fvARB"				, (void **)&pglUniform2fvARB },
-{ "glUniform3fvARB"				, (void **)&pglUniform3fvARB },
-{ "glUniform4fvARB"				, (void **)&pglUniform4fvARB },
-{ "glUniform1ivARB"				, (void **)&pglUniform1ivARB },
-{ "glUniform2ivARB"				, (void **)&pglUniform2ivARB },
-{ "glUniform3ivARB"				, (void **)&pglUniform3ivARB },
-{ "glUniform4ivARB"				, (void **)&pglUniform4ivARB },
-{ "glUniformMatrix2fvARB"			, (void **)&pglUniformMatrix2fvARB },
-{ "glUniformMatrix3fvARB"			, (void **)&pglUniformMatrix3fvARB },
-{ "glUniformMatrix4fvARB"			, (void **)&pglUniformMatrix4fvARB },
-{ "glGetObjectParameterfvARB"			, (void **)&pglGetObjectParameterfvARB },
-{ "glGetObjectParameterivARB"			, (void **)&pglGetObjectParameterivARB },
-{ "glGetInfoLogARB"				, (void **)&pglGetInfoLogARB },
-{ "glGetAttachedObjectsARB"			, (void **)&pglGetAttachedObjectsARB },
-{ "glGetUniformLocationARB"			, (void **)&pglGetUniformLocationARB },
-{ "glGetActiveUniformARB"			, (void **)&pglGetActiveUniformARB },
-{ "glGetUniformfvARB"			, (void **)&pglGetUniformfvARB },
-{ "glGetUniformivARB"			, (void **)&pglGetUniformivARB },
-{ "glGetShaderSourceARB"			, (void **)&pglGetShaderSourceARB },
-{ "glVertexAttribPointerARB"			, (void **)&pglVertexAttribPointerARB },
-{ "glEnableVertexAttribArrayARB"		, (void **)&pglEnableVertexAttribArrayARB },
-{ "glDisableVertexAttribArrayARB"		, (void **)&pglDisableVertexAttribArrayARB },
-{ "glBindAttribLocationARB"			, (void **)&pglBindAttribLocationARB },
-{ "glGetActiveAttribARB"			, (void **)&pglGetActiveAttribARB },
-{ "glGetAttribLocationARB"			, (void **)&pglGetAttribLocationARB },
-{ "glVertexAttrib2f"			, (void **)&pglVertexAttrib2fARB },
-{ "glVertexAttrib2fv"			, (void **)&pglVertexAttrib2fvARB },
-{ "glVertexAttrib3fv"			, (void **)&pglVertexAttrib3fvARB },
-{ NULL					, NULL }
-};
-
-static dllfunc_t vbofuncs[] =
-{
-{ "glBindBufferARB"				, (void **)&pglBindBufferARB },
-{ "glDeleteBuffersARB"			, (void **)&pglDeleteBuffersARB },
-{ "glGenBuffersARB"				, (void **)&pglGenBuffersARB },
-{ "glIsBufferARB"				, (void **)&pglIsBufferARB },
-{ "glMapBufferARB"				, (void **)&pglMapBufferARB },
-{ "glUnmapBufferARB"			, (void **)&pglUnmapBufferARB },
-{ "glBufferDataARB"				, (void **)&pglBufferDataARB },
-{ "glBufferSubDataARB"			, (void **)&pglBufferSubDataARB },
-{ NULL					, NULL}
-};
-
-static dllfunc_t vaofuncs[] =
-{
-{ "glBindVertexArray"			, (void **)&pglBindVertexArray },
-{ "glDeleteVertexArrays"			, (void **)&pglDeleteVertexArrays },
-{ "glGenVertexArrays"			, (void **)&pglGenVertexArrays },
-{ "glIsVertexArray"				, (void **)&pglIsVertexArray },
-{ NULL					, NULL }
-};
-
-static dllfunc_t arbfbofuncs[] =
-{
-{ "glIsRenderbuffer"			, (void **)&pglIsRenderbuffer },
-{ "glBindRenderbuffer"			, (void **)&pglBindRenderbuffer },
-{ "glDeleteRenderbuffers"			, (void **)&pglDeleteRenderbuffers },
-{ "glGenRenderbuffers"			, (void **)&pglGenRenderbuffers },
-{ "glRenderbufferStorage"			, (void **)&pglRenderbufferStorage },
-{ "glRenderbufferStorageMultisample"		, (void **)&pglRenderbufferStorageMultisample }, // not in GL_EXT_framebuffer_object
-{ "glGetRenderbufferParameteriv"		, (void **)&pglGetRenderbufferParameteriv },
-{ "glIsFramebuffer"				, (void **)&pglIsFramebuffer },
-{ "glBindFramebuffer"			, (void **)&pglBindFramebuffer },
-{ "glDeleteFramebuffers"			, (void **)&pglDeleteFramebuffers },
-{ "glGenFramebuffers"			, (void **)&pglGenFramebuffers },
-{ "glCheckFramebufferStatus"			, (void **)&pglCheckFramebufferStatus },
-{ "glFramebufferTexture1D"			, (void **)&pglFramebufferTexture1D },
-{ "glFramebufferTexture2D"			, (void **)&pglFramebufferTexture2D },
-{ "glFramebufferTexture3D"			, (void **)&pglFramebufferTexture3D },
-{ "glFramebufferTextureLayer"			, (void **)&pglFramebufferTextureLayer }, // not in GL_EXT_framebuffer_object
-{ "glFramebufferRenderbuffer"			, (void **)&pglFramebufferRenderbuffer },
-{ "glGetFramebufferAttachmentParameteriv"	, (void **)&pglGetFramebufferAttachmentParameteriv },
-{ "glBlitFramebuffer"			, (void **)&pglBlitFramebuffer }, // not in GL_EXT_framebuffer_object
-{ "glGenerateMipmap"			, (void **)&pglGenerateMipmap },
-{ NULL					, NULL}
-};
-
-static dllfunc_t extfbofuncs[] =
-{
-{ "glIsRenderbufferEXT"			, (void **)&pglIsRenderbuffer },
-{ "glBindRenderbufferEXT"			, (void **)&pglBindRenderbuffer },
-{ "glDeleteRenderbuffersEXT"			, (void **)&pglDeleteRenderbuffers },
-{ "glGenRenderbuffersEXT"			, (void **)&pglGenRenderbuffers },
-{ "glRenderbufferStorageEXT"			, (void **)&pglRenderbufferStorage },
-{ "glGetRenderbufferParameterivEXT"		, (void **)&pglGetRenderbufferParameteriv },
-{ "glIsFramebufferEXT"			, (void **)&pglIsFramebuffer },
-{ "glBindFramebufferEXT"			, (void **)&pglBindFramebuffer },
-{ "glDeleteFramebuffersEXT"			, (void **)&pglDeleteFramebuffers },
-{ "glGenFramebuffersEXT"			, (void **)&pglGenFramebuffers },
-{ "glCheckFramebufferStatusEXT"		, (void **)&pglCheckFramebufferStatus },
-{ "glFramebufferTexture1DEXT"			, (void **)&pglFramebufferTexture1D },
-{ "glFramebufferTexture2DEXT"			, (void **)&pglFramebufferTexture2D },
-{ "glFramebufferTexture3DEXT"			, (void **)&pglFramebufferTexture3D },
-{ "glFramebufferRenderbufferEXT"		, (void **)&pglFramebufferRenderbuffer },
-{ "glGetFramebufferAttachmentParameterivEXT"	, (void **)&pglGetFramebufferAttachmentParameteriv },
-{ "glGenerateMipmapEXT"			, (void **)&pglGenerateMipmap },
-{ NULL, NULL}
-};
-
-static dllfunc_t occlusionfunc[] =
-{
-{ "glGenQueriesARB"				, (void **)&pglGenQueriesARB },
-{ "glDeleteQueriesARB"			, (void **)&pglDeleteQueriesARB },
-{ "glIsQueryARB"				, (void **)&pglIsQueryARB },
-{ "glBeginQueryARB"				, (void **)&pglBeginQueryARB },
-{ "glEndQueryARB"				, (void **)&pglEndQueryARB },
-{ "glGetQueryivARB"				, (void **)&pglGetQueryivARB },
-{ "glGetQueryObjectivARB"			, (void **)&pglGetQueryObjectivARB },
-{ "glGetQueryObjectuivARB"			, (void **)&pglGetQueryObjectuivARB },
-{ NULL					, NULL }
-};
-
 static dllfunc_t texturecompressionfuncs[] =
 {
 { "glCompressedTexImage3DARB"			, (void **)&pglCompressedTexImage3DARB },
@@ -440,12 +292,6 @@ static dllfunc_t texturecompressionfuncs[] =
 { "glCompressedTexSubImage2DARB"		, (void **)&pglCompressedTexSubImage2DARB },
 { "glCompressedTexSubImage1DARB"		, (void **)&pglCompressedTexSubImage1DARB },
 { "glGetCompressedTexImageARB"		, (void **)&pglGetCompressedTexImage },
-{ NULL					, NULL }
-};
-
-static dllfunc_t drawbuffersfuncs[] =
-{
-{ "glDrawBuffersARB"			, (void **)&pglDrawBuffersARB },
 { NULL					, NULL }
 };
 
@@ -589,19 +435,19 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	const char	*extensions_string;
 
 	MsgDev( D_NOTE, "GL_CheckExtension: %s ", name );
+	GL_SetExtension( r_ext, true );
 
 	if( cvarname )
 	{
 		// system config disable extensions
-		parm = Cvar_Get( cvarname, "1", FCVAR_GLCONFIG, va( "enable or disable %s", name ));
+		parm = Cvar_Get( cvarname, "1", FCVAR_GLCONFIG, va( CVAR_GLCONFIG_DESCRIPTION, name ));
 
-		if( parm->value == 0 || ( gl_extensions->value == 0 && r_ext != GL_OPENGL_110 ))
+		if( !CVAR_TO_BOOL( parm ) || ( !CVAR_TO_BOOL( gl_extensions ) && r_ext != GL_OPENGL_110 ))
 		{
 			MsgDev( D_NOTE, "- disabled\n" );
-			GL_SetExtension( r_ext, 0 );
+			GL_SetExtension( r_ext, false );
 			return; // nothing to process at
 		}
-		GL_SetExtension( r_ext, 1 );
 	}
 
 	extensions_string = glConfig.extensions_string; 
@@ -620,7 +466,6 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	for( func = funcs; func && func->name; func++ )
 		*func->func = NULL;
 
-	GL_SetExtension( r_ext, true ); // predict extension state
 	for( func = funcs; func && func->name != NULL; func++ )
 	{
 		// functions are cleared before all the extensions are evaluated
@@ -643,7 +488,7 @@ void GL_UpdateSwapInterval( void )
 	// disable VSync while level is loading
 	if( cls.state < ca_active )
 	{
-		if( pwglSwapIntervalEXT )
+		if( pwglSwapIntervalEXT != NULL )
 			pwglSwapIntervalEXT( 0 );
 		SetBits( gl_vsync->flags, FCVAR_CHANGED );
 	}
@@ -651,7 +496,7 @@ void GL_UpdateSwapInterval( void )
 	{
 		ClearBits( gl_vsync->flags, FCVAR_CHANGED );
 
-		if( pwglSwapIntervalEXT )
+		if( pwglSwapIntervalEXT != NULL )
 			pwglSwapIntervalEXT( bound( -1, (int)gl_vsync->value, 1 ));
 	}
 }
@@ -1584,12 +1429,11 @@ void GL_InitCommands( void )
 	gl_extensions = Cvar_Get( "gl_allow_extensions", "1", FCVAR_GLCONFIG, "allow gl_extensions" );			
 	gl_texture_nearest = Cvar_Get( "gl_texture_nearest", "0", FCVAR_ARCHIVE, "disable texture filter" );
 	gl_lightmap_nearest = Cvar_Get( "gl_lightmap_nearest", "0", FCVAR_ARCHIVE, "disable lightmap filter" );
-	gl_max_size = Cvar_Get( "gl_max_size", "512", FCVAR_ARCHIVE, "no effect in Xash3D just a legacy" );
 	gl_check_errors = Cvar_Get( "gl_check_errors", "1", FCVAR_ARCHIVE, "ignore video engine errors" );
 	gl_vsync = Cvar_Get( "gl_vsync", "0", FCVAR_ARCHIVE,  "enable vertical syncronization" );
 	gl_detailscale = Cvar_Get( "gl_detailscale", "4.0", FCVAR_ARCHIVE, "default scale applies while auto-generate list of detail textures" );
-	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "2.0", FCVAR_ARCHIVE, "textures anisotropic filter" );
-	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", FCVAR_ARCHIVE, "LOD bias for mipmapped textures (prefomance|quality)" );
+	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "8", FCVAR_ARCHIVE, "textures anisotropic filter" );
+	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", FCVAR_ARCHIVE, "LOD bias for mipmapped textures (perfomance|quality)" );
 	gl_keeptjunctions = Cvar_Get( "gl_keeptjunctions", "1", FCVAR_ARCHIVE, "removing tjuncs causes blinking pixels" ); 
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", FCVAR_CHEAT, "show all uploaded textures" );
 	gl_finish = Cvar_Get( "gl_finish", "0", FCVAR_ARCHIVE, "use glFinish instead of glFlush" );
@@ -1642,7 +1486,7 @@ void GL_InitExtensions( void )
 	glConfig.renderer_string = pglGetString( GL_RENDERER );
 	glConfig.version_string = pglGetString( GL_VERSION );
 	glConfig.extensions_string = pglGetString( GL_EXTENSIONS );
-	MsgDev( D_INFO, "Video: %s\n", glConfig.renderer_string );
+	Con_Printf( "Video: %s\n", glConfig.renderer_string );
 
 	// intialize wrapper type
 	glConfig.context = CONTEXT_TYPE_GL;
@@ -1665,7 +1509,7 @@ void GL_InitExtensions( void )
 	else glConfig.hardware_type = GLHW_GENERIC;
 
 	// initalize until base opengl functions loaded (old-context)
-	if( !Sys_CheckParm( "-gldebug" ) || host.developer <= D_INFO )
+	if( !Sys_CheckParm( "-gldebug" ) || host.developer <= 0 )
 		GL_CheckExtension( "OpenGL Internal ProcAddress", wglproc_funcs, NULL, GL_WGL_PROCADDRESS );
 
 	// windows-specific extensions
@@ -1677,14 +1521,6 @@ void GL_InitExtensions( void )
 
 	// initalize until base opengl functions loaded
 	GL_CheckExtension( "WGL_EXT_swap_control", wglswapintervalfuncs, NULL, GL_WGL_SWAPCONTROL );
-
-	GL_CheckExtension( "glDrawRangeElements", drawrangeelementsfuncs, "gl_drawrangeelments", GL_DRAW_RANGEELEMENTS_EXT );
-
-	if( !GL_Support( GL_DRAW_RANGEELEMENTS_EXT ))
-		GL_CheckExtension( "GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "gl_drawrangeelments", GL_DRAW_RANGEELEMENTS_EXT );
-
-	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
-	if( pglDrawRangeElementsEXT == NULL ) pglDrawRangeElementsEXT = pglDrawRangeElements;
 
 	// multitexture
 	glConfig.max_texture_units = glConfig.max_texture_coords = glConfig.max_teximage_units = 1;
@@ -1706,7 +1542,7 @@ void GL_InitExtensions( void )
 		if( glConfig.max_3d_texture_size < 32 )
 		{
 			GL_SetExtension( GL_TEXTURE_3D_EXT, false );
-			MsgDev( D_ERROR, "GL_EXT_texture3D reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n" );
+			Con_Printf( S_ERROR "GL_EXT_texture3D reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n" );
 		}
 	}
 
@@ -1716,69 +1552,49 @@ void GL_InitExtensions( void )
 	if( GL_Support( GL_TEXTURE_ARRAY_EXT ))
 		pglGetIntegerv( GL_MAX_ARRAY_TEXTURE_LAYERS_EXT, &glConfig.max_2d_texture_layers );
 
-	// hardware cubemaps
+	// cubemaps support
 	GL_CheckExtension( "GL_ARB_texture_cube_map", NULL, "gl_texture_cubemap", GL_TEXTURE_CUBEMAP_EXT );
-
-	GL_CheckExtension( "GL_ARB_draw_buffers", drawbuffersfuncs, "gl_draw_buffers", GL_DRAW_BUFFERS_EXT );
 
 	if( GL_Support( GL_TEXTURE_CUBEMAP_EXT ))
 	{
 		pglGetIntegerv( GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &glConfig.max_cubemap_size );
 
 		// check for seamless cubemaps too
-		GL_CheckExtension( "GL_ARB_seamless_cube_map", NULL, "gl_seamless_cubemap", GL_ARB_SEAMLESS_CUBEMAP );
+		GL_CheckExtension( "GL_ARB_seamless_cube_map", NULL, "gl_texture_cubemap_seamless", GL_ARB_SEAMLESS_CUBEMAP );
 	}
 
 	GL_CheckExtension( "GL_ARB_texture_non_power_of_two", NULL, "gl_texture_npot", GL_ARB_TEXTURE_NPOT_EXT );
-	GL_CheckExtension( "GL_ARB_texture_compression", texturecompressionfuncs, "gl_dds_hardware_support", GL_TEXTURE_COMPRESSION_EXT );
-
-	GL_CheckExtension( "GL_EXT_texture_edge_clamp", NULL, "gl_clamp_to_edge", GL_CLAMPTOEDGE_EXT );
+	GL_CheckExtension( "GL_ARB_texture_compression", texturecompressionfuncs, "gl_texture_dxt_compression", GL_TEXTURE_COMPRESSION_EXT );
+	GL_CheckExtension( "GL_EXT_texture_edge_clamp", NULL, NULL, GL_CLAMPTOEDGE_EXT );
 
 	if( !GL_Support( GL_CLAMPTOEDGE_EXT ))
-		GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "gl_clamp_to_edge", GL_CLAMPTOEDGE_EXT );
+		GL_CheckExtension( "GL_SGIS_texture_edge_clamp", NULL, NULL, GL_CLAMPTOEDGE_EXT );
 
 	glConfig.max_texture_anisotropy = 0.0f;
-	GL_CheckExtension( "GL_EXT_texture_filter_anisotropic", NULL, "gl_ext_anisotropic_filter", GL_ANISOTROPY_EXT );
+	GL_CheckExtension( "GL_EXT_texture_filter_anisotropic", NULL, "gl_texture_anisotropic_filter", GL_ANISOTROPY_EXT );
 
 	if( GL_Support( GL_ANISOTROPY_EXT ))
 		pglGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.max_texture_anisotropy );
 
+	// g-cont. because lodbias it too glitchy on Intel's cards
 	if( glConfig.hardware_type != GLHW_INTEL )
-		GL_CheckExtension( "GL_EXT_texture_lod_bias", NULL, "gl_ext_texture_lod_bias", GL_TEXTURE_LOD_BIAS );
+		GL_CheckExtension( "GL_EXT_texture_lod_bias", NULL, "gl_texture_mipmap_biasing", GL_TEXTURE_LOD_BIAS );
 
 	if( GL_Support( GL_TEXTURE_LOD_BIAS ))
 		pglGetFloatv( GL_MAX_TEXTURE_LOD_BIAS_EXT, &glConfig.max_texture_lod_bias );
 
-	GL_CheckExtension( "GL_ARB_texture_border_clamp", NULL, "gl_ext_texborder_clamp", GL_CLAMP_TEXBORDER_EXT );
+	GL_CheckExtension( "GL_ARB_texture_border_clamp", NULL, NULL, GL_CLAMP_TEXBORDER_EXT );
 
-	GL_CheckExtension( "GL_ARB_vertex_buffer_object", vbofuncs, "gl_vertex_buffer_object", GL_ARB_VERTEX_BUFFER_OBJECT_EXT );
-	GL_CheckExtension( "GL_ARB_vertex_array_object", vaofuncs, "gl_vertex_array_object", GL_ARB_VERTEX_ARRAY_OBJECT_EXT );
-	GL_CheckExtension( "GL_ARB_half_float_pixel", NULL, "gl_half_float", GL_ARB_HALF_FLOAT_EXT );
-
-	// vp and fp shaders
-	GL_CheckExtension( "GL_ARB_shader_objects", shaderobjectsfuncs, "gl_shaderobjects", GL_SHADER_OBJECTS_EXT );
-	GL_CheckExtension( "GL_ARB_shading_language_100", NULL, "gl_shading_language", GL_SHADER_GLSL100_EXT );
-
-	GL_CheckExtension( "GL_ARB_depth_texture", NULL, "gl_depthtexture", GL_DEPTH_TEXTURE );
-	GL_CheckExtension( "GL_ARB_shadow", NULL, "gl_arb_shadow", GL_SHADOW_EXT );
-
-	GL_CheckExtension( "GL_ARB_texture_float", NULL, "gl_arb_texture_float", GL_ARB_TEXTURE_FLOAT_EXT );
-	GL_CheckExtension( "GL_ARB_depth_buffer_float", NULL, "gl_arb_depth_float", GL_ARB_DEPTH_FLOAT_EXT );
-	GL_CheckExtension( "GL_ARB_texture_rg", NULL, "gl_arb_texture_rg", GL_ARB_TEXTURE_RG );
-	GL_CheckExtension( "GL_EXT_gpu_shader4", NULL, "gl_ext_gpu_shader4", GL_EXT_GPU_SHADER4 );
+	GL_CheckExtension( "GL_ARB_depth_texture", NULL, NULL, GL_DEPTH_TEXTURE );
+	GL_CheckExtension( "GL_ARB_texture_float", NULL, "gl_texture_float", GL_ARB_TEXTURE_FLOAT_EXT );
+	GL_CheckExtension( "GL_ARB_depth_buffer_float", NULL, "gl_texture_float", GL_ARB_DEPTH_FLOAT_EXT );
+	GL_CheckExtension( "GL_EXT_gpu_shader4", NULL, NULL, GL_EXT_GPU_SHADER4 ); // don't confuse users
+	GL_CheckExtension( "GL_ARB_shading_language_100", NULL, NULL, GL_SHADER_GLSL100_EXT );
+//	GL_CheckExtension( "GL_ARB_texture_rg", NULL, "gl_arb_texture_rg", GL_ARB_TEXTURE_RG );
 
 	// this won't work without extended context
 	if( glw_state.extended )
 		GL_CheckExtension( "GL_ARB_debug_output", debugoutputfuncs, "gl_debug_output", GL_DEBUG_OUTPUT );
-
-	// FBO support
-	GL_CheckExtension( "GL_ARB_framebuffer_object", arbfbofuncs, "gl_framebuffer_object", GL_FRAMEBUFFER_OBJECT );
-
-	if( !GL_Support( GL_FRAMEBUFFER_OBJECT ))
-		GL_CheckExtension( "GL_EXT_framebuffer_object", extfbofuncs, "gl_framebuffer_object", GL_FRAMEBUFFER_OBJECT );
-
-	// occlusion queries
-	GL_CheckExtension( "GL_ARB_occlusion_query", occlusionfunc, "gl_occlusion_queries", GL_OCCLUSION_QUERIES_EXT );
 
 	// rectangle textures support
 	GL_CheckExtension( "GL_ARB_texture_rectangle", NULL, "gl_texture_rectangle", GL_TEXTURE_2D_RECT_EXT );
@@ -1804,12 +1620,10 @@ void GL_InitExtensions( void )
 	pglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.max_2d_texture_size );
 	if( glConfig.max_2d_texture_size <= 0 ) glConfig.max_2d_texture_size = 256;
 
-	pglGetIntegerv( GL_MAX_DRAW_BUFFERS_ARB, &glConfig.max_draw_buffers );
-
 	if( GL_Support( GL_TEXTURE_2D_RECT_EXT ))
 		pglGetIntegerv( GL_MAX_RECTANGLE_TEXTURE_SIZE_EXT, &glConfig.max_2d_rectangle_size );
 
-	Cvar_Get( "gl_max_texture_size", va( "%i", glConfig.max_2d_texture_size ), FCVAR_READ_ONLY, "opengl texture max dims" );
+	Cvar_Get( "gl_max_size", va( "%i", glConfig.max_2d_texture_size ), 0, "opengl texture max dims" );
 
 	// MCD has buffering issues
 	if( Q_stristr( glConfig.renderer_string, "gdi" ))
@@ -1835,9 +1649,8 @@ void GL_InitExtensions( void )
 			pglDebugMessageControlARB( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW_ARB, 0, NULL, true );
 	}
 
-	glw_state.initialized = true;
-
 	tr.framecount = tr.visframecount = 1;
+	glw_state.initialized = true;
 }
 
 /*
@@ -1863,7 +1676,7 @@ qboolean R_Init( void )
 		GL_RemoveCommands();
 		R_Free_OpenGL();
 
-		Msg( "^1Error:^7 can't initialize video subsystem\n" );
+		Con_Printf( S_ERROR "can't initialize video subsystem\n" );
 		Host_NewInstance( va( "#%s", GI->gamefolder ), "stopped" );
 		return false;
 	}

@@ -487,7 +487,6 @@ void SV_ActivateServer( int runPhysics );
 qboolean SV_SpawnServer( const char *server, const char *startspot, qboolean background );
 model_t *SV_ModelHandle( int modelindex );
 void SV_DeactivateServer( void );
-char *SV_EntityScript( void );
 
 //
 // sv_phys.c
@@ -599,9 +598,8 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, event_args_t *args );
 qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax );
 void SV_WriteEntityPatch( const char *filename );
-char *SV_ReadEntityScript( const char *filename, int *flags );
 float SV_AngleMod( float ideal, float current, float speed );
-void SV_SpawnEntities( const char *mapname, char *entities );
+void SV_SpawnEntities( const char *mapname );
 edict_t* SV_AllocPrivateData( edict_t *ent, string_t className );
 edict_t* SV_CreateNamedEntity( edict_t *ent, string_t className );
 string_t SV_AllocString( const char *szValue );

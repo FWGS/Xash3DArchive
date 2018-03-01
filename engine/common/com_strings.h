@@ -16,6 +16,12 @@ GNU General Public License for more details.
 #ifndef COM_STRINGS_H
 #define COM_STRINGS_H
 
+// default colored message headers
+#define S_NOTE			"^2Note:^7 "
+#define S_WARN			"^3Warning:^7 "
+#define S_ERROR			"^1Error:^7 "
+#define S_USAGE			"Usage: "
+
 // end game final default message
 #define DEFAULT_ENDGAME_MESSAGE	"The End"
 
@@ -27,5 +33,10 @@ GNU General Public License for more details.
 
 // path to default playermodel in Quake
 #define DEFAULT_PLAYER_PATH_QUAKE	"progs/player.mdl"
+
+// debug beams
+#define DEFAULT_LASERBEAM_PATH	"sprites/laserbeam.spr"
+
+#define CVAR_GLCONFIG_DESCRIPTION	"enable or disable %s"
 
 #endif//COM_STRINGS_H

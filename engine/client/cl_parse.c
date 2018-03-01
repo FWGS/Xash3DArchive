@@ -2289,9 +2289,7 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			CL_ParseServerTime( msg );
 			break;
 		case svc_print:
-			if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
-				MsgDev( D_INFO, "%s", MSG_ReadString( msg ));
-			else MsgDev( D_INFO, "^5%s", MSG_ReadString( msg ));
+			Con_Printf( "%s", MSG_ReadString( msg ));
 			break;
 		case svc_stufftext:
 			Cbuf_AddText( MSG_ReadString( msg ));

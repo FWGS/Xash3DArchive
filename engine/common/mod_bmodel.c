@@ -357,15 +357,15 @@ static int Mod_ArrayUsage( const char *szItem, int items, int maxitems, int item
 {
 	float	percentage = maxitems ? (items * 100.0f / maxitems) : 0.0f;
 
-	Msg( "%-12s  %7i/%-7i  %8i/%-8i  (%4.1f%%)", szItem, items, maxitems, items * itemsize, maxitems * itemsize, percentage );
+	Con_Printf( "%-12s  %7i/%-7i  %8i/%-8i  (%4.1f%%) ", szItem, items, maxitems, items * itemsize, maxitems * itemsize, percentage );
 
 	if( percentage > 99.9f )
-		Msg( "^1SIZE OVERFLOW!!!^7\n" );
+		Con_Printf( "^1SIZE OVERFLOW!!!^7\n" );
 	else if( percentage > 95.0f )
-		Msg( "^3SIZE DANGER!^7\n" );
+		Con_Printf( "^3SIZE DANGER!^7\n" );
 	else if( percentage > 80.0f )
-		Msg( "^2VERY FULL!^7\n" );
-	else Msg( "\n" );
+		Con_Printf( "^2VERY FULL!^7\n" );
+	else Con_Printf( "\n" );
 
 	return items * itemsize;
 }
@@ -379,15 +379,15 @@ static int Mod_GlobUsage( const char *szItem, int itemstorage, int maxstorage )
 {
 	float	percentage = maxstorage ? (itemstorage * 100.0f / maxstorage) : 0.0f;
 
-	Msg( "%-15s  %-12s  %8i/%-8i  (%4.1f%%)", szItem, "[variable]", itemstorage, maxstorage, percentage );
+	Con_Printf( "%-15s  %-12s  %8i/%-8i  (%4.1f%%) ", szItem, "[variable]", itemstorage, maxstorage, percentage );
 
 	if( percentage > 99.9f )
-		Msg( "^1SIZE OVERFLOW!!!^7\n" );
+		Con_Printf( "^1SIZE OVERFLOW!!!^7\n" );
 	else if( percentage > 95.0f )
-		Msg( "^3SIZE DANGER!^7\n" );
+		Con_Printf( "^3SIZE DANGER!^7\n" );
 	else if( percentage > 80.0f )
-		Msg( "^2VERY FULL!^7\n" );
-	else Msg( "\n" );
+		Con_Printf( "^2VERY FULL!^7\n" );
+	else Con_Printf( "\n" );
 
 	return itemstorage;
 }
@@ -406,13 +406,13 @@ void Mod_PrintWorldStats_f( void )
 
 	if( !w || !w->numsubmodels )
 	{
-		Msg( "No map loaded\n" );
+		Con_Printf( "No map loaded\n" );
 		return;
 	}
 
-	Msg( "\n" );
-	Msg( "Object names  Objects/Maxobjs  Memory / Maxmem  Fullness\n" );
-	Msg( "------------  ---------------  ---------------  --------\n" );
+	Con_Printf( "\n" );
+	Con_Printf( "Object names  Objects/Maxobjs  Memory / Maxmem  Fullness\n" );
+	Con_Printf( "------------  ---------------  ---------------  --------\n" );
 
 	for( i = 0; i < ARRAYSIZE( worldstats ); i++ )
 	{
@@ -426,13 +426,13 @@ void Mod_PrintWorldStats_f( void )
 		else totalmemory += Mod_ArrayUsage( stat->lumpname, stat->count, stat->maxcount, stat->entrysize );
 	}
 
-	Msg( "=== Total BSP file data space used: %s ===\n", Q_memprint( totalmemory ));
-	Msg( "World size ( %g %g %g ) units\n", world.size[0], world.size[1], world.size[2] );
-	Msg( "Supports transparency world water: %s\n", FBitSet( world.flags, FWORLD_WATERALPHA ) ? "Yes" : "No" );
-	Msg( "Lighting: %s\n", FBitSet( w->flags, MODEL_COLORED_LIGHTING ) ? "colored" : "monochrome" );
-	Msg( "original name: ^1%s\n", worldmodel->name );
-	Msg( "internal name: %s\n", (world.message[0]) ? va( "^2%s", world.message ) : "none" );
-	Msg( "map compiler: %s\n", (world.compiler[0]) ? va( "^3%s", world.compiler ) : "unknown" );
+	Con_Printf( "=== Total BSP file data space used: %s ===\n", Q_memprint( totalmemory ));
+	Con_Printf( "World size ( %g %g %g ) units\n", world.size[0], world.size[1], world.size[2] );
+	Con_Printf( "Supports transparency world water: %s\n", FBitSet( world.flags, FWORLD_WATERALPHA ) ? "Yes" : "No" );
+	Con_Printf( "Lighting: %s\n", FBitSet( w->flags, MODEL_COLORED_LIGHTING ) ? "colored" : "monochrome" );
+	Con_Printf( "original name: ^1%s\n", worldmodel->name );
+	Con_Printf( "internal name: %s\n", (world.message[0]) ? va( "^2%s", world.message ) : "none" );
+	Con_Printf( "map compiler: %s\n", (world.compiler[0]) ? va( "^3%s", world.compiler ) : "unknown" );
 }
 
 /*
@@ -1212,15 +1212,13 @@ static void Mod_SetupHull( dbspmodel_t *bmod, model_t *mod, byte *mempool, int h
 	CountClipNodes_r( bmod->clipnodes_out, hull, headnode );
 	count = hull->lastclipnode;
 
+	// fit array to real count
 	hull->clipnodes = (mclipnode_t *)Mem_Alloc( mempool, sizeof( mclipnode_t ) * hull->lastclipnode );
 	hull->planes = mod->planes; // share planes
 	hull->lastclipnode = 0; // restart counting
 
 	// remap clipnodes to 16-bit indexes
 	RemapClipNodes_r( bmod->clipnodes_out, hull, headnode );
-
-	// fit array to real count
-//	Msg( "%s hull%d, %i clipnodes (headnode %i)\n", mod->name, hullnum, hull->lastclipnode, headnode );
 }
 
 /*
@@ -1477,7 +1475,7 @@ static void Mod_LoadSubmodels( dbspmodel_t *bmod )
 	// these array used to sort translucent faces in bmodels
 	if( oldmaxfaces > world.max_surfaces )
 	{
-		world.draw_surfaces = (msurface_t **)Z_Realloc( world.draw_surfaces, oldmaxfaces * sizeof( msurface_t* ));
+		world.draw_surfaces = (sortedface_t *)Z_Realloc( world.draw_surfaces, oldmaxfaces * sizeof( sortedface_t ));
 		world.max_surfaces = oldmaxfaces;
 	}
 }
@@ -1489,14 +1487,45 @@ Mod_LoadEntities
 */
 static void Mod_LoadEntities( dbspmodel_t *bmod )
 {
-	char	*pfile;
-	string	keyname;
+	byte	*entpatch = NULL;
 	char	token[MAX_TOKEN];
 	char	wadstring[2048];
+	string	keyname;
+	char	*pfile;
+
+	if( bmod->isworld )
+	{
+		char	entfilename[MAX_QPATH];
+		long	entpatchsize;
+		size_t	ft1, ft2;
+
+		// world is check for entfile too
+		Q_strncpy( entfilename, loadmodel->name, sizeof( entfilename ));
+		COM_ReplaceExtension( entfilename, ".ent" );
+
+		// make sure what entity patch is never than bsp
+		ft1 = FS_FileTime( loadmodel->name, false );
+		ft2 = FS_FileTime( entfilename, true );
+
+		if( ft2 != -1 )
+		{
+			if( ft1 > ft2 )
+			{
+				Con_Printf( S_WARN "Entity patch is older than bsp. Ignored.\n", entfilename );			
+			}
+			else if(( entpatch = FS_LoadFile( entfilename, &entpatchsize, true )) != NULL )
+			{
+				Con_Printf( "^2Read entity patch:^7 %s\n", entfilename );
+				bmod->entdatasize = entpatchsize;
+				bmod->entdata = entpatch;
+			}
+		}
+	}
 
 	// make sure what we really has terminator
 	loadmodel->entities = Mem_Alloc( loadmodel->mempool, bmod->entdatasize + 1 );
-	memcpy( loadmodel->entities, bmod->entdata, bmod->entdatasize );
+	memcpy( loadmodel->entities, bmod->entdata, bmod->entdatasize ); // moving to private model pool
+	if( entpatch ) Mem_Free( entpatch ); // release entpatch if present
 	if( !bmod->isworld ) return;
 
 	pfile = (char *)loadmodel->entities;
@@ -2132,12 +2161,12 @@ static void Mod_LoadSurfaces( dbspmodel_t *bmod )
 			SetBits( out->flags, SURF_DRAWTILED|SURF_DRAWSKY );
 
 		if(( tex->name[0] == '*' && Q_stricmp( tex->name, "*default" )) || tex->name[0] == '!' )
-			SetBits( out->flags, SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL );
+			SetBits( out->flags, SURF_DRAWTURB|SURF_DRAWTILED );
 
 		if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 		{
 			if( !Q_strncmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
-				SetBits( out->flags, SURF_DRAWTURB|SURF_DRAWTILED|SURF_NOCULL );
+				SetBits( out->flags, SURF_DRAWTURB|SURF_DRAWTILED );
 		}
 
 		if( !Q_strncmp( tex->name, "scroll", 6 ))
@@ -2565,6 +2594,7 @@ qboolean Mod_LoadBmodelLumps( const byte *mod_base, qboolean isworld )
 	dheader_t		*header = (dheader_t *)mod_base;
 	dextrahdr_t	*extrahdr = (dextrahdr_t *)((byte *)mod_base + sizeof( dheader_t ));
 	dbspmodel_t	*bmod = &srcmodel;
+	char		wadvalue[2048];
 	int		i;
 
 	// always reset the intermediate struct
@@ -2572,6 +2602,7 @@ qboolean Mod_LoadBmodelLumps( const byte *mod_base, qboolean isworld )
 	memset( &loadstat, 0, sizeof( loadstat_t ));
 
 	Q_strncpy( loadstat.name, loadmodel->name, sizeof( loadstat.name ));
+	wadvalue[0] = '\0';
 
 #ifndef SUPPORT_BSP2_FORMAT
 	if( header->version == QBSP2_VERSION )
@@ -2633,8 +2664,14 @@ qboolean Mod_LoadBmodelLumps( const byte *mod_base, qboolean isworld )
 	Mod_MakeHull0 ();
 	Mod_SetupSubmodels( bmod );
 
-	if( bmod->wadlist.count > 0 )
-		Msg( "totally used %i wads\n", bmod->wadlist.count );
+	for( i = 0; i < bmod->wadlist.count; i++ )
+		Q_strncat( wadvalue, va( "%s.wad; ", bmod->wadlist.wadnames[i] ), sizeof( wadvalue ));
+
+	if( COM_CheckString( wadvalue ))
+	{
+		wadvalue[Q_strlen( wadvalue ) - 2] = '\0';
+		Con_DPrintf( "Wad files required to run the map: \"%s\"\n", wadvalue );
+	}
 
 	return true;
 }

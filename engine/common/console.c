@@ -1009,7 +1009,7 @@ void Con_Print( const char *txt )
 	static int	cr_pending = 0;
 	static char	buf[MAX_PRINT_MSG];
 	static int	bufpos = 0;
-	int		c, mask;
+	int		c, mask = 0;
 
 	// client not running
 	if( !con.initialized || !con.buffer )
@@ -1017,10 +1017,11 @@ void Con_Print( const char *txt )
 
 	if( txt[0] == 2 )
 	{
-		mask = 128;		// go to colored text
+		// go to colored text
+		if( Con_FixedFont( ))
+			mask = 128;
 		txt++;
 	}
-	else mask = 0;
 
 	for( ; *txt; txt++ )
 	{
@@ -1092,7 +1093,7 @@ void Con_DPrintf( char *szFmt, ... )
 	static char	buffer[MAX_PRINT_MSG];
 	va_list		args;
 
-	if( host.developer < D_ERROR )
+	if( host.developer < D_REPORT )
 		return;
 
 	va_start( args, szFmt );

@@ -876,7 +876,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 	pFile = FS_Open( name, "rb", true );
 	if( !pFile )
 	{
-		MsgDev( D_INFO, "ERROR: couldn't open.\n" );
+		Con_Printf( S_ERROR "couldn't open.\n" );
 		return NULL;
 	}
 
@@ -1972,7 +1972,7 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 		SV_SaveFinish( pSaveData );
 
 		if( !SV_LoadGameState( level, true ))
-			SV_SpawnEntities( level, SV_EntityScript( ));
+			SV_SpawnEntities( level );
 		SV_LoadAdjacentEnts( oldlevel, startspot );
 		sv.loadgame = sv.paused = true; // pause until all clients connect
 
@@ -1984,7 +1984,7 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 	{
 		// classic quake changelevel
 		svgame.dllFuncs.pfnResetGlobalState();
-		SV_SpawnEntities( level, SV_EntityScript( ));
+		SV_SpawnEntities( level );
 		SV_ActivateServer( true );
 	}
 }

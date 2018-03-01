@@ -716,7 +716,7 @@ void SCR_Init( void )
 
 	if( !UI_LoadProgs( ))
 	{
-		Msg( "^1Error: ^7can't initialize gameui.dll\n" ); // there is non fatal for us
+		Con_Printf( S_ERROR "can't initialize gameui.dll\n" ); // there is non fatal for us
 		if( !host.developer ) host.developer = 1; // we need console, because menu is missing
 	}
 

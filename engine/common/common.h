@@ -349,6 +349,7 @@ typedef struct host_parm_s
 	HWND		hWnd;		// main window
 	int		developer;	// show all developer's message
 	int		old_developer;	// keep real dev state (we need enable dev-mode in multiplayer)
+	qboolean		allow_console;	// allow console in dev-mode or multiplayer game
 	qboolean		key_overstrike;	// key overstrike mode
 	qboolean		stuffcmds_pending;	// should execute stuff commands
 	qboolean		allow_cheats;	// this host will allow cheating
@@ -405,6 +406,7 @@ void FS_LoadGameInfo( const char *rootfolder );
 void COM_FileBase( const char *in, char *out );
 const char *COM_FileExtension( const char *in );
 void COM_DefaultExtension( char *path, const char *extension );
+void COM_ReplaceExtension( char *path, const char *extension );
 void COM_ExtractFilePath( const char *path, char *dest );
 const char *FS_GetDiskPath( const char *name, qboolean gamedironly );
 const char *COM_FileWithoutPath( const char *in );

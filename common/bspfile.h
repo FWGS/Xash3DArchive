@@ -46,7 +46,6 @@ BRUSH MODELS
 // bmodel limits
 #define MAX_MAP_HULLS		4		// MAX_HULLS
 
-#define SURF_NOCULL			BIT( 0 )		// two-sided polygon (e.g. 'water4b')
 #define SURF_PLANEBACK		BIT( 1 )		// plane should be negated
 #define SURF_DRAWSKY		BIT( 2 )		// sky surface
 #define SURF_WATERCSG		BIT( 3 )		// culled by csg (was SURF_DRAWSPRITE)

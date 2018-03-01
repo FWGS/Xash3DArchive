@@ -238,8 +238,7 @@ void SV_CreateGenericResources( void )
 	string	filename, token;
 
 	Q_strncpy( filename, sv.model_precache[1], sizeof( filename ));
-	COM_StripExtension( filename );
-	COM_DefaultExtension( filename, ".res" );
+	COM_ReplaceExtension( filename, ".res" );
 	COM_FixSlashes( filename );
 
 	afile = FS_LoadFile( filename, NULL, false );
@@ -324,48 +323,6 @@ void SV_CreateResourceList( void )
 		if( nSize < 0 ) nSize = 0;
 		SV_AddResource( t_eventscript, s, nSize, RES_FATALIFMISSING, i );
 	}
-}
-
-/*
-================
-SV_EntityScript
-
-get entity script for current map
-================
-*/
-char *SV_EntityScript( void )
-{
-	string	entfilename;
-	size_t	ft1, ft2;
-	char	*ents;
-
-	if( !sv.worldmodel )
-		return NULL;
-
-	// check for entfile too
-	Q_strncpy( entfilename, sv.worldmodel->name, sizeof( entfilename ));
-	COM_StripExtension( entfilename );
-	COM_DefaultExtension( entfilename, ".ent" );
-
-	// make sure what entity patch is never than bsp
-	ft1 = FS_FileTime( sv.worldmodel->name, false );
-	ft2 = FS_FileTime( entfilename, true );
-
-	if( ft2 != -1 )
-	{
-		if( ft1 > ft2 )
-		{
-			MsgDev( D_INFO, "^1Entity patch is older than bsp. Ignored.\n", entfilename );			
-		}
-		else if(( ents = FS_LoadFile( entfilename, NULL, true )) != NULL )
-		{
-			MsgDev( D_INFO, "^2Read entity patch:^7 %s\n", entfilename );
-			return ents;
-		}
-	}
-
-	// use internal entities
-	return sv.worldmodel->entities;
 }
 
 /*
@@ -924,7 +881,7 @@ void SV_ExecLoadLevel( void )
 {
 	if( SV_SpawnServer( GameState->levelName, NULL, GameState->backgroundMap ))
 	{
-		SV_SpawnEntities( GameState->levelName, SV_EntityScript( ));
+		SV_SpawnEntities( GameState->levelName );
 		SV_ActivateServer( true );
 	}
 }
@@ -941,7 +898,7 @@ void SV_ExecLoadGame( void )
 	if( SV_SpawnServer( GameState->levelName, NULL, false ))
 	{
 		if( !SV_LoadGameState( GameState->levelName, false ))
-			SV_SpawnEntities( GameState->levelName, SV_EntityScript( ));
+			SV_SpawnEntities( GameState->levelName );
 		sv.loadgame = sv.paused = true; // pause until all clients connect
 		SV_ActivateServer( false );
 	}

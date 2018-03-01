@@ -66,8 +66,7 @@ static void BoundPoly( int numverts, float *verts, vec3_t mins, vec3_t maxs )
 	int	i, j;
 	float	*v;
 
-	mins[0] = mins[1] = mins[2] = 99999.0f;
-	maxs[0] = maxs[1] = maxs[2] = -99999.0f;
+	ClearBounds( mins, maxs );
 
 	for( i = 0, v = verts; i < numverts; i++ )
 	{
@@ -81,13 +80,13 @@ static void BoundPoly( int numverts, float *verts, vec3_t mins, vec3_t maxs )
 
 static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts )
 {
+	vec3_t		front[SUBDIVIDE_SIZE], back[SUBDIVIDE_SIZE];
+	mextrasurf_t	*warpinfo = warpface->info;
+	float		dist[SUBDIVIDE_SIZE];
+	float		m, frac, s, t, *v;
 	int		i, j, k, f, b;
 	float		sample_size;
 	vec3_t		mins, maxs;
-	float		m, frac, s, t, *v, vertsDiv;
-	vec3_t		front[SUBDIVIDE_SIZE], back[SUBDIVIDE_SIZE], total;
-	float		dist[SUBDIVIDE_SIZE], total_s, total_t, total_ls, total_lt;
-	mextrasurf_t	*warpinfo = warpface->info;
 	glpoly_t		*poly;
 
 	if( numverts > ( SUBDIVIDE_SIZE - 4 ))
@@ -149,21 +148,17 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 	}
 
 	// add a point in the center to help keep warp valid
-	poly = Mem_Alloc( loadmodel->mempool, sizeof( glpoly_t ) + ((numverts-4)+2) * VERTEXSIZE * sizeof( float ));
+	poly = Mem_Alloc( loadmodel->mempool, sizeof( glpoly_t ) + (numverts - 4) * VERTEXSIZE * sizeof( float ));
 	poly->next = warpface->polys;
 	poly->flags = warpface->flags;
 	warpface->polys = poly;
-	poly->numverts = numverts + 2;
-	VectorClear( total );
-	total_s = total_ls = 0.0f;
-	total_t = total_lt = 0.0f;
+	poly->numverts = numverts;
 
 	for( i = 0; i < numverts; i++, verts += 3 )
 	{
-		VectorCopy( verts, poly->verts[i+1] );
-		VectorAdd( total, verts, total );
+		VectorCopy( verts, poly->verts[i] );
 
-		if( warpface->flags & SURF_DRAWTURB )
+		if( FBitSet( warpface->flags, SURF_DRAWTURB ))
 		{
 			s = DotProduct( verts, warpface->texinfo->vecs[0] );
 			t = DotProduct( verts, warpface->texinfo->vecs[1] );
@@ -176,14 +171,11 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 			t /= warpface->texinfo->texture->height; 
 		}
 
-		poly->verts[i+1][3] = s;
-		poly->verts[i+1][4] = t;
-
-		total_s += s;
-		total_t += t;
+		poly->verts[i][3] = s;
+		poly->verts[i][4] = t;
 
 		// for speed reasons
-		if( !( warpface->flags & SURF_DRAWTURB ))
+		if( !FBitSet( warpface->flags, SURF_DRAWTURB ))
 		{
 			// lightmap texture coordinates
 			s = DotProduct( verts, warpinfo->lmvecs[0] ) + warpinfo->lmvecs[0][3];
@@ -198,28 +190,10 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 			t += sample_size * 0.5;
 			t /= BLOCK_SIZE * sample_size; //fa->texinfo->texture->height;
 
-			poly->verts[i+1][5] = s;
-			poly->verts[i+1][6] = t;
-
-			total_ls += s;
-			total_lt += t;
+			poly->verts[i][5] = s;
+			poly->verts[i][6] = t;
 		}
 	}
-
-	vertsDiv = ( 1.0f / (float)numverts );
-
-	VectorScale( total, vertsDiv, poly->verts[0] );
-	poly->verts[0][3] = total_s * vertsDiv;
-	poly->verts[0][4] = total_t * vertsDiv;
-
-	if( !( warpface->flags & SURF_DRAWTURB ))
-	{
-		poly->verts[0][5] = total_ls * vertsDiv;
-		poly->verts[0][6] = total_lt * vertsDiv;
-	}
-
-	// copy first vertex to last
-	memcpy( poly->verts[i+1], poly->verts[1], sizeof( poly->verts[0] ));
 }
 
 void GL_SetupFogColorForSurfaces( void )
@@ -1010,12 +984,7 @@ void R_RenderFullbrights( void )
 		GL_Bind( GL_TEXTURE0, i );
 
 		for( p = fullbright_polys[i]; p; p = p->next )
-		{
-			if( p->flags & SURF_DRAWTURB )
-				EmitWaterPolys( p, ( p->flags & SURF_NOCULL ), false );
-			else DrawGLPoly( p, 0.0f, 0.0f );
-		}
-
+			DrawGLPoly( p, 0.0f, 0.0f );
 		fullbright_polys[i] = NULL;		
 	}
 
@@ -1083,11 +1052,11 @@ void R_RenderDetails( void )
 R_RenderBrushPoly
 ================
 */
-void R_RenderBrushPoly( msurface_t *fa )
+void R_RenderBrushPoly( msurface_t *fa, int cull_type )
 {
-	texture_t	*t;
-	int	maps;
 	qboolean	is_dynamic = false;
+	int	maps;
+	texture_t	*t;
 
 	r_stats.c_world_polys++;
 
@@ -1101,7 +1070,7 @@ void R_RenderBrushPoly( msurface_t *fa )
 	if( fa->flags & SURF_DRAWTURB )
 	{	
 		// warp texture, no lightmaps
-		EmitWaterPolys( fa->polys, ( fa->flags & SURF_NOCULL ), false );
+		EmitWaterPolys( fa->polys, (cull_type == CULL_BACKSIDE));
 		return;
 	}
 
@@ -1152,12 +1121,8 @@ void R_RenderBrushPoly( msurface_t *fa )
 	}
 	else
 	{
-		float dist = PlaneDiff( tr.modelorg, fa->plane );
-		if( FBitSet( fa->flags, SURF_PLANEBACK ))
-			dist = -dist;
-
 		// if rendermode != kRenderNormal draw decals sequentially
-		DrawSurfaceDecals( fa, true, (dist < 0.0f) ? true : false );
+		DrawSurfaceDecals( fa, true, (cull_type == CULL_BACKSIDE));
 	}
 
 	if( fa->flags & SURF_DRAWTILED )
@@ -1274,7 +1239,7 @@ void R_DrawTextureChains( void )
                     }
 
 		for( ; s != NULL; s = s->texturechain )
-			R_RenderBrushPoly( s );
+			R_RenderBrushPoly( s, CULL_VISIBLE );
 		t->texturechain = NULL;
 	}
 }
@@ -1298,7 +1263,7 @@ void R_DrawAlphaTextureChains( void )
 
 	// make sure what color is reset
 	pglColor4ub( 255, 255, 255, 255 );
-	R_LoadIdentity();	// set identity matrix
+	R_LoadIdentity(); // set identity matrix
 
 	pglDisable( GL_BLEND );
 	pglEnable( GL_ALPHA_TEST );
@@ -1323,7 +1288,7 @@ void R_DrawAlphaTextureChains( void )
 			continue;
 
 		for( ; s != NULL; s = s->texturechain )
-			R_RenderBrushPoly( s );
+			R_RenderBrushPoly( s, CULL_VISIBLE );
 		t->texturechain = NULL;
 	}
 
@@ -1373,14 +1338,14 @@ void R_DrawWaterSurfaces( void )
 		s = t->texturechain;
 		if( !s ) continue;
 
-		if(!( s->flags & SURF_DRAWTURB ))
+		if( !FBitSet( s->flags, SURF_DRAWTURB ))
 			continue;
 
 		// set modulate mode explicitly
 		GL_Bind( GL_TEXTURE0, t->gl_texturenum );
 
 		for( ; s; s = s->texturechain )
-			EmitWaterPolys( s->polys, ( s->flags & SURF_NOCULL ), false );
+			EmitWaterPolys( s->polys, false );
 			
 		t->texturechain = NULL;
 	}
@@ -1399,14 +1364,14 @@ R_SurfaceCompare
 compare translucent surfaces
 =================
 */
-static int R_SurfaceCompare( const msurface_t **a, const msurface_t **b )
+static int R_SurfaceCompare( const sortedface_t *a, const sortedface_t *b )
 {
 	msurface_t	*surf1, *surf2;
 	vec3_t		org1, org2;
 	float		len1, len2;
 
-	surf1 = (msurface_t *)*a;
-	surf2 = (msurface_t *)*b;
+	surf1 = (msurface_t *)a->surf;
+	surf2 = (msurface_t *)b->surf;
 
 	VectorAdd( RI.currententity->origin, surf1->info->origin, org1 );
 	VectorAdd( RI.currententity->origin, surf2->info->origin, org2 );
@@ -1530,27 +1495,37 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( e->curstate.rendermode == kRenderTransAdd )
 		R_AllowFog( false );
 
+	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	num_sorted = 0;
 
-	psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		int result = R_CullSurface( psurf, NULL, 0 ); // ignore frustum for bmodels
+		int	cull_type = R_CullSurface( psurf, &RI.frustum, RI.frustum.clipFlags );
 
-		if(( result == CULL_VISIBLE ) || ( result == CULL_BACKSIDE && psurf->pdecals && e->curstate.rendermode == kRenderTransTexture ))
-                    {
-			if( num_sorted < world.max_surfaces )
-				world.draw_surfaces[num_sorted++] = psurf;
+		if( cull_type >= CULL_FRUSTUM )
+			continue;
+
+		if( cull_type == CULL_BACKSIDE )
+		{
+			if( !FBitSet( psurf->flags, SURF_DRAWTURB ) && !( psurf->pdecals && e->curstate.rendermode == kRenderTransTexture ))
+				continue;
+		}
+
+		if( num_sorted < world.max_surfaces )
+		{
+			world.draw_surfaces[num_sorted].surf = psurf;
+			world.draw_surfaces[num_sorted].cull = cull_type;
+			num_sorted++;
 		}
 	}
 
 	// sort faces if needs
-	if( e->curstate.rendermode == kRenderTransTexture && !gl_nosort->value )
-		qsort( world.draw_surfaces, num_sorted, sizeof( msurface_t* ), R_SurfaceCompare );
+	if( !FBitSet( clmodel->flags, MODEL_LIQUID ) && e->curstate.rendermode == kRenderTransTexture && !gl_nosort->value )
+		qsort( world.draw_surfaces, num_sorted, sizeof( sortedface_t ), R_SurfaceCompare );
 
 	// draw sorted translucent surfaces
 	for( i = 0; i < num_sorted; i++ )
-		R_RenderBrushPoly( world.draw_surfaces[i] );
+		R_RenderBrushPoly( world.draw_surfaces[i].surf, world.draw_surfaces[i].cull );
 
 	if( e->curstate.rendermode == kRenderTransColor )
 		pglEnable( GL_TEXTURE_2D );

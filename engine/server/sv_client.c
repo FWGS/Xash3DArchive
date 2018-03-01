@@ -1404,7 +1404,7 @@ void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl )
 	if(( host.developer ) || ( svs.maxclients > 1 ))
 	{
 		MSG_BeginServerCmd( msg, svc_print );
-		Q_snprintf( message, sizeof( message ), "%c\nBUILD %d SERVER (%i CRC)\nServer # %i\n", 2, Q_buildnum(), sv.progsCRC, svs.spawncount );
+		Q_snprintf( message, sizeof( message ), "\n^3BUILD %d SERVER (%i CRC)\nServer #%i\n", Q_buildnum(), sv.progsCRC, svs.spawncount );
 		MSG_WriteString( msg, message );
 	}
 
@@ -2571,4 +2571,4 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 			return;
 		}
 	}
-}
+} 

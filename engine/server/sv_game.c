@@ -626,13 +626,13 @@ SV_ReadEntityScript
 pfnMapIsValid use this
 ==============
 */
-char *SV_ReadEntityScript( const char *filename, int *flags )
+static char *SV_ReadEntityScript( const char *filename, int *flags )
 {
-	dheader_t		*header;
-	char		*ents = NULL;
 	string		bspfilename, entfilename;
 	int		ver = -1, lumpofs = 0, lumplen = 0;
-	byte		buf[MAX_SYSPATH]; // 1 kb
+	char		*ents = NULL;
+	byte		buf[1024];
+	dheader_t		*header;
 	size_t		ft1, ft2;
 	file_t		*f;
 
@@ -642,8 +642,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 	f = FS_Open( bspfilename, "rb", false );
 	if( !f ) return NULL;
 
-	*flags |= MAP_IS_EXIST;
-
+	SetBits( *flags, MAP_IS_EXIST );
 	memset( buf, 0, MAX_SYSPATH );
 	FS_Read( f, buf, MAX_SYSPATH );
 	header = (dheader_t *)buf;
@@ -651,7 +650,7 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 	// check all the lumps and some other errors
 	if( !Mod_TestBmodelLumps( bspfilename, buf, (host.developer <= 2) ? true : false ))
 	{
-		*flags |= MAP_INVALID_VERSION;
+		SetBits( *flags, MAP_INVALID_VERSION );
 		FS_Close( f );
 		return NULL;
 	}
@@ -679,7 +678,6 @@ char *SV_ReadEntityScript( const char *filename, int *flags )
 		ents = Z_Malloc( lumplen + 1 );
 		FS_Read( f, ents, lumplen );
 	}
-
 	FS_Close( f ); // all done
 
 	return ents;
@@ -694,20 +692,19 @@ Validate map
 */
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name )
 {
-	char	*ents = NULL;
-	char	*pfile;
 	int	flags = 0;
+	char	*pfile;
+	char	*ents;
 
 	ents = SV_ReadEntityScript( filename, &flags );
 
 	if( ents )
 	{
-		// if there are entities to parse, a missing message key just
-		// means there is no title, so clear the message string now
+		qboolean	need_landmark = Q_strlen( landmark_name ) > 0 ? true : false;
 		char	token[2048];
 		string	check_name;
-		qboolean	need_landmark = Q_strlen( landmark_name ) > 0 ? true : false;
 
+		// g-cont. in-dev mode we can entering on map even without "info_player_start"
 		if( !need_landmark && host.developer >= 2 )
 		{
 			// not transition 
@@ -727,10 +724,10 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 				pfile = COM_ParseFile( pfile, check_name );
 				if( !Q_strcmp( spawn_entity, check_name ))
 				{
-					flags |= MAP_HAS_SPAWNPOINT;
+					SetBits( flags, MAP_HAS_SPAWNPOINT );
 
 					// we already find landmark, stop the parsing
-					if( need_landmark && flags & MAP_HAS_LANDMARK )
+					if( need_landmark && FBitSet( flags, MAP_HAS_LANDMARK ))
 						break;
 				}
 			}
@@ -741,10 +738,10 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 
 				if( !Q_strcmp( landmark_name, check_name ))
 				{
-					flags |= MAP_HAS_LANDMARK;
+					SetBits( flags, MAP_HAS_LANDMARK );
 
 					// we already find spawnpoint, stop the parsing
-					if( flags & MAP_HAS_SPAWNPOINT )
+					if( FBitSet( flags, MAP_HAS_SPAWNPOINT ))
 						break;
 				}
 			}
@@ -791,27 +788,12 @@ void SV_InitEdict( edict_t *pEdict )
 void SV_FreeEdict( edict_t *pEdict )
 {
 	Assert( pEdict != NULL );
-	Assert( pEdict->free == false );
+	if( pEdict->free ) return;
 
 	// unlink from world
 	SV_UnlinkEdict( pEdict );
 
-	// never remove global entities from map (make dormant instead)
-	if( pEdict->v.globalname && sv.state == ss_active )
-	{
-		pEdict->v.solid = SOLID_NOT;
-		pEdict->v.flags &= ~FL_KILLME;
-		pEdict->v.effects = EF_NODRAW;
-		pEdict->v.movetype = MOVETYPE_NONE;
-		pEdict->v.modelindex = 0;
-		pEdict->v.nextthink = -1;
-		return;
-	}
-
 	SV_FreePrivateData( pEdict );
-
-	// NOTE: don't clear all edict fields on releasing
-	// because gamedll may trying to use edict pointers and crash game (e.g. Opposing Force)
 
 	// mark edict as freed
 	pEdict->freetime = sv.time;
@@ -1571,48 +1553,36 @@ pfnEntitiesInPVS
 */
 edict_t *pfnEntitiesInPVS( edict_t *pview )
 {
-	edict_t	*chain;
-	edict_t	*pEdict, *pEdict2;
+	edict_t	*pchain, *pstart;
 	vec3_t	viewpoint;
+	edict_t	*pent;
 	int	i;
 
 	if( !SV_IsValidEdict( pview ))
 		return NULL;
 
 	VectorAdd( pview->v.origin, pview->v.view_ofs, viewpoint );
+	pstart = EDICT_NUM( 0 ); 
 
-	for( chain = EDICT_NUM( 0 ), i = 1; i < svgame.numEntities; i++ )
+	for( i = 1; i < svgame.numEntities; i++ )
 	{
-		pEdict = EDICT_NUM( i );
+		pent = EDICT_NUM( i );
 
-		if( !SV_IsValidEdict( pEdict ))
+		if( !SV_IsValidEdict( pent ))
 			continue;
 
-		if( pEdict->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pEdict->v.aiment ))
-		{
-			// force all items across level even it is not visible
-			if( pEdict->v.aiment == EDICT_NUM( 1 ))
-			{
-				pEdict->v.chain = chain;
-				chain = pEdict;
-				continue;
-			}
+		if( pent->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pent->v.aiment ))
+			pchain = pent->v.aiment;
+		else pchain = pent;
 
-			pEdict2 = pEdict->v.aiment;
-		}
-		else
+		if( SV_BoxInPVS( viewpoint, pchain->v.absmin, pchain->v.absmax ))
 		{
-			pEdict2 = pEdict;
-		}
-
-		if( SV_BoxInPVS( viewpoint, pEdict2->v.absmin, pEdict2->v.absmax ))
-		{
-			pEdict->v.chain = chain;
-			chain = pEdict;
+			pent->v.chain = pstart;
+			pstart = pchain;
 		}
 	}
 
-	return chain;
+	return pstart;
 }
 
 /*
@@ -2641,20 +2611,10 @@ void pfnMessageEnd( void )
 	// update some messages in case their was format was changed and we want to keep backward compatibility
 	if( svgame.msg_index < 0 )
 	{
-		int svc_msg = abs( svgame.msg_index );
+		int	svc_msg = abs( svgame.msg_index );
 
-		if( svc_msg == svc_studiodecal && svgame.msg_realsize == 27 )
-		{
-			// oldstyle message for svc_studiodecal has missed four additional bytes:
-			// modelIndex, skin and body. Write it here for backward compatibility
-			MSG_WriteWord( &sv.multicast, 0 );
-			MSG_WriteByte( &sv.multicast, 0 );
-			MSG_WriteByte( &sv.multicast, 0 );
-		}
-		else if(( svc_msg == svc_finale || svc_msg == svc_cutscene ) && svgame.msg_realsize == 0 )
-		{
+		if(( svc_msg == svc_finale || svc_msg == svc_cutscene ) && svgame.msg_realsize == 0 )
 			MSG_WriteChar( &sv.multicast, 0 ); // write null string
-		}
 	}
 
 	if( !VectorIsNull( svgame.msg_org )) org = svgame.msg_org;
@@ -2840,55 +2800,38 @@ pfnAlertMessage
 */
 static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 {
-	char	buffer[2048];	// must support > 1k messages
+	char	buffer[2048];
 	va_list	args;
+
+	// g-cont: some mods have wrong aiconsole messages that crash the engine
+	if( level == at_aiconsole && host.developer < D_REPORT )
+		return;
+
+	va_start( args, szFmt );
+	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
+	va_end( args );
 
 	// check message for pass
 	switch( level )
 	{
 	case at_notice:
-		break;	// passed always
+		Con_Printf( S_NOTE "%s", buffer );
+		break;
 	case at_console:
-		if( host.developer < D_INFO )
-			return;
+		Con_Printf( "%s", buffer );
 		break;
 	case at_aiconsole:
-		if( host.developer < D_REPORT )
-			return;
+		Con_DPrintf( "%s", buffer );
 		break;
 	case at_warning:
-		if( host.developer < D_WARN )
-			return;
+		Con_Printf( S_WARN "%s", buffer );
 		break;
 	case at_error:
-		if( host.developer < D_ERROR )
-			return;
+		Con_Printf( S_ERROR "%s", buffer );
 		break;
 	case at_logged:
-		if( svs.maxclients <= 1 )
-			return;
-		break;
-	}
-
-	va_start( args, szFmt );
-	Q_vsnprintf( buffer, 2048, szFmt, args );
-	va_end( args );
-
-	if( level == at_warning )
-	{
-		Con_Printf( "^3Warning:^7 %s", buffer );
-	}
-	else if( level == at_error )
-	{
-		Con_Printf( "^1Error:^7 %s", buffer );
-	} 
-	else if( level == at_logged )
-	{
 		Log_Printf( "%s", buffer );
-	}
-	else
-	{
-		Con_Printf( buffer );
+		break;
 	}
 }
 
@@ -3327,11 +3270,12 @@ void pfnClientPrintf( edict_t* pEdict, PRINT_TYPE ptype, const char *szMsg )
 =============
 pfnServerPrint
 
+print to the server console
 =============
 */
 void pfnServerPrint( const char *szMsg )
 {
-	SV_BroadcastPrintf( NULL, "%s", szMsg );
+	Con_Printf( "%s", szMsg );
 }
 
 /*
@@ -3410,7 +3354,7 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 		return;
 	}
 
-	if(( client = SV_ClientFromEdict( pClient, true )) == NULL )
+	if(( client = SV_ClientFromEdict( pClient, false )) == NULL )
 	{
 		MsgDev( D_ERROR, "PF_SetView: not a client!\n" );
 		return;
@@ -4801,7 +4745,7 @@ Creates a server's entity / program execution context by
 parsing textual entity definitions out of an ent file.
 ==============
 */
-void SV_SpawnEntities( const char *mapname, char *entities )
+void SV_SpawnEntities( const char *mapname )
 {
 	edict_t	*ent;
 
@@ -4829,7 +4773,7 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	ent = EDICT_NUM( 0 );
 	if( ent->free ) SV_InitEdict( ent );
 	ent->v.model = MAKE_STRING( sv.model_precache[1] );
-	ent->v.modelindex = 1; // world model
+	ent->v.modelindex = WORLD_INDEX; // world model
 	ent->v.solid = SOLID_BSP;
 	ent->v.movetype = MOVETYPE_PUSH;
 	svgame.movevars.fog_settings = 0;
@@ -4840,11 +4784,7 @@ void SV_SpawnEntities( const char *mapname, char *entities )
 	svgame.globals->time = sv.time;
 
 	// spawn the rest of the entities on the map
-	SV_LoadFromFile( mapname, entities );
-
-	// free memory that allocated by entpatch only
-	if( !Mem_IsAllocatedExt( sv.worldmodel->mempool, entities ))
-		Mem_Free( entities );
+	SV_LoadFromFile( mapname, sv.worldmodel->entities );
 
 	MsgDev( D_NOTE, "Total %i entities spawned\n", svgame.numEntities );
 }

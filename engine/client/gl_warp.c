@@ -781,7 +781,7 @@ EmitWaterPolys
 Does a water warp on the pre-fragmented glpoly_t chain
 =============
 */
-void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction )
+void EmitWaterPolys( glpoly_t *polys, qboolean reverse )
 {
 	glpoly_t	*p = polys;
 	float	*v, nv, waveHeight;
@@ -789,7 +789,6 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction )
 	int	i;
 
 	if( !polys ) return;
-	if( noCull ) pglDisable( GL_CULL_FACE );
 
 	// set the current waveheight
 	if( p->verts[0][2] >= RI.vieworg[2] )
@@ -801,11 +800,11 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction )
 
 	for( p = polys; p; p = p->next )
 	{
-		pglBegin( GL_POLYGON );
-
-		if( direction )
+		if( reverse )
 			v = p->verts[0] + ( p->numverts - 1 ) * VERTEXSIZE;
 		else v = p->verts[0];
+
+		pglBegin( GL_POLYGON );
 
 		for( i = 0; i < p->numverts; i++ )
 		{
@@ -826,20 +825,15 @@ void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction )
 			t = ot + r_turbsin[(int)((os * 0.125f + cl.time) * TURBSCALE) & 255];
 			t *= ( 1.0f / SUBDIVIDE_SIZE );
 
-			if( glState.activeTMU != 0 )
-				GL_MultiTexCoord2f( glState.activeTMU, s, t );
-			else pglTexCoord2f( s, t );
+			pglTexCoord2f( s, t );
 			pglVertex3f( v[0], v[1], nv );
 
-			if( direction )
+			if( reverse )
 				v -= VERTEXSIZE;
 			else v += VERTEXSIZE;
 		}
 		pglEnd();
 	}
-
-	// restore culling
-	if( noCull ) pglEnable( GL_CULL_FACE );
 
 	GL_SetupFogColorForSurfaces();
 }

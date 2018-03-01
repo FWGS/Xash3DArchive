@@ -961,7 +961,7 @@ void CL_FinishTimeDemo( void )
 	time = host.realtime - cls.td_starttime;
 	if( !time ) time = 1.0;
 
-	Msg( "%i frames %5.3f seconds %5.3f fps\n", frames, time, frames / time );
+	Con_Printf( "%i frames %5.3f seconds %5.3f fps\n", frames, time, frames / time );
 }
 
 /*
@@ -1168,25 +1168,25 @@ void CL_Record_f( void )
 	}
 	else
 	{
-		Msg( "Usage: record <demoname>\n" );
+		Con_Printf( S_USAGE "record <demoname>\n" );
 		return;
 	}
 
 	if( cls.demorecording )
 	{
-		Msg( "Already recording.\n");
+		Con_Printf( "Already recording.\n");
 		return;
 	}
 
 	if( cls.demoplayback )
 	{
-		Msg( "Can't record during demo playback.\n");
+		Con_Printf( "Can't record during demo playback.\n");
 		return;
 	}
 
 	if( !cls.demoheader || cls.state != ca_active )
 	{
-		Msg( "You must be in a level to record.\n");
+		Con_Printf( "You must be in a level to record.\n");
 		return;
 	}
 
@@ -1202,7 +1202,7 @@ void CL_Record_f( void )
 
 		if( n == 10000 )
 		{
-			Msg( "^3ERROR: no free slots for demo recording\n" );
+			Con_Printf( S_ERROR, "no free slots for demo recording\n" );
 			return;
 		}
 	}
@@ -1239,7 +1239,7 @@ void CL_PlayDemo_f( void )
 
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: playdemo <demoname>\n" );
+		Con_Printf( S_USAGE "playdemo <demoname>\n" );
 		return;
 	}
 
@@ -1250,7 +1250,7 @@ void CL_PlayDemo_f( void )
 
 	if( cls.demorecording )
 	{
-		Msg( "Can't playback during demo record.\n");
+		Con_Printf( "Can't playback during demo record.\n");
 		return;
 	}
 
@@ -1365,7 +1365,7 @@ void CL_TimeDemo_f( void )
 {
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: timedemo <demoname>\n" );
+		Con_Printf( S_USAGE "timedemo <demoname>\n" );
 		return;
 	}
 

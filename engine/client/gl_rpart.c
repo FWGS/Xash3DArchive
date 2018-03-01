@@ -1614,11 +1614,11 @@ void CL_ReadPointFile_f( void )
 
 	if( !afile )
 	{
-		MsgDev( D_ERROR, "couldn't open %s\n", filename );
+		Con_Printf( S_ERROR "couldn't open %s\n", filename );
 		return;
 	}
 	
-	Msg( "Reading %s...\n", filename );
+	Con_Printf( "Reading %s...\n", filename );
 
 	count = 0;
 	pfile = afile;
@@ -1641,7 +1641,7 @@ void CL_ReadPointFile_f( void )
 		
 		if( !cl_free_particles )
 		{
-			MsgDev( D_ERROR, "CL_ReadPointFile: not enough free particles!\n" );
+			Con_Printf( S_ERROR "not enough free particles!\n" );
 			break;
 		}
 
@@ -1662,6 +1662,6 @@ void CL_ReadPointFile_f( void )
 
 	Mem_Free( afile );
 
-	if( count ) Msg( "%i points read\n", count );
-	else Msg( "map %s has no leaks!\n", clgame.mapname );
+	if( count ) Con_Printf( "%i points read\n", count );
+	else Con_Printf( "map %s has no leaks!\n", clgame.mapname );
 }

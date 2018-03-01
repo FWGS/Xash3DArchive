@@ -47,8 +47,9 @@ extern byte	*r_temppool;
 
 #define RP_NONVIEWERREF	(RP_ENVVIEW)
 #define R_ModelOpaque( rm )	( rm == kRenderNormal )
+#define R_StaticEntity( ent )	( VectorIsNull( ent->origin ) && VectorIsNull( ent->angles ))
 #define RP_LOCALCLIENT( e )	((e) != NULL && (e)->index == ( cl.playernum + 1 ) && e->player )
-#define RP_NORMALPASS()	((RI.params & RP_NONVIEWERREF) == 0 )
+#define RP_NORMALPASS()	( FBitSet( RI.params, RP_NONVIEWERREF ) == 0 )
 
 #define TF_SKY		(TF_SKYSIDE|TF_NOMIPMAP)
 #define TF_FONT		(TF_NOMIPMAP|TF_CLAMP)
@@ -431,7 +432,7 @@ void R_AddSkyBoxSurface( msurface_t *fa );
 void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
 void R_DrawClouds( void );
-void EmitWaterPolys( glpoly_t *polys, qboolean noCull, qboolean direction );
+void EmitWaterPolys( glpoly_t *polys, qboolean reverse );
 
 //
 // gl_vidnt.c
@@ -502,34 +503,25 @@ enum
 	GL_WGL_EXTENSIONS,
 	GL_WGL_SWAPCONTROL,		
 	GL_WGL_PROCADDRESS,
-	GL_ARB_VERTEX_BUFFER_OBJECT_EXT,
-	GL_ARB_VERTEX_ARRAY_OBJECT_EXT,
 	GL_ARB_MULTITEXTURE,
 	GL_TEXTURE_CUBEMAP_EXT,
 	GL_ANISOTROPY_EXT,
 	GL_TEXTURE_LOD_BIAS,
-	GL_OCCLUSION_QUERIES_EXT,
 	GL_TEXTURE_COMPRESSION_EXT,
 	GL_SHADER_GLSL100_EXT,
-	GL_DRAW_RANGEELEMENTS_EXT,
 	GL_TEXTURE_2D_RECT_EXT,
 	GL_TEXTURE_ARRAY_EXT,
 	GL_TEXTURE_3D_EXT,
 	GL_CLAMPTOEDGE_EXT,
-	GL_SHADER_OBJECTS_EXT,
 	GL_ARB_TEXTURE_NPOT_EXT,
 	GL_CLAMP_TEXBORDER_EXT,
 	GL_ARB_TEXTURE_FLOAT_EXT,
-	GL_ARB_HALF_FLOAT_EXT,
 	GL_ARB_DEPTH_FLOAT_EXT,
 	GL_ARB_SEAMLESS_CUBEMAP,
-	GL_FRAMEBUFFER_OBJECT,
-	GL_DRAW_BUFFERS_EXT,
 	GL_EXT_GPU_SHADER4,		// shaders only
 	GL_ARB_TEXTURE_RG,
 	GL_DEPTH_TEXTURE,
 	GL_DEBUG_OUTPUT,
-	GL_SHADOW_EXT,
 	GL_EXTCOUNT,		// must be last
 };
 
@@ -537,9 +529,7 @@ enum
 {
 	GL_KEEP_UNIT = -1,
 	GL_TEXTURE0 = 0,
-	GL_TEXTURE1,
-	GL_TEXTURE2,
-	GL_TEXTURE3,		// g-cont. 4 units should be enough
+	GL_TEXTURE1,		// used in some cases
 	MAX_TEXTURE_UNITS = 32	// can't acess to all over units without GLSL or cg
 };
 
@@ -572,7 +562,6 @@ typedef struct
 	GLint		max_2d_texture_layers;
 	GLint		max_3d_texture_size;
 	GLint		max_cubemap_size;
-	GLint		max_draw_buffers;
 
 	GLfloat		max_texture_anisotropy;
 	GLfloat		max_texture_lod_bias;
