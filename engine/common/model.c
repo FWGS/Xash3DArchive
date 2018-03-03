@@ -333,6 +333,9 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	}
 	else
 	{
+		if( world.loading )
+			SetBits( mod->flags, MODEL_WORLD ); // mark worldmodel
+
 		if( host.type == HOST_DEDICATED )
 		{
 			if( svgame.physFuncs.Mod_ProcessUserData != NULL )

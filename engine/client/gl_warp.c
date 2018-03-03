@@ -781,14 +781,14 @@ EmitWaterPolys
 Does a water warp on the pre-fragmented glpoly_t chain
 =============
 */
-void EmitWaterPolys( glpoly_t *polys, qboolean reverse )
+void EmitWaterPolys( msurface_t *warp, qboolean reverse )
 {
-	glpoly_t	*p = polys;
+	glpoly_t	*p = warp->polys;
 	float	*v, nv, waveHeight;
 	float	s, t, os, ot;
 	int	i;
 
-	if( !polys ) return;
+	if( !warp->polys ) return;
 
 	// set the current waveheight
 	if( p->verts[0][2] >= RI.vieworg[2] )
@@ -798,13 +798,17 @@ void EmitWaterPolys( glpoly_t *polys, qboolean reverse )
 	// reset fog color for nonlightmapped water
 	GL_ResetFogColor();
 
-	for( p = polys; p; p = p->next )
+	if( FBitSet( warp->flags, SURF_DRAWTURB_QUADS ))
+		pglBegin( GL_QUADS );
+
+	for( p = warp->polys; p; p = p->next )
 	{
 		if( reverse )
 			v = p->verts[0] + ( p->numverts - 1 ) * VERTEXSIZE;
 		else v = p->verts[0];
 
-		pglBegin( GL_POLYGON );
+		if( !FBitSet( warp->flags, SURF_DRAWTURB_QUADS ))
+			pglBegin( GL_POLYGON );
 
 		for( i = 0; i < p->numverts; i++ )
 		{
@@ -832,8 +836,13 @@ void EmitWaterPolys( glpoly_t *polys, qboolean reverse )
 				v -= VERTEXSIZE;
 			else v += VERTEXSIZE;
 		}
-		pglEnd();
+
+		if( !FBitSet( warp->flags, SURF_DRAWTURB_QUADS ))
+			pglEnd();
 	}
+
+	if( FBitSet( warp->flags, SURF_DRAWTURB_QUADS ))
+		pglEnd();
 
 	GL_SetupFogColorForSurfaces();
 }

@@ -476,7 +476,7 @@ long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo )
 			CL_Crashed(); // tell client about crash
 		else host.status = HOST_CRASHED;
 
-		Msg( "unhandled exception: %p at address %p\n", pInfo->ExceptionRecord->ExceptionAddress, pInfo->ExceptionRecord->ExceptionCode );
+		Con_Printf( "unhandled exception: %p at address %p\n", pInfo->ExceptionRecord->ExceptionAddress, pInfo->ExceptionRecord->ExceptionCode );
 #ifdef NDEBUG
 		// no reason to call debugger in release build - just exit
 		Sys_Quit();
@@ -523,7 +523,7 @@ void Sys_Error( const char *error, ... )
 		if( host.hWnd ) ShowWindow( host.hWnd, SW_HIDE );
 	}
 
-	if( host.developer > 0 )
+	if( host_developer.value )
 	{
 		Con_ShowConsole( true );
 		Con_DisableInput();	// disable input line for dedicated server
@@ -622,42 +622,24 @@ void Sys_Print( const char *pMsg )
 
 /*
 ================
-Msg
-
-formatted message
-================
-*/
-void Msg( const char *pMsg, ... )
-{
-	static char	text[MAX_PRINT_MSG];
-	va_list		argptr;	
-
-	va_start( argptr, pMsg );
-	Q_vsnprintf( text, sizeof( text ) - 1, pMsg, argptr );
-	va_end( argptr );
-
-	Sys_Print( text );
-}
-
-/*
-================
 MsgDev
 
 formatted developer message
 ================
 */
-void MsgDev( int level, const char *pMsg, ... )
+void MsgDev( int type, const char *pMsg, ... )
 {
 	static char	text[MAX_PRINT_MSG];
 	va_list		argptr;
 
-	if( host.developer < level ) return;
+	if( type >= D_REPORT && host_developer.value < DEV_EXTENDED )
+		return;
 
 	va_start( argptr, pMsg );
 	Q_vsnprintf( text, sizeof( text ) - 1, pMsg, argptr );
 	va_end( argptr );
 
-	switch( level )
+	switch( type )
 	{
 	case D_WARN:
 		Sys_Print( va( "^3Warning:^7 %s", text ));

@@ -291,21 +291,21 @@ void MSG_WriteCmdExt( sizebuf_t *sb, int cmd, netsrc_t type, const char *name )
 	if( name != NULL )
 	{
 		// get custom name
-		Msg( "^1sv^7 write: %s\n", name );
+		Con_Printf( "^1sv^7 write: %s\n", name );
 	}
 	else if( type == NS_SERVER )
 	{
 		if( cmd >= 0 && cmd <= svc_lastmsg )
 		{
 			// get engine message name
-			Msg( "^1sv^7 write: %s\n", svc_strings[cmd] );
+			Con_Printf( "^1sv^7 write: %s\n", svc_strings[cmd] );
 		}
 	}
 	else if( type == NS_CLIENT )
 	{
 		if( cmd >= 0 && cmd <= clc_lastmsg )
 		{
-			Msg( "^1cl^7 write: %s\n", clc_strings[cmd] );
+			Con_Printf( "^1cl^7 write: %s\n", clc_strings[cmd] );
 		}
 	}
 #endif
@@ -536,11 +536,11 @@ int MSG_ReadCmd( sizebuf_t *sb, netsrc_t type )
 #ifdef DEBUG_NET_MESSAGES_READ
 	if( type == NS_SERVER )
 	{
-		Msg( "^1cl^7 read: %s\n", CL_MsgInfo( cmd ));
+		Con_Printf( "^1cl^7 read: %s\n", CL_MsgInfo( cmd ));
 	}
 	else if( cmd >= 0 && cmd <= clc_lastmsg )
 	{
-		Msg( "^1sv^7 read: %s\n", clc_strings[cmd] );
+		Con_Printf( "^1sv^7 read: %s\n", clc_strings[cmd] );
 	}
 #endif
 	return cmd;

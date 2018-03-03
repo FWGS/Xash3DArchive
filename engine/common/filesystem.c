@@ -366,17 +366,17 @@ void FS_Path_f( void )
 {
 	searchpath_t	*s;
 
-	Msg( "Current search path:\n" );
+	Con_Printf( "Current search path:\n" );
 
 	for( s = fs_searchpaths; s; s = s->next )
 	{
-		if( s->pack ) Msg( "%s (%i files)", s->pack->filename, s->pack->numfiles );
-		else if( s->wad ) Msg( "%s (%i files)", s->wad->filename, s->wad->numlumps );
-		else Msg( "%s", s->filename );
+		if( s->pack ) Con_Printf( "%s (%i files)", s->pack->filename, s->pack->numfiles );
+		else if( s->wad ) Con_Printf( "%s (%i files)", s->wad->filename, s->wad->numlumps );
+		else Con_Printf( "%s", s->filename );
 
 		if( FBitSet( s->flags, FS_GAMEDIR_PATH ))
-			Msg( " ^2gamedir^7\n" );
-		else Msg( "\n" );
+			Con_Printf( " ^2gamedir^7\n" );
+		else Con_Printf( "\n" );
 	}
 }
 
@@ -1043,7 +1043,7 @@ void FS_ConvertGameInfo( const char *gamedir, const char *gameinfo_path, const c
 
 	if( FS_ParseLiblistGam( liblist_path, gamedir, &GameInfo ))
 	{
-		MsgDev( D_INFO, "Convert %s to %s\n", liblist_path, gameinfo_path );
+		Con_DPrintf( "Convert %s to %s\n", liblist_path, gameinfo_path );
 		FS_WriteGameInfo( gameinfo_path, &GameInfo );
 	}
 }
@@ -1280,7 +1280,7 @@ static qboolean FS_ParseGameInfo( const char *gamedir, gameinfo_t *GameInfo )
 		if( FS_ReadGameInfo( default_gameinfo_path, gamedir, &tmpGameInfo ))
 		{
 			// now we have copy of game info from basedir but needs to change gamedir
-			MsgDev( D_INFO, "Convert %s to %s\n", default_gameinfo_path, gameinfo_path );
+			Con_DPrintf( "Convert %s to %s\n", default_gameinfo_path, gameinfo_path );
 			Q_strncpy( tmpGameInfo.gamedir, gamedir, sizeof( tmpGameInfo.gamedir ));
 			FS_WriteGameInfo( gameinfo_path, &tmpGameInfo );
 		}
@@ -2544,13 +2544,8 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 	stringlist_t	dirlist;
 	char		*basepath;
 
-	for( i = 0; pattern[i] == '.' || pattern[i] == ':' || pattern[i] == '/' || pattern[i] == '\\'; i++ );
-
-	if( i > 0 )
-	{
-		MsgDev( D_INFO, "FS_Search: don't use punctuation at the beginning of a search pattern!\n");
-		return NULL;
-	}
+	if( pattern[0] == '.' || pattern[0] == ':' || pattern[0] == '/' || pattern[0] == '\\' )
+		return NULL; // punctuation issues
 
 	stringlistinit( &resultlist );
 	stringlistinit( &dirlist );

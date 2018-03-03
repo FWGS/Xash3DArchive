@@ -122,7 +122,7 @@ void SCR_NetSpeeds( void )
 	int		cur_clfps = 0;
 	rgba_t		color;
 
-	if( !host.developer )
+	if( !host.allow_console )
 		return;
 
 	if( !net_speeds->value || cls.demoplayback || cls.state != ca_active )
@@ -177,7 +177,7 @@ void SCR_RSpeeds( void )
 {
 	char	msg[MAX_SYSPATH];
 
-	if( !host.developer )
+	if( !host.allow_console )
 		return;
 
 	if( R_SpeedsMessage( msg, sizeof( msg )))
@@ -717,7 +717,7 @@ void SCR_Init( void )
 	if( !UI_LoadProgs( ))
 	{
 		Con_Printf( S_ERROR "can't initialize gameui.dll\n" ); // there is non fatal for us
-		if( !host.developer ) host.developer = 1; // we need console, because menu is missing
+		host.allow_console = true; // we need console, because menu is missing
 	}
 
 	SCR_LoadCreditsFont ();
@@ -727,7 +727,7 @@ void SCR_Init( void )
 	CL_InitNetgraph();
 	SCR_VidInit();
 
-	if( host.developer && Sys_CheckParm( "-toconsole" ))
+	if( host.allow_console && Sys_CheckParm( "-toconsole" ))
 		Cbuf_AddText( "toggleconsole\n" );
 	else UI_SetActiveMenu( true );
 

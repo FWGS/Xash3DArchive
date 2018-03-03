@@ -22,6 +22,10 @@ GNU General Public License for more details.
 #define S_ERROR			"^1Error:^7 "
 #define S_USAGE			"Usage: "
 
+#define S_OPENGL_NOTE		"^2OpenGL Note:^7 "
+#define S_OPENGL_WARN		"^3OpenGL Warning:^7 "
+#define S_OPENGL_ERROR		"^3OpenGL Error:^7 "
+
 // end game final default message
 #define DEFAULT_ENDGAME_MESSAGE	"The End"
 

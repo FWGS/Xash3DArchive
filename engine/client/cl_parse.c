@@ -211,7 +211,7 @@ void CL_WriteMessageHistory( void )
 
 	failcommand = &cls_message_debug.oldcmd[thecmd];
 	Con_Printf( "BAD:  %3i:%s\n", MSG_GetNumBytesRead( msg ) - 1, CL_MsgInfo( failcommand->command ));
-	if( host.developer >= 2 )
+	if( host_developer.value >= DEV_EXTENDED )
 		CL_WriteErrorMessage( MSG_GetNumBytesRead( msg ) - 1, msg );
 	cls_message_debug.parsing = false;
 }
@@ -777,6 +777,9 @@ void CL_ParseServerData( sizebuf_t *msg )
 	// wipe the client_t struct
 	CL_ClearState ();
 
+	// allow console in multiplayer games
+	if( maxclients > 1 ) host.allow_console = true;
+
 	// fill the client struct
 	cl.servercount = servercount;
 	cl.checksum = checksum;
@@ -807,9 +810,6 @@ void CL_ParseServerData( sizebuf_t *msg )
 		host.player_mins[i/3][i%3] = MSG_ReadChar( msg );
 		host.player_maxs[i/3][i%3] = MSG_ReadChar( msg );
 	}
-
-	if( cl.maxclients > 1 && host.developer < 1 )
-		host.developer++;
 
 	// multiplayer game?
 	if( cl.maxclients != 1 )	
@@ -858,7 +858,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	// begin fetching modellist
 	MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
-#if 0
+#if 1
 	MSG_WriteString( &cls.netchan.message, va( "modellist %i\n", cl.servercount ));
 #else
 	MSG_WriteString( &cls.netchan.message, va( "sendres %i\n", cl.servercount ));
@@ -1516,6 +1516,9 @@ void CL_RegisterResources ( sizebuf_t *msg )
 
 			CL_SetupOverviewParams();
 
+			if( clgame.drawFuncs.R_NewMap != NULL )
+				clgame.drawFuncs.R_NewMap();
+
 			// release unused SpriteTextures
 			for( i = 1; i < MAX_IMAGES; i++ )
 			{
@@ -1526,7 +1529,7 @@ void CL_RegisterResources ( sizebuf_t *msg )
 
 			Mod_FreeUnused ();
 
-			if( host.developer <= 2 )
+			if( host_developer.value <= DEV_NONE )
 				Con_ClearNotify(); // clear any lines of console text
 
 			// done with all resources, issue prespawn command.
@@ -1673,7 +1676,7 @@ void CL_BatchResourceRequest( void )
 
 		if( cls.state == ca_active && !cl_download_ingame.value )
 		{
-			Msg( "skipping in game download of %s\n", p->szFileName );
+			Con_Printf( "skipping in game download of %s\n", p->szFileName );
 			CL_MoveToOnHandList( p );
 			continue;
 		}

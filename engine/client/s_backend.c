@@ -485,16 +485,6 @@ void SNDDMA_Shutdown( void )
 
 /*
 ===========
-S_PrintDeviceName
-===========
-*/
-void S_PrintDeviceName( void )
-{
-	Msg( "Audio: DirectSound\n" );
-}
-
-/*
-===========
 S_Activate
 
 Called when the main window gains or loses focus.

@@ -31,7 +31,7 @@ void Log_Open( void )
 
 	if( !mp_logfile.value )
 	{
-		Msg( "Server logging data to console.\n" );
+		Con_Printf( "Server logging data to console.\n" );
 		return;
 	}
 
@@ -56,7 +56,7 @@ void Log_Open( void )
 		fp = FS_Open( szTestFile, "w", true );
 		if( fp )
 		{
-			Msg( "Server logging data to file %s\n", szTestFile );
+			Con_Printf( "Server logging data to file %s\n", szTestFile );
 		}
 		else
 		{
@@ -67,7 +67,7 @@ void Log_Open( void )
 
 	if( i == 1000 )
 	{
-		Msg( "Unable to open logfiles under %s\nLogging disabled\n", szFileBase );
+		Con_Printf( "Unable to open logfiles under %s\nLogging disabled\n", szFileBase );
 		svs.log.active = false;
 		return;
 	}
@@ -124,7 +124,7 @@ void Log_Printf( const char *fmt, ... )
 	{
 		// echo to server console
 		if( mp_logecho.value ) 
-			Msg( "%s", string );
+			Con_Printf( "%s", string );
 
 		// echo to log file
 		if( svs.log.file && mp_logfile.value )

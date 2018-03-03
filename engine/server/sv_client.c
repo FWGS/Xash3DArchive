@@ -365,7 +365,6 @@ gotnewcl:
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
 	newcl->userid = g_userid++;	// create unique userid
-	newcl->authentication_method = 2;
 
 	// initailize netchan here because SV_DropClient will clear network buffer
 	Netchan_Setup( NS_SERVER, &newcl->netchan, from, qport, newcl, SV_GetFragmentSize );
@@ -677,27 +676,18 @@ const char *SV_GetClientIDString( sv_client_t *cl )
 		return result;
 	}
 
-	if( cl->authentication_method == 0 )
+	if( NET_IsLocalAddress( cl->netchan.remote_address ))
 	{
-		// probably some old compatibility code.
-		Q_snprintf( result, sizeof( result ), "%010lu", cl->WonID );
+		Q_strncpy( result, "ID_LOOPBACK", sizeof( result ));
 	}
-	else if( cl->authentication_method == 2 )
+	else if( sv_lan.value )
 	{
-		if( NET_IsLocalAddress( cl->netchan.remote_address ))
-		{
-			Q_strncpy( result, "VALVE_ID_LOOPBACK", sizeof( result ));
-		}
-		else if( cl->WonID == 0 )
-		{
-			Q_strncpy( result, "VALVE_ID_PENDING", sizeof( result ));
-		}
-		else
-		{
-			Q_snprintf( result, sizeof( result ), "VALVE_%010lu", cl->WonID );
-		}
+		Q_strncpy( result, "ID_LAN", sizeof( result ));
 	}
-	else Q_strncpy( result, "UNKNOWN", sizeof( result ));
+	else
+	{
+		Q_snprintf( result, sizeof( result ), "ID_%s", MD5_Print( cl->hashedcdkey ));
+	}
 
 	return result;
 }
@@ -710,7 +700,7 @@ SV_Ack
 */
 void SV_Ack( netadr_t from )
 {
-	Msg( "ping %s\n", NET_AdrToString( from ));
+	Con_Printf( "ping %s\n", NET_AdrToString( from ));
 }
 
 /*
@@ -1401,7 +1391,7 @@ void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl )
 	int	i;
 
 	// Only send this message to developer console, or multiplayer clients.
-	if(( host.developer ) || ( svs.maxclients > 1 ))
+	if(( host_developer.value ) || ( svs.maxclients > 1 ))
 	{
 		MSG_BeginServerCmd( msg, svc_print );
 		Q_snprintf( message, sizeof( message ), "\n^3BUILD %d SERVER (%i CRC)\nServer #%i\n", Q_buildnum(), sv.progsCRC, svs.spawncount );
@@ -2571,4 +2561,4 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 			return;
 		}
 	}
-} 
+ }

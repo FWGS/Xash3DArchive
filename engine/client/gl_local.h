@@ -432,7 +432,7 @@ void R_AddSkyBoxSurface( msurface_t *fa );
 void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
 void R_DrawClouds( void );
-void EmitWaterPolys( glpoly_t *polys, qboolean reverse );
+void EmitWaterPolys( msurface_t *warp, qboolean reverse );
 
 //
 // gl_vidnt.c
@@ -643,7 +643,6 @@ extern convar_t	*r_lighting_modulate;
 extern convar_t	*r_lighting_ambient;
 extern convar_t	*r_studio_lambert;
 extern convar_t	*r_detailtextures;
-extern convar_t	*r_faceplanecull;
 extern convar_t	*r_drawentities;
 extern convar_t	*r_adjust_fov;
 extern convar_t	*r_decals;

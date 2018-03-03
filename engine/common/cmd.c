@@ -348,9 +348,9 @@ void Cmd_Alias_f( void )
 
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "Current alias commands:\n" );
+		Con_Printf( "Current alias commands:\n" );
 		for( a = cmd_alias; a; a = a->next )
-			Msg( "^2%s^7 : ^3%s^7\n", a->name, a->value );
+			Con_Printf( "^2%s^7 : ^3%s^7\n", a->name, a->value );
 		return;
 	}
 
@@ -358,7 +358,7 @@ void Cmd_Alias_f( void )
 
 	if( Q_strlen( s ) >= MAX_ALIAS_NAME )
 	{
-		Msg( "Alias name is too long\n" );
+		Con_Printf( "Alias name is too long\n" );
 		return;
 	}
 
@@ -418,7 +418,7 @@ static void Cmd_UnAlias_f ( void )
 
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "Usage: unalias alias1 [alias2 ...]\n" );
+		Con_Printf( S_USAGE "unalias alias1 [alias2 ...]\n" );
 		return;
 	}
 
@@ -440,7 +440,7 @@ static void Cmd_UnAlias_f ( void )
 			}
 		}
 
-		if( !a ) Msg( "unalias: %s alias not found\n", s );
+		if( !a ) Con_Printf( "%s not found\n", s );
 	}
 }
 
@@ -569,14 +569,14 @@ void Cmd_AddCommand( const char *cmd_name, xcommand_t function, const char *cmd_
 	// fail if the command is a variable name
 	if( Cvar_FindVar( cmd_name ))
 	{
-		MsgDev( D_INFO, "Cmd_AddCommand: %s already defined as a var\n", cmd_name );
+		Con_Printf( S_ERROR "Cmd_AddCommand: %s already defined as a var\n", cmd_name );
 		return;
 	}
 	
 	// fail if the command already exists
 	if( Cmd_Exists( cmd_name ))
 	{
-		MsgDev( D_INFO, "Cmd_AddCommand: %s already defined\n", cmd_name );
+		Con_Printf( S_ERROR "Cmd_AddCommand: %s already defined\n", cmd_name );
 		return;
 	}
 
@@ -821,14 +821,14 @@ void Cmd_If_f( void )
 	// usage
 	if( cmd_argc == 1 )
 	{
-		Msg( "Usage: if <op1> [ <operator> <op2> ]\n");
-		Msg( ":<action1>\n" );
-		Msg( ":<action2>\n" );
-		Msg( "else\n" );
-		Msg( ":<action3>\n" );
-		Msg( "operands are string or float values\n" );
-		Msg( "and substituted cvars like '$cl_lw'\n" );
-		Msg( "operator is '='', '==', '>', '<', '>=', '<=' or '!='\n" );
+		Con_Printf( S_USAGE "if <op1> [ <operator> <op2> ]\n");
+		Con_Printf( ":<action1>\n" );
+		Con_Printf( ":<action2>\n" );
+		Con_Printf( "else\n" );
+		Con_Printf( ":<action3>\n" );
+		Con_Printf( "operands are string or float values\n" );
+		Con_Printf( "and substituted cvars like '$cl_lw'\n" );
+		Con_Printf( "operator is '='', '==', '>', '<', '>=', '<=' or '!='\n" );
 		return;
 	}
 
@@ -986,7 +986,7 @@ void Cmd_ExecuteString( char *text )
 	else if( text[0] != '@' && host.type == HOST_NORMAL )
 	{
 		// commands with leading '@' are hidden system commands
-		MsgDev( D_INFO, "Unknown command \"%s\"\n", text );
+		Con_Printf( S_WARN "Unknown command \"%s\"\n", text );
 	}
 }
 
@@ -1013,7 +1013,7 @@ void Cmd_ForwardToServer( void )
 	if( cls.state < ca_connected || cls.state > ca_active )
 	{
 		if( Q_stricmp( Cmd_Argv( 0 ), "setinfo" ))
-			MsgDev( D_INFO, "Can't \"%s\", not connected\n", Cmd_Argv( 0 ));
+			Con_Printf( "Can't \"%s\", not connected\n", Cmd_Argv( 0 ));
 		return; // not connected
 	}
 
@@ -1055,11 +1055,11 @@ void Cmd_List_f( void )
 		if( match && !Q_stricmpext( match, cmd->name ))
 			continue;
 
-		Msg( " %-*s ^3%s^7\n", 32, cmd->name, cmd->desc );
+		Con_Printf( " %-*s ^3%s^7\n", 32, cmd->name, cmd->desc );
 		i++;
 	}
 
-	Msg( "%i commands\n", i );
+	Con_Printf( "%i commands\n", i );
 }
 
 /*
@@ -1076,22 +1076,13 @@ void Cmd_Unlink( int group )
 	int	count = 0;
 
 	if( Cvar_VariableInteger( "host_gameloaded" ) && FBitSet( group, CMD_SERVERDLL ))
-	{
-		MsgDev( D_INFO, "can't unlink commands while server is loaded\n" );
 		return;
-	}
 
 	if( Cvar_VariableInteger( "host_clientloaded" ) && FBitSet( group, CMD_CLIENTDLL ))
-	{
-		MsgDev( D_INFO, "can't unlink commands while client is loaded\n" );
 		return;
-	}
 
 	if( Cvar_VariableInteger( "host_gameuiloaded" ) && FBitSet( group, CMD_GAMEUIDLL ))
-	{
-		MsgDev( D_INFO, "can't unlink commands while GameUI is loaded\n" );
 		return;
-	}
 
 	prev = &cmd_functions;
 
@@ -1115,6 +1106,8 @@ void Cmd_Unlink( int group )
 		Mem_Free( cmd );
 		count++;
 	}
+
+	Con_DPrintf( "unlink %i commands\n", count );
 }
 
 /*

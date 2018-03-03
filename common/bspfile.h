@@ -48,7 +48,7 @@ BRUSH MODELS
 
 #define SURF_PLANEBACK		BIT( 1 )		// plane should be negated
 #define SURF_DRAWSKY		BIT( 2 )		// sky surface
-#define SURF_WATERCSG		BIT( 3 )		// culled by csg (was SURF_DRAWSPRITE)
+#define SURF_DRAWTURB_QUADS		BIT( 3 )		// all subidivided polygons are quads 
 #define SURF_DRAWTURB		BIT( 4 )		// warp surface
 #define SURF_DRAWTILED		BIT( 5 )		// face without lighmap
 #define SURF_CONVEYOR		BIT( 6 )		// scrolled texture (was SURF_DRAWBACKGROUND)

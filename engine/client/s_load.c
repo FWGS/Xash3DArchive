@@ -52,17 +52,17 @@ void S_SoundList_f( void )
 		{
 			totalSize += sc->size;
 
-			if( sc->loopStart >= 0 ) Msg( "L" );
-			else Msg( " " );
-			Msg( " (%2db) %s : sound/%s\n", sc->width * 8, Q_memprint( sc->size ), sfx->name );
+			if( sc->loopStart >= 0 ) Con_Printf( "L" );
+			else Con_Printf( " " );
+			Con_Printf( " (%2db) %s : sound/%s\n", sc->width * 8, Q_memprint( sc->size ), sfx->name );
 			totalSfx++;
 		}
 	}
 
-	Msg( "-------------------------------------------\n" );
-	Msg( "%i total sounds\n", totalSfx );
-	Msg( "%s total memory\n", Q_memprint( totalSize ));
-	Msg( "\n" );
+	Con_Printf( "-------------------------------------------\n" );
+	Con_Printf( "%i total sounds\n", totalSfx );
+	Con_Printf( "%s total memory\n", Q_memprint( totalSize ));
+	Con_Printf( "\n" );
 }
 
 // return true if char 'c' is one of 1st 2 characters in pch

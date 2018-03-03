@@ -147,7 +147,7 @@ int CL_IsDevOverviewMode( void )
 {
 	if( dev_overview.value > 0.0f )
 	{
-		if( host.developer > 0 || cls.spectator )
+		if( host_developer.value || cls.spectator )
 			return (int)dev_overview.value;
 	}
 
@@ -176,7 +176,7 @@ void CL_CheckClientState( void )
 		Cvar_SetValue( "scr_loading", 0.0f );	// reset progress bar	
 		Netchan_ReportFlow( &cls.netchan );
 
-		Con_Printf( "client connected at %.2f sec\n", Sys_DoubleTime() - cls.timestart ); 
+		Con_DPrintf( "client connected at %.2f sec\n", Sys_DoubleTime() - cls.timestart ); 
 		if(( cls.demoplayback || cls.disable_servercount != cl.servercount ) && cl.video_prepped )
 			SCR_EndLoadingPlaque(); // get rid of loading plaque
 		cl.first_frame = true;
@@ -199,7 +199,7 @@ void CL_SignonReply( void )
 	case 1:
 		// g-cont. my favorite message :-)
 		CL_ServerCommand( true, "begin" );
-		if( host.developer >= D_REPORT )
+		if( host_developer.value >= DEV_EXTENDED )
 			Mem_PrintStats();
 		break;
 	case 2:
@@ -1194,9 +1194,7 @@ void CL_ClearState( void )
 
 	Cvar_SetValue( "scr_download", 0.0f );
 	Cvar_SetValue( "scr_loading", 0.0f );
-
-	// restore real developer level
-	host.developer = host.old_developer;
+	host.allow_console = host.allow_console_init;
 }
 
 /*
@@ -1292,8 +1290,8 @@ void CL_Disconnect( void )
 	cls.state = ca_disconnected;
 	cls.signon = 0;
 
-	// back to menu if developer mode set to "player" or "mapper"
-	if( host.developer > 2 || CL_IsInMenu( ))
+	// back to menu in non-developer mode
+	if( host_developer.value || CL_IsInMenu( ))
 		return;
 
 	UI_SetActiveMenu( true );
@@ -1632,7 +1630,7 @@ void CL_PrepSound( void )
 	{
 		cl.sound_index[i+1] = S_RegisterSound( cl.sound_precache[i+1] );
 		Cvar_SetValue( "scr_loading", scr_loading->value + 5.0f / sndcount );
-		if( cl_allow_levelshots->value || host.developer > 3 || cl.background )
+		if( cl_allow_levelshots->value || host_developer.value || cl.background )
 			SCR_UpdateScreen();
 	}
 
@@ -1669,7 +1667,7 @@ void CL_PrepVideo( void )
 	{
 		Mod_LoadModel( cl.models[i+1], false );
 		Cvar_SetValue( "scr_loading", scr_loading->value + 75.0f / cl.nummodels );
-		if( cl_allow_levelshots->value || host.developer > 3 || cl.background )
+		if( cl_allow_levelshots->value || host_developer.value || cl.background )
 			SCR_UpdateScreen();
 	}
 
@@ -1685,6 +1683,9 @@ void CL_PrepVideo( void )
 
 	CL_SetupOverviewParams(); // set overview bounds
 
+	if( clgame.drawFuncs.R_NewMap != NULL )
+		clgame.drawFuncs.R_NewMap();
+
 	// release unused SpriteTextures
 	for( i = 1; i < MAX_IMAGES; i++ )
 	{
@@ -1697,7 +1698,7 @@ void CL_PrepVideo( void )
 
 	Cvar_SetValue( "scr_loading", 100.0f );	// all done
 
-	if( host.developer <= 2 )
+	if( !host_developer.value )
 		Con_ClearNotify(); // clear any lines of console text
 
 	cl.video_prepped = true;
@@ -1981,7 +1982,7 @@ void CL_ReadPackets( void )
 	CL_ReadNetMessage();
 #if 0
 	// keep cheat cvars are unchanged
-	if( cl.maxclients > 1 && cls.state == ca_active && host.developer <= 1 )
+	if( cl.maxclients > 1 && cls.state == ca_active && !host_developer.value )
 		Cvar_SetCheatState();
 #endif
 	// singleplayer never has connection timeout
@@ -2307,9 +2308,9 @@ void CL_InitLocal( void )
 	cl_smoothtime = Cvar_Get( "cl_smoothtime", "0.1", FCVAR_ARCHIVE, "time to smooth up" );
 	cl_cmdbackup = Cvar_Get( "cl_cmdbackup", "10", FCVAR_ARCHIVE, "how many additional history commands are sent" );
 	cl_cmdrate = Cvar_Get( "cl_cmdrate", "30", FCVAR_ARCHIVE, "Max number of command packets sent to server per second" );
-	cl_draw_particles = Cvar_Get( "r_drawparticles", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render particles" );
-	cl_draw_tracers = Cvar_Get( "r_drawtracers", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render tracers" );
-	cl_draw_beams = Cvar_Get( "r_drawbeams", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render beams" );
+	cl_draw_particles = Cvar_Get( "r_drawparticles", "1", FCVAR_CHEAT, "render particles" );
+	cl_draw_tracers = Cvar_Get( "r_drawtracers", "1", FCVAR_CHEAT, "render tracers" );
+	cl_draw_beams = Cvar_Get( "r_drawbeams", "1", FCVAR_CHEAT, "render beams" );
 	cl_lightstyle_lerping = Cvar_Get( "cl_lightstyle_lerping", "0", FCVAR_ARCHIVE, "enables animated light lerping (perfomance option)" );
 	cl_showerror = Cvar_Get( "cl_showerror", "0", FCVAR_ARCHIVE, "show prediction error" );
 	cl_bmodelinterp = Cvar_Get( "cl_bmodelinterp", "1", FCVAR_ARCHIVE, "enable bmodel interpolation" );

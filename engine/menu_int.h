@@ -36,7 +36,7 @@ typedef struct ui_globalvars_s
 	int		scrHeight;
 
 	int		maxClients;
-	int		developer;
+	int		allow_console;
 	int		demoplayback;
 	int		demorecording;
 	char		demoname[64];	// name of currently playing demo

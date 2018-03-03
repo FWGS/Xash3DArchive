@@ -612,7 +612,7 @@ void SV_WriteEntityPatch( const char *filename )
 		entities = (char *)Z_Malloc( lumplen + 1 );
 		FS_Read( f, entities, lumplen );
 		FS_WriteFile( va( "maps/%s.ent", filename ), entities, lumplen );
-		Msg( "Write 'maps/%s.ent'\n", filename );
+		Con_Printf( "Write 'maps/%s.ent'\n", filename );
 		Mem_Free( entities );
 	}
 
@@ -648,7 +648,7 @@ static char *SV_ReadEntityScript( const char *filename, int *flags )
 	header = (dheader_t *)buf;
 
 	// check all the lumps and some other errors
-	if( !Mod_TestBmodelLumps( bspfilename, buf, (host.developer <= 2) ? true : false ))
+	if( !Mod_TestBmodelLumps( bspfilename, buf, (host_developer.value) ? false : true ))
 	{
 		SetBits( *flags, MAP_INVALID_VERSION );
 		FS_Close( f );
@@ -705,7 +705,7 @@ int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *l
 		string	check_name;
 
 		// g-cont. in-dev mode we can entering on map even without "info_player_start"
-		if( !need_landmark && host.developer >= 2 )
+		if( !need_landmark && host_developer.value )
 		{
 			// not transition 
 			Mem_Free( ents );
@@ -1603,7 +1603,7 @@ pfnRemoveEntity
 free edict private mem, unlink physics etc
 ==============
 */
-void pfnRemoveEntity( edict_t* e )
+void pfnRemoveEntity( edict_t *e )
 {
 	if( !SV_IsValidEdict( e ))
 	{
@@ -2320,7 +2320,7 @@ void pfnServerExecute( void )
 	Cbuf_Execute();
 
 	if( host.sv_cvars_restored > 0 )
-		MsgDev( D_INFO, "server executing ^2config.cfg^7 (%i cvars)\n", host.sv_cvars_restored );
+		Con_DPrintf( "server executing ^2config.cfg^7 (%i cvars)\n", host.sv_cvars_restored );
 
 	host.apply_game_config = false;
 	svgame.config_executed = true;
@@ -2798,13 +2798,25 @@ pfnAlertMessage
 
 =============
 */
-static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
+static void pfnAlertMessage( ALERT_TYPE type, char *szFmt, ... )
 {
 	char	buffer[2048];
 	va_list	args;
 
+	if( type == at_logged && svs.maxclients > 1 )
+	{
+		va_start( args, szFmt );
+		Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
+		va_end( args );
+		Log_Printf( "%s", buffer );
+		return;
+	}
+
+	if( host_developer.value <= DEV_NONE )
+		return;
+
 	// g-cont: some mods have wrong aiconsole messages that crash the engine
-	if( level == at_aiconsole && host.developer < D_REPORT )
+	if( type == at_aiconsole && host_developer.value < DEV_EXTENDED )
 		return;
 
 	va_start( args, szFmt );
@@ -2812,7 +2824,7 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 	va_end( args );
 
 	// check message for pass
-	switch( level )
+	switch( type )
 	{
 	case at_notice:
 		Con_Printf( S_NOTE "%s", buffer );
@@ -2828,9 +2840,6 @@ static void pfnAlertMessage( ALERT_TYPE level, char *szFmt, ... )
 		break;
 	case at_error:
 		Con_Printf( S_ERROR "%s", buffer );
-		break;
-	case at_logged:
-		Log_Printf( "%s", buffer );
 		break;
 	}
 }
@@ -3429,7 +3438,7 @@ int pfnIsMapValid( char *filename )
 	int	flags;
 
 	// determine spawn entity classname
-	if( svs.maxclients == 1 )
+	if( svs.maxclients <= 1 )
 		spawn_entity = GI->sp_entity;
 	else spawn_entity = GI->mp_entity;
 
@@ -3726,7 +3735,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 	}
 
 	// check event for precached
-	if( !sv.event_precache[eventindex][0] )
+	if( !COM_CheckString( sv.event_precache[eventindex] ))
 	{
 		MsgDev( D_ERROR, "SV_PlaybackEvent: event %i was not precached\n", eventindex );
 		return;		
@@ -3785,7 +3794,7 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 
 	if( !FBitSet( flags, FEV_GLOBAL ) && VectorIsNull( pvspoint ))
           {
-		MsgDev( D_ERROR, "%s: not a FEV_GLOBAL event missing origin. Ignored.\n", sv.event_precache[eventindex] );
+		Con_DPrintf( S_ERROR "%s: not a FEV_GLOBAL event missing origin. Ignored.\n", sv.event_precache[eventindex] );
 		return;
 	}
 
@@ -3798,13 +3807,13 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 
 			if( FBitSet( flags, FEV_NOTHOST ))
 			{
-				MsgDev( D_WARN, "%s: specified FEV_NOTHOST when invoker not a client\n", ev_name );
+				Con_DPrintf( S_WARN "%s: specified FEV_NOTHOST when invoker not a client\n", ev_name );
 				ClearBits( flags, FEV_NOTHOST );
 			}
 
 			if( FBitSet( flags, FEV_HOSTONLY ))
 			{
-				MsgDev( D_WARN, "%s: specified FEV_HOSTONLY when invoker not a client\n", ev_name );
+				Con_DPrintf( S_WARN "%s: specified FEV_HOSTONLY when invoker not a client\n", ev_name );
 				ClearBits( flags, FEV_HOSTONLY );
 			}
 		}
@@ -3884,15 +3893,6 @@ void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, 
 					// found an empty slot
 					bestslot = j;
 					break;
-				}
-			}
-
-			if( j >= MAX_EVENT_QUEUE )
-			{
-				if( bestslot != -1 )
-				{
-					Msg( "Unreachable code called!\n" );
-					ei = &cl->events.ei[bestslot];
 				}
 			}
 		}
@@ -4308,8 +4308,6 @@ const char *pfnGetPlayerAuthId( edict_t *e )
 		{
 			if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 				Q_strncat( result, "BOT", sizeof( result ));
-			else if( cl->authentication_method == 0 )
-				Q_snprintf( result, sizeof( result ), "%u", (uint)cl->WonID );
 			else Q_snprintf( result, sizeof( result ), "%s", SV_GetClientIDString( cl ));
 
 			return result;

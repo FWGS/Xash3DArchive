@@ -114,7 +114,7 @@ qboolean SV_SetPlayer( void )
 
 	if( !svs.clients || sv.background )
 	{
-		Msg( "^3no server running.\n" );
+		Con_Printf( "^3no server running.\n" );
 		return false;
           }
 
@@ -134,7 +134,7 @@ qboolean SV_SetPlayer( void )
 		idnum = Q_atoi( s );
 		if( idnum < 0 || idnum >= svs.maxclients )
 		{
-			Msg( "Bad client slot: %i\n", idnum );
+			Con_Printf( "Bad client slot: %i\n", idnum );
 			return false;
 		}
 
@@ -143,7 +143,7 @@ qboolean SV_SetPlayer( void )
 
 		if( !svs.currentPlayer->state )
 		{
-			Msg( "Client %i is not active\n", idnum );
+			Con_Printf( "Client %i is not active\n", idnum );
 			return false;
 		}
 		return true;
@@ -161,7 +161,7 @@ qboolean SV_SetPlayer( void )
 		}
 	}
 
-	Msg( "Userid %s is not on the server\n", s );
+	Con_Printf( "Userid %s is not on the server\n", s );
 	svs.currentPlayer = NULL;
 	svs.currentPlayerNum = 0;
 
@@ -181,7 +181,7 @@ qboolean SV_ValidateMap( const char *pMapName, qboolean check_spawn )
 	int	flags;
 
 	// determine spawn entity classname
-	if( !check_spawn || svs.maxclients == 1 )
+	if( !check_spawn || svs.maxclients <= 1 )
 		spawn_entity = GI->sp_entity;
 	else spawn_entity = GI->mp_entity;
 
@@ -222,7 +222,7 @@ void SV_Map_f( void )
 
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: map <mapname>\n" );
+		Con_Printf( S_USAGE "map <mapname>\n" );
 		return;
 	}
 
@@ -250,7 +250,7 @@ void SV_MapBackground_f( void )
 
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: map_background <mapname>\n" );
+		Con_Printf( S_USAGE "map_background <mapname>\n" );
 		return;
 	}
 
@@ -285,7 +285,7 @@ void SV_NewGame_f( void )
 {
 	if( Cmd_Argc() != 1 )
 	{
-		Msg( "Usage: newgame\n" );
+		Con_Printf( S_USAGE "newgame\n" );
 		return;
 	}
 
@@ -302,7 +302,7 @@ void SV_HazardCourse_f( void )
 {
 	if( Cmd_Argc() != 1 )
 	{
-		Msg( "Usage: hazardcourse\n" );
+		Con_Printf( S_USAGE "hazardcourse\n" );
 		return;
 	}
 
@@ -327,7 +327,7 @@ void SV_Load_f( void )
 
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: load <savename>\n" );
+		Con_Printf( S_USAGE "load <savename>\n" );
 		return;
 	}
 
@@ -361,7 +361,7 @@ void SV_Save_f( void )
 	case 1: name = "new"; break;
 	case 2: name = Cmd_Argv( 1 ); break;
 	default:
-		Msg( "Usage: save <savename>\n" );
+		Con_Printf( S_USAGE "save <savename>\n" );
 		return;
 	}
 
@@ -389,7 +389,7 @@ void SV_DeleteSave_f( void )
 {
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: killsave <name>\n" );
+		Con_Printf( S_USAGE "killsave <name>\n" );
 		return;
 	}
 
@@ -408,7 +408,7 @@ void SV_AutoSave_f( void )
 {
 	if( Cmd_Argc() != 1 )
 	{
-		Msg( "Usage: autosave\n" );
+		Con_Printf( S_USAGE "autosave\n" );
 		return;
 	}
 
@@ -454,7 +454,7 @@ void SV_Kick_f( void )
 {
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: kick <userid> | <name>\n" );
+		Con_Printf( S_USAGE "kick <userid> | <name>\n" );
 		return;
 	}
 
@@ -462,7 +462,7 @@ void SV_Kick_f( void )
 
 	if( NET_IsLocalAddress( svs.currentPlayer->netchan.remote_address ))
 	{
-		Msg( "The local player cannot be kicked!\n" );
+		Con_Printf( "The local player cannot be kicked!\n" );
 		return;
 	}
 
@@ -510,7 +510,7 @@ void SV_EntPatch_f( void )
 		}
 		else
 		{
-			Msg( "Usage: entpatch <mapname>\n" );
+			Con_Printf( S_USAGE "entpatch <mapname>\n" );
 			return;
 		}
 	}
@@ -531,13 +531,13 @@ void SV_Status_f( void )
 
 	if( !svs.clients || sv.background )
 	{
-		Msg( "^3no server running.\n" );
+		Con_Printf( "^3no server running.\n" );
 		return;
 	}
 
-	Msg( "map: %s\n", sv.name );
-	Msg( "num score ping    name            lastmsg address               port \n" );
-	Msg( "--- ----- ------- --------------- ------- --------------------- ------\n" );
+	Con_Printf( "map: %s\n", sv.name );
+	Con_Printf( "num score ping    name            lastmsg address               port \n" );
+	Con_Printf( "--- ----- ------- --------------- ------- --------------------- ------\n" );
 
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
@@ -546,26 +546,26 @@ void SV_Status_f( void )
 
 		if( !cl->state ) continue;
 
-		Msg( "%3i ", i );
-		Msg( "%5i ", (int)cl->edict->v.frags );
+		Con_Printf( "%3i ", i );
+		Con_Printf( "%5i ", (int)cl->edict->v.frags );
 
-		if( cl->state == cs_connected ) Msg( "Connect" );
-		else if( cl->state == cs_zombie ) Msg( "Zombie " );
-		else if( FBitSet( cl->flags, FCL_FAKECLIENT )) Msg( "Bot   " );
-		else Msg( "%7i ", SV_CalcPing( cl ));
+		if( cl->state == cs_connected ) Con_Printf( "Connect" );
+		else if( cl->state == cs_zombie ) Con_Printf( "Zombie " );
+		else if( FBitSet( cl->flags, FCL_FAKECLIENT )) Con_Printf( "Bot   " );
+		else Con_Printf( "%7i ", SV_CalcPing( cl ));
 
-		Msg( "%s", cl->name );
+		Con_Printf( "%s", cl->name );
 		l = 24 - Q_strlen( cl->name );
-		for( j = 0; j < l; j++ ) Msg( " " );
-		Msg( "%g ", ( host.realtime - cl->netchan.last_received ));
+		for( j = 0; j < l; j++ ) Con_Printf( " " );
+		Con_Printf( "%g ", ( host.realtime - cl->netchan.last_received ));
 		s = NET_BaseAdrToString( cl->netchan.remote_address );
-		Msg( "%s", s );
+		Con_Printf( "%s", s );
 		l = 22 - Q_strlen( s );
-		for( j = 0; j < l; j++ ) Msg( " " );
-		Msg( "%5i", cl->netchan.qport );
-		Msg( "\n" );
+		for( j = 0; j < l; j++ ) Con_Printf( " " );
+		Con_Printf( "%5i", cl->netchan.qport );
+		Con_Printf( "\n" );
 	}
-	Msg( "\n" );
+	Con_Printf( "\n" );
 }
 
 /*
@@ -581,7 +581,7 @@ void SV_ConSay_f( void )
 
 	if( !svs.clients || sv.background )
 	{
-		Msg( "^3no server running.\n" );
+		Con_Printf( "^3no server running.\n" );
 		return;
 	}
 
@@ -622,21 +622,21 @@ void SV_ServerInfo_f( void )
 
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "Server info settings:\n" );
+		Con_Printf( "Server info settings:\n" );
 		Info_Print( svs.serverinfo );
-		Msg( "Total %i symbols\n", Q_strlen( svs.serverinfo ));
+		Con_Printf( "Total %i symbols\n", Q_strlen( svs.serverinfo ));
 		return;
 	}
 
 	if( Cmd_Argc() != 3 )
 	{
-		Msg( "Usage: serverinfo [ <key> <value> ]\n");
+		Con_Printf( S_USAGE "serverinfo [ <key> <value> ]\n");
 		return;
 	}
 
 	if( Cmd_Argv(1)[0] == '*' )
 	{
-		Msg( "Star variables cannot be changed.\n" );
+		Con_Printf( "Star variables cannot be changed.\n" );
 		return;
 	}
 
@@ -664,21 +664,21 @@ void SV_LocalInfo_f( void )
 {
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "Local info settings:\n" );
+		Con_Printf( "Local info settings:\n" );
 		Info_Print( svs.localinfo );
-		Msg( "Total %i symbols\n", Q_strlen( svs.localinfo ));
+		Con_Printf( "Total %i symbols\n", Q_strlen( svs.localinfo ));
 		return;
 	}
 
 	if( Cmd_Argc() != 3 )
 	{
-		Msg( "Usage: localinfo [ <key> <value> ]\n");
+		Con_Printf( S_USAGE "localinfo [ <key> <value> ]\n");
 		return;
 	}
 
 	if( Cmd_Argv(1)[0] == '*' )
 	{
-		Msg( "Star variables cannot be changed.\n" );
+		Con_Printf( "Star variables cannot be changed.\n" );
 		return;
 	}
 
@@ -696,13 +696,13 @@ void SV_ClientInfo_f( void )
 {
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: clientinfo <userid>\n" );
+		Con_Printf( S_USAGE "clientinfo <userid>\n" );
 		return;
 	}
 
 	if( !SV_SetPlayer( )) return;
-	Msg( "userinfo\n" );
-	Msg( "--------\n" );
+	Con_Printf( "userinfo\n" );
+	Con_Printf( "--------\n" );
 	Info_Print( svs.currentPlayer->userinfo );
 
 }
@@ -748,14 +748,14 @@ void SV_EdictUsage_f( void )
 
 	if( sv.state != ss_active )
 	{
-		Msg( "^3no server running.\n" );
+		Con_Printf( "^3no server running.\n" );
 		return;
 	}
 
 	active = pfnNumberOfEntities(); 
-	Msg( "%5i edicts is used\n", active );
-	Msg( "%5i edicts is free\n", GI->max_edicts - active );
-	Msg( "%5i total\n", GI->max_edicts );
+	Con_Printf( "%5i edicts is used\n", active );
+	Con_Printf( "%5i edicts is free\n", GI->max_edicts - active );
+	Con_Printf( "%5i total\n", GI->max_edicts );
 }
 
 /*
@@ -771,7 +771,7 @@ void SV_EntityInfo_f( void )
 
 	if( sv.state != ss_active )
 	{
-		Msg( "^3no server running.\n" );
+		Con_Printf( "^3no server running.\n" );
 		return;
 	}
 
@@ -780,24 +780,24 @@ void SV_EntityInfo_f( void )
 		ent = EDICT_NUM( i );
 		if( !SV_IsValidEdict( ent )) continue;
 
-		Msg( "%5i origin: %.f %.f %.f", i, ent->v.origin[0], ent->v.origin[1], ent->v.origin[2] );
+		Con_Printf( "%5i origin: %.f %.f %.f", i, ent->v.origin[0], ent->v.origin[1], ent->v.origin[2] );
 
 		if( ent->v.classname )
-			Msg( ", class: %s", STRING( ent->v.classname ));
+			Con_Printf( ", class: %s", STRING( ent->v.classname ));
 
 		if( ent->v.globalname )
-			Msg( ", global: %s", STRING( ent->v.globalname ));
+			Con_Printf( ", global: %s", STRING( ent->v.globalname ));
 
 		if( ent->v.targetname )
-			Msg( ", name: %s", STRING( ent->v.targetname ));
+			Con_Printf( ", name: %s", STRING( ent->v.targetname ));
 
 		if( ent->v.target )
-			Msg( ", target: %s", STRING( ent->v.target ));
+			Con_Printf( ", target: %s", STRING( ent->v.target ));
 
 		if( ent->v.model )
-			Msg( ", model: %s", STRING( ent->v.model ));
+			Con_Printf( ", model: %s", STRING( ent->v.model ));
 
-		Msg( "\n" );
+		Con_Printf( "\n" );
 	}
 }
 /*

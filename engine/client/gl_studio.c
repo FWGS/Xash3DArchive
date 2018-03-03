@@ -787,7 +787,7 @@ void *R_StudioGetAnim( studiohdr_t *m_pStudioHeader, model_t *m_pSubModel, mstud
 		if( !buf || !filesize ) Host_Error( "StudioGetAnim: can't load %s\n", filepath );
 		if( IDSEQGRPHEADER != *(uint *)buf ) Host_Error( "StudioGetAnim: %s is corrupted\n", filepath );
 
-		MsgDev( D_INFO, "loading: %s\n", filepath );
+		Con_Printf( "loading: %s\n", filepath );
 			
 		paSequences[pseqdesc->seqgroup].data = Mem_Alloc( com_studiocache, filesize );
 		memcpy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
@@ -2715,7 +2715,7 @@ static model_t *R_StudioSetupPlayerModel( int index )
 	state = &cl.player_models[index];
 
 	// g-cont: force for "dev-mode", non-local games and menu preview
-	if(( host.developer || !Host_IsLocalGame( ) || !RI.drawWorld ) && info->model[0] )
+	if(( host_developer.value || !Host_IsLocalGame( ) || !RI.drawWorld ) && info->model[0] )
 	{
 		if( Q_strcmp( state->name, info->model ))
 		{
@@ -3388,10 +3388,8 @@ static int R_StudioDrawPlayer( int flags, entity_state_t *pplayer )
 			RI.currententity->curstate.body = 255;
 		}
 
-		if(!( host.developer == 0 && cl.maxclients == 1 ) && ( RI.currentmodel == RI.currententity->model ))
-		{
+		if( !( !host_developer.value && cl.maxclients == 1 ) && ( RI.currentmodel == RI.currententity->model ))
 			RI.currententity->curstate.body = 1; // force helmet
-		}
 
 		lighting.plightvec = dir;
 		R_StudioDynamicLight( RI.currententity, &lighting );
@@ -3908,15 +3906,15 @@ void CL_InitStudioAPI( void )
 	if( !clgame.dllFuncs.pfnGetStudioModelInterface )
 		return;
 
-	MsgDev( D_NOTE, "InitStudioAPI " );
+	Con_DPrintf( "InitStudioAPI " );
 
 	if( clgame.dllFuncs.pfnGetStudioModelInterface( STUDIO_INTERFACE_VERSION, &pStudioDraw, &gStudioAPI ))
 	{
-		MsgDev( D_NOTE, "- ok\n" );
+		Con_DPrintf( "- ok\n" );
 		return;
 	}
 
-	MsgDev( D_NOTE, "- failed\n" );
+	Con_DPrintf( "- failed\n" );
 
 	// NOTE: we always return true even if game interface was not correct
 	// because we need Draw our StudioModels

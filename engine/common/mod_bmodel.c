@@ -1375,33 +1375,19 @@ static void Mod_SetupSubmodels( dbspmodel_t *bmod )
 				SetBits( mod->flags, MODEL_HAS_ORIGIN );
 		}
 
+		// sets the model flags
 		for( j = 0; i != 0 && j < mod->nummodelsurfaces; j++ )
 		{
-			msurface_t	*surf = mod->surfaces + mod->firstmodelsurface + j;
+			msurface_t *surf = mod->surfaces + mod->firstmodelsurface + j;
 
-			if( surf->flags & SURF_CONVEYOR )
-				mod->flags |= MODEL_CONVEYOR;
+			if( FBitSet( surf->flags, SURF_CONVEYOR ))
+				SetBits( mod->flags, MODEL_CONVEYOR );
 
-			if( surf->flags & SURF_TRANSPARENT )
-				mod->flags |= MODEL_TRANSPARENT;
+			if( FBitSet( surf->flags, SURF_TRANSPARENT ))
+				SetBits( mod->flags, MODEL_TRANSPARENT );
 
-			// kill water backplanes for submodels (half-life rules)
-			if( surf->flags & SURF_DRAWTURB )
-			{
-				mod->flags |= MODEL_LIQUID;
-
-				if( surf->plane->type == PLANE_Z )
-				{
-					// kill bottom plane too
-					if( surf->info->mins[2] == bm->mins[2] + 1.0f )
-						surf->flags |= SURF_WATERCSG;
-				}
-				else
-				{
-					// kill side planes
-					surf->flags |= SURF_WATERCSG;
-				}
-			}
+			if( FBitSet( surf->flags, SURF_DRAWTURB ))
+				SetBits( mod->flags, MODEL_LIQUID );
 		}
 
 		if( i < mod->numsubmodels - 1 )
@@ -2629,11 +2615,11 @@ qboolean Mod_LoadBmodelLumps( const byte *mod_base, qboolean isworld )
 
 	// loading base lumps
 	for( i = 0; i < ARRAYSIZE( srclumps ); i++ )
-		Mod_LoadLump( mod_base, &srclumps[i], &worldstats[i], isworld ? LUMP_SAVESTATS : 0 );
+		Mod_LoadLump( mod_base, &srclumps[i], &worldstats[i], isworld ? (LUMP_SAVESTATS|LUMP_SILENT) : 0 );
 
 	// loading extralumps
 	for( i = 0; i < ARRAYSIZE( extlumps ); i++ )
-		Mod_LoadLump( mod_base, &extlumps[i], &worldstats[ARRAYSIZE( srclumps ) + i], isworld ? LUMP_SAVESTATS : 0 );
+		Mod_LoadLump( mod_base, &extlumps[i], &worldstats[ARRAYSIZE( srclumps ) + i], isworld ? (LUMP_SAVESTATS|LUMP_SILENT) : 0 );
 
 	if( loadstat.numerrors )
 	{

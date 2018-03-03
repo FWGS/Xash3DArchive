@@ -34,6 +34,7 @@ void UI_UpdateMenu( float realtime )
 	gameui.globals->frametime = host.realframetime;
 	gameui.globals->demoplayback = cls.demoplayback;
 	gameui.globals->demorecording = cls.demorecording;
+	gameui.globals->allow_console = host.allow_console;
 
 	gameui.dllFuncs.pfnRedraw( realtime );
 	UI_UpdateUserinfo();
@@ -1054,7 +1055,7 @@ qboolean UI_LoadProgs( void )
 	UI_ConvertGameInfo( &gameui.gameInfo, SI.GameInfo ); // current gameinfo
 
 	// setup globals
-	gameui.globals->developer = host.developer;
+	gameui.globals->allow_console = host.allow_console;
 
 	// initialize game
 	gameui.dllFuncs.pfnInit();

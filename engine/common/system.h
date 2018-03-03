@@ -103,7 +103,7 @@ void Con_DisableInput( void );
 char *Con_Input( void );
 
 // text messages
-void Msg( const char *pMsg, ... );
+#define Msg	Con_Printf
 void MsgDev( int level, const char *pMsg, ... );
 
 #ifdef __cplusplus

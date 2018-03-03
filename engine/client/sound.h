@@ -269,7 +269,6 @@ void S_InitScaletable( void );
 wavdata_t *S_LoadSound( sfx_t *sfx );
 float S_GetMasterVolume( void );
 float S_GetMusicVolume( void );
-void S_PrintDeviceName( void );
 
 //
 // s_main.c

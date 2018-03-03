@@ -797,7 +797,7 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&mp_logfile);
 
 	// when we in developer-mode automatically turn cheats on
-	if( host.developer > 1 ) Cvar_SetValue( "sv_cheats", 1.0f );
+	if( host_developer.value ) Cvar_SetValue( "sv_cheats", 1.0f );
 
 	SV_ClearSaveDir ();	// delete all temporary *.hl files
 	MSG_Init( &net_message, "NetMessage", net_message_buffer, sizeof( net_message_buffer ));

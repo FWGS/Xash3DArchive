@@ -147,6 +147,9 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 		return;
 	}
 
+	if( numverts != 4 )
+		ClearBits( warpface->flags, SURF_DRAWTURB_QUADS ); 
+
 	// add a point in the center to help keep warp valid
 	poly = Mem_Alloc( loadmodel->mempool, sizeof( glpoly_t ) + (numverts - 4) * VERTEXSIZE * sizeof( float ));
 	poly->next = warpface->polys;
@@ -252,6 +255,8 @@ void GL_SubdivideSurface( msurface_t *fa )
 		VectorCopy( vec, verts[numverts] );
 		numverts++;
 	}
+
+	SetBits( fa->flags, SURF_DRAWTURB_QUADS ); // predict state
 
 	// do subdivide
 	SubdividePolygon_r( fa, numverts, verts[0] );
@@ -1070,7 +1075,7 @@ void R_RenderBrushPoly( msurface_t *fa, int cull_type )
 	if( fa->flags & SURF_DRAWTURB )
 	{	
 		// warp texture, no lightmaps
-		EmitWaterPolys( fa->polys, (cull_type == CULL_BACKSIDE));
+		EmitWaterPolys( fa, (cull_type == CULL_BACKSIDE));
 		return;
 	}
 
@@ -1345,7 +1350,7 @@ void R_DrawWaterSurfaces( void )
 		GL_Bind( GL_TEXTURE0, t->gl_texturenum );
 
 		for( ; s; s = s->texturechain )
-			EmitWaterPolys( s->polys, false );
+			EmitWaterPolys( s, false );
 			
 		t->texturechain = NULL;
 	}
@@ -1436,6 +1441,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	int		i, k, num_sorted;
 	vec3_t		origin_l, oldorigin;
 	vec3_t		mins, maxs;
+	int		cull_type;
 	msurface_t	*psurf;
 	model_t		*clmodel;
 	qboolean		rotated;
@@ -1500,7 +1506,15 @@ void R_DrawBrushModel( cl_entity_t *e )
 
 	for( i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
 	{
-		int	cull_type = R_CullSurface( psurf, &RI.frustum, RI.frustum.clipFlags );
+		if( FBitSet( psurf->flags, SURF_DRAWTURB ) && !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		{
+			if( psurf->plane->type != PLANE_Z && !FBitSet( e->curstate.effects, EF_WATERSIDES ))
+				continue;
+			if( mins[2] + 1.0 >= psurf->plane->dist )
+				continue;
+		}
+
+		cull_type = R_CullSurface( psurf, &RI.frustum, RI.frustum.clipFlags );
 
 		if( cull_type >= CULL_FRUSTUM )
 			continue;

@@ -50,8 +50,8 @@ void SV_CreateCustomizationList( sv_client_t *cl )
 			else
 			{
 				if( sv_allow_upload.value )
-					Msg( "Ignoring invalid custom decal from %s\n", cl->name );
-				else Msg( "Ignoring custom decal from %s\n", cl->name );
+					Con_Printf( "Ignoring invalid custom decal from %s\n", cl->name );
+				else Con_Printf( "Ignoring custom decal from %s\n", cl->name );
 			}
 		}
 		else
@@ -165,7 +165,7 @@ void SV_ParseConsistencyResponse( sv_client_t *cl, sizebuf_t *msg )
 
 	if( sv.num_consistency != c )
 	{
-		Msg( "%s:%s sent bad file data\n", cl->name, NET_AdrToString( cl->netchan.remote_address ));
+		Con_Printf( "%s:%s sent bad file data\n", cl->name, NET_AdrToString( cl->netchan.remote_address ));
 		SV_DropClient( cl );
 		return;
 	}

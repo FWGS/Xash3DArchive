@@ -653,7 +653,7 @@ static void NET_AdjustLag( void )
 	dt = bound( 0.0, dt, 0.1 );
 	lasttime = host.realtime;
 
-	if( host.developer || !net_fakelag->value )
+	if( host_developer.value || !net_fakelag->value )
 	{
 		if( net_fakelag->value != net.fakelag )
 		{
@@ -700,7 +700,7 @@ static qboolean NET_LagPacket( qboolean newdata, netsrc_t sock, netadr_t *from, 
 	{
 		if( net_fakeloss->value != 0.0f )
 		{
-			if( host.developer >= D_ERROR )
+			if( host_developer.value )
 			{
 				net.losscount[sock]++;
 				if( net_fakeloss->value <= 0.0f )
@@ -800,7 +800,7 @@ qboolean NET_GetLong( byte *pData, int size, int *outSize )
 			net.split_flags[i] = -1;
 
 		if( net_showpackets && net_showpackets->value == 4.0f )
-			Msg( "<-- Split packet restart %i count %i seq\n", net.split.split_count, sequence_number );
+			Con_Printf( "<-- Split packet restart %i count %i seq\n", net.split.split_count, sequence_number );
 	}
 
 	packet_payload_size = size - sizeof( SPLITPACKET );
@@ -819,7 +819,7 @@ qboolean NET_GetLong( byte *pData, int size, int *outSize )
 		net.split_flags[packet_number] = sequence_number;
 
 		if( net_showpackets && net_showpackets->value == 4.0f )
-			Msg( "<-- Split packet %i of %i, %i bytes %i seq\n",
+			Con_Printf( "<-- Split packet %i of %i, %i bytes %i seq\n",
 				packet_number + 1, packet_count, packet_payload_size, sequence_number );
 
 		if( SPLIT_SIZE * packet_number + packet_payload_size > MAX_UDP_PACKET )
@@ -1003,7 +1003,7 @@ int NET_SendLong( netsrc_t sock, int net_socket, const char *buf, int len, int f
 				memset( &adr, 0, sizeof( adr ));
 				NET_SockadrToNetadr((struct sockaddr *)to, &adr );
 
-				Msg( "Sending split %i of %i with %i bytes and seq %i to %s\n",
+				Con_Printf( "Sending split %i of %i with %i bytes and seq %i to %s\n",
 					packet_number + 1, packet_count, size, net.sequence_number, NET_AdrToString( adr ));
 			}
 
@@ -1137,12 +1137,13 @@ static int NET_IPSocket( const char *net_interface, int port, qboolean multicast
 	if( Sys_CheckParm( "-tos" ))
 	{
 		optval = 16;
-		MsgDev( D_INFO, "Enabling LOWDELAY TOS option\n" );
+		Con_Printf( "Enabling LOWDELAY TOS option\n" );
+
 		if( pSetSockopt( net_socket, IPPROTO_IP, IP_TOS, (const char *)&optval, sizeof( optval )) == SOCKET_ERROR )
 		{
 			err = pWSAGetLastError();
 			if( err != WSAENOPROTOOPT )
-				MsgDev( D_WARN, "NET_UDPSocket: port: %d  setsockopt IP_TOS: %s\n", port, NET_ErrorString( ));
+				Con_Printf( S_WARN "NET_UDPSocket: port: %d  setsockopt IP_TOS: %s\n", port, NET_ErrorString( ));
 			pCloseSocket( net_socket );
 			return INVALID_SOCKET;
 		}

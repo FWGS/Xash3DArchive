@@ -259,6 +259,8 @@ typedef struct render_interface_s
 	void		(*R_ProcessEntData)( qboolean allocate );
 	// get visdata for current frame from custom renderer
 	byte*		(*Mod_GetCurrentVis)( void );
+	// tell the renderer what new map is started
+	void		(*R_NewMap)( void );
 } render_interface_t;
 
 #endif//RENDER_API_H

@@ -157,7 +157,7 @@ void Con_SetColor_f( void )
 	switch( Cmd_Argc() )
 	{
 	case 1:
-		Msg( "\"con_color\" is %i %i %i\n", g_color_table[7][0], g_color_table[7][1], g_color_table[7][2] );
+		Con_Printf( "\"con_color\" is %i %i %i\n", g_color_table[7][0], g_color_table[7][1], g_color_table[7][2] );
 		break;
 	case 2:
 		VectorSet( color, g_color_table[7][0], g_color_table[7][1], g_color_table[7][2] );
@@ -169,7 +169,7 @@ void Con_SetColor_f( void )
 		Con_DefaultColor( color[0], color[1], color[2] );
 		break;
 	default:
-		Msg( "Usage: con_color \"r g b\"\n" );
+		Con_Printf( S_USAGE "con_color \"r g b\"\n" );
 		break;
 	}
 }
@@ -283,7 +283,7 @@ Con_ToggleConsole_f
 */
 void Con_ToggleConsole_f( void )
 {
-	if( !host.developer || UI_CreditsActive( ))
+	if( !host.allow_console || UI_CreditsActive( ))
 		return; // disabled
 
 	// show console only in game or by special call from menu
@@ -317,7 +317,7 @@ void Con_SetTimes_f( void )
 
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: contimes <n lines>\n" );
+		Con_Printf( S_USAGE "contimes <n lines>\n" );
 		return;
 	}
 
@@ -1069,15 +1069,12 @@ void Con_Printf( char *szFmt, ... )
 	static char	buffer[MAX_PRINT_MSG];
 	va_list		args;
 
-	if( host.developer <= 0 )
+	if( !host.allow_console )
 		return;
 
 	va_start( args, szFmt );
 	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
 	va_end( args );
-
-	if( buffer[0] == '0' && buffer[1] == '\n' && buffer[2] == '\0' )
-		return; // hlrally spam
 
 	Sys_Print( buffer );
 }
@@ -1093,7 +1090,7 @@ void Con_DPrintf( char *szFmt, ... )
 	static char	buffer[MAX_PRINT_MSG];
 	va_list		args;
 
-	if( host.developer < D_REPORT )
+	if( host_developer.value < DEV_EXTENDED )
 		return;
 
 	va_start( args, szFmt );
@@ -1261,8 +1258,8 @@ static void Con_PrintMatches( const char *s, const char *unused1, const char *m,
 {
 	if( !Q_strnicmp( s, con.shortestMatch, Q_strlen( con.shortestMatch )))
 	{
-		if( m && *m ) Msg( "    %s ^3\"%s\"\n", s, m );
-		else Msg( "    %s\n", s ); // variable or command without description
+		if( m && *m ) Con_Printf( "    %s ^3\"%s\"\n", s, m );
+		else Con_Printf( "    %s\n", s ); // variable or command without description
 	}
 }
 
@@ -1416,7 +1413,7 @@ void Con_CompleteCommand( field_t *field )
 		con.completionField->cursor = Q_strlen( con.completionField->buffer );
 		Con_ConcatRemaining( temp.buffer, con.completionString );
 
-		Msg( "]%s\n", con.completionField->buffer );
+		Con_Printf( "]%s\n", con.completionField->buffer );
 
 		// run through again, printing matches
 		Cmd_LookupCmds( NULL, NULL, Con_PrintMatches );
@@ -1694,7 +1691,7 @@ void Key_Console( int key )
 		Cbuf_AddText( "\n" );
 
 		// echo to console
-		Msg( ">%s\n", con.input.buffer );
+		Con_Printf( ">%s\n", con.input.buffer );
 
 		// copy line to history buffer
 		con.historyLines[con.nextHistoryLine % CON_HISTORY] = con.input;
@@ -1891,7 +1888,7 @@ Draws the debug messages (not passed to console history)
 */
 void Con_DrawDebug( void )
 {
-	if( !host.developer || Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" ))
+	if( !host_developer.value || Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" ))
 		return;
 
 	if( con.draw_notify && !Con_Visible( ))
@@ -1917,7 +1914,7 @@ void Con_DrawNotify( void )
 
 	x = con.curFont->charWidths[' ']; // offset one space at left screen side
 
-	if( host.developer && ( !Cvar_VariableInteger( "cl_background" ) && !Cvar_VariableInteger( "sv_background" )))
+	if( host_developer.value && ( !Cvar_VariableInteger( "cl_background" ) && !Cvar_VariableInteger( "sv_background" )))
 	{
 		for( i = CON_LINES_COUNT - con.num_times; i < CON_LINES_COUNT; i++ )
 		{
@@ -2024,10 +2021,10 @@ void Con_DrawSolidConsole( int lines )
 	pglColor4ub( 255, 255, 255, 255 ); // to prevent grab color from screenfade
 	R_DrawStretchPic( 0, lines - glState.height, glState.width, glState.height, 0, 0, 1, 1, con.background );
 
-	if( !con.curFont || host.developer <= 0 )
+	if( !con.curFont || !host.allow_console )
 		return; // nothing to draw
 
-	if( host.developer > 0 )
+	if( host.allow_console )
 	{
 		// draw current version
 		int	stringLen, width = 0, charH;
@@ -2112,17 +2109,10 @@ void Con_DrawConsole( void )
 		}
 		else
 		{
-			if( host.developer >= 4 )
-			{
-				con.vislines = (glState.height >> 1);	// keep console open
-			}
-			else
-			{
-				con.showlines = 0;
+			con.showlines = 0;
 
-				if( host.developer >= 2 )
-					Con_DrawNotify(); // draw notify lines
-			}
+			if( host_developer.value >= DEV_EXTENDED )
+				Con_DrawNotify(); // draw notify lines
 		}
 	}
 
@@ -2220,7 +2210,7 @@ void Con_RunConsole( void )
 	float	lines_per_frame;
 
 	// decide on the destination height of the console
-	if( host.developer && cls.key_dest == key_console )
+	if( host.allow_console && cls.key_dest == key_console )
 	{
 		if( cls.state == ca_disconnected )
 			con.showlines = glState.height;	// full screen
@@ -2288,7 +2278,7 @@ void Con_VidInit( void )
 	Con_LoadConchars();
 
 	// loading console image
-	if( host.developer )
+	if( host.allow_console )
 	{
 		// trying to load truecolor image first
 		if( FS_FileExists( "gfx/shell/conback.bmp", false ) || FS_FileExists( "gfx/shell/conback.tga", false ))

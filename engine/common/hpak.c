@@ -497,7 +497,7 @@ void HPAK_CheckSize( const char *filename )
 
 	if( FS_FileSize( pakname, false ) > ( maxsize * 1000000 ))
 	{
-		Msg( "Server: Size of %s > %f MB, deleting.\n", filename, hpk_maxsize->value );
+		Con_Printf( "Server: Size of %s > %f MB, deleting.\n", filename, hpk_maxsize->value );
 		Log_Printf( "Server: Size of %s > %f MB, deleting.\n", filename, hpk_maxsize->value );
 		FS_Delete( filename );
 	}
@@ -863,7 +863,7 @@ void HPAK_List_f( void )
 
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "usage: hpklist <hpk>\n" );
+		Con_Printf( S_USAGE "hpklist <hpk>\n" );
 		return;
 	}
 
@@ -871,7 +871,7 @@ void HPAK_List_f( void )
 
 	Q_strncpy( pakname, Cmd_Argv( 1 ), sizeof( pakname ));
 	COM_ReplaceExtension( pakname, ".hpk" );
-	Msg( "Contents for %s.\n", pakname );
+	Con_Printf( "Contents for %s.\n", pakname );
 
 	f = FS_Open( pakname, "rb", false );
 	if( !f )
@@ -906,8 +906,8 @@ void HPAK_List_f( void )
 		return;
 	}
 
-	Msg( "# of Entries:  %i\n", directory.count );
-	Msg( "# Type Size FileName : MD5 Hash\n" );
+	Con_Printf( "# of Entries:  %i\n", directory.count );
+	Con_Printf( "# Type Size FileName : MD5 Hash\n" );
 
 	directory.entries = Z_Malloc( directory.count * sizeof( hpak_lump_t ));
 	FS_Read( f, directory.entries, directory.count * sizeof( hpak_lump_t ));
@@ -919,7 +919,7 @@ void HPAK_List_f( void )
 		type = HPAK_TypeFromIndex( entry->resource.type );
 		size = Q_memprint( entry->resource.nDownloadSize );
 
-		Msg( "%i: %10s %s %s\n  :  %s\n", nCurrent + 1, type, size, lumpname, MD5_Print( entry->resource.rgucMD5_hash ));
+		Con_Printf( "%i: %10s %s %s\n  :  %s\n", nCurrent + 1, type, size, lumpname, MD5_Print( entry->resource.rgucMD5_hash ));
 	}
 
 	if( directory.entries )
@@ -945,7 +945,7 @@ void HPAK_Extract_f( void )
 
 	if( Cmd_Argc() != 3 )
 	{
-		Msg( "usage:  hpkextract hpkname [all | single index]\n" );
+		Con_Printf( S_USAGE "hpkextract hpkname [all | single index]\n" );
 		return;
 	}
 
@@ -962,7 +962,7 @@ void HPAK_Extract_f( void )
 
 	Q_strncpy( pakname, Cmd_Argv( 1 ), sizeof( pakname ));
 	COM_ReplaceExtension( pakname, ".hpk" );
-	Msg( "Contents for %s.\n", pakname );
+	Con_Printf( "Contents for %s.\n", pakname );
 
 	f = FS_Open( pakname, "rb", false );
 	if( !f )
@@ -997,8 +997,8 @@ void HPAK_Extract_f( void )
 		return;
 	}
 
-	if( nIndex == -1 ) Msg( "Extracting all lumps from %s.\n", pakname );
-	else Msg( "Extracting lump %i from %s\n", nIndex, pakname );
+	if( nIndex == -1 ) Con_Printf( "Extracting all lumps from %s.\n", pakname );
+	else Con_Printf( "Extracting lump %i from %s\n", nIndex, pakname );
 
 	directory.entries = Z_Malloc( directory.count * sizeof( hpak_lump_t ));
 	FS_Read( f, directory.entries, directory.count * sizeof( hpak_lump_t ));
@@ -1014,7 +1014,7 @@ void HPAK_Extract_f( void )
 		type = HPAK_TypeFromIndex( entry->resource.type );
 		size = Q_memprint( entry->resource.nDownloadSize );
 
-		Msg( "Extracting %i: %10s %s %s\n", nCurrent + 1, type, size, lumpname );
+		Con_Printf( "Extracting %i: %10s %s %s\n", nCurrent + 1, type, size, lumpname );
 
 		if( entry->disksize <= 0 || entry->disksize >= HPAK_MAX_SIZE )
 		{
@@ -1046,7 +1046,7 @@ void HPAK_Remove_f( void )
 
 	if( Cmd_Argc() != 3 )
 	{
-		Msg( "usage: hpkremove <hpk> <index>\n" );
+		Con_Printf( S_USAGE "hpkremove <hpk> <index>\n" );
 		return;
 	}
 
@@ -1064,7 +1064,7 @@ void HPAK_Validate_f( void )
 {
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: hpkval <filename>\n" );
+		Con_Printf( S_USAGE "hpkval <filename>\n" );
 		return;
 	}
 

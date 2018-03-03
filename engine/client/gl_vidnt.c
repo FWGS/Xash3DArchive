@@ -53,7 +53,6 @@ convar_t	*r_lighting_extended;
 convar_t	*r_lighting_modulate;
 convar_t	*r_lighting_ambient;
 convar_t	*r_detailtextures;
-convar_t	*r_faceplanecull;
 convar_t	*r_drawentities;
 convar_t	*r_adjust_fov;
 convar_t	*r_decals;
@@ -337,34 +336,26 @@ static void CALLBACK GL_DebugOutput( GLuint source, GLuint type, GLuint id, GLui
 	switch( type )
 	{
 	case GL_DEBUG_TYPE_ERROR_ARB:
-		if( host.developer < D_ERROR )	// "-dev 2"
-			return;
-		Con_Printf( "^1OpenGL Error:^7 %s\n", message );
+		Con_Printf( S_OPENGL_ERROR "%s\n", message );
 		break;
 	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB:
-		if( host.developer < D_WARN )		// "-dev 3"
-			return;
-		Con_Printf( "^3OpenGL Warning:^7 %s\n", message );
+		Con_Printf( S_OPENGL_WARN "%s\n", message );
 		break;
 	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB:
-		if( host.developer < D_WARN )		// "-dev 3"
-			return;
-		Con_Printf( "^3OpenGL Warning:^7 %s\n", message );
+		Con_Printf( S_OPENGL_WARN "%s\n", message );
 		break;
 	case GL_DEBUG_TYPE_PORTABILITY_ARB:
-		if( host.developer < D_REPORT )	// "-dev 4"
+		if( host_developer.value < DEV_EXTENDED )
 			return;
-		Con_Printf( "^3OpenGL Warning:^7 %s\n", message );
+		Con_Printf( S_OPENGL_WARN "%s\n", message );
 		break;
 	case GL_DEBUG_TYPE_PERFORMANCE_ARB:
-		if( host.developer < D_REPORT )	// "-dev 4"
+		if( host_developer.value < DEV_EXTENDED )
 			return;
-		Con_Printf( "OpenGL Notify: %s\n", message );
+		Con_Printf( S_OPENGL_NOTE "%s\n", message );
 		break;
 	case GL_DEBUG_TYPE_OTHER_ARB:
-	default:	if( host.developer < D_NOTE )		// "-dev 5"
-			return;
-		Con_Printf( "OpenGL: %s\n", message );
+	default:	Con_Printf( S_OPENGL_NOTE "%s\n", message );
 		break;
 	}
 }
@@ -378,7 +369,7 @@ void GL_SetExtension( int r_ext, int enable )
 {
 	if( r_ext >= 0 && r_ext < GL_EXTCOUNT )
 		glConfig.extension[r_ext] = enable ? GL_TRUE : GL_FALSE;
-	else MsgDev( D_ERROR, "GL_SetExtension: invalid extension %d\n", r_ext );
+	else Con_Printf( S_ERROR "GL_SetExtension: invalid extension %d\n", r_ext );
 }
 
 /*
@@ -390,7 +381,7 @@ qboolean GL_Support( int r_ext )
 {
 	if( r_ext >= 0 && r_ext < GL_EXTCOUNT )
 		return glConfig.extension[r_ext] ? true : false;
-	MsgDev( D_ERROR, "GL_Support: invalid extension %d\n", r_ext );
+	Con_Printf( S_ERROR "GL_Support: invalid extension %d\n", r_ext );
 
 	return false;		
 }
@@ -431,7 +422,7 @@ GL_CheckExtension
 void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cvarname, int r_ext )
 {
 	const dllfunc_t	*func;
-	convar_t		*parm;
+	convar_t		*parm = NULL;
 	const char	*extensions_string;
 
 	MsgDev( D_NOTE, "GL_CheckExtension: %s ", name );
@@ -441,13 +432,13 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	{
 		// system config disable extensions
 		parm = Cvar_Get( cvarname, "1", FCVAR_GLCONFIG, va( CVAR_GLCONFIG_DESCRIPTION, name ));
+          }
 
-		if( !CVAR_TO_BOOL( parm ) || ( !CVAR_TO_BOOL( gl_extensions ) && r_ext != GL_OPENGL_110 ))
-		{
-			MsgDev( D_NOTE, "- disabled\n" );
-			GL_SetExtension( r_ext, false );
-			return; // nothing to process at
-		}
+	if(( parm && !CVAR_TO_BOOL( parm )) || ( !CVAR_TO_BOOL( gl_extensions ) && r_ext != GL_OPENGL_110 ))
+	{
+		MsgDev( D_NOTE, "- disabled\n" );
+		GL_SetExtension( r_ext, false );
+		return; // nothing to process at
 	}
 
 	extensions_string = glConfig.extensions_string; 
@@ -469,7 +460,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, const char *cv
 	for( func = funcs; func && func->name != NULL; func++ )
 	{
 		// functions are cleared before all the extensions are evaluated
-		if(!(*func->func = (void *)GL_GetProcAddress( func->name )))
+		if((*func->func = (void *)GL_GetProcAddress( func->name )) == NULL )
 			GL_SetExtension( r_ext, false ); // one or more functions are invalid, extension will be disabled
 	}
 
@@ -542,20 +533,20 @@ static void GL_ContextError( void )
 	DWORD error = GetLastError();
 
 	if( error == ( 0xc0070000|ERROR_INVALID_VERSION_ARB ))
-		MsgDev( D_ERROR, "Unsupported OpenGL context version (%s).\n", "2.0" );
+		Con_Printf( S_ERROR "Unsupported OpenGL context version (%s).\n", "2.0" );
 	else if( error == ( 0xc0070000|ERROR_INVALID_PROFILE_ARB ))
-		MsgDev( D_ERROR, "Unsupported OpenGL profile (%s).\n", "compat" );
+		Con_Printf( S_ERROR "Unsupported OpenGL profile (%s).\n", "compat" );
 	else if( error == ( 0xc0070000|ERROR_INVALID_OPERATION ))
-		MsgDev( D_ERROR, "wglCreateContextAttribsARB returned invalid operation.\n" );
+		Con_Printf( S_ERROR "wglCreateContextAttribsARB returned invalid operation.\n" );
 	else if( error == ( 0xc0070000|ERROR_DC_NOT_FOUND ))
-		MsgDev( D_ERROR, "wglCreateContextAttribsARB returned dc not found.\n" );
+		Con_Printf( S_ERROR "wglCreateContextAttribsARB returned dc not found.\n" );
 	else if( error == ( 0xc0070000|ERROR_INVALID_PIXEL_FORMAT ))
-		MsgDev( D_ERROR, "wglCreateContextAttribsARB returned dc not found.\n" );
+		Con_Printf( S_ERROR "wglCreateContextAttribsARB returned dc not found.\n" );
 	else if( error == ( 0xc0070000|ERROR_NO_SYSTEM_RESOURCES ))
-		MsgDev( D_ERROR, "wglCreateContextAttribsARB ran out of system resources.\n" );
+		Con_Printf( S_ERROR "wglCreateContextAttribsARB ran out of system resources.\n" );
 	else if( error == ( 0xc0070000|ERROR_INVALID_PARAMETER ))
-		MsgDev( D_ERROR, "wglCreateContextAttribsARB reported invalid parameter.\n" );
-	else MsgDev( D_ERROR, "Unknown error creating an OpenGL (%s) Context.\n", "2.0" );
+		Con_Printf( S_ERROR "wglCreateContextAttribsARB reported invalid parameter.\n" );
+	else Con_Printf( S_ERROR "Unknown error creating an OpenGL (%s) Context.\n", "2.0" );
 }
 
 /*
@@ -575,7 +566,7 @@ qboolean GL_CreateContext( void )
 	if(!( pwglMakeCurrent( glw_state.hDC, glw_state.hGLRC )))
 		return GL_DeleteContext();
 
-	if( !Sys_CheckParm( "-gldebug" ) || host.developer <= D_INFO ) // debug bit kill the perfomance
+	if( !Sys_CheckParm( "-gldebug" ) || !host_developer.value ) // debug bit kill the perfomance
 		return true;
 
 	pwglCreateContextAttribsARB = GL_GetProcAddress( "wglCreateContextAttribsARB" );
@@ -708,7 +699,7 @@ static int VID_ChoosePFD( PIXELFORMATDESCRIPTOR *pfd, int colorBits, int alphaBi
 
 	if( !pixelFormat )
 	{
-		MsgDev( D_ERROR, "VID_ChoosePFD failed\n" );
+		Con_Printf( S_ERROR "VID_ChoosePFD failed\n" );
 		return 0;
 	}
 
@@ -784,7 +775,7 @@ qboolean GL_SetPixelformat( void )
 
 		if( !pixelFormat )
 		{
-			MsgDev( D_ERROR, "GL_SetPixelformat: failed to find an appropriate PIXELFORMAT\n" );
+			Con_Printf( S_ERROR "GL_SetPixelformat: failed to find an appropriate PIXELFORMAT\n" );
 			return false;
 		}
 	}
@@ -792,7 +783,7 @@ qboolean GL_SetPixelformat( void )
 	// set the pixel format
 	if( !SetPixelFormat( glw_state.hDC, pixelFormat, &PFD ))
 	{
-		MsgDev( D_ERROR, "GL_SetPixelformat: failed\n" );
+		Con_Printf( S_ERROR "GL_SetPixelformat: failed\n" );
 		return false;
 	}
 
@@ -806,7 +797,7 @@ qboolean GL_SetPixelformat( void )
 		}
 		else
 		{
-			MsgDev( D_ERROR, "GL_SetPixelformat: no hardware acceleration found\n" );
+			Con_Printf( S_ERROR "GL_SetPixelformat: no hardware acceleration found\n" );
 			return false;
 		}
 	}
@@ -907,7 +898,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 			Q_snprintf( localPath, sizeof( localPath ), "%s/%s", GI->gamedir, GI->iconpath );
 			wc.hIcon = LoadImage( NULL, localPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE|LR_DEFAULTSIZE );
 		}
-		else MsgDev( D_INFO, "Extract %s from pak if you want to see it.\n", GI->iconpath );
+		else Con_Printf( "Extract %s from pak if you want to see it.\n", GI->iconpath );
 	}
 
 	// couldn't loaded for some reasons? use default
@@ -915,7 +906,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 
 	if( !RegisterClass( &wc ))
 	{ 
-		MsgDev( D_ERROR, "VID_CreateWindow: couldn't register window class %s\n" WINDOW_NAME );
+		Con_Printf( S_ERROR "VID_CreateWindow: couldn't register window class %s\n" WINDOW_NAME );
 		return false;
 	}
 
@@ -970,13 +961,13 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 	if( host.hWnd != window )
 	{
 		// make sure what CreateWindowEx call the IN_WndProc
-		MsgDev( D_WARN, "VID_CreateWindow: bad hWnd for '%s'\n", wndname );
+		Con_Printf( S_WARN "VID_CreateWindow: bad hWnd for '%s'\n", wndname );
 	}
 
 	if( !host.hWnd ) 
 	{
 		// host.hWnd must be filled in IN_WndProc
-		MsgDev( D_ERROR, "VID_CreateWindow: couldn't create '%s'\n", wndname );
+		Con_Printf( S_ERROR "VID_CreateWindow: couldn't create '%s'\n", wndname );
 		return false;
 	}
 
@@ -991,7 +982,7 @@ qboolean VID_CreateWindow( int width, int height, qboolean fullscreen )
 		host.hWnd = NULL;
 
 		UnregisterClass( WINDOW_NAME, host.hInst );
-		MsgDev( D_ERROR, "OpenGL driver not installed\n" );
+		Con_Printf( S_ERROR "OpenGL driver not installed\n" );
 
 		return false;
 	}
@@ -1153,7 +1144,7 @@ rserr_t R_ChangeDisplaySettings( int vid_mode, qboolean fullscreen )
 					return rserr_invalid_mode;
 
 				if( freq_specified )
-					MsgDev( D_ERROR, "VID_SetMode: display frequency %i Hz is not supported\n", freq_specified );
+					Con_Printf( S_ERROR "VID_SetMode: display frequency %i Hz is not supported\n", freq_specified );
 				glState.fullScreen = true;
 				return rserr_ok;
 			}
@@ -1214,20 +1205,20 @@ qboolean VID_SetMode( void )
 		if( err == rserr_invalid_fullscreen )
 		{
 			Cvar_SetValue( "fullscreen", 0 );
-			MsgDev( D_ERROR, "VID_SetMode: fullscreen unavailable in this mode\n" );
+			Con_Printf( S_ERROR "VID_SetMode: fullscreen unavailable in this mode\n" );
 			if(( err = R_ChangeDisplaySettings( vid_mode->value, false )) == rserr_ok )
 				return true;
 		}
 		else if( err == rserr_invalid_mode )
 		{
+			Con_Printf( S_ERROR "VID_SetMode: invalid mode\n" );
 			Cvar_SetValue( "vid_mode", glConfig.prev_mode );
-			MsgDev( D_ERROR, "VID_SetMode: invalid mode\n" );
 		}
 
 		// try setting it back to something safe
 		if(( err = R_ChangeDisplaySettings( glConfig.prev_mode, false )) != rserr_ok )
 		{
-			MsgDev( D_ERROR, "VID_SetMode: could not revert to safe mode\n" );
+			Con_Printf( S_ERROR "VID_SetMode: could not revert to safe mode\n" );
 			return false;
 		}
 	}
@@ -1255,7 +1246,7 @@ void VID_CheckChanges( void )
 	{
 		if( !VID_SetMode( ))
 		{
-			Msg( "Error: can't initialize video subsystem\n" );
+			Con_Printf( S_ERROR "can't initialize video subsystem\n" );
 			Host_NewInstance( va("#%s", GI->gamefolder ), "stopped" );
 		}
 		else
@@ -1278,7 +1269,7 @@ qboolean R_Init_OpenGL( void )
 	if( !opengl_dll.link )
 		return false;
 
-	if( Sys_CheckParm( "-gldebug" ) && host.developer > D_INFO )
+	if( Sys_CheckParm( "-gldebug" ) && host_developer.value )
 		GL_CheckExtension( "OpenGL Internal ProcAddress", wglproc_funcs, NULL, GL_WGL_PROCADDRESS );
 
 	return VID_SetMode();
@@ -1353,45 +1344,45 @@ R_RenderInfo_f
 */
 void R_RenderInfo_f( void )
 {
-	Msg( "\n" );
-	Msg( "GL_VENDOR: %s\n", glConfig.vendor_string );
-	Msg( "GL_RENDERER: %s\n", glConfig.renderer_string );
-	Msg( "GL_VERSION: %s\n", glConfig.version_string );
+	Con_Printf( "\n" );
+	Con_Printf( "GL_VENDOR: %s\n", glConfig.vendor_string );
+	Con_Printf( "GL_RENDERER: %s\n", glConfig.renderer_string );
+	Con_Printf( "GL_VERSION: %s\n", glConfig.version_string );
 
 	// don't spam about extensions
-	if( host.developer >= D_REPORT )
+	if( host_developer.value >= DEV_EXTENDED )
 	{
-		Msg( "GL_EXTENSIONS: %s\n", glConfig.extensions_string );
+		Con_Printf( "GL_EXTENSIONS: %s\n", glConfig.extensions_string );
 
 		if( glConfig.wgl_extensions_string != NULL )
-			Msg( "\nWGL_EXTENSIONS: %s\n", glConfig.wgl_extensions_string );
+			Con_Printf( "\nWGL_EXTENSIONS: %s\n", glConfig.wgl_extensions_string );
 	}
 
-	Msg( "GL_MAX_TEXTURE_SIZE: %i\n", glConfig.max_2d_texture_size );
+	Con_Printf( "GL_MAX_TEXTURE_SIZE: %i\n", glConfig.max_2d_texture_size );
 	
 	if( GL_Support( GL_ARB_MULTITEXTURE ))
-		Msg( "GL_MAX_TEXTURE_UNITS_ARB: %i\n", glConfig.max_texture_units );
+		Con_Printf( "GL_MAX_TEXTURE_UNITS_ARB: %i\n", glConfig.max_texture_units );
 	if( GL_Support( GL_TEXTURE_CUBEMAP_EXT ))
-		Msg( "GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB: %i\n", glConfig.max_cubemap_size );
+		Con_Printf( "GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB: %i\n", glConfig.max_cubemap_size );
 	if( GL_Support( GL_ANISOTROPY_EXT ))
-		Msg( "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT: %.1f\n", glConfig.max_texture_anisotropy );
+		Con_Printf( "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT: %.1f\n", glConfig.max_texture_anisotropy );
 	if( GL_Support( GL_TEXTURE_2D_RECT_EXT ))
-		Msg( "GL_MAX_RECTANGLE_TEXTURE_SIZE: %i\n", glConfig.max_2d_rectangle_size );
+		Con_Printf( "GL_MAX_RECTANGLE_TEXTURE_SIZE: %i\n", glConfig.max_2d_rectangle_size );
 	if( GL_Support( GL_TEXTURE_ARRAY_EXT ))
-		Msg( "GL_MAX_ARRAY_TEXTURE_LAYERS_EXT: %i\n", glConfig.max_2d_texture_layers );
+		Con_Printf( "GL_MAX_ARRAY_TEXTURE_LAYERS_EXT: %i\n", glConfig.max_2d_texture_layers );
 	if( GL_Support( GL_SHADER_GLSL100_EXT ))
 	{
-		Msg( "GL_MAX_TEXTURE_COORDS_ARB: %i\n", glConfig.max_texture_coords );
-		Msg( "GL_MAX_TEXTURE_IMAGE_UNITS_ARB: %i\n", glConfig.max_teximage_units );
-		Msg( "GL_MAX_VERTEX_UNIFORM_COMPONENTS_ARB: %i\n", glConfig.max_vertex_uniforms );
-		Msg( "GL_MAX_VERTEX_ATTRIBS_ARB: %i\n", glConfig.max_vertex_attribs );
+		Con_Printf( "GL_MAX_TEXTURE_COORDS_ARB: %i\n", glConfig.max_texture_coords );
+		Con_Printf( "GL_MAX_TEXTURE_IMAGE_UNITS_ARB: %i\n", glConfig.max_teximage_units );
+		Con_Printf( "GL_MAX_VERTEX_UNIFORM_COMPONENTS_ARB: %i\n", glConfig.max_vertex_uniforms );
+		Con_Printf( "GL_MAX_VERTEX_ATTRIBS_ARB: %i\n", glConfig.max_vertex_attribs );
 	}
 
-	Msg( "\n" );
-	Msg( "MODE: %s\n", vidmode[(int)vid_mode->value].desc );
-	Msg( "\n" );
-	Msg( "VERTICAL SYNC: %s\n", gl_vsync->value ? "enabled" : "disabled" );
-	Msg( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
+	Con_Printf( "\n" );
+	Con_Printf( "MODE: %s\n", vidmode[(int)vid_mode->value].desc );
+	Con_Printf( "\n" );
+	Con_Printf( "VERTICAL SYNC: %s\n", gl_vsync->value ? "enabled" : "disabled" );
+	Con_Printf( "Color %d bits, Alpha %d bits, Depth %d bits, Stencil %d bits\n", glConfig.color_bits,
 		glConfig.alpha_bits, glConfig.depth_bits, glConfig.stencil_bits );
 }
 
@@ -1414,14 +1405,13 @@ void GL_InitCommands( void )
 	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", FCVAR_ARCHIVE, "making FOV adjustment for wide-screens" );
 	r_novis = Cvar_Get( "r_novis", "0", 0, "ignore vis information (perfomance test)" );
 	r_nocull = Cvar_Get( "r_nocull", "0", 0, "ignore frustrum culling (perfomance test)" );
-	r_faceplanecull = Cvar_Get( "r_faceplanecull", "1", 0, "ignore face plane culling (perfomance test)" );
 	r_detailtextures = Cvar_Get( "r_detailtextures", "1", FCVAR_ARCHIVE, "enable detail textures support, use '2' for autogenerate detail.txt" );
 	r_lockpvs = Cvar_Get( "r_lockpvs", "0", FCVAR_CHEAT, "lockpvs area at current point (pvs test)" );
 	r_lockfrustum = Cvar_Get( "r_lockfrustum", "0", FCVAR_CHEAT, "lock frustrum area at current point (cull test)" );
 	r_dynamic = Cvar_Get( "r_dynamic", "1", FCVAR_ARCHIVE, "allow dynamic lighting (dlights, lightstyles)" );
 	r_traceglow = Cvar_Get( "r_traceglow", "1", FCVAR_ARCHIVE, "cull flares behind models" );
 	r_lightmap = Cvar_Get( "r_lightmap", "0", FCVAR_CHEAT, "lightmap debugging tool" );
-	r_drawentities = Cvar_Get( "r_drawentities", "1", FCVAR_CHEAT|FCVAR_ARCHIVE, "render entities" );
+	r_drawentities = Cvar_Get( "r_drawentities", "1", FCVAR_CHEAT, "render entities" );
 	r_decals = Cvar_Get( "r_decals", "4096", FCVAR_ARCHIVE, "sets the maximum number of decals" );
 	window_xpos = Cvar_Get( "_window_xpos", "130", FCVAR_RENDERINFO, "window position by horizontal" );
 	window_ypos = Cvar_Get( "_window_ypos", "48", FCVAR_RENDERINFO, "window position by vertical" );
@@ -1509,7 +1499,7 @@ void GL_InitExtensions( void )
 	else glConfig.hardware_type = GLHW_GENERIC;
 
 	// initalize until base opengl functions loaded (old-context)
-	if( !Sys_CheckParm( "-gldebug" ) || host.developer <= 0 )
+	if( !Sys_CheckParm( "-gldebug" ) || !host_developer.value )
 		GL_CheckExtension( "OpenGL Internal ProcAddress", wglproc_funcs, NULL, GL_WGL_PROCADDRESS );
 
 	// windows-specific extensions
@@ -1637,15 +1627,13 @@ void GL_InitExtensions( void )
 	// enable gldebug if allowed
 	if( GL_Support( GL_DEBUG_OUTPUT ))
 	{
-		if( host.developer >= D_ERROR )
-			pglDebugMessageCallbackARB( GL_DebugOutput, NULL );
+		pglDebugMessageCallbackARB( GL_DebugOutput, NULL );
 
 		// force everything to happen in the main thread instead of in a separate driver thread
-		if( host.developer >= D_WARN )
-			pglEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB );
+		pglEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB );
 
 		// enable all the low priority messages
-		if( host.developer >= D_REPORT )
+		if( host_developer.value >= DEV_EXTENDED )
 			pglDebugMessageControlARB( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW_ARB, 0, NULL, true );
 	}
 
@@ -1771,5 +1759,5 @@ void GL_CheckForErrors_( const char *filename, const int fileline )
 		break;
 	}
 
-	MsgDev( D_ERROR, "OpenGL: %s (called at %s:%i)\n", str, filename, fileline );
+	Con_Printf( S_OPENGL_ERROR "%s (called at %s:%i)\n", str, filename, fileline );
 }

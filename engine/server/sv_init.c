@@ -246,19 +246,19 @@ void SV_CreateGenericResources( void )
 
 	pfile = afile;
 
-	MsgDev( D_REPORT, "Precaching from %s\n", filename );
-	MsgDev( D_REPORT, "----------------------------------\n" );
+	Con_DPrintf( "Precaching from %s\n", filename );
+	Con_DPrintf( "----------------------------------\n" );
 
 	while( ( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		if( !COM_IsSafeFileToDownload( token ))
 			continue;
 
-		MsgDev( D_REPORT, "  %s\n", token );
+		Con_DPrintf( "  %s\n", token );
 		SV_GenericIndex( token );
 	}
 
-	MsgDev( D_REPORT, "----------------------------------\n" );
+	Con_DPrintf( "----------------------------------\n" );
 	Mem_Free( afile );
 }
 
@@ -544,7 +544,7 @@ void SV_ActivateServer( int runPhysics )
 
 	host.movevars_changed = true;
 
-	MsgDev( D_INFO, "level loaded at %.2f sec\n", Sys_DoubleTime() - svs.timestart );
+	Con_DPrintf( "level loaded at %.2f sec\n", Sys_DoubleTime() - svs.timestart );
 
 	if( svs.maxclients > 1 )
 	{
@@ -612,7 +612,7 @@ qboolean SV_InitGame( void )
 	// first initialize?
 	if( !SV_LoadProgs( GI->game_dll ))
 	{
-		MsgDev( D_ERROR, "SV_InitGame: can't initialize %s\n", GI->game_dll );
+		Con_Printf( S_ERROR "can't initialize %s\n", GI->game_dll );
 		return false; // failed to loading server.dll
 	}
 
@@ -705,7 +705,7 @@ void SV_SetupClients( void )
 	svs.clients = Z_Realloc( svs.clients, sizeof( sv_client_t ) * svs.maxclients );
 	svs.num_client_entities = svs.maxclients * SV_UPDATE_BACKUP * NUM_PACKET_ENTITIES;
 	svs.packet_entities = Z_Realloc( svs.packet_entities, sizeof( entity_state_t ) * svs.num_client_entities );
-	MsgDev( D_INFO, "%s alloced by server packet entities\n", Q_memprint( sizeof( entity_state_t ) * svs.num_client_entities ));
+	Con_DPrintf( "%s alloced by server packet entities\n", Q_memprint( sizeof( entity_state_t ) * svs.num_client_entities ));
 
 	// init network stuff
 	NET_Config(( svs.maxclients > 1 ));
@@ -741,11 +741,11 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 
 	if( startspot )
 	{
-		MsgDev( D_INFO, "Spawn Server: %s [%s]\n", mapname, startspot );
+		Con_Printf( "Spawn Server: %s [%s]\n", mapname, startspot );
 	}
 	else
 	{
-		MsgDev( D_INFO, "Spawn Server: %s\n", mapname );
+		Con_DPrintf( "Spawn Server: %s\n", mapname );
 	}
 
 	memset( &sv, 0, sizeof( sv ));	// wipe the entire per-level structure

@@ -90,6 +90,13 @@ typedef struct
 
 enum
 {
+	DEV_NONE = 0,
+	DEV_NORMAL,
+	DEV_EXTENDED
+};
+
+enum
+{
 	D_INFO = 1,	// "-dev 1", shows various system messages
 	D_WARN,		// "-dev 2", shows not critical system warnings
 	D_ERROR,		// "-dev 3", shows critical warnings 
@@ -165,6 +172,7 @@ extern convar_t	*cmd_scripting;
 extern convar_t	*sv_maxclients;
 extern convar_t	*cl_allow_levelshots;
 extern convar_t	*vid_displayfrequency;
+extern convar_t	host_developer;
 extern convar_t	*host_limitlocal;
 extern convar_t	*host_framerate;
 extern convar_t	*host_maxfps;
@@ -347,9 +355,8 @@ typedef struct host_parm_s
 	vec3_t		player_maxs[MAX_MAP_HULLS];	// 4 hulls allowed
 
 	HWND		hWnd;		// main window
-	int		developer;	// show all developer's message
-	int		old_developer;	// keep real dev state (we need enable dev-mode in multiplayer)
 	qboolean		allow_console;	// allow console in dev-mode or multiplayer game
+	qboolean		allow_console_init;	// initial value to allow the console
 	qboolean		key_overstrike;	// key overstrike mode
 	qboolean		stuffcmds_pending;	// should execute stuff commands
 	qboolean		allow_cheats;	// this host will allow cheating

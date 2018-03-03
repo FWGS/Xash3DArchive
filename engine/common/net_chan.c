@@ -1489,7 +1489,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 
 		c = ( chan->sock == NS_CLIENT ) ? 'c' : 's';
 
-		Msg( " %c --> sz=%i seq=%i ack=%i rel=%i tm=%f\n"
+		Con_Printf( " %c --> sz=%i seq=%i ack=%i rel=%i tm=%f\n"
 			, c
 			, MSG_GetNumBytesWritten( &send )
 			, ( chan->outgoing_sequence - 1 )
@@ -1580,7 +1580,7 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 		
 		c = ( chan->sock == NS_CLIENT ) ? 'c' : 's';
 
-		Msg( " %c <-- sz=%i seq=%i ack=%i rel=%i tm=%f\n"
+		Con_Printf( " %c <-- sz=%i seq=%i ack=%i rel=%i tm=%f\n"
 			, c
 			, MSG_GetMaxBytes( msg )
 			, sequence
@@ -1597,8 +1597,8 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 			const char *adr = NET_AdrToString( chan->remote_address );
 
 			if( sequence == (uint)chan->incoming_sequence )
-				Msg( "%s:duplicate packet %i at %i\n", adr, sequence, chan->incoming_sequence );
-			else Msg( "%s:out of order packet %i at %i\n", adr, sequence, chan->incoming_sequence );
+				Con_Printf( "%s:duplicate packet %i at %i\n", adr, sequence, chan->incoming_sequence );
+			else Con_Printf( "%s:out of order packet %i at %i\n", adr, sequence, chan->incoming_sequence );
 		}
 		return false;
 	}
@@ -1606,7 +1606,7 @@ qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg )
 	// dropped packets don't keep the message from being used
 	net_drop = sequence - ( chan->incoming_sequence + 1 );
 	if( net_drop > 0 && net_showdrop->value )
-		Msg( "%s:Dropped %i packets at %i\n", NET_AdrToString( chan->remote_address ), sequence - (chan->incoming_sequence + 1), sequence );
+		Con_Printf( "%s:Dropped %i packets at %i\n", NET_AdrToString( chan->remote_address ), sequence - (chan->incoming_sequence + 1), sequence );
 
 	// if the current outgoing reliable message has been acknowledged
 	// clear the buffer to make way for the next

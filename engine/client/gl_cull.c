@@ -91,12 +91,6 @@ int R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags )
 	if( !surf || !surf->texinfo || !surf->texinfo->texture )
 		return CULL_OTHER;
 
-	if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
-	{
-		if( FBitSet( surf->flags, SURF_WATERCSG ) && !FBitSet( e->curstate.effects, EF_NOWATERCSG ))
-			return CULL_OTHER;
-	}
-
 	if( r_nocull->value )
 		return CULL_VISIBLE;
 
@@ -107,48 +101,45 @@ int R_CullSurface( msurface_t *surf, gl_frustum_t *frustum, uint clipflags )
 	// only static ents can be culled by frustum
 	if( !R_StaticEntity( e )) frustum = NULL;
 
-	if( r_faceplanecull->value )
+	if( !VectorIsNull( surf->plane->normal ))
 	{
-		if( !VectorIsNull( surf->plane->normal ))
+		float	dist;
+
+		// can use normal.z for world (optimisation)
+		if( RI.drawOrtho )
 		{
-			float	dist;
+			vec3_t	orthonormal;
 
-			// can use normal.z for world (optimisation)
-			if( RI.drawOrtho )
+			if( e == clgame.entities ) orthonormal[2] = surf->plane->normal[2];
+			else Matrix4x4_VectorRotate( RI.objectMatrix, surf->plane->normal, orthonormal );
+			dist = orthonormal[2];
+		}
+		else dist = PlaneDiff( tr.modelorg, surf->plane );
+
+		if( glState.faceCull == GL_FRONT )
+		{
+			if( FBitSet( surf->flags, SURF_PLANEBACK ))
 			{
-				vec3_t	orthonormal;
-
-				if( e == clgame.entities ) orthonormal[2] = surf->plane->normal[2];
-				else Matrix4x4_VectorRotate( RI.objectMatrix, surf->plane->normal, orthonormal );
-				dist = orthonormal[2];
+				if( dist >= -BACKFACE_EPSILON )
+					return CULL_BACKSIDE; // wrong side
 			}
-			else dist = PlaneDiff( tr.modelorg, surf->plane );
-
-			if( glState.faceCull == GL_FRONT )
+			else
 			{
-				if( FBitSet( surf->flags, SURF_PLANEBACK ))
-				{
-					if( dist >= -BACKFACE_EPSILON )
-						return CULL_BACKSIDE; // wrong side
-				}
-				else
-				{
-					if( dist <= BACKFACE_EPSILON )
-						return CULL_BACKSIDE; // wrong side
-				}
+				if( dist <= BACKFACE_EPSILON )
+					return CULL_BACKSIDE; // wrong side
 			}
-			else if( glState.faceCull == GL_BACK )
+		}
+		else if( glState.faceCull == GL_BACK )
+		{
+			if( FBitSet( surf->flags, SURF_PLANEBACK ))
 			{
-				if( FBitSet( surf->flags, SURF_PLANEBACK ))
-				{
-					if( dist <= BACKFACE_EPSILON )
-						return CULL_BACKSIDE; // wrong side
-				}
-				else
-				{
-					if( dist >= -BACKFACE_EPSILON )
-						return CULL_BACKSIDE; // wrong side
-				}
+				if( dist <= BACKFACE_EPSILON )
+					return CULL_BACKSIDE; // wrong side
+			}
+			else
+			{
+				if( dist >= -BACKFACE_EPSILON )
+					return CULL_BACKSIDE; // wrong side
 			}
 		}
 	}

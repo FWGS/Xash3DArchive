@@ -24,7 +24,6 @@ typedef int (*PHYSICAPI)( int, server_physics_api_t*, physics_interface_t* );
 extern triangleapi_t gTriApi;
 
 /*
-
 pushmove objects do not obey gravity, and do not interact with each other or trigger fields,
 but block normal movement and push normal objects when they move.
 
@@ -84,15 +83,9 @@ void SV_CheckAllEnts( void )
 	{
 		e = EDICT_NUM( i );
 
-		// DEBUG: check 'gamestate' for using by mods
-		if( e->v.gamestate != 0 )
-		{
-			MsgDev( D_INFO, "Entity %s[%i] uses gamestate %i\n", SV_ClassName( e ), NUM_FOR_EDICT( e ), e->v.gamestate );
-		}
-
 		if( e->free && e->pvPrivateData != NULL )
 		{
-			MsgDev( D_ERROR, "Freed entity %s (%i) has private data.\n", SV_ClassName( e ), i );
+			Con_Printf( S_ERROR "Freed entity %s (%i) has private data.\n", SV_ClassName( e ), i );
 			continue;
 		}
 
@@ -101,14 +94,14 @@ void SV_CheckAllEnts( void )
 
 		if( !e->v.pContainingEntity || e->v.pContainingEntity != e )
 		{
-			MsgDev( D_ERROR, "Entity %s (%i) has invalid container, fixed.\n", SV_ClassName( e ), i );
+			Con_Printf( S_ERROR "Entity %s (%i) has invalid container, fixed.\n", SV_ClassName( e ), i );
 			e->v.pContainingEntity = e;
 			continue;
 		}
 
 		if( !e->pvPrivateData || !Mem_IsAllocatedExt( svgame.mempool, e->pvPrivateData ))
 		{
-			MsgDev( D_ERROR, "Entity %s (%i) trashed private data.\n", SV_ClassName( e ), i );
+			Con_Printf( S_ERROR "Entity %s (%i) trashed private data.\n", SV_ClassName( e ), i );
 			e->pvPrivateData = NULL;
 			continue;
 		}
@@ -134,14 +127,14 @@ void SV_CheckVelocity( edict_t *ent )
 		if( IS_NAN( ent->v.velocity[i] ))
 		{
 			if( sv_check_errors->value )
-				MsgDev( D_INFO, "Got a NaN velocity on %s\n", STRING( ent->v.classname ));
+				Con_Printf( "Got a NaN velocity on %s\n", STRING( ent->v.classname ));
 			ent->v.velocity[i] = 0.0f;
 		}
 
 		if( IS_NAN( ent->v.origin[i] ))
 		{
 			if( sv_check_errors->value )
-				MsgDev( D_INFO, "Got a NaN origin on %s\n", STRING( ent->v.classname ));
+				Con_Printf( "Got a NaN origin on %s\n", STRING( ent->v.classname ));
 			ent->v.origin[i] = 0.0f;
 		}
 	}
@@ -153,7 +146,7 @@ void SV_CheckVelocity( edict_t *ent )
 	{
 		wishspd = sqrt( wishspd );
 		if( sv_check_errors->value )
-			MsgDev( D_INFO, "Got a velocity too high on %s ( %.2f > %.2f )\n", STRING( ent->v.classname ), wishspd, sqrt( maxspd ));
+			Con_Printf( "Got a velocity too high on %s ( %.2f > %.2f )\n", STRING( ent->v.classname ), wishspd, sqrt( maxspd ));
 		wishspd = sv_maxvelocity.value / wishspd;
 		VectorScale( ent->v.velocity, wishspd, ent->v.velocity );
 	}
@@ -257,10 +250,7 @@ qboolean SV_PlayerRunThink( edict_t *ent, float frametime, double time )
 	}
 
 	if( FBitSet( ent->v.flags, FL_KILLME ))
-	{
-		MsgDev( D_ERROR, "client can't be deleted!\n" );
 		ClearBits( ent->v.flags, FL_KILLME );
-          }
 
 	return !ent->free;
 }
@@ -609,8 +599,8 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
 		if( trace.fraction == 1.0f )
 			 break; // moved the entire distance
 
-		if( !trace.ent )
-			MsgDev( D_ERROR, "SV_FlyMove: trace.ent == NULL\n" );
+		if( !SV_IsValidEdict( trace.ent ))
+			break; // g-cont. this should never happens
 
 		if( trace.plane.normal[2] > 0.7f )
 		{
@@ -619,7 +609,7 @@ int SV_FlyMove( edict_t *ent, float time, trace_t *steptrace )
          			if( trace.ent->v.solid == SOLID_BSP || trace.ent->v.solid == SOLID_SLIDEBOX ||
 			trace.ent->v.movetype == MOVETYPE_PUSHSTEP || (trace.ent->v.flags & FL_CLIENT))
 			{
-				ent->v.flags |= FL_ONGROUND;
+				SetBits( ent->v.flags, FL_ONGROUND );
 				ent->v.groundentity = trace.ent;
 			}
 		}
@@ -1228,7 +1218,6 @@ void SV_Physics_Follow( edict_t *ent )
 
 	if( !SV_IsValidEdict( parent ))
 	{
-		MsgDev( D_ERROR, "%s have MOVETYPE_FOLLOW with no corresponding ent!\n", SV_ClassName( ent ));
 		ent->v.movetype = MOVETYPE_NONE;
 		return;
 	}
@@ -1257,7 +1246,6 @@ void SV_Physics_Compound( edict_t *ent )
 
 	if( !SV_IsValidEdict( parent ))
 	{
-		MsgDev( D_ERROR, "%s have MOVETYPE_COMPOUND with no corresponding ent!", SV_ClassName( ent ));
 		ent->v.movetype = MOVETYPE_NONE;
 		return;
 	}

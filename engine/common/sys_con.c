@@ -203,7 +203,7 @@ long _stdcall Con_InputLineProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 			Q_strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - Q_strlen( s_wcd.consoleText ) - 5 );
 			Q_strcat( s_wcd.consoleText, "\n" );
 			SetWindowText( s_wcd.hwndInputLine, "" );
-			Msg( ">%s\n", inputBuffer );
+			Con_Printf( ">%s\n", inputBuffer );
 
 			// copy line to history buffer
 			Q_strncpy( s_wcd.historyLines[s_wcd.nextHistoryLine % COMMAND_HISTORY], inputBuffer, MAX_STRING );
@@ -280,7 +280,7 @@ void Con_CreateConsole( void )
 	wc.lpszClassName = SYSCONSOLE;
 	wc.lpszMenuName  = 0;
 
-	if( Sys_CheckParm( "-log" ) && host.developer != 0 )
+	if( Sys_CheckParm( "-log" ))
 		s_wcd.log_active = true;
 
 	if( host.type == HOST_NORMAL )

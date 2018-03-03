@@ -232,7 +232,7 @@ void CL_CheckPredictionError( void )
 	// save the prediction error for interpolation
 	if( dist > MAX_PREDICTION_ERROR )
 	{
-		if( cl_showerror->value && host.developer >= D_ERROR )
+		if( cl_showerror->value && host_developer.value )
 			Con_NPrintf( 10 + ( ++pos & 3 ), "^3player teleported:^7 %.3f units\n", dist );
 
 		// a teleport or something or gamepaused
@@ -240,7 +240,7 @@ void CL_CheckPredictionError( void )
 	}
 	else
 	{
-		if( cl_showerror->value && dist > MIN_PREDICTION_EPSILON && host.developer >= D_ERROR )
+		if( cl_showerror->value && dist > MIN_PREDICTION_EPSILON && host_developer.value )
 			Con_NPrintf( 10 + ( ++pos & 3 ), "^1prediction error:^7 %.3f units\n", dist );
 
 		VectorCopy( cl.frames[cmd].playerstate[cl.playernum].origin, cl.local.predicted_origins[frame] );

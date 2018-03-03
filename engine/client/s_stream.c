@@ -27,12 +27,15 @@ S_PrintBackgroundTrackState
 */
 void S_PrintBackgroundTrackState( void )
 {
+	Con_Printf( "BackgroundTrack: " );
+
 	if( s_bgTrack.current[0] && s_bgTrack.loopName[0] )
-		Msg( "BackgroundTrack: intro %s, loop %s\n", s_bgTrack.current, s_bgTrack.loopName );
+		Con_Printf( "intro %s, loop %s\n", s_bgTrack.current, s_bgTrack.loopName );
 	else if( s_bgTrack.current[0] )
-		Msg( "BackgroundTrack: %s\n", s_bgTrack.current );
+		Con_Printf( "%s\n", s_bgTrack.current );
 	else if( s_bgTrack.loopName[0] )
-		Msg( "BackgroundTrack: %s [loop]\n", s_bgTrack.loopName );
+		Con_Printf( "%s [loop]\n", s_bgTrack.loopName );
+	else Con_Printf( "not playing\n" );
 }
 
 /*

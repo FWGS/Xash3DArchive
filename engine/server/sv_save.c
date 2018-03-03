@@ -600,7 +600,7 @@ int SV_IsValidSave( void )
 
 	if( !svs.initialized || sv.state != ss_active )
 	{
-		Msg( "Not playing a local game.\n" );
+		Con_Printf( "Not playing a local game.\n" );
 		return 0;
 	}
 
@@ -608,26 +608,26 @@ int SV_IsValidSave( void )
 	{
 		if( !svgame.physFuncs.SV_AllowSaveGame( ))
 		{
-			Msg( "Savegame is not allowed.\n" );
+			Con_Printf( "Savegame is not allowed.\n" );
 			return 0;
 		}
 	}
 
 	if( !CL_Active( ))
 	{
-		Msg( "Can't save if not active.\n" );
+		Con_Printf( "Can't save if not active.\n" );
 		return 0;
 	}
 
 	if( CL_IsIntermission( ))
 	{
-		Msg( "Can't save during intermission.\n" );
+		Con_Printf( "Can't save during intermission.\n" );
 		return 0;
 	}
 
 	if( svs.maxclients != 1 )
 	{
-		Msg( "Can't save multiplayer games.\n" );
+		Con_Printf( "Can't save multiplayer games.\n" );
 		return 0;
 	}
 
@@ -637,13 +637,13 @@ int SV_IsValidSave( void )
 		
 		if( !pl )
 		{
-			Msg( "Can't savegame without a player!\n" );
+			Con_Printf( "Can't savegame without a player!\n" );
 			return 0;
 		}
 			
-		if( pl->v.deadflag != false || pl->v.health <= 0.0f )
+		if( pl->v.deadflag || pl->v.health <= 0.0f )
 		{
-			Msg( "Can't savegame with a dead player\n" );
+			Con_Printf( "Can't savegame with a dead player\n" );
 			return 0;
 		}
 
@@ -651,7 +651,7 @@ int SV_IsValidSave( void )
 		return 1;
 	}
 
-	Msg( "Can't savegame without a client!\n" );
+	Con_Printf( "Can't savegame without a client!\n" );
 
 	return 0;
 }
@@ -871,7 +871,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 	int			i, id, size, version;
 	
 	Q_snprintf( name, sizeof( name ), "save/%s.HL1", level );
-	MsgDev( D_INFO, "Loading game from %s...\n", name );
+	Con_Printf( "Loading game from %s...\n", name );
 
 	pFile = FS_Open( name, "rb", true );
 	if( !pFile )
@@ -1273,7 +1273,7 @@ void SV_LoadClientState( SAVERESTOREDATA *pSaveData, const char *level, qboolean
 	// read offsets
 	FS_Read( pFile, &sections, sizeof( sections ));
 
-	if( adjacent ) MsgDev( D_INFO, "Loading decals from %s\n", level );
+	if( adjacent ) Con_Printf( "Loading decals from %s\n", level );
 
 	if( sections.offsets[LUMP_DECALS_OFFSET] != -1 )
 	{
@@ -1790,7 +1790,7 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 				// IMPORTANT: we should find the already spawned or local restored global entity
 				pNewEnt = SV_FindGlobalEntity( tmpVars.classname, tmpVars.globalname );
 
-				MsgDev( D_INFO, "Merging changes for global: %s\n", STRING( pEntInfo->classname ));
+				Con_DPrintf( "Merging changes for global: %s\n", STRING( pEntInfo->classname ));
 
 				// -------------------------------------------------------------------------
 				// Pass the "global" flag to the DLL to indicate this entity should only override
@@ -1808,7 +1808,7 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 			}
 			else 
 			{
-				MsgDev( D_INFO, "Transferring %s (%d)\n", STRING( pEntInfo->classname ), NUM_FOR_EDICT( pent ));
+				Con_DPrintf( "Transferring %s (%d)\n", STRING( pEntInfo->classname ), NUM_FOR_EDICT( pent ));
 
 				if( svgame.dllFuncs.pfnRestore( pent, pSaveData, false ) < 0 )
 				{
@@ -1820,7 +1820,7 @@ int SV_CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask )
 					{
 						// this can happen during normal processing - PVS is just a guess,
 						// some map areas won't exist in the new map
-						MsgDev( D_INFO, "Suppressing %s\n", STRING( pEntInfo->classname ));
+						Con_DPrintf( "Suppressing %s\n", STRING( pEntInfo->classname ));
 						pent->v.flags |= FL_KILLME;
 					}
 					else
@@ -1873,7 +1873,6 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 		// map was already in the list
 		if( test < i ) continue;
 
-		MsgDev( D_NOTE, "Merging entities from %s ( at %s )\n", currentLevelData.levelList[i].mapName, currentLevelData.levelList[i].landmarkName );
 		pSaveData = SV_LoadSaveData( currentLevelData.levelList[i].mapName );
 
 		if( pSaveData )
@@ -1893,13 +1892,13 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 			index = -1;
 
 			if( !Q_stricmp( currentLevelData.levelList[i].mapName, pOldLevel ))
-				flags |= FENTTABLE_PLAYER;
+				SetBits( flags, FENTTABLE_PLAYER );
 
 			while( 1 )
 			{
 				index = EntryInTable( pSaveData, sv.name, index );
 				if( index < 0 ) break;
-				flags |= (1<<index);
+				SetBits( flags, BIT( index ));
 			}
 
 			if( flags ) movedCount = SV_CreateEntityTransitionList( pSaveData, flags );
@@ -1917,9 +1916,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 	svgame.globals->pSaveData = NULL;
 
 	if( !foundprevious )
-	{
 		Host_Error( "Level transition ERROR\nCan't find connection to %s from %s\n", pOldLevel, sv.name );
-	}
 }
 
 /*
@@ -1937,7 +1934,7 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 	
 	if( sv.state != ss_active )
 	{
-		Msg( "SV_ChangeLevel: server not running\n");
+		Con_Printf( S_ERROR "server not running\n");
 		return;
 	}
 
@@ -1949,7 +1946,6 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 
 	Q_strncpy( level, mapname, MAX_STRING );
 	Q_strncpy( oldlevel, sv.name, MAX_STRING );
-	sv.changelevel = true;
 
 	if( loadfromsavedgame )
 	{
@@ -2031,7 +2027,7 @@ int SV_SaveGameSlot( const char *pSaveName, const char *pSaveComment )
 	SaveRestore_Rewind( pSaveData, tokenSize );
 
 	Q_snprintf( name, sizeof( name ), "save/%s.sav", pSaveName );
-	MsgDev( D_INFO, "Saving game to %s...\n", name );
+	Con_Printf( "Saving game to %s...\n", name );
 
 	Cbuf_AddText( va( "saveshot \"%s\"\n", pSaveName ));
 
@@ -2185,7 +2181,7 @@ qboolean SV_LoadGame( const char *pPath )
 		return false;
 	}
 
-	MsgDev( D_INFO, "Loading game from %s...\n", pPath );
+	Con_Printf( "Loading game from %s...\n", pPath );
 	Cvar_FullSet( "maxplayers", "1", FCVAR_LATCH );
 	Cvar_SetValue( "deathmatch", 0 );
 	Cvar_SetValue( "coop", 0 );
@@ -2247,7 +2243,7 @@ void SV_SaveGame( const char *pName )
 
 		if( n == 1000 )
 		{
-			Msg( "^3ERROR^7: no free slots for savegame\n" );
+			Con_Printf( S_ERROR "no free slots for savegame\n" );
 			return;
 		}
 	}

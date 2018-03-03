@@ -29,9 +29,11 @@ HINSTANCE		hCurrent;	// hinstance of current .dll
 host_parm_t	host;	// host parms
 sysinfo_t		SI;
 
+CVAR_DEFINE( host_developer, "developer", "0", 0, "engine is in development-mode" );
 convar_t	*host_gameloaded;
 convar_t	*host_clientloaded;
 convar_t	*host_limitlocal;
+convar_t	host_developer;
 convar_t	*host_maxfps;
 convar_t	*host_framerate;
 convar_t	*con_gamemaps;
@@ -171,7 +173,7 @@ void Host_ChangeGame_f( void )
 
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: game <directory>\n" );
+		Con_Printf( S_USAGE "game <directory>\n" );
 		return;
 	}
 
@@ -184,11 +186,11 @@ void Host_ChangeGame_f( void )
 
 	if( i == SI.numgames )
 	{
-		Msg( "%s not exist\n", Cmd_Argv( 1 ));
+		Con_Printf( "%s not exist\n", Cmd_Argv( 1 ));
 	}
 	else if( !Q_stricmp( GI->gamefolder, Cmd_Argv( 1 )))
 	{
-		Msg( "%s already active\n", Cmd_Argv( 1 ));	
+		Con_Printf( "%s already active\n", Cmd_Argv( 1 ));	
 	}
 	else
 	{
@@ -212,7 +214,7 @@ void Host_Exec_f( void )
 
 	if( Cmd_Argc() != 2 )
 	{
-		Msg( "Usage: exec <filename>\n" );
+		Con_Printf( S_USAGE "exec <filename>\n" );
 		return;
 	}
 
@@ -266,7 +268,7 @@ void Host_MemStats_f( void )
 		Mem_PrintStats();
 		break;
 	default:
-		Msg( "Usage: memlist <all>\n" );
+		Con_Printf( S_USAGE "memlist <all>\n" );
 		break;
 	}
 }
@@ -639,11 +641,11 @@ void Host_Error( const char *error, ... )
 	}
 	else
 	{
-		if( host.developer > 0 )
+		if( host.allow_console )
 		{
 			UI_SetActiveMenu( false );
 			Key_SetKeyDest( key_console );
-			Msg( "Host_Error: %s", hosterror1 );
+			Con_Printf( "Host_Error: %s", hosterror1 );
 		}
 		else MSGBOX2( hosterror1 );
 	}
@@ -653,7 +655,7 @@ void Host_Error( const char *error, ... )
 
 	if( recursive )
 	{ 
-		Msg( "Host_RecursiveError: %s", hosterror2 );
+		Con_Printf( "Host_RecursiveError: %s", hosterror2 );
 		Sys_Error( hosterror1 );
 		return; // don't multiple executes
 	}
@@ -718,6 +720,7 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 	char		cmdline[128];
 	qboolean		parse_cmdline = false;
 	char		szTemp[MAX_SYSPATH];
+	int		developer = 0;
 	string		szRootPath;
 	char		*in, *out;
 
@@ -733,11 +736,10 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 	host.oldFilter = SetUnhandledExceptionFilter( Sys_Crash );
 	host.hInst = GetModuleHandle( NULL );
 	host.change_game = bChangeGame;
-	host.status = HOST_INIT; // initialzation started
-	host.developer = host.old_developer = 0;
 	host.config_executed = false;
+	host.status = HOST_INIT; // initialzation started
 
-	Memory_Init();		// init memory subsystem
+	Memory_Init(); // init memory subsystem
 
 	progname[0] = cmdline[0] = '\0';
 	in = (char *)hostname;
@@ -768,17 +770,18 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 	host.mempool = Mem_AllocPool( "Zone Engine" );
 
 	if( Sys_CheckParm( "-console" ))
-		host.developer = 1;
+		host.allow_console = true;
 
 	if( Sys_CheckParm( "-dev" ))
 	{
+		host.allow_console = true;
+		developer = DEV_NORMAL;
+
 		if( Sys_GetParmFromCmdLine( "-dev", dev_level ))
 		{
 			if( Q_isdigit( dev_level ))
-				host.developer = abs( Q_atoi( dev_level ));
-			else host.developer++; // -dev == 1, -dev -console == 2
+				developer = bound( DEV_NONE, abs( Q_atoi( dev_level )), DEV_EXTENDED );
 		}
-		else host.developer++; // -dev == 1, -dev -console == 2
 	}
 
 	host.type = HOST_NORMAL; // predict state
@@ -824,15 +827,17 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 
 		CloseHandle( host.hMutex );
 		host.hMutex = CreateSemaphore( NULL, 0, 1, "Xash Dedicated Server" );
-		if( host.developer < 3 ) host.developer = 3; // otherwise we see empty console
+		host.allow_console = true;
 	}
 	else
 	{
 		// don't show console as default
-		if( host.developer < D_WARN ) host.con_showalways = false;
+		if( developer <= DEV_NORMAL )
+			host.con_showalways = false;
 	}
 
-	host.old_developer = host.developer;
+	// member console allowing
+	host.allow_console_init = host.allow_console;
 
 	Con_CreateConsole(); // system console used by dedicated server or show fatal errors
 
@@ -848,11 +853,12 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 	// startup cmds and cvars subsystem
 	Cmd_Init();
 	Cvar_Init();
-	Con_Init();	// early console running to catch all the messages
 
 	// share developer level across all dlls
-	Q_snprintf( dev_level, sizeof( dev_level ), "%i", host.developer );
-	Cvar_Get( "developer", dev_level, FCVAR_READ_ONLY, "current developer level" );
+	Q_snprintf( dev_level, sizeof( dev_level ), "%i", developer );
+	Cvar_DirectSet( &host_developer, dev_level );
+
+	Con_Init(); // early console running to catch all the messages
 	Cmd_AddCommand( "exec", Host_Exec_f, "execute a script file" );
 	Cmd_AddCommand( "memlist", Host_MemStats_f, "prints memory pool information" );
 
@@ -866,11 +872,11 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 	if( GI->secure )
 	{
 		// clear all developer levels when game is protected
-		Cvar_FullSet( "developer", "0", FCVAR_READ_ONLY );
-		host.developer = host.old_developer = 0;
+		Cvar_DirectSet( &host_developer, "0" );
+		host.allow_console_init = false;
 		host.con_showalways = false;
+		host.allow_console = false;
 	}
-
 	HPAK_Init();
 
 	IN_Init();
@@ -901,7 +907,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	Host_InitCommon( progname, bChangeGame );
 
 	// init commands and vars
-	if( host.developer >= 3 )
+	if( host_developer.value >= DEV_EXTENDED )
 	{
 		Cmd_AddCommand ( "sys_error", Sys_Error_f, "just throw a fatal error to test shutdown procedures");
 		Cmd_AddCommand ( "host_error", Host_Error_f, "just throw a host error to test shutdown procedures");

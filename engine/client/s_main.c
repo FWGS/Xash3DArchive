@@ -2011,7 +2011,7 @@ void S_Play_f( void )
 {
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "Usage: play <soundfile>\n" );
+		Con_Printf( S_USAGE "play <soundfile>\n" );
 		return;
 	}
 
@@ -2022,7 +2022,7 @@ void S_PlayVol_f( void )
 {
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "Usage: playvol <soundfile volume>\n" );
+		Con_Printf( S_USAGE "playvol <soundfile volume>\n" );
 		return;
 	}
 
@@ -2033,7 +2033,7 @@ void S_Say_f( void )
 {
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "Usage: speak <soundfile>\n" );
+		Con_Printf( S_USAGE "speak <soundfile>\n" );
 		return;
 	}
 
@@ -2044,7 +2044,7 @@ void S_SayReliable_f( void )
 {
 	if( Cmd_Argc() == 1 )
 	{
-		Msg( "Usage: spk <soundfile>\n" );
+		Con_Printf( S_USAGE "spk <soundfile>\n" );
 		return;
 	}
 
@@ -2105,7 +2105,7 @@ void S_Music_f( void )
 		// restore command for singleplayer: all arguments are valid
 		S_StartBackgroundTrack( Cmd_Argv( 1 ), Cmd_Argv( 2 ), Q_atoi( Cmd_Argv( 3 )), false );
 	}
-	else Msg( "Usage: music <musicfile> [loopfile]\n" );
+	else Con_Printf( S_USAGE "music <musicfile> [loopfile]\n" );
 }
 
 /*
@@ -2142,13 +2142,12 @@ S_SoundInfo_f
 */
 void S_SoundInfo_f( void )
 {
-	S_PrintDeviceName();
-
-	Msg( "%5d channel(s)\n", 2 );
-	Msg( "%5d samples\n", dma.samples );
-	Msg( "%5d bits/sample\n", 16 );
-	Msg( "%5d bytes/sec\n", SOUND_DMA_SPEED );
-	Msg( "%5d total_channels\n", total_channels );
+	Con_Printf( "Audio: DirectSound\n" );
+	Con_Printf( "%5d channel(s)\n", 2 );
+	Con_Printf( "%5d samples\n", dma.samples );
+	Con_Printf( "%5d bits/sample\n", 16 );
+	Con_Printf( "%5d bytes/sec\n", SOUND_DMA_SPEED );
+	Con_Printf( "%5d total_channels\n", total_channels );
 
 	S_PrintBackgroundTrackState ();
 }
