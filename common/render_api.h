@@ -261,6 +261,8 @@ typedef struct render_interface_s
 	byte*		(*Mod_GetCurrentVis)( void );
 	// tell the renderer what new map is started
 	void		(*R_NewMap)( void );
+	// clear the render entities before each frame
+	void		(*R_ClearScene)( void );
 } render_interface_t;
 
 #endif//RENDER_API_H

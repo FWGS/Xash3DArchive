@@ -33,7 +33,7 @@ const char *svc_strings[svc_lastmsg+1] =
 	"svc_nop",
 	"svc_disconnect",
 	"svc_event",
-	"svc_version",
+	"svc_changing",
 	"svc_setview",
 	"svc_sound",
 	"svc_time",
@@ -644,6 +644,34 @@ void CL_ParseSoundFade( sizebuf_t *msg )
 
 /*
 ==================
+CL_RequestMissingResources
+
+==================
+*/
+qboolean CL_RequestMissingResources( void )
+{
+	resource_t	*p;
+
+	if( !cls.dl.doneregistering && ( cls.dl.custom || cls.state == ca_validate ))
+	{
+		p = cl.resourcesneeded.pNext;
+
+		if( p == &cl.resourcesneeded )
+		{
+			cls.dl.doneregistering = true;
+			cls.dl.custom = false;
+		}
+		else if( !FBitSet( p->ucFlags, RES_WASMISSING ))
+		{
+			CL_MoveToOnHandList( cl.resourcesneeded.pNext );
+			return true;
+		}
+	}
+	return false;
+}
+
+/*
+==================
 CL_ParseCustomization
 
 ==================
@@ -732,18 +760,20 @@ CL_ParseServerData
 */
 void CL_ParseServerData( sizebuf_t *msg )
 {
-	int	i, servercount, checksum;
-	int	playernum, maxclients;
 	char	gamefolder[MAX_QPATH];
 	qboolean	background;
+	int	i;
 
 	MsgDev( D_NOTE, "Serverdata packet received.\n" );
 	cls.timestart = Sys_DoubleTime();
 
 	cls.demowaiting = false;	// server is changed
-	cls.state = ca_connected;
 	clgame.load_sequence++;	// now all hud sprites are invalid
-	cls.signon = 0;		// reset signon state
+
+	// wipe the client_t struct
+	if( !cls.changelevel && !cls.changedemo )
+		CL_ClearState ();
+	cls.state = ca_connected;
 
 	// Re-init hud video, especially if we changed game directories
 	clgame.dllFuncs.pfnVidInit();
@@ -754,48 +784,21 @@ void CL_ParseServerData( sizebuf_t *msg )
 	if( cls.serverProtocol != PROTOCOL_VERSION )
 		Host_Error( "Server use invalid protocol (%i should be %i)\n", cls.serverProtocol, PROTOCOL_VERSION );
 
-	servercount = MSG_ReadLong( msg );
-	checksum = MSG_ReadLong( msg );
-	playernum = MSG_ReadByte( msg );
-	maxclients = MSG_ReadByte( msg );
+	cl.servercount = MSG_ReadLong( msg );
+	cl.checksum = MSG_ReadLong( msg );
+	cl.playernum = MSG_ReadByte( msg );
+	cl.maxclients = MSG_ReadByte( msg );
 	clgame.maxEntities = MSG_ReadWord( msg );
 	clgame.maxEntities = bound( 600, clgame.maxEntities, MAX_EDICTS );
 	clgame.maxModels = MSG_ReadWord( msg );
 	Q_strncpy( clgame.mapname, MSG_ReadString( msg ), MAX_STRING );
 	Q_strncpy( clgame.maptitle, MSG_ReadString( msg ), MAX_STRING );
 	background = MSG_ReadOneBit( msg );
-	cls.changelevel = MSG_ReadOneBit( msg );
-	Q_strncpy( gamefolder, MSG_ReadString( msg ), MAX_STRING );
+	Q_strncpy( gamefolder, MSG_ReadString( msg ), MAX_QPATH );
 	host.features = (uint)MSG_ReadLong( msg );
 
 	if( clgame.maxModels > MAX_MODELS )
 		MsgDev( D_WARN, "server model limit is above client model limit %i > %i\n", clgame.maxModels, MAX_MODELS );
-
-	if( cls.changelevel && cls.demoplayback )
-		cls.changedemo = true;
-
-	// wipe the client_t struct
-	CL_ClearState ();
-
-	// allow console in multiplayer games
-	if( maxclients > 1 ) host.allow_console = true;
-
-	// fill the client struct
-	cl.servercount = servercount;
-	cl.checksum = checksum;
-	cl.playernum = playernum;
-	cl.maxclients = maxclients;
-
-	// set the background state
-	if( cls.demoplayback && ( cls.demonum != -1 ))
-	{
-		host.mouse_visible = false;
-		cl.background = true;
-	}
-	else cl.background = background;
-
-	if( cls.changedemo )
-		SCR_BeginLoadingPlaque( cl.background );
 
 	if( Con_FixedFont( ))
 	{
@@ -812,8 +815,11 @@ void CL_ParseServerData( sizebuf_t *msg )
 	}
 
 	// multiplayer game?
-	if( cl.maxclients != 1 )	
+	if( cl.maxclients > 1 )	
 	{
+		// allow console in multiplayer games
+		host.allow_console = true;
+
 		// loading user settings
 		CSCR_LoadDefaultCVars( "user.scr" );
 
@@ -821,6 +827,15 @@ void CL_ParseServerData( sizebuf_t *msg )
 			Cvar_SetValue( "r_decals", mp_decals.value );
 	}
 	else Cvar_Reset( "r_decals" );
+
+	// set the background state
+	if( cls.demoplayback && ( cls.demonum != -1 ))
+	{
+		// re-init mouse
+		host.mouse_visible = false;
+		cl.background = true;
+	}
+	else cl.background = background;
 
 	if( cl.background )	// tell the game parts about background state
 		Cvar_FullSet( "cl_background", "1", FCVAR_READ_ONLY );
@@ -841,7 +856,9 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cl.viewentity = cl.playernum + 1;
 	gameui.globals->maxClients = cl.maxclients;
 	Q_strncpy( gameui.globals->maptitle, clgame.maptitle, sizeof( gameui.globals->maptitle ));
-	CL_InitEdicts (); // re-arrange edicts
+
+	if( !cls.changelevel && !cls.changedemo )
+		CL_InitEdicts (); // re-arrange edicts
 
 	// get splash name
 	if( cls.demoplayback && ( cls.demonum != -1 ))
@@ -863,31 +880,6 @@ void CL_ParseServerData( sizebuf_t *msg )
 #else
 	MSG_WriteString( &cls.netchan.message, va( "sendres %i\n", cl.servercount ));
 #endif
-	if( scr_dark->value )
-	{
-		screenfade_t		*sf = &clgame.fade;
-		client_textmessage_t	*title;
-
-		title = CL_TextMessageGet( "GAMETITLE" );
-
-		if( title )
-		{
-			// get settings from titles.txt
-			sf->fadeEnd = title->holdtime + title->fadeout;
-			sf->fadeReset = title->fadeout;
-		}
-		else sf->fadeEnd = sf->fadeReset = 5.0f;
-	
-		sf->fadeFlags = FFADE_IN;
-		sf->fader = sf->fadeg = sf->fadeb = 0;
-		sf->fadealpha = 255;
-		sf->fadeSpeed = (float)sf->fadealpha / sf->fadeReset;
-		sf->fadeReset += cl.time;
-		sf->fadeEnd += sf->fadeReset;
-		
-		Cvar_SetValue( "v_dark", 0.0f );
-	}
-
 	// need to prep refresh at next oportunity
 	cl.video_prepped = false;
 	cl.audio_prepped = false;
@@ -2276,10 +2268,37 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			CL_ParseEvent( msg );
 			cl.frames[cl.parsecountmod].graphdata.event += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
-		case svc_version:
-			param1 = MSG_ReadLong( msg );
-			if( param1 != PROTOCOL_VERSION )
-				Host_Error( "Server is protocol %i instead of %i\n", param1, PROTOCOL_VERSION );
+		case svc_changing:
+			if( MSG_ReadOneBit( msg ))
+			{
+				cls.changelevel = true;
+				S_StopAllSounds( true );
+
+				MsgDev( D_INFO, "Server changing, reconnecting\n" );
+
+				if( cls.demoplayback )
+				{
+					SCR_BeginLoadingPlaque( cl.background );
+					cls.changedemo = true;
+				}
+			}
+			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
+
+			CL_ClearState ();
+			CL_InitEdicts (); // re-arrange edicts
+
+			if( cls.demoplayback )
+			{
+				cl.background = (cls.demonum != -1) ? true : false;
+				cls.state = ca_connected;
+			}
+			else
+			{
+				// g-cont. local client skip the challenge
+				if( SV_Active()) cls.state = ca_disconnected;
+				else cls.state = ca_connecting;
+				cls.connect_time = MAX_HEARTBEAT;
+			}
 			break;
 		case svc_setview:
 			CL_ParseViewEntity( msg );

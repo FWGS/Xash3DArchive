@@ -357,6 +357,12 @@ void SV_ClearResourceList( resource_t *pList )
 	pList->pNext = pList;
 }
 
+void SV_ClearResourceLists( sv_client_t *cl )
+{
+	SV_ClearResourceList( &cl->resourcesneeded );
+	SV_ClearResourceList( &cl->resourcesonhand );
+}
+
 int SV_EstimateNeededResources( sv_client_t *cl )
 {
 	int		missing = 0;

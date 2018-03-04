@@ -2867,14 +2867,14 @@ int CL_DecalIndexFromName( const char *name )
 {
 	int	i;
 
-	if( !name || !name[0] )
+	if( !COM_CheckString( name ))
 		return 0;
 
 	// look through the loaded sprite name list for SpriteName
-	for( i = 0; i < (MAX_DECALS - 1) && host.draw_decals[i+1][0]; i++ )
+	for( i = 1; i < MAX_DECALS && host.draw_decals[i][0]; i++ )
 	{
-		if( !Q_stricmp( name, host.draw_decals[i+1] ))
-			return i+1;
+		if( !Q_stricmp( name, host.draw_decals[i] ))
+			return i;
 	}
 	return 0; // invalid decal
 }

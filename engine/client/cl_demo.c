@@ -447,9 +447,6 @@ void CL_StopRecord( void )
 	CL_WriteDemoCmdHeader( dem_stop, cls.demofile );
 
 	stoptime = CL_GetDemoRecordClock();
-
-	// close down the hud for now.
-	// g-cont. is this need???
 	if( clgame.hInstance ) clgame.dllFuncs.pfnReset();
 
 	curpos = FS_Tell( cls.demofile );

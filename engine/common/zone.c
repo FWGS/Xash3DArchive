@@ -453,11 +453,15 @@ void Mem_PrintList( size_t minallocationsize )
 	Con_Printf( "memory pool list:\n""  ^3size                          name\n");
 	for( pool = poolchain; pool; pool = pool->next )
 	{
+		long	changed_size = (long)pool->totalsize - (long)pool->lastchecksize;
+
 		// poolnames can contain color symbols, make sure what color is reset
-		if( ((long)pool->totalsize - pool->lastchecksize ) != 0 )
+		if( changed_size != 0 )
 		{
-			Con_Printf( "%10s (%10s actual) %s (^7+%s change)\n", Q_memprint( pool->totalsize ), Q_memprint( pool->realsize ),
-			pool->name, Q_memprint( pool->totalsize - pool->lastchecksize ));
+			char	sign = (changed_size < 0) ? '-' : '+';
+
+			Con_Printf( "%10s (%10s actual) %s (^7%c%s change)\n", Q_memprint( pool->totalsize ), Q_memprint( pool->realsize ),
+			pool->name, sign, Q_memprint( abs( changed_size )));
 		}
 		else
 		{

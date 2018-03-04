@@ -4948,7 +4948,7 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.stringspool = Mem_AllocPool( "Server Strings" );
 
 	// fire once
-	MsgDev( D_INFO, "Dll loaded for mod %s\n", svgame.dllFuncs.pfnGetGameDescription( ));
+	Con_Printf( "Dll loaded for game ^2\"%s\"\n", svgame.dllFuncs.pfnGetGameDescription( ));
 
 	// all done, initialize game
 	svgame.dllFuncs.pfnGameInit();

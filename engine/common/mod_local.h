@@ -65,7 +65,6 @@ GNU General Public License for more details.
 #define MODEL_WORLD			BIT( 29 )	// it's a worldmodel
 #define MODEL_CLIENT		BIT( 30 )	// client sprite
 
-
 // goes into world.flags
 #define FWORLD_SKYSPHERE		BIT( 0 )
 #define FWORLD_CUSTOM_SKYBOX		BIT( 1 )

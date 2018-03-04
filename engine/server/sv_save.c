@@ -871,7 +871,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 	int			i, id, size, version;
 	
 	Q_snprintf( name, sizeof( name ), "save/%s.HL1", level );
-	Con_Printf( "Loading game from %s...\n", name );
+	Con_DPrintf( "Loading game from %s...\n", name );
 
 	pFile = FS_Open( name, "rb", true );
 	if( !pFile )
@@ -1957,6 +1957,7 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 	}
 
 	SV_InactivateClients ();
+	SV_FinalMessage( "", true );
 	SV_DeactivateServer ();
 
 	if( !SV_SpawnServer( level, startspot, false ))
@@ -2142,8 +2143,8 @@ qboolean SV_LoadGame( const char *pPath )
 	if( !FS_FileExists( pPath, true ))
 		return false;
 
-	SV_InitGameProgs();
-	if( !svgame.hInstance )
+	// initialize game if needs
+	if( !SV_InitGame( ))
 		return false;
 
 	pFile = FS_Open( pPath, "rb", true );

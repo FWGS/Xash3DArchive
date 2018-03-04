@@ -1144,7 +1144,8 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 	normalMap = FBitSet( tex->flags, TF_NORMALMAP ) ? true : false;
 	numSides = FBitSet( pic->flags, IMAGE_CUBEMAP ) ? 6 : 1;
 
-	// uploading texture into video memory
+	// uploading texture into video memory, change the binding
+	glState.currentTextures[glState.activeTMU] = tex->texnum;
 	pglBindTexture( tex->target, tex->texnum );
 
 	for( i = 0; i < numSides; i++ )

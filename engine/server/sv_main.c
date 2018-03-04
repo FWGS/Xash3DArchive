@@ -98,9 +98,6 @@ CVAR_DEFINE_AUTO( sv_skydir_z, "1", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "sky rotation
 CVAR_DEFINE_AUTO( sv_skyangle, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skybox rotational angle (in degrees)" );
 CVAR_DEFINE_AUTO( sv_skyspeed, "0", 0, "skybox rotational speed" );
 
-CVAR_DEFINE( sv_spawntime, "host_spawntime", "0.1", FCVAR_ARCHIVE, "host.frametime on spawn new map (force to 0.8 if have problems)" );
-CVAR_DEFINE( sv_changetime, "host_changetime", "0.001", FCVAR_ARCHIVE, "host.frametime on changelevel (force to 0.1 if have player stucks)" );
-
 // obsolete cvars which we should keep because game DLL's will be relies on it
 CVAR_DEFINE_AUTO( showtriggers, "0", FCVAR_LATCH, "debug cvar shows triggers" );
 CVAR_DEFINE_AUTO( sv_airmove, "1", FCVAR_SERVER, "obsolete, compatibility issues" );
@@ -320,10 +317,7 @@ void SV_ReadPackets( void )
 				continue;
 
 			if( cl->netchan.remote_address.port != net_from.port )
-			{
-				MsgDev( D_NOTE, "SV_ReadPackets: fixing up a translated port\n");
 				cl->netchan.remote_address.port = net_from.port;
-			}
 
 			if( Netchan_Process( &cl->netchan, &net_message ))
 			{	
@@ -331,7 +325,7 @@ void SV_ReadPackets( void )
 					SetBits( cl->flags, FCL_SEND_NET_MESSAGE ); // reply at end of frame
 
 				// this is a valid, sequenced packet, so process it
-				if( cl->state != cs_zombie )
+				if( cl->frames != NULL && cl->state != cs_zombie )
 				{
 					SV_ExecuteClientMessage( cl, &net_message );
 					svgame.globals->frametime = sv.frametime;
@@ -350,7 +344,7 @@ void SV_ReadPackets( void )
 						SetBits( cl->flags, FCL_SEND_NET_MESSAGE ); // reply at end of frame
 
 					// this is a valid, sequenced packet, so process it
-					if( cl->state != cs_zombie )
+					if( cl->frames != NULL && cl->state != cs_zombie )
 					{
 						SV_ExecuteClientMessage( cl, &net_message );
 						svgame.globals->frametime = sv.frametime;
@@ -785,10 +779,6 @@ void SV_Init( void )
 	sv_hostmap = Cvar_Get( "hostmap", GI->startmap, 0, "keep name of last entered map" );
 	Cvar_RegisterVariable (&sv_password);
 	Cvar_RegisterVariable (&sv_lan);
-
-	Cvar_RegisterVariable (&sv_spawntime);
-	Cvar_RegisterVariable (&sv_changetime);
-
 	Cvar_RegisterVariable (&violence_ablood);
 	Cvar_RegisterVariable (&violence_hblood);
 	Cvar_RegisterVariable (&violence_agibs);
@@ -824,11 +814,25 @@ void SV_FinalMessage( const char *message, qboolean reconnect )
 	int		i;
 	
 	MSG_Init( &msg, "FinalMessage", msg_buf, sizeof( msg_buf ));
-	MSG_BeginServerCmd( &msg, svc_print );
-	MSG_WriteString( &msg, va( "%s\n", message ));
 
-	if( reconnect ) SV_BuildReconnect( &msg );
-	else MSG_BeginServerCmd( &msg, svc_disconnect );
+	if( COM_CheckString( message ))
+	{
+		MSG_BeginServerCmd( &msg, svc_print );
+		MSG_WriteString( &msg, message );
+	}
+
+	if( reconnect )
+	{
+		MSG_BeginServerCmd( &msg, svc_changing );
+
+		if( GameState->loadGame || svs.maxclients > 1 )
+			MSG_WriteOneBit( &msg, 1 ); // changelevel
+		else MSG_WriteOneBit( &msg, 0 );
+	}
+	else
+	{
+		MSG_BeginServerCmd( &msg, svc_disconnect );
+	}
 
 	// send it twice
 	// stagger the packets to crutch operating system limited buffers
@@ -841,6 +845,13 @@ void SV_FinalMessage( const char *message, qboolean reconnect )
 			Netchan_Transmit( &cl->netchan, MSG_GetNumBytesWritten( &msg ), MSG_GetData( &msg ));
 }
 
+/*
+================
+SV_FreeClients
+
+release server clients
+================
+*/
 void SV_FreeClients( void )
 {
 	if( svs.maxclients != 0 )
@@ -859,8 +870,6 @@ void SV_FreeClients( void )
 			svs.num_client_entities = 0;
 			svs.next_client_entities = 0;
 		}
-
-		svs.maxclients = 0;
 	}
 }
 
@@ -888,11 +897,13 @@ void SV_Shutdown( const char *finalmsg )
 
 	NET_Config( false );
 	SV_UnloadProgs ();
+	CL_Drop();
 
 	// free current level
 	memset( &sv, 0, sizeof( sv ));
 
 	SV_FreeClients();
+	svs.maxclients = 0;
 
 	Log_Printf( "Server shutdown\n" );
 	Log_Close();

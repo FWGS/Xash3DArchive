@@ -432,8 +432,6 @@ extern convar_t		sv_skyname;
 extern convar_t		sv_skyspeed;
 extern convar_t		sv_skyangle;
 extern convar_t		sv_consistency;
-extern convar_t		sv_spawntime;
-extern convar_t		sv_changetime;
 extern convar_t		sv_password;
 extern convar_t		sv_uploadmax;
 extern convar_t		deathmatch;
@@ -473,6 +471,8 @@ void SV_ProcessFile( sv_client_t *cl, char *filename );
 void SV_SendResourceList( sv_client_t *cl );
 void SV_AddToMaster( netadr_t from, sizebuf_t *msg );
 qboolean SV_IsSimulating( void );
+qboolean SV_InitGame( void );
+void SV_FreeClients( void );
 void Master_Add( void );
 void Master_Heartbeat( void );
 void Master_Packet( void );
@@ -564,6 +564,7 @@ int SV_EstimateNeededResources( sv_client_t *cl );
 void SV_ClearResourceList( resource_t *pList );
 void SV_BatchUploadRequest( sv_client_t *cl );
 void SV_SendResources( sv_client_t *cl, sizebuf_t *msg );
+void SV_ClearResourceLists( sv_client_t *cl );
 int SV_TransferConsistencyInfo( void );
 
 //

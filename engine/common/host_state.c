@@ -43,6 +43,7 @@ void COM_NewGame( char const *pMapName )
 
 	GameState->backgroundMap = false;
 	GameState->landmarkName[0] = 0;
+	GameState->loadGame = false;
 	GameState->newGame = true;
 }
 
@@ -56,6 +57,7 @@ void COM_LoadLevel( char const *pMapName, qboolean background )
 
 	GameState->backgroundMap = background;
 	GameState->landmarkName[0] = 0;
+	GameState->loadGame = false;
 	GameState->newGame = false;
 }
 

@@ -27,7 +27,7 @@ convar_t *cl_testlights;
 convar_t *cl_allow_levelshots;
 convar_t *cl_levelshot_name;
 convar_t *cl_envshot_size;
-convar_t *scr_dark;
+convar_t *v_dark;
 
 typedef struct
 {
@@ -704,7 +704,7 @@ void SCR_Init( void )
 	scr_download = Cvar_Get( "scr_download", "0", 0, "downloading bar progress" );
 	cl_testlights = Cvar_Get( "cl_testlights", "0", 0, "test dynamic lights" );
 	cl_envshot_size = Cvar_Get( "cl_envshot_size", "256", FCVAR_ARCHIVE, "envshot size of cube side" );
-	scr_dark = Cvar_Get( "v_dark", "0", 0, "starts level from dark screen" );
+	v_dark = Cvar_Get( "v_dark", "0", 0, "starts level from dark screen" );
 	scr_viewsize = Cvar_Get( "viewsize", "120", FCVAR_ARCHIVE, "screen size" );
 	
 	// register our commands

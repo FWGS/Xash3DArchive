@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #define svc_nop			1	// does nothing
 #define svc_disconnect		2	// kick client from server
 #define svc_event			3	// playback event queue
-#define svc_version			4	// [long] server version
+#define svc_changing		4	// changelevel by server request
 #define svc_setview			5	// [short] entity number
 #define svc_sound			6	// <see code>
 #define svc_time			7	// [float] server time

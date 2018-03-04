@@ -629,7 +629,7 @@ void SV_WriteEntitiesToClient( sv_client_t *cl, sizebuf_t *msg )
 		svs.next_client_entities = 0;
 
 		// delta is broken for now, cannot keep connected clients
-		SV_FinalMessage( "Server will restart due delta is outdated", true );
+		SV_FinalMessage( "Server will restart due delta is outdated\n", true );
 	}
 
 	// copy the entity states out

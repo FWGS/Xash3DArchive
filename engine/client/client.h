@@ -694,7 +694,7 @@ extern convar_t	*scr_centertime;
 extern convar_t	*scr_viewsize;
 extern convar_t	*scr_download;
 extern convar_t	*scr_loading;
-extern convar_t	*scr_dark;	// start from dark
+extern convar_t	*v_dark;	// start from dark
 extern convar_t	*net_graph;
 extern convar_t	*rate;
 
@@ -837,6 +837,7 @@ _inline cl_entity_t *CL_EDICT_NUM( int n )
 void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message );
 void CL_ParseTempEntity( sizebuf_t *msg );
 qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
+qboolean CL_RequestMissingResources( void );
 
 //
 // cl_scrn.c
@@ -911,6 +912,7 @@ qboolean CL_GetEntitySpatialization( struct channel_s *ch );
 qboolean CL_GetMovieSpatialization( struct rawchan_s *ch );
 void CL_ComputePlayerOrigin( cl_entity_t *clent );
 void CL_UpdateEntityFields( cl_entity_t *ent );
+void CL_MoveThirdpersonCamera( void );
 qboolean CL_IsPlayerIndex( int idx );
 void CL_SetIdealPitch( void );
 void CL_EmitEntities( void );

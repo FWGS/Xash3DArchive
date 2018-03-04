@@ -134,6 +134,7 @@ typedef struct
 	int			lightmap_samples;	// samples per lightmap (1 or 3)
 	int			version;		// model version
 	qboolean			isworld;
+	qboolean			vis_errors;	// don't spam about vis
 } dbspmodel_t;
 
 typedef struct
@@ -447,7 +448,7 @@ void Mod_PrintWorldStats_f( void )
 Mod_DecompressVis
 ===================
 */
-static void Mod_DecompressVis( const byte *in, const byte *inend, byte *out, byte *outend )
+static void Mod_DecompressVis( dbspmodel_t *bmod, const byte *in, const byte *inend, byte *out, byte *outend )
 {
 	byte	*outstart = out;
 	int	c;
@@ -456,8 +457,12 @@ static void Mod_DecompressVis( const byte *in, const byte *inend, byte *out, byt
 	{
 		if( in == inend )
 		{
-			MsgDev( D_WARN, "Mod_DecompressVis: input underrun (decompressed %i of %i output bytes)\n",
-			(int)(out - outstart), (int)(outend - outstart));
+			if( !bmod->vis_errors )
+			{
+				MsgDev( D_WARN, "Mod_DecompressVis: input underrun (decompressed %i of %i output bytes)\n",
+				(int)(out - outstart), (int)(outend - outstart));
+				bmod->vis_errors = true;
+			}
 			return;
 		}
 
@@ -471,8 +476,12 @@ static void Mod_DecompressVis( const byte *in, const byte *inend, byte *out, byt
 		{
 			if( in == inend )
 			{
-				MsgDev( D_NOTE, "Mod_DecompressVis: input underrun (during zero-run) (decompressed %i of %i output bytes)\n",
-				(int)(out - outstart), (int)(outend - outstart));
+				if( !bmod->vis_errors )
+				{
+					MsgDev( D_NOTE, "Mod_DecompressVis: input underrun (during zero-run) (decompressed %i of %i output bytes)\n",
+					(int)(out - outstart), (int)(outend - outstart));
+					bmod->vis_errors = true;
+				}
 				return;
 			}
 
@@ -480,8 +489,12 @@ static void Mod_DecompressVis( const byte *in, const byte *inend, byte *out, byt
 			{
 				if( out == outend )
 				{
-					MsgDev( D_NOTE, "Mod_DecompressVis: output overrun (decompressed %i of %i output bytes)\n",
-					(int)(out - outstart), (int)(outend - outstart));
+					if( !bmod->vis_errors )
+					{
+						MsgDev( D_NOTE, "Mod_DecompressVis: output overrun (decompressed %i of %i output bytes)\n",
+						(int)(out - outstart), (int)(outend - outstart));
+						bmod->vis_errors = true;
+					}
 					return;
 				}
 				*out++ = 0;
@@ -2369,7 +2382,7 @@ static void Mod_LoadLeafs( dbspmodel_t *bmod )
 					byte	*outrow = world.visdata + out->cluster * world.visbytes;
 					byte	*outrowend = world.visdata + (out->cluster + 1) * world.visbytes;
 
-					Mod_DecompressVis( inrow, inrowend, outrow, outrowend );
+					Mod_DecompressVis( bmod, inrow, inrowend, outrow, outrowend );
 				}
 				else MsgDev( D_WARN, "Mod_LoadLeafs: invalid visofs for leaf #%i\n", i );
 			}
@@ -2621,12 +2634,12 @@ qboolean Mod_LoadBmodelLumps( const byte *mod_base, qboolean isworld )
 	for( i = 0; i < ARRAYSIZE( extlumps ); i++ )
 		Mod_LoadLump( mod_base, &extlumps[i], &worldstats[ARRAYSIZE( srclumps ) + i], isworld ? (LUMP_SAVESTATS|LUMP_SILENT) : 0 );
 
-	if( loadstat.numerrors )
+	if( !bmod->isworld && loadstat.numerrors )
 	{
 		Con_DPrintf( "Mod_Load%s: %i error(s), %i warning(s)\n", isworld ? "World" : "Brush", loadstat.numerrors, loadstat.numwarnings );
 		return false; // there were errors, we can't load this map
 	}	
-	else if( loadstat.numwarnings )
+	else if( !bmod->isworld && loadstat.numwarnings )
 		Con_DPrintf( "Mod_Load%s: %i warning(s)\n", isworld ? "World" : "Brush", loadstat.numwarnings );
 
 	// load into heap

@@ -205,6 +205,33 @@ int SV_CheckIPRestrictions( netadr_t from )
 }
 
 /*
+================
+SV_FindEmptySlot
+
+Get slot # and set client_t pointer for player, if possible
+We don't do this search on a "reconnect, we just reuse the slot
+================
+*/
+int SV_FindEmptySlot( netadr_t from, int *pslot, sv_client_t **ppClient )
+{
+	sv_client_t	*cl;
+	int		i;
+
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+	{
+		if( cl->state == cs_free )
+		{
+			*ppClient = cl;
+			*pslot = i;
+			return 1;
+		}
+	}
+
+	SV_RejectConnection( from, "server is full\n" );
+	return 0;
+}
+
+/*
 ==================
 SV_ConnectClient
 
@@ -217,6 +244,8 @@ void SV_ConnectClient( netadr_t from )
 	char		physinfo[MAX_PHYSINFO_STRING];
 	char		protinfo[MAX_INFO_STRING];
 	sv_client_t	temp, *cl, *newcl;
+	qboolean		reconnect = false;
+	int		nClientSlot = 0;
 	int		qport, version;
 	int		i, edictnum;
 	int		count = 0;
@@ -281,23 +310,6 @@ void SV_ConnectClient( netadr_t from )
 
 	Q_strncpy( userinfo, s, sizeof( userinfo ));
 
-	// quick reject
-	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
-	{
-		if( cl->state == cs_free || cl->state == cs_zombie )
-			continue;
-
-		if( NET_CompareBaseAdr( from, cl->netchan.remote_address ) && ( cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
-		{
-			if( !NET_IsLocalAddress( from ) && ( host.realtime - cl->connection_started ) < sv_reconnect_limit->value )
-			{
-				SV_RejectConnection( from, "too soon\n" );
-				return;
-			}
-			break;
-		}
-	}
-
 	// check connection password (don't verify local client)
 	if( !NET_IsLocalAddress( from ) && sv_password.string[0] && Q_stricmp( sv_password.string, Info_ValueForKey( userinfo, "password" )))
 	{
@@ -319,39 +331,35 @@ void SV_ConnectClient( netadr_t from )
 
 		if( NET_CompareBaseAdr( from, cl->netchan.remote_address ) && ( cl->netchan.qport == qport || from.port == cl->netchan.remote_address.port ))
 		{
-			MsgDev( D_INFO, "%s:reconnect\n", NET_AdrToString( from ));
-			newcl = cl;
-			goto gotnewcl;
-		}
-	}
-
-	// find a client slot
-	newcl = NULL;
-
-	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
-	{
-		if( cl->state == cs_free )
-		{
+			reconnect = true;
 			newcl = cl;
 			break;
 		}
 	}
 
-	if( !newcl )
+	// A reconnecting client will re-use the slot found above when checking for reconnection.
+	// the slot will be wiped clean.
+	if( !reconnect )
 	{
-		SV_RejectConnection( from, "server is full\n" );
-		return;
+		// cConnect the client if there are empty slots.
+		if( !SV_FindEmptySlot( from, &nClientSlot, &newcl ))
+			return;
 	}
+	else
+	{
+		MsgDev( D_INFO, "%s:reconnect\n", NET_AdrToString( from ));
+	}
+
+	// find a client slot
+	ASSERT( newcl != NULL );
 
 	// build a new connection
 	// accept the new client
-gotnewcl:	
 	// this is the only place a sv_client_t is ever initialized
-
 	if( svs.maxclients == 1 ) // save physinfo for singleplayer
 		Q_strncpy( physinfo, newcl->physinfo, sizeof( physinfo ));
 
-	*newcl = temp;
+	*newcl = temp;	// FIXME: don't clearing all the fields
 
 	if( svs.maxclients == 1 ) // restore physinfo for singleplayer
 		Q_strncpy( newcl->physinfo, physinfo, sizeof( physinfo ));
@@ -396,6 +404,7 @@ gotnewcl:
 	// parse some info from the info strings (this can override cl_updaterate)
 	Q_strncpy( newcl->userinfo, userinfo, sizeof( newcl->userinfo ));
 	SV_UserinfoChanged( newcl, newcl->userinfo );
+	SV_ClearResourceLists( newcl );
 
 	newcl->next_messagetime = host.realtime + newcl->cl_updaterate;
 	newcl->next_sendinfotime = 0.0;
@@ -1410,7 +1419,6 @@ void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl )
 	MSG_WriteString( msg, sv.name );
 	MSG_WriteString( msg, STRING( svgame.edicts->v.message )); // Map Message
 	MSG_WriteOneBit( msg, sv.background ); // tell client about background map
-	MSG_WriteOneBit( msg, svgame.globals->changelevel );
 	MSG_WriteString( msg, GI->gamefolder );
 	MSG_WriteLong( msg, host.features );
 
@@ -2488,6 +2496,8 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 	qboolean		move_issued = false;
 	client_frame_t	*frame;
 	char		*s;
+
+	ASSERT( cl->frames != NULL );
 
 	// calc ping time
 	frame = &cl->frames[cl->netchan.incoming_acknowledged & SV_UPDATE_MASK];

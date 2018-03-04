@@ -2130,11 +2130,7 @@ void Con_DrawConsole( void )
 	case ca_connected:
 	case ca_validate:
 		// force to show console always for -dev 3 and higher 
-		if( con.vislines )
-		{
-			GL_CleanupAllTextureUnits(); // ugly hack to remove blinking voiceicon.spr during loading
-			Con_DrawSolidConsole( con.vislines );
-		}
+		Con_DrawSolidConsole( con.vislines );
 		break;
 	case ca_active:
 	case ca_cinematic: 

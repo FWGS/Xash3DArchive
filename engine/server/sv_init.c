@@ -478,17 +478,15 @@ void SV_ActivateServer( int runPhysics )
 	// parse user-specified resources
 	SV_CreateGenericResources();
 
-	sv.state = ss_active;
-
 	if( runPhysics )
 	{
-		sv.frametime = bound( 0.1, sv_spawntime.value, 0.8 );
 		numFrames = (svs.maxclients <= 1) ? 2 : 8;
+		sv.frametime = 0.1;
 	}
 	else
 	{
-		sv.frametime = bound( 0.001, sv_changetime.value, 0.1 );
-		numFrames = 0;
+		sv.frametime = (svgame.globals->changelevel) ? 0.1 : 0.001;
+		numFrames = 1;
 	}
 
 	// run some frames to allow everything to settle
@@ -512,14 +510,6 @@ void SV_ActivateServer( int runPhysics )
 
 		Netchan_Clear( &cl->netchan );
 		cl->delta_sequence = -1;
-
-		if( svs.maxclients <= 1 )
-			SV_SendServerdata( &msg, cl );
-		else SV_BuildReconnect( &cl->netchan.message );
-
-		Netchan_CreateFragments( &cl->netchan, &msg );
-		Netchan_FragSend( &cl->netchan );
-		MSG_Clear( &msg );
 	}
 
 	// invoke to refresh all movevars
@@ -543,6 +533,7 @@ void SV_ActivateServer( int runPhysics )
 		Mod_FreeUnused ();
 
 	host.movevars_changed = true;
+	sv.state = ss_active;
 
 	Con_DPrintf( "level loaded at %.2f sec\n", Sys_DoubleTime() - svs.timestart );
 
@@ -574,6 +565,7 @@ void SV_DeactivateServer( void )
 
 	svgame.globals->time = sv.time;
 	svgame.dllFuncs.pfnServerDeactivate();
+	sv.state = ss_dead;
 
 	SV_FreeEdicts ();
 
@@ -594,7 +586,6 @@ void SV_DeactivateServer( void )
 	svgame.numEntities = svs.maxclients + 1; // clients + world
 	svgame.globals->startspot = 0;
 	svgame.globals->mapname = 0;
-	sv.state = ss_dead;
 }
 
 /*
@@ -634,6 +625,7 @@ void SV_ShutdownGame( void )
 	if( !GameState->loadGame )
 		SV_ClearGameState();
 
+	SV_FinalMessage( "", true );
 	S_StopBackgroundTrack();
 
 	if( GameState->newGame )
@@ -644,24 +636,6 @@ void SV_ShutdownGame( void )
 	{
 		S_StopAllSounds( true );
 		SV_DeactivateServer();
-	}
-}
-
-/*
-================
-SV_AllocClientFrames
-
-allocate delta-compression frames for each client
-================
-*/
-void SV_AllocClientFrames( void )
-{
-	sv_client_t	*cl;
-	int		i;
-
-	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
-	{
-		cl->frames = Z_Realloc( cl->frames, SV_UPDATE_BACKUP * sizeof( client_frame_t ));
 	}
 }
 
@@ -680,11 +654,13 @@ void SV_SetupClients( void )
 	if( svs.maxclients != (int)sv_maxclients->value )
 		changed_maxclients = true;
 
-	svs.maxclients = sv_maxclients->value;	// copy the actual value from cvar
 	if( !changed_maxclients ) return; // nothing to change
 
 	// if clients count was changed we need to run full shutdown procedure
-//	Host_ShutdownServer();
+	if( svs.maxclients ) Host_ShutdownServer();
+
+	// copy the actual value from cvar
+	svs.maxclients = (int)sv_maxclients->value;
 
 	// dedicated servers are can't be single player and are usually DM
 	if( host.type == HOST_DEDICATED )
@@ -727,7 +703,6 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	edict_t	*ent;
 
 	SV_SetupClients();
-	SV_AllocClientFrames();
 
 	if( !SV_InitGame( ))
 		return false;

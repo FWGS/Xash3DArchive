@@ -906,9 +906,12 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		return false;
 	}
 
-	// don't add the player in firstperson mode
-	if( RP_LOCALCLIENT( ent ) && !CL_IsThirdPerson( ) && ( ent->index == cl.viewentity ))
-		return false;
+	if( FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP ))
+	{
+		// don't add the player in firstperson mode
+		if( RP_LOCALCLIENT( ent ) && !CL_IsThirdPerson( ) && ( ent->index == cl.viewentity ))
+			return false;
+	}
 
 	if( entityType == ET_BEAM )
 	{
@@ -986,6 +989,13 @@ void CL_LinkPlayers( frame_t *frame )
 	{
 		if( state->messagenum != cl.parsecount )
 			continue;	// not present this frame
+
+		if( !FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP ))
+		{
+			// don't add the player in firstperson mode
+			if( !CL_IsThirdPerson( ) && ( i == cl.viewentity - 1 ))
+				continue;
+		}
 
 		if( !state->modelindex || FBitSet( state->effects, EF_NODRAW ))
 			continue;
@@ -1198,6 +1208,22 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 /*
 ===============
+CL_MoveThirdpersonCamera
+
+think thirdperson
+===============
+*/
+void CL_MoveThirdpersonCamera( void )
+{
+	if( cls.state == ca_disconnected || cls.state == ca_cinematic )
+		return;
+
+	// think thirdperson camera
+	clgame.dllFuncs.CAM_Think ();
+}
+
+/*
+===============
 CL_EmitEntities
 
 add visible entities to refresh list
@@ -1224,8 +1250,9 @@ void CL_EmitEntities( void )
 	// set client ideal pitch when mlook is disabled
 	CL_SetIdealPitch ();
 
-	// think thirdperson camera
-	clgame.dllFuncs.CAM_Think ();
+	// clear the scene befor start new frame
+	if( clgame.drawFuncs.R_ClearScene != NULL )
+		clgame.drawFuncs.R_ClearScene();
 
 	// link all the visible clients first
 	CL_LinkPlayers ( &cl.frames[cl.parsecountmod] );

@@ -192,12 +192,12 @@ An svc_signonnum has been received, perform a client side setup
 */
 void CL_SignonReply( void )
 {
-	Con_Printf( "CL_SignonReply: %i\n", cls.signon );
+	// g-cont. my favorite message :-)
+	Con_DPrintf( "CL_SignonReply: %i\n", cls.signon );
 
 	switch( cls.signon )
 	{
 	case 1:
-		// g-cont. my favorite message :-)
 		CL_ServerCommand( true, "begin" );
 		if( host_developer.value >= DEV_EXTENDED )
 			Mem_PrintStats();
@@ -604,7 +604,7 @@ void CL_CreateCmd( void )
 		CL_ApplyAddAngle();
 	}
 
-	active = ( cls.state == ca_active && !cl.paused && !cls.demoplayback );
+	active = (( cls.signon == SIGNONS ) && !cl.paused && !cls.demoplayback );
 	clgame.dllFuncs.CL_CreateMove( host.frametime, &pcmd->cmd, active );
 
 	CL_PopPMStates();
@@ -2323,7 +2323,6 @@ void CL_InitLocal( void )
 	// these two added to shut up CS 1.5 about 'unknown' commands
 	Cvar_Get( "lightgamma", "1", FCVAR_ARCHIVE, "ambient lighting level (legacy, unused)" );
 	Cvar_Get( "direct", "1", FCVAR_ARCHIVE, "direct lighting level (legacy, unused)" );
-	Cvar_Get( "voice_serverdebug", "0", 0, "debug voice (legacy, unused)" );
 
 	// server commands
 	Cmd_AddCommand ("noclip", NULL, "enable or disable no clipping mode" );
@@ -2472,6 +2471,7 @@ void Host_ClientFrame( void )
 	// a new portion updates from server
 	CL_RedoPrediction ();
 
+	// TODO: implement
 //	Voice_Idle( host.frametime );
 
 	// emit visible entities
@@ -2480,9 +2480,11 @@ void Host_ClientFrame( void )
 	// in case we lost connection
 	CL_CheckForResend ();
 
-//	while( CL_RequestMissingResources( ));
+	// procssing resources on handle
+	while( CL_RequestMissingResources( ));
 
-//	CL_HTTPUpdate ();
+	// handle thirdperson camera
+	CL_MoveThirdpersonCamera();
 
 	// handle spectator movement
 	CL_MoveSpectatorCamera();
