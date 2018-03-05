@@ -25,6 +25,7 @@ extern "C" {
 Legend:
 
 INTERNAL RESOURCE			- function contain hardcoded path to resource that engine required (optional in most cases)
+OBSOLETE, UNUSED			- this function no longer used and leaved here for keep binary compatibility
 TODO				- some functionality not impemented but planned
 FIXME				- code doesn't working properly in some rare cases
 HACKHACK				- unexpected behavior on some input params (or something like)
@@ -684,7 +685,6 @@ void Host_WriteConfig( void );
 qboolean Host_IsLocalGame( void );
 qboolean Host_IsLocalClient( void );
 void Host_ShutdownServer( void );
-void Host_Print( const char *txt );
 void Host_Error( const char *error, ... );
 void Host_PrintEngineFeatures( void );
 void Host_Frame( float time );
@@ -773,7 +773,7 @@ void CRC32_Init( dword *pulCRC );
 byte CRC32_BlockSequence( byte *base, int length, int sequence );
 void CRC32_ProcessBuffer( dword *pulCRC, const void *pBuffer, int nBuffer );
 void CRC32_ProcessByte( dword *pulCRC, byte ch );
-void CRC32_Final( dword *pulCRC );
+dword CRC32_Final( dword pulCRC );
 qboolean CRC32_File( dword *crcvalue, const char *filename );
 qboolean CRC32_MapFile( dword *crcvalue, const char *filename, qboolean multiplayer );
 void MD5Init( MD5Context_t *ctx );
@@ -878,6 +878,7 @@ qboolean S_StreamGetCurrentState( char *currentTrack, char *loopTrack, int *posi
 struct cl_entity_s *CL_GetEntityByIndex( int index );
 struct player_info_s *CL_GetPlayerInfo( int playerIndex );
 void CL_ServerCommand( qboolean reliable, char *fmt, ... );
+void CL_HudMessage( const char *pMessage );
 const char *CL_MsgInfo( int cmd );
 void SV_DrawDebugTriangles( void );
 void SV_DrawOrthoTriangles( void );

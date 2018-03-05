@@ -57,6 +57,7 @@ void Cvar_FullSet( const char *var_name, const char *value, int flags );
 void Cvar_DirectSet( convar_t *var, const char *value );
 void Cvar_Set( const char *var_name, const char *value );
 void Cvar_SetValue( const char *var_name, float value );
+const char *Cvar_BuildAutoDescription( int flags );
 float Cvar_VariableValue( const char *var_name );
 int Cvar_VariableInteger( const char *var_name );
 char *Cvar_VariableString( const char *var_name );

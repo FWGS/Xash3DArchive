@@ -1251,15 +1251,29 @@ static int Con_SortCmds( const char **arg1, const char **arg2 )
 
 /*
 ===============
-Con_PrintMatches
+Con_PrintCmdMatches
 ===============
 */
-static void Con_PrintMatches( const char *s, const char *unused1, const char *m, void *unused2 )
+static void Con_PrintCmdMatches( const char *s, const char *unused1, const char *m, void *unused2 )
 {
 	if( !Q_strnicmp( s, con.shortestMatch, Q_strlen( con.shortestMatch )))
 	{
-		if( m && *m ) Con_Printf( "    %s ^3\"%s\"\n", s, m );
+		if( COM_CheckString( m )) Con_Printf( "    %s ^3\"%s\"\n", s, m );
 		else Con_Printf( "    %s\n", s ); // variable or command without description
+	}
+}
+
+/*
+===============
+Con_PrintCvarMatches
+===============
+*/
+static void Con_PrintCvarMatches( const char *s, const char *value, const char *m, void *unused2 )
+{
+	if( !Q_strnicmp( s, con.shortestMatch, Q_strlen( con.shortestMatch )))
+	{
+		if( COM_CheckString( m )) Con_Printf( "    %s (%s)   ^3\"%s\"\n", s, value, m );
+		else Con_Printf( "    %s  (%s)\n", s, value ); // variable or command without description
 	}
 }
 
@@ -1416,8 +1430,8 @@ void Con_CompleteCommand( field_t *field )
 		Con_Printf( "]%s\n", con.completionField->buffer );
 
 		// run through again, printing matches
-		Cmd_LookupCmds( NULL, NULL, Con_PrintMatches );
-		Cvar_LookupVars( 0, NULL, NULL, Con_PrintMatches );
+		Cmd_LookupCmds( NULL, NULL, Con_PrintCmdMatches );
+		Cvar_LookupVars( 0, NULL, NULL, Con_PrintCvarMatches );
 	}
 }
 

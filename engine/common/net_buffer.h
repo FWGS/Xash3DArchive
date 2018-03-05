@@ -90,6 +90,7 @@ void MSG_WriteDword( sizebuf_t *sb, dword val );
 void MSG_WriteCoord( sizebuf_t *sb, float val );
 void MSG_WriteFloat( sizebuf_t *sb, float val );
 void MSG_WriteVec3Coord( sizebuf_t *sb, const float *fa );
+void MSG_WriteVec3Angles( sizebuf_t *sb, const float *fa );
 qboolean MSG_WriteBytes( sizebuf_t *sb, const void *pBuf, int nBytes );	// same as MSG_WriteData
 qboolean MSG_WriteString( sizebuf_t *sb, const char *pStr );		// returns false if it overflows the buffer.
 
@@ -126,6 +127,7 @@ dword MSG_ReadDword( sizebuf_t *sb );
 float MSG_ReadCoord( sizebuf_t *sb );
 float MSG_ReadFloat( sizebuf_t *sb );
 void MSG_ReadVec3Coord( sizebuf_t *sb, vec3_t fa );
+void MSG_ReadVec3Angles( sizebuf_t *sb, vec3_t fa );
 qboolean MSG_ReadBytes( sizebuf_t *sb, void *pOut, int nBytes );
 char *MSG_ReadStringExt( sizebuf_t *sb, qboolean bLine );
 					

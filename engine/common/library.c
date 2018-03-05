@@ -866,7 +866,10 @@ dword COM_FunctionFromName( void *hInstance, const char *pName )
 			return hInst->funcs[index] + hInst->funcBase;
 		}
 	}
+
 	// couldn't find the function name to return address
+	Con_Printf( "Can't find proc: %s\n", pName );
+
 	return 0;
 }
 
@@ -885,6 +888,9 @@ const char *COM_NameForFunction( void *hInstance, dword function )
 		if(( function - hInst->funcBase ) == hInst->funcs[index] )
 			return hInst->names[i];
 	}
+
 	// couldn't find the function address to return name
+	Con_Printf( "Can't find address: %08lx\n", function );
+
 	return NULL;
 }

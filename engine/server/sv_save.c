@@ -414,19 +414,17 @@ void LandmarkOrigin( SAVERESTOREDATA *pSaveData, vec3_t output, const char *pLan
 	VectorClear( output );
 }
 
-int EntityInSolid( edict_t *ent )
+int EntityInSolid( edict_t *pent )
 {
-	edict_t	*pParent = ent->v.aiment;
 	vec3_t	point;
 
 	// if you're attached to a client, always go through
-	if( SV_IsValidEdict( pParent ))
-	{
-		if( pParent->v.flags & FL_CLIENT )
-			return 0;
-	}
+	if( pent->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pent->v.aiment ) && FBitSet( pent->v.aiment->v.flags, FL_CLIENT ))
+		return 0;
 
-	VectorAverage( ent->v.absmin, ent->v.absmax, point );
+	VectorAverage( pent->v.absmin, pent->v.absmax, point );
+	svs.groupmask = pent->v.groupinfo;
+
 	return (SV_PointContents( point ) == CONTENTS_SOLID);
 }
 
@@ -2257,19 +2255,7 @@ void SV_SaveGame( const char *pName )
 	SV_BuildSaveComment( comment, sizeof( comment ));
 	SV_SaveGameSlot( savename, comment );
 
-	// HACKHACK: send usermessage from engine
-	if( Q_stricmp( pName, "autosave" ) && svgame.gmsgHudText != -1 )
-	{
-		const char *pMsg = "GAMESAVED"; // defined in titles.txt
-		sv_client_t *cl;
-
-		if(( cl = SV_ClientFromEdict( EDICT_NUM( 1 ), true )) != NULL )
-		{
-			MSG_WriteByte( &cl->netchan.message, svgame.gmsgHudText );
-			MSG_WriteByte( &cl->netchan.message, Q_strlen( pMsg ) + 1 );
-			MSG_WriteString( &cl->netchan.message, pMsg );
-		}
-	}
+	CL_HudMessage( "GAMESAVED" ); // defined in titles.txt
 }
 
 /* 

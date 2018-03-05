@@ -316,9 +316,8 @@ void SCR_BeginLoadingPlaque( qboolean is_background )
 			SCR_UpdateScreen();
 	}
 
-	if( cls.disable_screen ) return;		// already set
-	if( cls.state == ca_disconnected ) return;	// if at console, don't bring up the plaque
-	if( cls.key_dest == key_console ) return;
+	if( cls.state == ca_disconnected || cls.disable_screen )
+		return; // already set
 
 	cls.draw_changelevel = is_background ? false : true;
 	SCR_UpdateScreen();

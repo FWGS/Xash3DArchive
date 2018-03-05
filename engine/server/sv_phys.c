@@ -271,8 +271,10 @@ void SV_Impact( edict_t *e1, edict_t *e2, trace_t *trace )
 
 	if( e1->v.groupinfo && e2->v.groupinfo )
 	{
-		if(( !svs.groupop && !( e1->v.groupinfo & e2->v.groupinfo )) ||
-		( svs.groupop == 1 && ( e1->v.groupinfo & e2->v.groupinfo )))
+		if( svs.groupop == GROUP_OP_AND && !FBitSet( e1->v.groupinfo, e2->v.groupinfo ))
+			return;
+
+		if( svs.groupop == GROUP_OP_NAND && FBitSet( e1->v.groupinfo, e2->v.groupinfo ))
 			return;
 	}
 
@@ -441,12 +443,7 @@ qboolean SV_CheckWater( edict_t *ent )
 		ent->v.watertype = cont;
 		ent->v.waterlevel = 1;
 
-		if( ent->v.absmin[2] == ent->v.absmax[2] )
-		{
-			// a point entity
-			ent->v.waterlevel = 3;
-		}
-		else
+		if( ent->v.absmin[2] != ent->v.absmax[2] )
 		{
 			point[2] = (ent->v.absmin[2] + ent->v.absmax[2]) * 0.5f;
 
@@ -458,7 +455,6 @@ qboolean SV_CheckWater( edict_t *ent )
 				ent->v.waterlevel = 2;
 
 				VectorAdd( point, ent->v.view_ofs, point );
-
 				svs.groupmask = ent->v.groupinfo;
 				cont = SV_PointContents( point );
 
@@ -466,11 +462,16 @@ qboolean SV_CheckWater( edict_t *ent )
 					ent->v.waterlevel = 3;
 			}
 		}
+		else
+		{
+			// a point entity
+			ent->v.waterlevel = 3;
+		}
 
 		// Quake2 feature. Probably never was used in Half-Life...
 		if( truecont <= CONTENTS_CURRENT_0 && truecont >= CONTENTS_CURRENT_DOWN )
 		{
-			float speed = 50.0f * ent->v.waterlevel;
+			float speed = 150.0f * ent->v.waterlevel / 3.0f;
 			const float *dir = current_table[CONTENTS_CURRENT_0 - truecont];
 
 			VectorMA( ent->v.basevelocity, speed, dir, ent->v.basevelocity );
@@ -1344,15 +1345,15 @@ SV_CheckWaterTransition
 */
 void SV_CheckWaterTransition( edict_t *ent )
 {
+	vec3_t	point;
 	int	cont;
-	vec3_t	halfmax;
 
-	halfmax[0] = (ent->v.absmax[0] + ent->v.absmin[0]) * 0.5f;
-	halfmax[1] = (ent->v.absmax[1] + ent->v.absmin[1]) * 0.5f;
-	halfmax[2] = (ent->v.absmin[2] + 1.0f);
+	point[0] = (ent->v.absmax[0] + ent->v.absmin[0]) * 0.5f;
+	point[1] = (ent->v.absmax[1] + ent->v.absmin[1]) * 0.5f;
+	point[2] = (ent->v.absmin[2] + 1.0f);
 
 	svs.groupmask = ent->v.groupinfo;
-	cont = SV_PointContents( halfmax );
+	cont = SV_PointContents( point );
 
 	if( !ent->v.watertype )
 	{
@@ -1362,51 +1363,50 @@ void SV_CheckWaterTransition( edict_t *ent )
 		return;
 	}
 
-	if( cont > CONTENTS_WATER || cont <= CONTENTS_TRANSLUCENT )
+	if( cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
+	{
+		if( ent->v.watertype == CONTENTS_EMPTY )
+		{	
+			// just crossed into water
+			SV_StartSound( ent, CHAN_AUTO, "player/pl_wade1.wav", 1.0f, ATTN_NORM, 0, 100 );
+			ent->v.velocity[2] *= 0.5;
+		}		
+
+		ent->v.watertype = cont;
+		ent->v.waterlevel = 1;
+
+		if( ent->v.absmin[2] != ent->v.absmax[2] )
+		{
+			point[2] = (ent->v.absmin[2] + ent->v.absmax[2]) * 0.5f;
+			svs.groupmask = ent->v.groupinfo;
+			cont = SV_PointContents( point );
+
+			if( cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
+			{
+				ent->v.waterlevel = 2;
+				VectorAdd( point, ent->v.view_ofs, point );
+				svs.groupmask = ent->v.groupinfo;
+				cont = SV_PointContents( point );
+				if( cont <= CONTENTS_WATER && cont > CONTENTS_TRANSLUCENT )
+					ent->v.waterlevel = 3;
+			}
+		}
+		else
+		{
+			// point entity
+			ent->v.waterlevel = 3;
+		}
+	}
+	else
 	{
 		if( ent->v.watertype != CONTENTS_EMPTY )
-		{
+		{	
+			// just crossed into water
 			SV_StartSound( ent, CHAN_AUTO, "player/pl_wade2.wav", 1.0f, ATTN_NORM, 0, 100 );
-		}
-
+		}		
 		ent->v.watertype = CONTENTS_EMPTY;
 		ent->v.waterlevel = 0;
-		return;
 	}
-
-	if( ent->v.watertype == CONTENTS_EMPTY )
-	{
-		SV_StartSound( ent, CHAN_AUTO, "player/pl_wade1.wav", 1.0f, ATTN_NORM, 0, 100 );
-		ent->v.velocity[2] *= 0.5f;
-	}
-
-	ent->v.watertype = cont;
-	ent->v.waterlevel = 1;
-
-	if( ent->v.absmin[2] == ent->v.absmax[2] )
-	{
-		// a point entity
-		ent->v.waterlevel = 3;
-	}
-
-	halfmax[2] = (ent->v.absmin[2] + ent->v.absmax[2]) * 0.5f;
-
-	svs.groupmask = ent->v.groupinfo;
-	cont = SV_PointContents( halfmax );
-
-	if( cont > CONTENTS_WATER || cont <= CONTENTS_TRANSLUCENT )
-		return;
-
-	ent->v.waterlevel = 2;
-	VectorAdd( halfmax, ent->v.view_ofs, halfmax );
-
-	svs.groupmask = ent->v.groupinfo;
-	cont = SV_PointContents( halfmax );
-
-	if( cont > CONTENTS_WATER || cont <= CONTENTS_TRANSLUCENT )
-		return;
-
-	ent->v.waterlevel = 3;
 }
 
 /*
@@ -1644,7 +1644,7 @@ void SV_Physics_Step( edict_t *ent )
 
 		for( x = 0; x <= 1; x++ )
 		{
-			if( ent->v.flags & FL_ONGROUND )
+			if( FBitSet( ent->v.flags, FL_ONGROUND ))
 				break;
 
 			for( y = 0; y <= 1; y++ )
@@ -1656,7 +1656,7 @@ void SV_Physics_Step( edict_t *ent )
 
 				if( trace.startsolid )
 				{
-					ent->v.flags |= FL_ONGROUND;
+					SetBits( ent->v.flags, FL_ONGROUND );
 					ent->v.groundentity = trace.ent;
 					ent->v.friction = 1.0f;
 					break;

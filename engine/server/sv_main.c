@@ -102,6 +102,7 @@ CVAR_DEFINE_AUTO( sv_skyspeed, "0", 0, "skybox rotational speed" );
 CVAR_DEFINE_AUTO( showtriggers, "0", FCVAR_LATCH, "debug cvar shows triggers" );
 CVAR_DEFINE_AUTO( sv_airmove, "1", FCVAR_SERVER, "obsolete, compatibility issues" );
 CVAR_DEFINE_AUTO( sv_version, "", FCVAR_READ_ONLY, "engine version string" );
+CVAR_DEFINE_AUTO( hostname, "", FCVAR_SERVER|FCVAR_PRINTABLEONLY, "name of current host" );
 
 // gore-related cvars
 CVAR_DEFINE_AUTO( violence_hblood, "1", 0, "draw human blood" );
@@ -112,7 +113,6 @@ CVAR_DEFINE_AUTO( violence_agibs, "1", 0, "show alien gib entities" );
 convar_t	*sv_novis;			// disable server culling entities by vis
 convar_t	*sv_pausable;
 convar_t	*timeout;				// seconds without any message
-convar_t	*hostname;
 convar_t	*sv_lighting_modulate;
 convar_t	*sv_maxclients;
 convar_t	*sv_check_errors;
@@ -305,8 +305,10 @@ void SV_ReadPackets( void )
 		qport = (int)MSG_ReadShort( &net_message ) & 0xffff;
 
 		// check for packets from connected clients
-		for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+		for( i = 0, sv.current_client = svs.clients; i < svs.maxclients; i++, sv.current_client++ )
 		{
+			cl = sv.current_client;
+
 			if( cl->state == cs_free || FBitSet( cl->flags, FCL_FAKECLIENT ))
 				continue;
 
@@ -364,8 +366,7 @@ void SV_ReadPackets( void )
 			continue;
 	}
 
-	svs.currentPlayer = NULL;
-	svs.currentPlayerNum = -1;
+	sv.current_client = NULL;
 }
 
 /*
@@ -419,7 +420,7 @@ void SV_CheckTimeouts( void )
 		}
 	}
 
-	if( sv.paused && !numclients )
+	if( svs.maxclients > 1 && sv.paused && !numclients )
 	{
 		// nobody left, unpause the server
 		SV_TogglePause( "Pause released since no players are left." );
@@ -736,7 +737,7 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&rcon_password);
 	Cvar_RegisterVariable (&sv_stepsize);
 	Cvar_RegisterVariable (&sv_newunit);
-	hostname = Cvar_Get( "hostname", "unnamed", FCVAR_SERVER|FCVAR_ARCHIVE, "host name" );
+	Cvar_RegisterVariable (&hostname);
 	timeout = Cvar_Get( "timeout", "125", FCVAR_SERVER, "connection timeout" );
 	sv_pausable = Cvar_Get( "pausable", "1", FCVAR_SERVER, "allow players to pause or not" );
 	sv_validate_changelevel = Cvar_Get( "sv_validate_changelevel", "1", FCVAR_ARCHIVE, "test change level for level-designer errors" );
@@ -772,7 +773,6 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_uploadmax);
 	Cvar_RegisterVariable (&sv_version);
 	Cvar_RegisterVariable (&sv_instancedbaseline);
-	sv_sendvelocity = Cvar_Get( "sv_sendvelocity", "0", FCVAR_ARCHIVE, "force to send velocity for event_t structure across network" );
 	Cvar_RegisterVariable (&sv_consistency);
 	Cvar_RegisterVariable (&sv_downloadurl);
 	sv_novis = Cvar_Get( "sv_novis", "0", 0, "force to ignore server visibility" );
@@ -823,11 +823,12 @@ void SV_FinalMessage( const char *message, qboolean reconnect )
 
 	if( reconnect )
 	{
-		MSG_BeginServerCmd( &msg, svc_changing );
-
-		if( GameState->loadGame || svs.maxclients > 1 )
-			MSG_WriteOneBit( &msg, 1 ); // changelevel
-		else MSG_WriteOneBit( &msg, 0 );
+		if( svs.maxclients <= 1 )
+		{
+			MSG_BeginServerCmd( &msg, svc_changing );
+			MSG_WriteOneBit( &msg, GameState->loadGame );
+		}
+		else SV_BuildReconnect( &msg ); 
 	}
 	else
 	{

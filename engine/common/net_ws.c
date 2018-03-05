@@ -1249,8 +1249,9 @@ void NET_GetLocalAddress( void )
 
 			if( pGetSockName( net.ip_sockets[NS_SERVER], (struct sockaddr *)&address, &namelen ) == SOCKET_ERROR )
 			{
-				MsgDev( D_ERROR, "Could not get TCP/IP address, TCP/IP disabled\nReason:  %s\n", NET_ErrorString( ));
-				net.allow_ip = false;
+				// this may happens if multiple clients running on single machine
+				MsgDev( D_ERROR, "Could not get TCP/IP address. Reason:  %s\n", NET_ErrorString( ));
+//				net.allow_ip = false;
 			}
 			else
 			{

@@ -1209,6 +1209,9 @@ void CL_Record_f( void )
 	Q_sprintf( demopath, "demos/%s.dem", demoname );
 	Q_sprintf( demoshot, "demos/%s.bmp", demoname );
 
+	// unload previous image from memory (it's will be overwritten)
+	GL_FreeImage( demoshot );
+
 	// make sure what old demo is removed
 	if( FS_FileExists( demopath, false )) FS_Delete( demopath );
 	if( FS_FileExists( demoshot, false )) FS_Delete( demoshot );

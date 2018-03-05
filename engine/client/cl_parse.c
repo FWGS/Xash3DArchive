@@ -514,13 +514,8 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 	state.skin = MSG_ReadByte( msg );
 	state.body = MSG_ReadByte( msg );
 	state.scale = MSG_ReadCoord( msg );
-
-	for( i = 0; i < 3; i++ )
-	{
-		state.origin[i] = MSG_ReadCoord( msg );
-		state.angles[i] = MSG_ReadBitAngle( msg, 16 );
-	}
-
+	MSG_ReadVec3Coord( msg, state.origin );
+	MSG_ReadVec3Angles( msg, state.angles );
 	state.rendermode = MSG_ReadByte( msg );
 
 	if( state.rendermode != kRenderNormal )
@@ -875,7 +870,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 
 	// begin fetching modellist
 	MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
-#if 1
+#if 0
 	MSG_WriteString( &cls.netchan.message, va( "modellist %i\n", cl.servercount ));
 #else
 	MSG_WriteString( &cls.netchan.message, va( "sendres %i\n", cl.servercount ));
@@ -1425,7 +1420,7 @@ void CL_SendConsistencyInfo( sizebuf_t *msg )
 		{
 			CRC32_Init( &crcFile );
 			CRC32_File( &crcFile, filename );
-			CRC32_Final( &crcFile );
+			crcFile = CRC32_Final( crcFile );
 			user_changed_diskfile = !Mod_ValidateCRC( filename, crcFile );
 		}
 
@@ -2081,7 +2076,7 @@ qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf )
 {
 	int	i;
 
-	if( !pszName || !*pszName )
+	if( !COM_CheckString( pszName ))
 		return false;
 
 	for( i = 0; i < MAX_USER_MESSAGES; i++ )
@@ -2093,7 +2088,7 @@ qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf )
 
 	if( i == MAX_USER_MESSAGES )
 	{
-		MsgDev( D_ERROR, "CL_DispatchUserMessage: bad message %s\n", pszName );
+		Con_DPrintf( S_ERROR "UserMsg: bad message %s\n", pszName );
 		return false;
 	}
 
@@ -2103,7 +2098,7 @@ qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf )
 	}
 	else
 	{
-		MsgDev( D_ERROR, "CL_DispatchUserMessage: %s not hooked\n", pszName );
+		Con_DPrintf( S_ERROR, "UserMsg: No pfn %s %d\n", clgame.msg[i].name, clgame.msg[i].number );
 		clgame.msg[i].func = CL_UserMsgStub; // throw warning only once
 	}
 	return true;
@@ -2174,7 +2169,7 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 	}
 	else
 	{
-		MsgDev( D_ERROR, "CL_ParseUserMessage: %s not hooked\n", clgame.msg[i].name );
+		Con_DPrintf( S_ERROR, "UserMsg: No pfn %s %d\n", clgame.msg[i].name, clgame.msg[i].number );
 		clgame.msg[i].func = CL_UserMsgStub; // throw warning only once
 	}
 }

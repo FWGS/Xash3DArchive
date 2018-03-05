@@ -906,12 +906,9 @@ qboolean CL_AddVisibleEntity( cl_entity_t *ent, int entityType )
 		return false;
 	}
 
-	if( FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP ))
-	{
-		// don't add the player in firstperson mode
-		if( RP_LOCALCLIENT( ent ) && !CL_IsThirdPerson( ) && ( ent->index == cl.viewentity ))
-			return false;
-	}
+	// don't add the player in firstperson mode
+	if( RP_LOCALCLIENT( ent ) && !CL_IsThirdPerson( ) && ( ent->index == cl.viewentity ))
+		return false;
 
 	if( entityType == ET_BEAM )
 	{
@@ -989,13 +986,6 @@ void CL_LinkPlayers( frame_t *frame )
 	{
 		if( state->messagenum != cl.parsecount )
 			continue;	// not present this frame
-
-		if( !FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP ))
-		{
-			// don't add the player in firstperson mode
-			if( !CL_IsThirdPerson( ) && ( i == cl.viewentity - 1 ))
-				continue;
-		}
 
 		if( !state->modelindex || FBitSet( state->effects, EF_NODRAW ))
 			continue;

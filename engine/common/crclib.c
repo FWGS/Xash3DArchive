@@ -93,9 +93,9 @@ void CRC32_Init( dword *pulCRC )
 	*pulCRC = CRC32_INIT_VALUE;
 }
 
-void CRC32_Final( dword *pulCRC )
+dword CRC32_Final( dword pulCRC )
 {
-	*pulCRC ^= CRC32_XOR_VALUE;
+	return pulCRC ^ CRC32_XOR_VALUE;
 }
 
 void CRC32_ProcessByte( dword *pulCRC, byte ch )
@@ -196,7 +196,7 @@ byte CRC32_BlockSequence( byte *base, int length, int sequence )
 
 	CRC32_Init( &CRC );
 	CRC32_ProcessBuffer( &CRC, buffer, length );
-	CRC32_Final( &CRC );
+	CRC = CRC32_Final( CRC );
 
 	return (byte)CRC;
 }

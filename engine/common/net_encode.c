@@ -770,11 +770,12 @@ void Delta_InitFields( void )
 		Delta_ParseTable( &pfile, dt, encodeDll, encodeFunc );
 	}
 	Mem_Free( afile );
-
+#if 0
 	// adding some required fields that user may forget or don't know how to specified
 	Delta_AddField( "event_t", "velocity[0]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
 	Delta_AddField( "event_t", "velocity[1]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
 	Delta_AddField( "event_t", "velocity[2]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );	
+#endif
 }
 
 void Delta_Init( void )

@@ -47,6 +47,40 @@ convar_t *Cvar_FindVarExt( const char *var_name, int ignore_group )
 
 /*
 ============
+Cvar_BuildAutoDescription
+
+build cvar auto description that based on the setup flags
+============
+*/
+const char *Cvar_BuildAutoDescription( int flags )
+{
+	static char	desc[128];
+
+	desc[0] = '\0';
+
+	if( FBitSet( flags, FCVAR_EXTDLL ))
+		Q_strncpy( desc, "game ", sizeof( desc ));
+	else if( FBitSet( flags, FCVAR_CLIENTDLL ))
+		Q_strncpy( desc, "client ", sizeof( desc ));
+	else if( FBitSet( flags, FCVAR_GAMEUIDLL ))
+		Q_strncpy( desc, "GameUI ", sizeof( desc ));
+
+	if( FBitSet( flags, FCVAR_SERVER ))
+		Q_strncat( desc, "server ", sizeof( desc ));
+
+	if( FBitSet( flags, FCVAR_USERINFO ))
+		Q_strncat( desc, "user ", sizeof( desc ));
+
+	if( FBitSet( flags, FCVAR_ARCHIVE ))
+		Q_strncat( desc, "archived ", sizeof( desc ));
+
+	Q_strncat( desc, "cvar", sizeof( desc ));
+
+	return desc;
+}
+
+/*
+============
 Cvar_UpdateInfo
 
 deal with userinfo etc
@@ -803,7 +837,7 @@ void Cvar_List_f( void )
 
 		if( FBitSet( var->flags, FCVAR_EXTENDED|FCVAR_ALLOCATED ))
 			Con_Printf( " %-*s %s ^3%s^7\n", 32, var->name, value, var->desc );
-		else Con_Printf( " %-*s %s\n", 32, var->name, value );
+		else Con_Printf( " %-*s %s ^3%s^7\n", 32, var->name, value, Cvar_BuildAutoDescription( var->flags ));
 
 		count++;
 	}

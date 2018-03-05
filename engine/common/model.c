@@ -363,7 +363,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 
 		CRC32_Init( &currentCRC );
 		CRC32_ProcessBuffer( &currentCRC, buf, length );
-		CRC32_Final( &currentCRC );
+		currentCRC = CRC32_Final( currentCRC );
 
 		if( FBitSet( p->flags, FCRC_CHECKSUM_DONE ))
 		{

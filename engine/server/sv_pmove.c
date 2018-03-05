@@ -211,8 +211,10 @@ void SV_AddLinksToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3_t
 
 		if( check->v.groupinfo != 0 )
 		{
-			if(( !svs.groupop && (check->v.groupinfo & pl->v.groupinfo ) == 0) ||
-			( svs.groupop == 1 && ( check->v.groupinfo & pl->v.groupinfo ) != 0 ))
+			if( svs.groupop == GROUP_OP_AND && !FBitSet( check->v.groupinfo, pl->v.groupinfo ))
+				continue;
+
+			if( svs.groupop == GROUP_OP_NAND && FBitSet( check->v.groupinfo, pl->v.groupinfo ))
 				continue;
 		}
 

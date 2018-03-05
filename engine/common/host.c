@@ -315,7 +315,7 @@ qboolean Host_RegisterDecal( const char *name, int *count )
 	char	shortname[MAX_QPATH];
 	int	i;
 
-	if( !name || !*name )
+	if( !COM_CheckString( name ))
 		return 0;
 
 	COM_FileBase( name, shortname );
@@ -328,7 +328,7 @@ qboolean Host_RegisterDecal( const char *name, int *count )
 
 	if( i == MAX_DECALS )
 	{
-		MsgDev( D_ERROR, "Host_RegisterDecal: MAX_DECALS limit exceeded\n" );
+		MsgDev( D_ERROR, "MAX_DECALS limit exceeded (%d)\n", MAX_DECALS );
 		return false;
 	}
 
@@ -346,12 +346,12 @@ Host_InitDecals
 */
 void Host_InitDecals( void )
 {
-	search_t	*t;
 	int	i, num_decals = 0;
+	search_t	*t;
 
 	memset( host.draw_decals, 0, sizeof( host.draw_decals ));
 
-	// lookup all decals in decals.wad
+	// lookup all the decals in decals.wad (basedir, gamedir, falldir)
 	t = FS_Search( "decals.wad/*.*", true, false );
 
 	for( i = 0; t && i < t->numfilenames; i++ )
@@ -361,7 +361,7 @@ void Host_InitDecals( void )
 	}
 
 	if( t ) Mem_Free( t );
-	MsgDev( D_NOTE, "InitDecals: %i decals\n", num_decals );
+	Con_DPrintf( "InitDecals: %i decals\n", num_decals );
 }
 
 /*
@@ -575,34 +575,6 @@ void Host_Frame( float time )
 	Host_ClientFrame (); // client frame
 
 	host.framecount++;
-}
-
-/*
-================
-Host_Print
-
-Handles cursor positioning, line wrapping, etc
-All console printing must go through this in order to be logged to disk
-If no console is visible, the text will appear at the top of the game window
-================
-*/
-void Host_Print( const char *txt )
-{
-	if( host.rd.target )
-	{
-		if(( Q_strlen( txt ) + Q_strlen( host.rd.buffer )) > ( host.rd.buffersize - 1 ))
-		{
-			if( host.rd.flush )
-			{
-				host.rd.flush( host.rd.address, host.rd.target, host.rd.buffer );
-				*host.rd.buffer = 0;
-			}
-		}
-		Q_strcat( host.rd.buffer, txt );
-		return;
-	}
-
-	Con_Print( txt ); // echo to client console
 }
 
 /*

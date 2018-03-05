@@ -73,7 +73,7 @@ void SV_BroadcastPrintf( sv_client_t *ignore, char *fmt, ... )
 	}
 
 	// echo to console
-	Con_DPrintf( string );
+	Con_Printf( string );
 }
 
 /*
@@ -106,24 +106,19 @@ SV_SetPlayer
 Sets sv_client and sv_player to the player with idnum Cmd_Argv(1)
 ==================
 */
-qboolean SV_SetPlayer( void )
+static sv_client_t *SV_SetPlayer( void )
 {
 	char		*s;
 	sv_client_t	*cl;
 	int		i, idnum;
 
 	if( !svs.clients || sv.background )
-	{
-		Con_Printf( "^3no server running.\n" );
-		return false;
-          }
+		return NULL;
 
 	if( svs.maxclients == 1 || Cmd_Argc() < 2 )
 	{
 		// special case for local client
-		svs.currentPlayer = svs.clients;
-		svs.currentPlayerNum = 0;
-		return true;
+		return svs.clients;
 	}
 
 	s = Cmd_Argv( 1 );
@@ -132,40 +127,34 @@ qboolean SV_SetPlayer( void )
 	if( Q_isdigit( s ) || (s[0] == '-' && Q_isdigit( s + 1 )))
 	{
 		idnum = Q_atoi( s );
+
 		if( idnum < 0 || idnum >= svs.maxclients )
 		{
 			Con_Printf( "Bad client slot: %i\n", idnum );
-			return false;
+			return NULL;
 		}
 
-		svs.currentPlayer = &svs.clients[idnum];
-		svs.currentPlayerNum = idnum;
+		cl = &svs.clients[idnum];
 
-		if( !svs.currentPlayer->state )
+		if( !cl->state )
 		{
 			Con_Printf( "Client %i is not active\n", idnum );
-			return false;
+			return NULL;
 		}
-		return true;
+		return cl;
 	}
 
 	// check for a name match
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
 		if( !cl->state ) continue;
+
 		if( !Q_strcmp( cl->name, s ))
-		{
-			svs.currentPlayer = cl;
-			svs.currentPlayerNum = (cl - svs.clients);
-			return true;
-		}
+			return cl;
 	}
 
 	Con_Printf( "Userid %s is not on the server\n", s );
-	svs.currentPlayer = NULL;
-	svs.currentPlayerNum = 0;
-
-	return false;
+	return NULL;
 }
 
 /*
@@ -424,9 +413,9 @@ restarts current level
 */
 void SV_Restart_f( void )
 {
+	// because restart can be multiple issued
 	if( sv.state != ss_active )
 		return;
-
 	COM_LoadLevel( sv.name, sv.background );
 }
 
@@ -439,6 +428,10 @@ continue from latest savedgame
 */
 void SV_Reload_f( void )
 {
+	// because reload can be multiple issued
+	if( GameState->nextstate != STATE_RUNFRAME )
+		return;
+
 	if( !SV_LoadGame( SV_GetLatestSave( )))
 		COM_LoadLevel( sv_hostmap->string, false );
 }
@@ -452,24 +445,27 @@ Kick a user off of the server
 */
 void SV_Kick_f( void )
 {
+	sv_client_t	*cl;
+
 	if( Cmd_Argc() != 2 )
 	{
 		Con_Printf( S_USAGE "kick <userid> | <name>\n" );
 		return;
 	}
 
-	if( !SV_SetPlayer( )) return;
+	if(( cl = SV_SetPlayer( )) == NULL )
+		return;
 
-	if( NET_IsLocalAddress( svs.currentPlayer->netchan.remote_address ))
+	if( NET_IsLocalAddress( cl->netchan.remote_address ))
 	{
 		Con_Printf( "The local player cannot be kicked!\n" );
 		return;
 	}
 
-	Log_Printf( "Kick: \"%s<%i>\" was kicked\n", svs.currentPlayer->name, svs.currentPlayer->userid );
-	SV_BroadcastPrintf( svs.currentPlayer, "%s was kicked\n", svs.currentPlayer->name );
-	SV_ClientPrintf( svs.currentPlayer, "You were kicked from the game\n" );
-	SV_DropClient( svs.currentPlayer );
+	Log_Printf( "Kick: \"%s<%i>\" was kicked\n", cl->name, cl->userid );
+	SV_BroadcastPrintf( cl, "%s was kicked\n", cl->name );
+	SV_ClientPrintf( cl, "You were kicked from the game\n" );
+	SV_DropClient( cl );
 }
 
 /*
@@ -479,18 +475,21 @@ SV_Kill_f
 */
 void SV_Kill_f( void )
 {
-	if( !SV_SetPlayer( )) return;
+	sv_client_t	*cl;
 
-	if( !svs.currentPlayer || !SV_IsValidEdict( svs.currentPlayer->edict ))
+	if(( cl = SV_SetPlayer( )) == NULL )
 		return;
 
-	if( svs.currentPlayer->edict->v.health <= 0.0f )
+	if( !SV_IsValidEdict( cl->edict ))
+		return;
+
+	if( cl->edict->v.health <= 0.0f )
 	{
-		SV_ClientPrintf( svs.currentPlayer, "Can't suicide - already dead!\n");
+		SV_ClientPrintf( cl, "Can't suicide - already dead!\n");
 		return;
 	}
 
-	svgame.dllFuncs.pfnClientKill( svs.currentPlayer->edict );	
+	svgame.dllFuncs.pfnClientKill( cl->edict );	
 }
 
 /*
@@ -694,16 +693,20 @@ Examine all a users info strings
 */
 void SV_ClientInfo_f( void )
 {
+	sv_client_t	*cl;
+
 	if( Cmd_Argc() != 2 )
 	{
 		Con_Printf( S_USAGE "clientinfo <userid>\n" );
 		return;
 	}
 
-	if( !SV_SetPlayer( )) return;
+	if(( cl = SV_SetPlayer( )) == NULL )
+		return;
+
 	Con_Printf( "userinfo\n" );
 	Con_Printf( "--------\n" );
-	Info_Print( svs.currentPlayer->userinfo );
+	Info_Print( cl->userinfo );
 
 }
 

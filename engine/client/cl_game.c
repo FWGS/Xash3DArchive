@@ -670,6 +670,19 @@ static void CL_InitTitles( const char *filename )
 
 /*
 ====================
+CL_HudMessage
+
+Template to show hud messages
+====================
+*/
+void CL_HudMessage( const char *pMessage )
+{
+	if( !COM_CheckString( pMessage )) return;
+	CL_DispatchUserMessage( "HudText", Q_strlen( pMessage ), (void *)pMessage );
+}
+
+/*
+====================
 CL_ParseTextMessage
 
 Parse TE_TEXTMESSAGE
@@ -686,8 +699,6 @@ void CL_ParseTextMessage( sizebuf_t *msg )
 
 	if( channel <= 0 || channel > ( MAX_TEXTCHANNELS - 1 ))
 	{
-		// invalid channel specified, use internal counter		
-		if( channel != 0 ) MsgDev( D_ERROR, "HudText: invalid channel %i\n", channel );
 		channel = msgindex;
 		msgindex = (msgindex + 1) & (MAX_TEXTCHANNELS - 1);
 	}	
@@ -717,9 +728,7 @@ void CL_ParseTextMessage( sizebuf_t *msg )
 	// to prevent grab too long messages
 	Q_strncpy( (char *)text->pMessage, MSG_ReadString( msg ), 2048 ); 		
 
-	// NOTE: a "HudText" message contain only 'string' with message name, so we
-	// don't needs to use MSG_ routines here, just directly write msgname into netbuffer
-	CL_DispatchUserMessage( "HudText", Q_strlen( text->pName ) + 1, (void *)text->pName );
+	CL_HudMessage( text->pName );
 }
 
 /*
@@ -767,9 +776,7 @@ void CL_ParseFinaleCutscene( sizebuf_t *msg, int level )
 	if( *text->pMessage == '\0' )
 		return; // no real text
 
-	// NOTE: a "HudText" message contain only 'string' with message name, so we
-	// don't needs to use MSG_ routines here, just directly write msgname into netbuffer
-	CL_DispatchUserMessage( "HudText", Q_strlen( text->pName ) + 1, (void *)text->pName );
+	CL_HudMessage( text->pName );
 }
 
 /*

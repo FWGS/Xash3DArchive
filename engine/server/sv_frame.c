@@ -73,10 +73,10 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 
 	cl = SV_ClientFromEdict( pClient, true );
 
-	Assert( cl != NULL );
+	ASSERT( cl != NULL );
 
 	// portals can't change hostflags
-	if( pClient && from_client )
+	if( from_client )
 	{
 		// setup hostflags
 		if( FBitSet( cl->flags, FCL_LOCAL_WEAPONS ))
@@ -97,9 +97,6 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 
 		ent = EDICT_NUM( e );
 
-		if( !SV_IsValidEdict( ent ) || FBitSet( ent->v.flags, FL_KILLME ))
-			continue;
-
 		// don't double add an entity through portals (in case this already added)
 		if( CHECKVISBIT( ents->sended, e ))
 			continue;
@@ -119,12 +116,11 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 
 			if( SV_IsValidEdict( ent->v.aiment ) && FBitSet( ent->v.aiment->v.effects, EF_MERGE_VISIBILITY ))
 			{
-				if( cl != NULL && cl->num_viewents < MAX_VIEWENTS )
+				if( cl->num_viewents < MAX_VIEWENTS )
 				{
 					cl->viewentity[cl->num_viewents] = ent->v.aiment;
 					cl->num_viewents++;
 				}
-				else MsgDev( D_ERROR, "SV_AddEntitiesToPacket: too many viewentities!\n" );
 			}
 
 			// if we are full, silently discard entities
@@ -202,7 +198,7 @@ SV_EmitPacketEntities
 Writes a delta update of an entity_state_t list to the message->
 =============
 */
-void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
+static void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg )
 {
 	entity_state_t	*oldent, *newent;
 	int		oldindex, newindex;
@@ -220,8 +216,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 		// the snapshot's entities may still have rolled off the buffer, though
 		if( from->first_entity <= ( svs.next_client_entities - svs.num_client_entities ))
 		{
-			MsgDev( D_WARN, "%s: delta request from out of date entities.\n", cl->name );
-
+			Con_DPrintf( S_WARN "%s: delta request from out of date entities.\n", cl->name );
 			MSG_BeginServerCmd( msg, svc_packetentities );
 			MSG_WriteUBitLong( msg, to->num_entities - 1, MAX_VISIBLE_PACKET_BITS );
 
@@ -291,7 +286,7 @@ void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_t *msg 
 			int		offset = 0;
 
 			// trying to reduce message by select optimal baseline
-			if( sv_instancedbaseline.value == 0 || sv.instanced.count == 0 || sv.last_valid_baseline > newnum )
+			if( !sv_instancedbaseline.value || !sv.instanced.count || sv.last_valid_baseline > newnum )
 			{
 				offset = SV_FindBestBaseline( newindex, &baseline, newent, to, player );
 			}
@@ -504,12 +499,10 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	int		i;
 
 	memset( &nullcd, 0, sizeof( nullcd ));
-
-	clent = cl->edict;
 	frame = &cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK];
-
 	frame->senttime = host.realtime;
 	frame->ping_time = -1.0f;
+	clent = cl->edict;
 
 	if( cl->chokecount != 0 )
 	{
@@ -522,9 +515,7 @@ void SV_WriteClientdataToMessage( sv_client_t *cl, sizebuf_t *msg )
 	{
 	case 1:
 		MSG_BeginServerCmd( msg, svc_setangle );
-		MSG_WriteBitAngle( msg, clent->v.angles[0], 16 );
-		MSG_WriteBitAngle( msg, clent->v.angles[1], 16 );
-		MSG_WriteBitAngle( msg, clent->v.angles[2], 16 );
+		MSG_WriteVec3Angles( msg, clent->v.angles );
 		break;
 	case 2:
 		MSG_BeginServerCmd( msg, svc_addangle );
@@ -586,18 +577,12 @@ SV_WriteEntitiesToClient
 */
 void SV_WriteEntitiesToClient( sv_client_t *cl, sizebuf_t *msg )
 {
-	edict_t		*clent;
-	edict_t		*viewent;	// may be NULL
 	client_frame_t	*frame;
 	entity_state_t	*state;
 	static sv_ents_t	frame_ents;
 	int		i, send_pings;
 
 	frame = &cl->frames[cl->netchan.outgoing_sequence & SV_UPDATE_MASK];
-	clent = cl->edict;
-
-	viewent = cl->pViewEntity;	// himself or trigger_camera
-
 	send_pings = SV_ShouldUpdatePing( cl );
 
 	memset( frame_ents.sended, 0, sizeof( frame_ents.sended ));
@@ -608,12 +593,12 @@ void SV_WriteEntitiesToClient( sv_client_t *cl, sizebuf_t *msg )
 
 	// add all the entities directly visible to the eye, which
 	// may include portal entities that merge other viewpoints
-	SV_AddEntitiesToPacket( viewent, clent, frame, &frame_ents, true );
+	SV_AddEntitiesToPacket( cl->pViewEntity, cl->edict, frame, &frame_ents, true );
 
 	if( c_notsend != cl->ignored_ents )
 	{
 		if( c_notsend > 0 )
-			MsgDev( D_ERROR, "Too many entities in visible packet list. Ignored %d entities\n", c_notsend );
+			Con_Printf( S_ERROR "Too many entities in visible packet list. Ignored %d entities\n", c_notsend );
 		cl->ignored_ents = c_notsend;
 	}   
 
@@ -674,9 +659,6 @@ void SV_SendClientDatagram( sv_client_t *cl )
 		if( sv.simulating && cl->lastservertime == sv.time )
 			return;
 	}
-
-	svs.currentPlayerNum = (cl - svs.clients);
-	svs.currentPlayer = cl;
 
 	MSG_Init( &msg, "Datagram", msg_buf, sizeof( msg_buf ));
 
@@ -824,17 +806,16 @@ void SV_SendClientMessages( void )
 	sv_client_t	*cl;
 	int		i;
 
-	svs.currentPlayer = NULL;
-	svs.currentPlayerNum = -1;
-
 	if( sv.state == ss_dead )
 		return;
 
 	SV_UpdateToReliableMessages ();
 
 	// send a message to each connected client
-	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+	for( i = 0, sv.current_client = svs.clients; i < svs.maxclients; i++, sv.current_client++ )
 	{
+		cl = sv.current_client;
+
 		if( !cl->state || FBitSet( cl->flags, FCL_FAKECLIENT ))
 			continue;
 
@@ -899,8 +880,7 @@ void SV_SendClientMessages( void )
 	}
 
 	// reset current client
-	svs.currentPlayer = NULL;
-	svs.currentPlayerNum = -1;
+	sv.current_client = NULL;
 }
 
 /*

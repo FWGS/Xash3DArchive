@@ -45,9 +45,17 @@ extern int SV_UPDATE_BACKUP;
 #define MAP_HAS_LANDMARK	BIT( 2 )
 #define MAP_INVALID_VERSION	BIT( 3 )
 
+// group flags
+#define GROUP_OP_AND	0
+#define GROUP_OP_NAND	1
+
+#ifdef NDEBUG
 #define SV_IsValidEdict( e )	( e && !e->free )
+#else
+#define SV_IsValidEdict( e )	SV_CheckEdict( e, __FILE__, __LINE__ )
+#endif
 #define NUM_FOR_EDICT(e)	((int)((edict_t *)(e) - svgame.edicts))
-#define EDICT_NUM( num )	SV_EDICT_NUM( num, __FILE__, __LINE__ )
+#define EDICT_NUM( num )	SV_EdictNum( num )
 #define STRING( offset )	SV_GetString( offset )
 #define ALLOC_STRING(str)	SV_AllocString( str )
 #define MAKE_STRING(str)	SV_MakeString( str )
@@ -136,6 +144,7 @@ typedef struct server_s
 	double		time_residual;	// unclamped
 	float		frametime;	// 1.0 / sv_fps->value
 	int		framecount;	// count physic frames
+	struct sv_client_s	*current_client;	// current client who network message sending on
 
 	int		hostflags;	// misc server flags: predicting etc
 	CRC32_t		worldmapCRC;
@@ -190,6 +199,12 @@ typedef struct server_s
 
 	qboolean		simulating;
 	qboolean		paused;
+
+	// statistics
+	int		ignored_static_ents;
+	int		ignored_studio_decals;
+	int		ignored_world_decals;
+	int		static_ents_overflow;
 } server_t;
 
 typedef struct
@@ -242,12 +257,13 @@ typedef struct sv_client_s
 	float		latency;
 
 	int		ignored_ents;		// if visibility list is full we should know how many entities will be ignored
-	int		listeners;		// 32 bits == MAX_CLIENTS (voice listeners)
-
 	edict_t		*edict;			// EDICT_NUM(clientnum+1)
 	edict_t		*pViewEntity;		// svc_setview member
 	edict_t		*viewentity[MAX_VIEWENTS];	// list of portal cameras in player PVS
 	int		num_viewents;		// num of portal cameras that can merge PVS
+
+	qboolean		m_bLoopback;		// Does this client want to hear his own voice?
+	uint		listeners;		// which other clients does this guy's voice stream go to?
 
 	// the datagram is written to by sound calls, prints, temp ents, etc.
 	// it can be harmlessly overflowed.
@@ -379,8 +395,6 @@ typedef struct
 	int		spawncount;		// incremented each server start
 						// used to check late spawns
 	sv_client_t	*clients;			// [svs.maxclients]
-	sv_client_t	*currentPlayer;		// current client who network message sending on
-	int		currentPlayerNum;		// for easy acess to some global arrays
 	int		num_client_entities;	// svs.maxclients*UPDATE_BACKUP*MAX_PACKET_ENTITIES
 	int		next_client_entities;	// next client_entity to use
 	entity_state_t	*packet_entities;		// [num_client_entities]
@@ -435,6 +449,7 @@ extern convar_t		sv_consistency;
 extern convar_t		sv_password;
 extern convar_t		sv_uploadmax;
 extern convar_t		deathmatch;
+extern convar_t		hostname;
 extern convar_t		skill;
 extern convar_t		coop;
 
@@ -442,10 +457,8 @@ extern	convar_t		*sv_pausable;		// allows pause in multiplayer
 extern	convar_t		*sv_check_errors;
 extern	convar_t		*sv_reconnect_limit;
 extern	convar_t		*sv_lighting_modulate;
-extern	convar_t		*hostname;
 extern	convar_t		*sv_novis;
 extern	convar_t		*sv_hostmap;
-extern	convar_t		*sv_sendvelocity;
 extern	convar_t		*sv_validate_changelevel;
 extern	convar_t		*public_server;
 
@@ -586,9 +599,9 @@ edict_t *SV_AllocEdict( void );
 void SV_FreeEdict( edict_t *pEdict );
 void SV_InitEdict( edict_t *pEdict );
 const char *SV_ClassName( const edict_t *e );
-void SV_SetModel( edict_t *ent, const char *name );
 void SV_FreePrivateData( edict_t *pEdict );
 void SV_CopyTraceToGlobal( trace_t *trace );
+qboolean SV_CheckEdict( const edict_t *e, const char *file, const int line );
 void SV_SetMinMaxSize( edict_t *e, const float *min, const float *max, qboolean relink );
 edict_t* SV_FindEntityByString( edict_t *pStartEdict, const char *pszField, const char *pszValue );
 void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
@@ -604,7 +617,6 @@ string_t SV_AllocString( const char *szValue );
 string_t SV_MakeString( const char *szValue );
 const char *SV_GetString( string_t iString );
 sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, qboolean spawned_only );
-void SV_SetClientMaxspeed( sv_client_t *cl, float fNewMaxspeed );
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
 void SV_CreateStaticEntity( struct sizebuf_s *msg, sv_static_entity_t *ent );
@@ -618,15 +630,9 @@ byte *pfnSetFatPAS( const float *org );
 int pfnPrecacheModel( const char *s );
 void pfnRemoveEntity( edict_t* e );
 void SV_RestartStaticEnts( void );
+int pfnGetCurrentPlayer( void );
+edict_t *SV_EdictNum( int n );
 char *SV_Localinfo( void );
-
-_inline edict_t *SV_EDICT_NUM( int n, const char * file, const int line )
-{
-	if((n >= 0) && (n < GI->max_edicts))
-		return svgame.edicts + n;
-	Host_Error( "SV_EDICT_NUM: bad number %i (called at %s:%i)\n", n, file, line );
-	return NULL;	
-}
 
 //
 // sv_log.c

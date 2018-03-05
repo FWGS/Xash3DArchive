@@ -890,7 +890,7 @@ cvar_t *pfnCvar_RegisterClientVariable( const char *szName, const char *szValue,
 {
 	if( FBitSet( flags, FCVAR_GLCONFIG ))
 		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( CVAR_GLCONFIG_DESCRIPTION, szName ));
-	return (cvar_t *)Cvar_Get( szName, szValue, flags|FCVAR_CLIENTDLL, "client cvar" );
+	return (cvar_t *)Cvar_Get( szName, szValue, flags|FCVAR_CLIENTDLL, Cvar_BuildAutoDescription( flags|FCVAR_CLIENTDLL ));
 }
 
 /*
@@ -903,7 +903,7 @@ cvar_t *pfnCvar_RegisterGameUIVariable( const char *szName, const char *szValue,
 {
 	if( FBitSet( flags, FCVAR_GLCONFIG ))
 		return (cvar_t *)Cvar_Get( szName, szValue, flags, va( CVAR_GLCONFIG_DESCRIPTION, szName ));
-	return (cvar_t *)Cvar_Get( szName, szValue, flags|FCVAR_GAMEUIDLL, "GameUI cvar" );
+	return (cvar_t *)Cvar_Get( szName, szValue, flags|FCVAR_GAMEUIDLL, Cvar_BuildAutoDescription( flags|FCVAR_GAMEUIDLL ));
 }
 
 /*

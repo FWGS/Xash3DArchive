@@ -1069,7 +1069,7 @@ void CL_CheckForResend( void )
 	if( adr.port == 0 ) adr.port = MSG_BigShort( PORT_SERVER );
 	cls.connect_time = host.realtime; // for retransmit requests
 
-	MsgDev( D_NOTE, "Connecting to %s...\n", cls.servername );
+	Con_Printf( "Connecting to %s...\n", cls.servername );
 	Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
 }
 
@@ -1092,7 +1092,7 @@ void CL_Connect_f( void )
 	Q_strncpy( server, Cmd_Argv( 1 ), sizeof( server ));
 
 	// if running a local server, kill it and reissue
-	if( SV_Active( )) Host_ShutdownServer();
+//	if( SV_Active( )) Host_ShutdownServer();
 	NET_Config( true ); // allow remote
 
 	Con_Printf( "server %s\n", server );

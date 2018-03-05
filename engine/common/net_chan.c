@@ -132,8 +132,8 @@ void Netchan_Shutdown( void )
 
 void Netchan_ReportFlow( netchan_t *chan )
 {
-	char	incoming[CS_SIZE];
-	char	outgoing[CS_SIZE];
+	char	incoming[64];
+	char	outgoing[64];
 
 	if( CL_IsPlaybackDemo( ))
 		return;

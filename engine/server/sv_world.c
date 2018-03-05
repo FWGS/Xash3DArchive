@@ -526,8 +526,10 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 
 			if( touch->v.groupinfo && ent->v.groupinfo )
 			{
-				if(( !svs.groupop && !(touch->v.groupinfo & ent->v.groupinfo)) ||
-				(svs.groupop == 1 && (touch->v.groupinfo & ent->v.groupinfo)))
+				if( svs.groupop == GROUP_OP_AND && !FBitSet( touch->v.groupinfo, ent->v.groupinfo ))
+					continue;
+
+				if( svs.groupop == GROUP_OP_NAND && FBitSet( touch->v.groupinfo, ent->v.groupinfo ))
 					continue;
 			}
 
@@ -720,8 +722,10 @@ void SV_WaterLinks( const vec3_t origin, int *pCont, areanode_t *node )
 
 		if( touch->v.groupinfo )
 		{
-			if(( !svs.groupop && !(touch->v.groupinfo & svs.groupmask)) ||
-			(svs.groupop == 1 && (touch->v.groupinfo & svs.groupmask)))
+			if( svs.groupop == GROUP_OP_AND && !FBitSet( touch->v.groupinfo, svs.groupmask ))
+				continue;
+
+			if( svs.groupop == GROUP_OP_NAND && FBitSet( touch->v.groupinfo, svs.groupmask ))
 				continue;
 		}
 
@@ -1136,10 +1140,12 @@ static qboolean SV_ClipToEntity( edict_t *touch, moveclip_t *clip )
 	trace_t	trace;
 	model_t	*mod;
 
-	if( touch->v.groupinfo != 0 && SV_IsValidEdict( clip->passedict ) && clip->passedict->v.groupinfo != 0 )
+	if( touch->v.groupinfo && SV_IsValidEdict( clip->passedict ) && clip->passedict->v.groupinfo != 0 )
 	{
-		if(( svs.groupop == 0 && ( touch->v.groupinfo & clip->passedict->v.groupinfo ) == 0) ||
-		( svs.groupop == 1 && (touch->v.groupinfo & clip->passedict->v.groupinfo ) != 0 ))
+		if( svs.groupop == GROUP_OP_AND && !FBitSet( touch->v.groupinfo, clip->passedict->v.groupinfo ))
+			return true;
+
+		if( svs.groupop == GROUP_OP_NAND && FBitSet( touch->v.groupinfo, clip->passedict->v.groupinfo ))
 			return true;
 	}
 
@@ -1715,23 +1721,17 @@ int SV_LightForEntity( edict_t *pEdict )
 {
 	vec3_t	start, end;
 
-	if( !pEdict ) return 0;
-	if( pEdict->v.effects & EF_FULLBRIGHT || !sv.worldmodel->lightdata )
-	{
+	if( FBitSet( pEdict->v.effects, EF_FULLBRIGHT ) || !sv.worldmodel->lightdata )
 		return 255;
-	}
 
-	if( pEdict->v.flags & FL_CLIENT )
-	{
-		// player has more precision light level
-		// that come from client-side
+	// player has more precision light level that come from client-side
+	if( FBitSet( pEdict->v.flags, FL_CLIENT ))
 		return pEdict->v.light_level;
-	}
 
 	VectorCopy( pEdict->v.origin, start );
 	VectorCopy( pEdict->v.origin, end );
 
-	if( pEdict->v.effects & EF_INVLIGHT )
+	if( FBitSet( pEdict->v.effects, EF_INVLIGHT ))
 		end[2] = start[2] + world.size[2];
 	else end[2] = start[2] - world.size[2];
 	VectorSet( sv_pointColor, 1.0f, 1.0f, 1.0f );

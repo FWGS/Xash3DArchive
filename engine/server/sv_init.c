@@ -32,7 +32,7 @@ register unique model for a server and client
 */
 int SV_ModelIndex( const char *filename )
 {
-	char	name[64];
+	char	name[MAX_QPATH];
 	int	i;
 
 	if( !COM_CheckString( filename ))
@@ -49,7 +49,7 @@ int SV_ModelIndex( const char *filename )
 
 	if( i == MAX_MODELS )
 	{
-		Host_Error( "SV_ModelIndex: MAX_MODELS limit exceeded\n" );
+		Host_Error( "MAX_MODELS limit exceeded (%d)\n", MAX_MODELS );
 		return 0;
 	}
 
@@ -58,8 +58,7 @@ int SV_ModelIndex( const char *filename )
 
 	if( sv.state != ss_loading )
 	{	
-		MsgDev( D_WARN, "late precache of %s\n", name );
-
+		Con_Printf( S_WARN "late precache of %s\n", name );
 		// send the update to everyone
 		MSG_BeginServerCmd( &sv.reliable_datagram, svc_modelindex );
 		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_MODEL_BITS );
@@ -78,12 +77,15 @@ register unique sound for client
 */
 int SV_SoundIndex( const char *filename )
 {
-	char	name[64];
+	char	name[MAX_QPATH];
 	int	i;
 
 	// don't precache sentence names!
 	if( !COM_CheckString( filename ))
 		return 0;
+
+	if( filename[0] == '!' )
+		Host_Error( "SV_SoundIndex: '%s' do not precache sentence names!\n", filename );
 
 	Q_strncpy( name, filename, sizeof( name ));
 	COM_FixSlashes( name );
@@ -96,7 +98,7 @@ int SV_SoundIndex( const char *filename )
 
 	if( i == MAX_SOUNDS )
 	{
-		Host_Error( "SV_SoundIndex: MAX_SOUNDS limit exceeded\n" );
+		Host_Error( "MAX_SOUNDS limit exceeded (%d)\n", MAX_SOUNDS );
 		return 0;
 	}
 
@@ -105,8 +107,7 @@ int SV_SoundIndex( const char *filename )
 
 	if( sv.state != ss_loading )
 	{	
-		MsgDev( D_WARN, "late precache of %s\n", name );
-
+		Con_Printf( S_WARN "late precache of %s\n", name );
 		// send the update to everyone
 		MSG_BeginServerCmd( &sv.reliable_datagram, svc_soundindex );
 		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_SOUND_BITS );
@@ -125,7 +126,7 @@ register network event for a server and client
 */
 int SV_EventIndex( const char *filename )
 {
-	char	name[64];
+	char	name[MAX_QPATH];
 	int	i;
 
 	if( !COM_CheckString( filename ))
@@ -142,7 +143,7 @@ int SV_EventIndex( const char *filename )
 
 	if( i == MAX_EVENTS )
 	{
-		Host_Error( "SV_EventIndex: MAX_EVENTS limit exceeded\n" );
+		Host_Error( "MAX_EVENTS limit exceeded (%d)\n", MAX_EVENTS );
 		return 0;
 	}
 
@@ -169,7 +170,7 @@ register generic resourse for a server and client
 */
 int SV_GenericIndex( const char *filename )
 {
-	char	name[64];
+	char	name[MAX_QPATH];
 	int	i;
 
 	if( !COM_CheckString( filename ))
@@ -186,7 +187,7 @@ int SV_GenericIndex( const char *filename )
 
 	if( i == MAX_CUSTOM )
 	{
-		Host_Error( "SV_GenericIndex: MAX_RESOURCES limit exceeded\n" );
+		Host_Error( "MAX_CUSTOM limit exceeded (%d)\n", MAX_CUSTOM );
 		return 0;
 	}
 
@@ -222,7 +223,7 @@ void SV_AddResource( resourcetype_t type, const char *name, int size, byte flags
 	resource_t	*pResource = &sv.resources[sv.num_resources];
 
 	if( sv.num_resources >= MAX_RESOURCES )
-		Host_Error( "SV_AddResource: MAX_RESOURCES limit exceeded\n" );
+		Host_Error( "MAX_RESOURCES limit exceeded (%d)\n", MAX_RESOURCES );
 	sv.num_resources++;
 
 	Q_strncpy( pResource->szFileName, name, sizeof( pResource->szFileName ));
@@ -234,8 +235,8 @@ void SV_AddResource( resourcetype_t type, const char *name, int size, byte flags
 
 void SV_CreateGenericResources( void )
 {
-	char	*afile, *pfile;
 	string	filename, token;
+	char	*afile, *pfile;
 
 	Q_strncpy( filename, sv.model_precache[1], sizeof( filename ));
 	COM_ReplaceExtension( filename, ".res" );
@@ -249,7 +250,7 @@ void SV_CreateGenericResources( void )
 	Con_DPrintf( "Precaching from %s\n", filename );
 	Con_DPrintf( "----------------------------------\n" );
 
-	while( ( pfile = COM_ParseFile( pfile, token )) != NULL )
+	while(( pfile = COM_ParseFile( pfile, token )) != NULL )
 	{
 		if( !COM_IsSafeFileToDownload( token ))
 			continue;
@@ -264,7 +265,7 @@ void SV_CreateGenericResources( void )
 
 void SV_CreateResourceList( void )
 {
-	int	ffirstsent = 0;
+	qboolean	ffirstsent = false;
 	int	i, nSize;
 	char	*s;
 
@@ -273,7 +274,7 @@ void SV_CreateResourceList( void )
 	for( i = 1; i < MAX_CUSTOM; i++ )
 	{
 		s = sv.files_precache[i];
-		if( !*s ) break; // end of list
+		if( !COM_CheckString( s )) break; // end of list
 		nSize = ( svs.maxclients > 1 ) ? FS_FileSize( s, false ) : 0;
 		if( nSize < 0 ) nSize = 0;
 		SV_AddResource( t_generic, s, nSize, RES_FATALIFMISSING, i );
@@ -282,14 +283,15 @@ void SV_CreateResourceList( void )
 	for( i = 1; i < MAX_SOUNDS; i++ )
 	{
 		s = sv.sound_precache[i];
-		if( !*s ) break; // end of list
+		if( !COM_CheckString( s ))
+			break; // end of list
 
 		if( s[0] == '!' )
 		{
 			if( !ffirstsent )
 			{
 				SV_AddResource( t_sound, "!", 0, RES_FATALIFMISSING, i );
-				ffirstsent = 1;
+				ffirstsent = true;
 			}
 		}
 		else
@@ -303,7 +305,7 @@ void SV_CreateResourceList( void )
 	for( i = 1; i < MAX_MODELS; i++ )
 	{
 		s = sv.model_precache[i];
-		if( !*s ) break; // end of list
+		if( !COM_CheckString( s )) break; // end of list
 		nSize = ( svs.maxclients > 1 && s[0] != '*' ) ? FS_FileSize( s, false ) : 0;
 		if( nSize < 0 ) nSize = 0;
 		SV_AddResource( t_model, s, nSize, sv.model_precache_flags[i], i );
@@ -318,7 +320,7 @@ void SV_CreateResourceList( void )
 	for( i = 1; i < MAX_EVENTS; i++ )
 	{
 		s = sv.event_precache[i];
-		if( !*s ) break; // end of list
+		if( !COM_CheckString( s )) break; // end of list
 		nSize = ( svs.maxclients > 1 ) ? FS_FileSize( s, false ) : 0;
 		if( nSize < 0 ) nSize = 0;
 		SV_AddResource( t_eventscript, s, nSize, RES_FATALIFMISSING, i );
@@ -463,7 +465,7 @@ void SV_ActivateServer( int runPhysics )
 	if( !svs.initialized )
 		return;
 
-	MSG_Init( &msg, "NewServer", msg_buf, sizeof( msg_buf ));
+	MSG_Init( &msg, "ActivateServer", msg_buf, sizeof( msg_buf ));
 
 	// always clearing newunit variable
 	Cvar_SetValue( "sv_newunit", 0 );
@@ -537,9 +539,15 @@ void SV_ActivateServer( int runPhysics )
 
 	Con_DPrintf( "level loaded at %.2f sec\n", Sys_DoubleTime() - svs.timestart );
 
+	if( sv.ignored_static_ents )
+		Con_Printf( S_WARN "%i static entities was rejected due buffer overflow\n", sv.ignored_static_ents );
+
+	if( sv.ignored_studio_decals || sv.ignored_world_decals )
+		Con_Printf( S_WARN "%i static decals was rejected due buffer overflow\n", sv.ignored_studio_decals + sv.ignored_world_decals );
+
 	if( svs.maxclients > 1 )
 	{
-		char	*cycle = Cvar_VariableString( "mapchangecfgfile" );
+		const char *cycle = Cvar_VariableString( "mapchangecfgfile" );
 
 		if( COM_CheckString( cycle ))
 			Cbuf_AddText( va( "exec %s\n", cycle ));
@@ -714,6 +722,10 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	svs.timestart = Sys_DoubleTime();
 	svs.spawncount++; // any partially connected client will be restarted
 
+	// let's not have any servers with no name
+	if( !COM_CheckString( hostname.string ))
+		Cvar_Set( "hostname", svgame.dllFuncs.pfnGetGameDescription ? svgame.dllFuncs.pfnGetGameDescription() : FS_Title( ));
+
 	if( startspot )
 	{
 		Con_Printf( "Spawn Server: %s [%s]\n", mapname, startspot );
@@ -739,6 +751,10 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	current_skill = Q_rint( skill.value );
 	current_skill = bound( 0, current_skill, 3 );
 	Cvar_SetValue( "skill", (float)current_skill );
+
+	// force normal player collisions for single player
+	if( svs.maxclients == 1 )
+		Cvar_SetValue( "sv_clienttrace", 1 );
 
 	// copy gamemode into svgame.globals
 	svgame.globals->deathmatch = deathmatch.value;

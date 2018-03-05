@@ -247,10 +247,8 @@ void SV_ConnectClient( netadr_t from )
 	qboolean		reconnect = false;
 	int		nClientSlot = 0;
 	int		qport, version;
-	int		i, edictnum;
-	int		count = 0;
+	int		i, count = 0;
 	int		challenge;
-	edict_t		*ent;
 	char		*s;
 
 	if( Cmd_Argc() < 5 )
@@ -364,12 +362,8 @@ void SV_ConnectClient( netadr_t from )
 	if( svs.maxclients == 1 ) // restore physinfo for singleplayer
 		Q_strncpy( newcl->physinfo, physinfo, sizeof( physinfo ));
 
-	svs.currentPlayer = newcl;
-	svs.currentPlayerNum = (newcl - svs.clients);
-	edictnum = svs.currentPlayerNum + 1;
-
-	ent = EDICT_NUM( edictnum );
-	newcl->edict = ent;
+	sv.current_client = newcl;
+	newcl->edict = EDICT_NUM( (newcl - svs.clients) + 1 );
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
 	newcl->userid = g_userid++;	// create unique userid
@@ -379,7 +373,7 @@ void SV_ConnectClient( netadr_t from )
 	MSG_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
 
 	// get the game a chance to reject this connection or modify the userinfo
-	if( !( SV_ClientConnect( ent, userinfo )))
+	if( !( SV_ClientConnect( newcl->edict, userinfo )))
 	{
 		if( *Info_ValueForKey( userinfo, "rejmsg" )) 
 			SV_RejectConnection( from, "%s\n", Info_ValueForKey( userinfo, "rejmsg" ));
@@ -451,10 +445,9 @@ A connection request that came from the game module
 */
 edict_t *SV_FakeConnect( const char *netname )
 {
-	int		i, edictnum;
 	char		userinfo[MAX_INFO_STRING];
 	sv_client_t	temp, *cl, *newcl;
-	edict_t		*ent;
+	int		i;
 
 	if( !netname ) netname = "";
 	userinfo[0] = '\0';
@@ -491,23 +484,20 @@ edict_t *SV_FakeConnect( const char *netname )
 	// accept the new client
 	// this is the only place a sv_client_t is ever initialized
 	*newcl = temp;
-	svs.currentPlayer = newcl;
-	svs.currentPlayerNum = (newcl - svs.clients);
-	edictnum = svs.currentPlayerNum + 1;
+	sv.current_client = newcl;
 
 	if( newcl->frames )
 		Mem_Free( newcl->frames );	// fakeclients doesn't have frames
 	newcl->frames = NULL;
 
-	ent = EDICT_NUM( edictnum );
-	newcl->edict = ent;
+	newcl->edict = EDICT_NUM( (newcl - svs.clients) + 1 );
 	newcl->challenge = -1;		// fake challenge
 	newcl->delta_sequence = -1;
 	newcl->userid = g_userid++;		// create unique userid
 	SetBits( newcl->flags, FCL_FAKECLIENT );
 
 	// get the game a chance to reject this connection or modify the userinfo
-	if( !SV_ClientConnect( ent, userinfo ))
+	if( !SV_ClientConnect( newcl->edict, userinfo ))
 	{
 		MsgDev( D_ERROR, "SV_ConnectClient: game rejected a connection.\n" );
 		return NULL;
@@ -522,11 +512,11 @@ edict_t *SV_FakeConnect( const char *netname )
 
 	MsgDev( D_NOTE, "Bot %i connecting with challenge %p\n", i, -1 );
 
-	SetBits( ent->v.flags, FL_CLIENT|FL_FAKECLIENT );	// mark it as fakeclient
+	SetBits( newcl->edict->v.flags, FL_CLIENT|FL_FAKECLIENT );	// mark it as fakeclient
 	newcl->state = cs_spawned;
 	newcl->connection_started = host.realtime;
 	
-	return ent;
+	return newcl->edict;
 }
 
 /*
@@ -636,7 +626,7 @@ void SV_BeginRedirect( netadr_t adr, int target, char *buffer, int buffersize, v
 
 void SV_FlushRedirect( netadr_t adr, int dest, char *buf )
 {
-	if( svs.currentPlayer && FBitSet( svs.currentPlayer->flags, FCL_FAKECLIENT ))
+	if( sv.current_client && FBitSet( sv.current_client->flags, FCL_FAKECLIENT ))
 		return;
 
 	switch( dest )
@@ -645,12 +635,12 @@ void SV_FlushRedirect( netadr_t adr, int dest, char *buf )
 		Netchan_OutOfBandPrint( NS_SERVER, adr, "print\n%s", buf );
 		break;
 	case RD_CLIENT:
-		if( !svs.currentPlayer ) return; // client not set
-		MSG_BeginServerCmd( &svs.currentPlayer->netchan.message, svc_print );
-		MSG_WriteString( &svs.currentPlayer->netchan.message, buf );
+		if( !sv.current_client ) return; // client not set
+		MSG_BeginServerCmd( &sv.current_client->netchan.message, svc_print );
+		MSG_WriteString( &sv.current_client->netchan.message, buf );
 		break;
 	case RD_NONE:
-		MsgDev( D_ERROR, "SV_FlushRedirect: %s: invalid destination\n", NET_AdrToString( adr ));
+		Con_Printf( S_ERROR "SV_FlushRedirect: %s: invalid destination\n", NET_AdrToString( adr ));
 		break;
 	}
 }
@@ -675,17 +665,15 @@ Returns a pointer to a static char for most likely only printing.
 */
 const char *SV_GetClientIDString( sv_client_t *cl )
 {
-	static char	result[CS_SIZE];
+	static char	result[MAX_QPATH];
 
-	result[0] = '\0';
+	if( !cl ) return "";
 
-	if( !cl )
+	if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 	{
-		MsgDev( D_ERROR, "SV_GetClientIDString: invalid client\n" );
-		return result;
+		Q_strncpy( result, "BOT", sizeof( result ));
 	}
-
-	if( NET_IsLocalAddress( cl->netchan.remote_address ))
+	else if( NET_IsLocalAddress( cl->netchan.remote_address ))
 	{
 		Q_strncpy( result, "ID_LOOPBACK", sizeof( result ));
 	}
@@ -735,7 +723,7 @@ void SV_Info( netadr_t from )
 
 	if( version != PROTOCOL_VERSION )
 	{
-		Q_snprintf( string, sizeof( string ), "%s: wrong version\n", hostname->string );
+		Q_snprintf( string, sizeof( string ), "%s: wrong version\n", hostname.string );
 	}
 	else
 	{
@@ -743,7 +731,7 @@ void SV_Info( netadr_t from )
 			if( svs.clients[i].state >= cs_connected )
 				count++;
 
-		Info_SetValueForKey( string, "host", hostname->string, MAX_INFO_STRING );
+		Info_SetValueForKey( string, "host", hostname.string, MAX_INFO_STRING );
 		Info_SetValueForKey( string, "map", sv.name, MAX_INFO_STRING );
 		Info_SetValueForKey( string, "dm", va( "%i", (int)svgame.globals->deathmatch ), MAX_INFO_STRING );
 		Info_SetValueForKey( string, "team", va( "%i", (int)svgame.globals->teamplay ), MAX_INFO_STRING );
@@ -826,7 +814,7 @@ void SV_BuildNetAnswer( netadr_t from )
 				count++;
 
 		string[0] = '\0';
-		Info_SetValueForKey( string, "hostname", hostname->string, MAX_INFO_STRING );
+		Info_SetValueForKey( string, "hostname", hostname.string, MAX_INFO_STRING );
 		Info_SetValueForKey( string, "gamedir", GI->gamefolder, MAX_INFO_STRING );
 		Info_SetValueForKey( string, "current", va( "%i", count ), MAX_INFO_STRING );
 		Info_SetValueForKey( string, "max", va( "%i", svs.maxclients ), MAX_INFO_STRING );
@@ -1205,9 +1193,7 @@ void SV_PutClientInServer( sv_client_t *cl )
 		if( ent->v.fixangle == 1 )
 		{
 			MSG_BeginServerCmd( &msg, svc_setangle );
-			MSG_WriteBitAngle( &msg, ent->v.angles[0], 16 );
-			MSG_WriteBitAngle( &msg, ent->v.angles[1], 16 );
-			MSG_WriteBitAngle( &msg, ent->v.angles[2], 16 );
+			MSG_WriteVec3Angles( &msg, ent->v.angles );
 			ent->v.fixangle = 0;
 		}
 
@@ -2081,9 +2067,6 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 {
 	ucmd_t	*u;
 
-	svs.currentPlayer = cl;
-	svs.currentPlayerNum = (cl - svs.clients);
-
 	Cmd_TokenizeString( s );
 
 	for( u = ucmds; u->name; u++ )
@@ -2146,7 +2129,7 @@ void SV_TSourceEngineQuery( netadr_t from )
 
 	MSG_WriteByte( &buf, 'm' );
 	MSG_WriteString( &buf, NET_AdrToString( net_local ));
-	MSG_WriteString( &buf, hostname->string );
+	MSG_WriteString( &buf, hostname.string );
 	MSG_WriteString( &buf, sv.name );
 	MSG_WriteString( &buf, GI->gamefolder );
 	MSG_WriteString( &buf, GI->title );
@@ -2204,7 +2187,7 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	Cmd_TokenizeString( args );
 
 	pcmd = Cmd_Argv( 0 );
-	MsgDev( D_NOTE, "SV_ConnectionlessPacket: %s : %s\n", NET_AdrToString( from ), pcmd );
+	Con_DPrintf( "SV_ConnectionlessPacket: %s : %s\n", NET_AdrToString( from ), pcmd );
 
 	if( !Q_strcmp( pcmd, "ping" )) SV_Ping( from );
 	else if( !Q_strcmp( pcmd, "ack" )) SV_Ack( from );
@@ -2514,10 +2497,6 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 
 	cl->latency = SV_CalcClientTime( cl );
 	cl->delta_sequence = -1; // no delta unless requested
-
-	// set the current client
-	svs.currentPlayer = cl;
-	svs.currentPlayerNum = (cl - svs.clients);
 				
 	// read optional clientCommand strings
 	while( cl->state != cs_zombie )

@@ -274,6 +274,13 @@ void MSG_WriteVec3Coord( sizebuf_t *sb, const float *fa )
 	MSG_WriteCoord( sb, fa[2] );
 }
 
+void MSG_WriteVec3Angles( sizebuf_t *sb, const float *fa )
+{
+	MSG_WriteBitAngle( sb, fa[0], 16 );
+	MSG_WriteBitAngle( sb, fa[1], 16 );
+	MSG_WriteBitAngle( sb, fa[2], 16 );
+}
+
 void MSG_WriteBitFloat( sizebuf_t *sb, float val )
 {
 	long	intVal;
@@ -580,6 +587,14 @@ void MSG_ReadVec3Coord( sizebuf_t *sb, vec3_t fa )
 	fa[1] = MSG_ReadCoord( sb );
 	fa[2] = MSG_ReadCoord( sb );
 }
+
+void MSG_ReadVec3Angles( sizebuf_t *sb, vec3_t fa )
+{
+	fa[0] = MSG_ReadBitAngle( sb, 16 );
+	fa[1] = MSG_ReadBitAngle( sb, 16 );
+	fa[2] = MSG_ReadBitAngle( sb, 16 );
+}
+
 
 long MSG_ReadLong( sizebuf_t *sb )
 {

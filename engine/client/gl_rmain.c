@@ -1398,7 +1398,7 @@ static uint pfnFileBufferCRC32( const void *buffer, const int length )
 
 	CRC32_Init( &modelCRC );
 	CRC32_ProcessBuffer( &modelCRC, buffer, length );
-	CRC32_Final( &modelCRC );
+	modelCRC = CRC32_Final( modelCRC );
 
 	return modelCRC;
 }
