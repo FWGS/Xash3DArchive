@@ -17,15 +17,31 @@ GNU General Public License for more details.
 #include "client.h"
 #include "net_encode.h"
 
-qboolean CL_CheckFile( sizebuf_t *msg, const char *filename )
+qboolean CL_CheckFile( sizebuf_t *msg, resource_t *pResource )
 {
-	string	filepath;
+	char	filepath[MAX_QPATH];
 
-	Q_strncpy( filepath, filename, sizeof( filepath ));
-
-	if( Q_strstr( filepath, ".." ) || Q_strstr( filepath, "server.cfg" ))
+	switch( pResource->type )
 	{
-		MsgDev( D_REPORT, "refusing to download a path with '..'\n" );
+	case t_sound:
+	case t_model:
+		// built-in resources not needs to be downloaded
+		if( pResource->szFileName[0] == '*' )
+			return true;
+		break;
+	}
+
+	// resource was missed on server
+	if( pResource->nDownloadSize <= 0 )
+		return true;
+
+	if( pResource->type == t_sound )
+		Q_strncpy( filepath, va( "sound/%s", pResource->szFileName ), sizeof( filepath ));
+	else Q_strncpy( filepath, pResource->szFileName, sizeof( filepath ));
+ 
+	if( !COM_IsSafeFileToDownload( filepath ))
+	{
+		MsgDev( D_REPORT, "refusing to download %s\n", filepath );
 		return true;
 	}
 
@@ -49,16 +65,10 @@ qboolean CL_CheckFile( sizebuf_t *msg, const char *filename )
 		MsgDev( D_WARN, "file %s missing during demo playback.\n", filepath );
 		return true;
 	}
-#if 0
-	// TODO: implement
-	if( CL_CanUseHTTPDownload( ))
-	{
-		CL_QueueHTTPDownload( filepath );
-		return false;
-	}
-#endif
-	MSG_WriteByte( msg, clc_stringcmd );
-	MSG_WriteString( msg, va( "dlfile %s", filepath ));
+
+	MSG_BeginClientCmd( msg, clc_stringcmd );
+	MSG_WriteString( msg, va( "dlfile %s", pResource->szFileName ));
+
 	return false;
 }
 

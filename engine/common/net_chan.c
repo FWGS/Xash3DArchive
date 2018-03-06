@@ -1455,8 +1455,10 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 		// go ahead and pad a full 16 extra bytes -- this only happens during authentication / signon
 		for( i = MSG_GetNumBytesWritten( &send ); i < 16; i++ )		
 		{
-			// NOTE: that the server can parse svc_nop, too.
-			MSG_WriteByte( &send, svc_nop );
+			if( chan->sock == NS_CLIENT )
+				MSG_BeginClientCmd( &send, clc_nop );
+			else if( chan->sock == NS_SERVER )
+				MSG_BeginServerCmd( &send, svc_nop );			
 		}
 	}
 

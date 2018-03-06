@@ -816,7 +816,7 @@ void CL_WritePacket( void )
 		MSG_Clear( &cls.datagram );
 
 		// deliver the message (or update reliable)
-		Netchan_Transmit( &cls.netchan, MSG_GetNumBytesWritten( &buf ), MSG_GetData( &buf ));
+		Netchan_TransmitBits( &cls.netchan, MSG_GetNumBitsWritten( &buf ), MSG_GetData( &buf ));
 	}
 	else
 	{
@@ -869,7 +869,7 @@ void CL_BeginUpload_f( void )
 
 	name = Cmd_Argv( 1 );
 
-	if( !name && !name[0] )
+	if( !COM_CheckString( name ))
 	{
 		MsgDev( D_ERROR, "upload without filename\n" );
 		return;
@@ -1073,6 +1073,59 @@ void CL_CheckForResend( void )
 	Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
 }
 
+resource_t *CL_AddResource( resourcetype_t type, const char *name, int size, qboolean bFatalIfMissing, int index )
+{
+	resource_t	*r = &cl.resourcelist[cl.num_resources];
+
+	if( cl.num_resources >= MAX_RESOURCES )
+		Host_Error( "Too many resources on client\n" );
+	cl.num_resources++;
+
+	Q_strncpy( r->szFileName, name, sizeof( r->szFileName ));
+	r->ucFlags |= bFatalIfMissing ? RES_FATALIFMISSING : 0;
+	r->nDownloadSize = size;
+	r->nIndex = index;
+	r->type = type;
+
+	return r;
+}
+
+void CL_CreateResourceList( void )
+{
+	char		szFileName[MAX_OSPATH];
+	byte		rgucMD5_hash[16];
+	resource_t	*pNewResource;
+	int		nSize;
+	file_t		*fp;
+
+	HPAK_FlushHostQueue();
+	cl.num_resources = 0;
+
+	Q_snprintf( szFileName, sizeof( szFileName ), "logos/remapped.bmp" );
+	memset( rgucMD5_hash, 0, sizeof( rgucMD5_hash ));
+
+	fp = FS_Open( szFileName, "rb", true );
+
+	if( fp )
+	{
+		MD5_HashFile( rgucMD5_hash, szFileName, NULL );
+		nSize = FS_FileLength( fp );
+
+		if( nSize != 0 )
+		{
+			pNewResource = CL_AddResource( t_decal, szFileName, nSize, false, 0 );
+
+			if( pNewResource )
+			{
+				SetBits( pNewResource->ucFlags, RES_CUSTOM );
+				memcpy( pNewResource->rgucMD5_hash, rgucMD5_hash, 16 );
+				HPAK_AddLump( false, CUSTOM_RES_PATH, pNewResource, NULL, fp );
+			}
+		}
+		FS_Close( fp );
+	}
+}
+
 /*
 ================
 CL_Connect_f
@@ -1171,11 +1224,18 @@ CL_ClearState
 */
 void CL_ClearState( void )
 {
+	int	i;
+
 	S_StopAllSounds ( true );
 	CL_ClearEffects ();
 	CL_FreeEdicts ();
 
 	CL_ClearPhysEnts ();
+	NetAPI_CancelAllRequests();
+	CL_ClearResourceLists();
+
+	for( i = 0; i < MAX_CLIENTS; i++ )
+		COM_ClearCustomizationList( &cl.players[i].customdata, false );
 
 	// wipe the entire cl structure
 	memset( &cl, 0, sizeof( cl ));
@@ -1186,8 +1246,10 @@ void CL_ClearState( void )
 	cl.maxclients = 1; // allow to drawing player in menu
 	cl.mtime[0] = cl.mtime[1] = 1.0f; // because level starts from 1.0f second
 
-	NetAPI_CancelAllRequests();
-	CL_ClearResourceLists();
+	cl.resourcesneeded.pNext = cl.resourcesneeded.pPrev = &cl.resourcesneeded;
+	cl.resourcesonhand.pNext = cl.resourcesonhand.pPrev = &cl.resourcesonhand;
+
+	CL_CreateResourceList();
 
 	cl.local.interp_amount = 0.1f;
 	cl.local.scr_fov = 90.0f;
@@ -1989,24 +2051,73 @@ void CL_ReadPackets( void )
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))
 		return;
 
+	Netchan_UpdateProgress( &cls.netchan );
+
 	// if in the debugger last frame, don't timeout
 	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
           
 	// check timeout
-	if( cls.state >= ca_connected && !cls.demoplayback && cls.state != ca_cinematic )
+	if( cls.state >= ca_connected && cls.state != ca_cinematic && !cls.demoplayback )
 	{
 		if( host.realtime - cls.netchan.last_received > cl_timeout->value )
 		{
-			if( ++cl.timeoutcount > 5 ) // timeoutcount saves debugger
-			{
-				Con_Printf( "\nServer connection timed out.\n" );
-				CL_Disconnect();
-				return;
-			}
+			Con_Printf( "\nServer connection timed out.\n" );
+			CL_Disconnect();
+			return;
 		}
 	}
-	else cl.timeoutcount = 0;
 	
+}
+
+/*
+====================
+CL_CleanFileName
+
+Replace the displayed name for some resources
+====================
+*/
+const char *CL_CleanFileName( const char *filename )
+{
+	const char	*pfilename = filename;
+
+	if( COM_CheckString( filename ) && filename[0] == '!' )
+		pfilename = "customization";
+	return pfilename;
+}
+
+
+/*
+====================
+CL_RegisterCustomization
+
+register custom resource for player
+====================
+*/
+void CL_RegisterCustomization( resource_t *resource )
+{
+	qboolean		bFound = false;
+	customization_t	*pList;
+
+	for( pList = cl.players[resource->playernum].customdata.pNext; pList; pList = pList->pNext )
+	{
+		if( !memcmp( pList->resource.rgucMD5_hash, resource->rgucMD5_hash, 16 ))
+		{
+			bFound = true;
+			break;
+		}
+	}
+
+	if( !bFound )
+	{
+		player_info_t	*player =  &cl.players[resource->playernum];
+
+		if( !COM_CreateCustomization( &player->customdata, resource, resource->playernum, FCUST_FROMHPAK, NULL, NULL ))
+			Con_Printf( "Unable to create custom decal for player %i\n", resource->playernum );
+	}
+	else
+	{
+		Con_DPrintf( "Duplicate resource received and ignored.\n" );
+	}
 }
 
 /*
@@ -2019,9 +2130,102 @@ A file has been received via the fragmentation/reassembly layer, put it in the r
 */
 void CL_ProcessFile( qboolean successfully_received, const char *filename )
 {
-	if( successfully_received )
-		Con_Printf( "received %s\n", filename );
-	else MsgDev( D_WARN, "failed to download %s", filename );
+	int		sound_len = Q_strlen( DEFAULT_SOUNDPATH );
+	byte		rgucMD5_hash[16];
+	const char	*pfilename;
+	resource_t	*p;
+
+	if( COM_CheckString( filename ) && successfully_received )
+	{
+		if( filename[0] != '!' )
+			Con_Printf( "Processing %s\n", filename );
+	}
+	else if( !successfully_received )
+	{
+		Con_Printf( S_ERROR "server failed to transmit file '%s'\n", CL_CleanFileName( filename ));
+	}
+
+	pfilename = filename;
+
+	if( !Q_strnicmp( filename, DEFAULT_SOUNDPATH, sound_len ))
+		pfilename += sound_len;
+
+	for( p = cl.resourcesneeded.pNext; p != &cl.resourcesneeded; p = p->pNext )
+	{
+		if( !Q_strnicmp( filename, "!MD5", 4 ))
+		{
+			COM_HexConvert( pfilename + 4, 32, rgucMD5_hash );
+
+			if( !memcmp( p->rgucMD5_hash, rgucMD5_hash, 16 ))
+				break;
+		}
+		else
+		{
+			if( !Q_stricmp( p->szFileName, filename ))
+				break;
+		}
+	}
+
+	if( p != &cl.resourcesneeded )
+	{
+		if( successfully_received )
+			ClearBits( p->ucFlags, RES_WASMISSING );
+
+		if( filename[0] == '!' )
+		{
+			if( cls.netchan.tempbuffer )
+			{
+				if( p->nDownloadSize == cls.netchan.tempbuffersize )
+				{
+					if( p->ucFlags & RES_CUSTOM )
+					{
+						HPAK_AddLump( true, CUSTOM_RES_PATH, p, cls.netchan.tempbuffer, NULL );
+						CL_RegisterCustomization( p );
+					}
+				}
+				else
+				{
+					Con_Printf( "Downloaded %i bytes for purported %i byte file, ignoring download\n", p->nDownloadSize );
+				}
+
+				if( cls.netchan.tempbuffer )
+					Mem_Free( cls.netchan.tempbuffer );
+			}
+
+			cls.netchan.tempbuffersize = 0;
+			cls.netchan.tempbuffer = NULL;
+			CL_MoveToOnHandList( p );
+		}
+	}
+
+	if( cls.state != ca_disconnected )
+	{
+		if( cl.resourcesneeded.pNext == &cl.resourcesneeded )
+		{
+			byte	msg_buf[32768];
+			sizebuf_t msg;
+
+			MSG_Init( &msg, "Resource Registration", msg_buf, sizeof( msg_buf ));
+
+			if( CL_PrecacheResources( ))
+				CL_RegisterResources( &msg );
+
+			if( MSG_GetNumBytesWritten( &msg ) > 0 )
+			{
+				Netchan_CreateFragments( &cls.netchan, &msg );
+				Netchan_FragSend( &cls.netchan );
+			}
+		}
+
+		if( cls.netchan.tempbuffer )
+		{
+			Con_Printf( "Received a decal %s, but didn't find it in resources needed list!\n", pfilename );
+			Mem_Free( cls.netchan.tempbuffer );
+		}
+
+		cls.netchan.tempbuffer = NULL;
+		cls.netchan.tempbuffersize = 0;
+	}
 }
 
 /*
@@ -2267,6 +2471,9 @@ void CL_InitLocal( void )
 {
 	cls.state = ca_disconnected;
 	cls.signon = 0;
+
+	cl.resourcesneeded.pNext = cl.resourcesneeded.pPrev = &cl.resourcesneeded;
+	cl.resourcesonhand.pNext = cl.resourcesonhand.pPrev = &cl.resourcesonhand;
 
 	Cvar_RegisterVariable( &mp_decals );
 	Cvar_RegisterVariable( &dev_overview );

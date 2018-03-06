@@ -149,7 +149,7 @@ void CL_UpdateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomcolor
 	byte		paletteBackup[768];
 	byte		*raw, *pal;
 
-	// save of the real texture index
+	// save off the real texture index
 	glt = R_GetTexture( ptexture->index );
 
 	// build name of original texture

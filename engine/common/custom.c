@@ -18,7 +18,7 @@ GNU General Public License for more details.
 
 qboolean CustomDecal_Validate( void *raw, int nFileSize )
 {
-	rgbdata_t	*test = FS_LoadImage( "#logo", raw, nFileSize );
+	rgbdata_t	*test = FS_LoadImage( "#logo.bmp", raw, nFileSize );
 
 	if( test )
 	{
@@ -74,14 +74,16 @@ qboolean COM_CreateCustomization( customization_t *pListHead, resource_t *pResou
 
 	pCust->bInUse = true;
 
-	if ( flags & FCUST_FROMHPAK )
+	if( FBitSet( flags, FCUST_FROMHPAK ))
 	{
-		if ( !HPAK_GetDataPointer( CUSTOM_RES_PATH, pResource, (unsigned char **)&pCust->pBuffer, NULL ) )
+		if( !HPAK_GetDataPointer( CUSTOM_RES_PATH, pResource, (byte **)&pCust->pBuffer, NULL ))
 			bError = true;
 	}
 	else
 	{
-		pCust->pBuffer = COM_LoadFile( pResource->szFileName, 5, NULL );
+		int checksize = 0;
+		pCust->pBuffer = COM_LoadFile( pResource->szFileName, 5, &checksize );
+		Msg( "loading %s, check %d, downoad %d\n", pResource->szFileName, checksize, pCust->resource.nDownloadSize );
 	}
 
 	if( bError )
@@ -97,8 +99,8 @@ qboolean COM_CreateCustomization( customization_t *pListHead, resource_t *pResou
 			{
 				if( pResource->nDownloadSize >= (1 * 1024) && pResource->nDownloadSize <= ( 16 * 1024 ))
 				{
-					if( FBitSet( flags, FCUST_WIPEDATA ))
-						pCust->pInfo = FS_LoadImage( "#logo", pCust->pBuffer, pCust->resource.nDownloadSize );
+					if( !FBitSet( flags, FCUST_WIPEDATA ))
+						pCust->pInfo = FS_LoadImage( "#logo.bmp", pCust->pBuffer, pCust->resource.nDownloadSize );
 					else pCust->pInfo = NULL;
 					if( nLumps ) *nLumps = 1;
 				}

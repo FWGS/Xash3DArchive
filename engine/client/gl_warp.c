@@ -476,7 +476,7 @@ void R_SetupSky( const char *skyboxname )
 
 		tr.skyboxTextures[i] = GL_LoadTexture( sidename, NULL, 0, TF_CLAMP|TF_SKY, NULL );
 		if( !tr.skyboxTextures[i] ) break;
-		Con_DPrintf( "%s%s, ", skyboxname, r_skyBoxSuffix[i] );
+		Con_DPrintf( "%s%s%s", skyboxname, r_skyBoxSuffix[i], i != 5 ? ", " : ". " );
 	}
 
 	if( i == 6 )

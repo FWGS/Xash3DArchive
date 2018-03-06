@@ -222,7 +222,7 @@ typedef struct
 typedef struct sv_client_s
 {
 	cl_state_t	state;
-	cl_upload_t	upload;			// uploading state
+	cl_upload_t	upstate;			// uploading state
 	char		name[32];			// extracted from userinfo, color string allowed
 	int		flags;			// client flags, some info
 	CRC32_t		crcValue;
@@ -246,7 +246,7 @@ typedef struct sv_client_s
 	customization_t	customdata;		// player customization linked list
 	resource_t	resourcesonhand;
 	resource_t	resourcesneeded;		// <mapname.res> from client (server downloading)
-
+	file_t		*upload;
 	usercmd_t		lastcmd;			// for filling in big drops
 
 	double		connecttime;
@@ -480,7 +480,7 @@ void SV_KillOperatorCommands( void );
 void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo );
 void SV_RemoteCommand( netadr_t from, sizebuf_t *msg );
 void SV_PrepWorldFrame( void );
-void SV_ProcessFile( sv_client_t *cl, char *filename );
+void SV_ProcessFile( sv_client_t *cl, const char *filename );
 void SV_SendResourceList( sv_client_t *cl );
 void SV_AddToMaster( netadr_t from, sizebuf_t *msg );
 qboolean SV_IsSimulating( void );
@@ -578,7 +578,8 @@ void SV_ClearResourceList( resource_t *pList );
 void SV_BatchUploadRequest( sv_client_t *cl );
 void SV_SendResources( sv_client_t *cl, sizebuf_t *msg );
 void SV_ClearResourceLists( sv_client_t *cl );
-int SV_TransferConsistencyInfo( void );
+void SV_TransferConsistencyInfo( void );
+void SV_RequestMissingResources( void );
 
 //
 // sv_frame.c

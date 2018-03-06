@@ -1017,7 +1017,7 @@ void Cmd_ForwardToServer( void )
 		return; // not connected
 	}
 
-	MSG_WriteByte( &cls.netchan.message, clc_stringcmd );
+	MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
 
 	str[0] = 0;
 	if( Q_stricmp( Cmd_Argv( 0 ), "cmd" ))

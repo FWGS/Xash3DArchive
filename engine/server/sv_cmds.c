@@ -170,7 +170,7 @@ qboolean SV_ValidateMap( const char *pMapName, qboolean check_spawn )
 	int	flags;
 
 	// determine spawn entity classname
-	if( !check_spawn || svs.maxclients <= 1 )
+	if( !check_spawn || (int)sv_maxclients->value <= 1 )
 		spawn_entity = GI->sp_entity;
 	else spawn_entity = GI->mp_entity;
 

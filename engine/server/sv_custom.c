@@ -61,49 +61,52 @@ void SV_CreateCustomizationList( sv_client_t *cl )
 	}
 }
 
-qboolean SV_FileInConsistencyList( const char *filename, consistency_t **ppconsist )
+qboolean SV_FileInConsistencyList( const char *filename, consistency_t **ppout )
 {
 	int	i;
 
-	for( i = 0; i < MAX_MODELS && sv.consistency_list[i].filename != NULL; i++ )
+	if( ppout != NULL )
+		*ppout = NULL;
+
+	for( i = 0; i < MAX_MODELS; i++ )
 	{
-		if( !Q_stricmp( sv.consistency_list[i].filename, filename ) )
+		consistency_t	*pc = &sv.consistency_list[i];
+
+		if( !pc->filename )
+			break;
+
+		if( !Q_stricmp( pc->filename, filename ))
 		{
-			if( ppconsist != NULL )
-				*ppconsist = &sv.consistency_list[i];
+			if( ppout != NULL )
+				*ppout = pc;
 			return true;
 		}
 	}
+
 	return false;
 }
 
 void SV_ParseConsistencyResponse( sv_client_t *cl, sizebuf_t *msg )
 {
-	int				idx;
-	int				value;
-	int				c;
-	int				i;
-	resource_t		*r;
-	int				badresindex;
-	vec3_t			mins, maxs;
-	vec3_t			cmins, cmaxs;
-	byte			readbuffer[32];
-	byte			nullbuffer[32];
-	byte			resbuffer[32];
-	qboolean			invalid_type;
-	FORCE_TYPE		ft;
-	int			length;
+	int		i, c, idx, value;
+	byte		readbuffer[32];
+	byte		nullbuffer[32];
+	byte		resbuffer[32];
+	qboolean		invalid_type;
+	vec3_t		cmins, cmaxs;
+	int		badresindex;
+	vec3_t		mins, maxs;
+	FORCE_TYPE	ft;
+	resource_t	*r;
 
 	memset( nullbuffer, 0, sizeof( nullbuffer ));
-	length = MSG_ReadShort( msg );
 	invalid_type = false;
 	badresindex = 0;
 	c = 0;
 
 	while( MSG_ReadOneBit( msg ))
 	{
-		idx = MSG_ReadUBitLong( msg, MAX_RESOURCE_BITS );
-
+		idx = MSG_ReadUBitLong( msg, MAX_MODEL_BITS );
 		if( idx < 0 || idx >= sv.num_resources )
 			break;
 
@@ -165,7 +168,7 @@ void SV_ParseConsistencyResponse( sv_client_t *cl, sizebuf_t *msg )
 
 	if( sv.num_consistency != c )
 	{
-		Con_Printf( "%s:%s sent bad file data\n", cl->name, NET_AdrToString( cl->netchan.remote_address ));
+		Con_Printf( S_WARN "%s:%s sent bad file data\n", cl->name, NET_AdrToString( cl->netchan.remote_address ));
 		SV_DropClient( cl );
 		return;
 	}
@@ -188,7 +191,7 @@ void SV_ParseConsistencyResponse( sv_client_t *cl, sizebuf_t *msg )
 	}
 }
 
-int SV_TransferConsistencyInfo( void )
+void SV_TransferConsistencyInfo( void )
 {
 	vec3_t		mins, maxs;
 	int		i, total = 0;
@@ -238,7 +241,7 @@ int SV_TransferConsistencyInfo( void )
 		total++;
 	}
 
-	return total;
+	sv.num_consistency = total;
 }
 
 void SV_SendConsistencyList( sv_client_t *cl, sizebuf_t *msg )
@@ -268,7 +271,7 @@ void SV_SendConsistencyList( sv_client_t *cl, sizebuf_t *msg )
 		if( delta > 31 )
 		{
 			MSG_WriteOneBit( msg, 0 );
-			MSG_WriteUBitLong( msg, i, MAX_RESOURCE_BITS );
+			MSG_WriteUBitLong( msg, i, MAX_MODEL_BITS );
 		}
 		else
 		{
@@ -300,7 +303,7 @@ qboolean SV_CheckFile( sizebuf_t *msg, const char *filename )
 	if( !sv_allow_upload.value )
 		return true;
 
-	MSG_WriteByte( msg, svc_stufftext );
+	MSG_BeginServerCmd( msg, svc_stufftext );
 	MSG_WriteString( msg, va( "upload \"!MD5%s\"\n", MD5_Print( p.rgucMD5_hash )));
 
 	return false;
@@ -330,6 +333,20 @@ void SV_AddToResourceList( resource_t *pResource, resource_t *pList )
 	pResource->pNext = pList;
 	pList->pPrev->pNext = pResource;
 	pList->pPrev = pResource;
+}
+
+void SV_SendCustomization( sv_client_t *cl, resource_t *pResource )
+{
+	MSG_BeginServerCmd( &cl->netchan.message, svc_customization );
+	MSG_WriteByte( &cl->netchan.message, ( cl - svs.clients ));	// playernum
+	MSG_WriteByte( &cl->netchan.message, pResource->type );
+	MSG_WriteString( &cl->netchan.message, pResource->szFileName );
+	MSG_WriteShort( &cl->netchan.message, pResource->nIndex );
+	MSG_WriteLong( &cl->netchan.message, pResource->nDownloadSize );
+	MSG_WriteByte( &cl->netchan.message, pResource->ucFlags );
+
+	if( FBitSet( pResource->ucFlags, RES_CUSTOM ))
+		MSG_WriteBytes( &cl->netchan.message, pResource->rgucMD5_hash, 16 );
 }
 
 void SV_RemoveFromResourceList( resource_t *pResource )
@@ -391,6 +408,96 @@ int SV_EstimateNeededResources( sv_client_t *cl )
 	return size;
 }
 
+void SV_Customization( sv_client_t *pClient, resource_t *pResource, qboolean bSkipPlayer )
+{
+	int		i, nPlayerNumber = -1;
+	sv_client_t	*cl;
+
+	i = pClient - svs.clients;
+	if( i >= 0 && i < svs.maxclients )
+		nPlayerNumber = i;
+	else Host_Error( "Couldn't find player index for customization.\n" );
+
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+	{
+		if( !cl->state != cs_spawned )
+			continue;
+
+		if( FBitSet( cl->flags, FCL_FAKECLIENT ))
+			continue;
+
+		if( cl == pClient && bSkipPlayer )
+			continue;
+
+		SV_SendCustomization( cl, pResource );
+	}
+}
+
+void SV_PropagateCustomizations( sv_client_t *pHost )
+{
+	customization_t	*pCust;
+	resource_t	*pResource;
+	sv_client_t	*cl;
+	int		i;
+
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+	{
+		if( !cl->state != cs_spawned )
+			continue;
+
+		if( FBitSet( cl->flags, FCL_FAKECLIENT ))
+			continue;
+
+		for( pCust = cl->customdata.pNext; pCust != NULL; pCust = pCust->pNext )
+		{
+			if( !pCust->bInUse ) continue;
+			pResource = &pCust->resource;
+			SV_SendCustomization( pHost, pResource );
+		}
+	}
+}
+
+void SV_RegisterResources( sv_client_t *pHost )
+{
+	resource_t	*pResource;
+
+	for( pResource = pHost->resourcesonhand.pNext; pResource != &pHost->resourcesonhand; pResource = pResource->pNext )
+	{
+		SV_CreateCustomizationList( pHost );
+		SV_Customization( pHost, pResource, true );
+	}
+}
+
+qboolean SV_UploadComplete( sv_client_t *cl )
+{
+	if( &cl->resourcesneeded != cl->resourcesneeded.pNext )
+		return false;
+
+	SV_RegisterResources( cl );
+	SV_PropagateCustomizations( cl );
+
+	if( sv_allow_upload.value )
+		Con_Printf( "Custom resource propagation complete.\n" );
+	cl->upstate = us_complete;
+
+	return true;
+}
+
+void SV_RequestMissingResources( void )
+{
+	sv_client_t	*cl;
+	int		i;
+
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+	{
+		if( cl->state != cs_spawned )
+			continue;
+
+		if( cl->upstate == us_processing )
+			SV_UploadComplete( cl );
+	}
+}
+
 void SV_BatchUploadRequest( sv_client_t *cl )
 {
 	string		filename;
@@ -431,13 +538,13 @@ void SV_SendResources( sv_client_t *cl, sizebuf_t *msg )
 
 	memset( nullrguc, 0, sizeof( nullrguc ));
 
-	MSG_WriteByte( msg, svc_resourcerequest );
+	MSG_BeginServerCmd( msg, svc_resourcerequest );
 	MSG_WriteLong( msg, svs.spawncount );
 	MSG_WriteLong( msg, 0 );
 
 	if( sv_downloadurl.string && sv_downloadurl.string[0] && Q_strlen( sv_downloadurl.string ) < 256 )
 	{
-		MSG_WriteByte( msg, svc_resourcelocation );
+		MSG_BeginServerCmd( msg, svc_resourcelocation );
 		MSG_WriteString( msg, sv_downloadurl.string );
 	}
 
@@ -449,7 +556,7 @@ void SV_SendResources( sv_client_t *cl, sizebuf_t *msg )
 		MSG_WriteUBitLong( msg, sv.resources[i].type, 4 );
 		MSG_WriteString( msg, sv.resources[i].szFileName );
 		MSG_WriteUBitLong( msg, sv.resources[i].nIndex, MAX_MODEL_BITS );
-		MSG_WriteUBitLong( msg, sv.resources[i].nDownloadSize, 24 );	// prevent to download a very big files?
+		MSG_WriteSBitLong( msg, sv.resources[i].nDownloadSize, 24 ); // prevent to download a very big files?
 		MSG_WriteUBitLong( msg, sv.resources[i].ucFlags & ( RES_FATALIFMISSING|RES_WASMISSING ), 3 );
 
 		if( FBitSet( sv.resources[i].ucFlags, RES_CUSTOM ))

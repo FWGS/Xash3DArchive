@@ -502,7 +502,7 @@ void SV_ActivateServer( int runPhysics )
 	SV_CreateResourceList();
 
 	// check and count all files that marked by user as unmodified (typically is a player models etc)
-	sv.num_consistency = SV_TransferConsistencyInfo();
+	SV_TransferConsistencyInfo();
 
 	// send serverinfo to all connected clients
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )

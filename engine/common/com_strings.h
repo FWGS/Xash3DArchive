@@ -41,6 +41,9 @@ GNU General Public License for more details.
 // debug beams
 #define DEFAULT_LASERBEAM_PATH	"sprites/laserbeam.spr"
 
+// path to folders where placed all sounds
+#define DEFAULT_SOUNDPATH		"sound/"
+
 #define CVAR_GLCONFIG_DESCRIPTION	"enable or disable %s"
 
 #endif//COM_STRINGS_H

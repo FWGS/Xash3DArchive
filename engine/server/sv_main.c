@@ -260,6 +260,72 @@ void SV_CheckCmdTimes( void )
 	}
 }
 
+void SV_ProcessFile( sv_client_t *cl, const char *filename )
+{
+	customization_t	*pList;
+	resource_t	*resource;
+	resource_t	*next;
+	byte		md5[16];
+	qboolean		bFound;
+	qboolean		bError;
+
+	if( filename[0] == '!' )
+	{
+		Con_Printf( "Ignoring non-customization file upload of %s\n", filename );
+		return;
+	}
+
+	COM_HexConvert( filename + 4, 32, md5 );
+
+	for( resource = cl->resourcesneeded.pNext; resource != &cl->resourcesneeded; resource = next )
+	{
+		next = resource->pNext;
+
+		if( !memcmp( resource->rgucMD5_hash, md5, 16 ))
+			break;
+	}
+
+	if( resource == &cl->resourcesneeded )
+	{
+		Con_Printf( "SV_ProcessFile:  Unrequested decal\n" );
+		return;
+	}
+
+	if( resource->nDownloadSize != cl->netchan.tempbuffersize )
+	{
+		Con_Printf( "Downloaded %i bytes for purported %i byte file\n", cl->netchan.tempbuffersize, resource->nDownloadSize );
+		return;
+	}
+
+	HPAK_AddLump( true, CUSTOM_RES_PATH, resource, cl->netchan.tempbuffer, NULL );
+	ClearBits( resource->ucFlags, RES_WASMISSING );
+	SV_MoveToOnHandList( cl, resource );
+
+	bError = false;
+	bFound = false;
+
+	for( pList = cl->customdata.pNext; pList; pList = pList->pNext )
+	{
+		if( !memcmp( pList->resource.rgucMD5_hash, resource->rgucMD5_hash, 16 ))
+		{
+			bFound = true;
+			break;
+		}
+	}
+
+	if( !bFound )
+	{
+		if( !COM_CreateCustomization( &cl->customdata, resource, -1, FCUST_FROMHPAK|FCUST_WIPEDATA|FCUST_IGNOREINIT, NULL, NULL ))
+			bError = true;
+	}
+	else
+	{
+		Con_DPrintf( "Duplicate resource received and ignored.\n" );
+	}
+
+	if( bError ) Con_Printf( S_ERROR "parsing custom decal from %s\n", cl->name );
+}
+
 /*
 =================
 SV_ReadPackets
@@ -342,7 +408,7 @@ void SV_ReadPackets( void )
 				{
 					MSG_Init( &net_message, "ClientPacket", net_message_buffer, curSize );
 
-					if( svs.maxclients == 1 || cl->state != cs_spawned )
+					if(( svs.maxclients == 1 && !host_limitlocal->value ) || ( cl->state != cs_spawned ))
 						SetBits( cl->flags, FCL_SEND_NET_MESSAGE ); // reply at end of frame
 
 					// this is a valid, sequenced packet, so process it
@@ -451,17 +517,6 @@ void SV_PrepWorldFrame( void )
 
 /*
 =================
-SV_ProcessFile
-=================
-*/
-void SV_ProcessFile( sv_client_t *cl, char *filename )
-{
-	// some other file...
-	MsgDev( D_INFO, "Received file %s from %s\n", filename, cl->name );
-}
-
-/*
-=================
 SV_IsSimulating
 =================
 */
@@ -548,14 +603,17 @@ void Host_ServerFrame( void )
 	// read packets from clients
 	SV_ReadPackets ();
 
+	// let everything in the world think and move
+	SV_RunGameFrame ();
+
 	// refresh physic movevars on the client side
 	SV_UpdateMovevars ( false );
 
+	// request missing resources for clients
+	SV_RequestMissingResources();
+
 	// check timeouts
 	SV_CheckTimeouts ();
-
-	// let everything in the world think and move
-	SV_RunGameFrame ();
 		
 	// send messages back to the clients that had packets read this frame
 	SV_SendClientMessages ();
@@ -839,11 +897,11 @@ void SV_FinalMessage( const char *message, qboolean reconnect )
 	// stagger the packets to crutch operating system limited buffers
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 		if( cl->state >= cs_connected && !FBitSet( cl->flags, FCL_FAKECLIENT ))
-			Netchan_Transmit( &cl->netchan, MSG_GetNumBytesWritten( &msg ), MSG_GetData( &msg ));
+			Netchan_TransmitBits( &cl->netchan, MSG_GetNumBitsWritten( &msg ), MSG_GetData( &msg ));
 
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 		if( cl->state >= cs_connected && !FBitSet( cl->flags, FCL_FAKECLIENT ))
-			Netchan_Transmit( &cl->netchan, MSG_GetNumBytesWritten( &msg ), MSG_GetData( &msg ));
+			Netchan_TransmitBits( &cl->netchan, MSG_GetNumBitsWritten( &msg ), MSG_GetData( &msg ));
 }
 
 /*

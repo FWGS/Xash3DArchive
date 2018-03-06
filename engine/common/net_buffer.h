@@ -61,6 +61,7 @@ void MSG_InitMasks( void );	// called once at startup engine
 void MSG_SeekToBit( sizebuf_t *sb, int bitPos );
 void MSG_SeekToByte( sizebuf_t *sb, int bytePos );
 void MSG_ExciseBits( sizebuf_t *sb, int startbit, int bitstoremove );
+_inline int MSG_TellBit( sizebuf_t *sb ) { return sb->iCurBit; }
 qboolean MSG_CheckOverflow( sizebuf_t *sb );
 short MSG_BigShort( short swap );
 

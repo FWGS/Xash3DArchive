@@ -483,7 +483,7 @@ void Delta_WriteTableField( sizebuf_t *msg, int tableIndex, const delta_t *pFiel
 	nameIndex = Delta_IndexForFieldInfo( dt->pInfo, pField->name );
 	Assert( nameIndex >= 0 && nameIndex < dt->maxFields );
 
-	MSG_WriteByte( msg, svc_deltatable );
+	MSG_BeginServerCmd( msg, svc_deltatable );
 	MSG_WriteUBitLong( msg, tableIndex, 4 );		// assume we support 16 network tables
 	MSG_WriteUBitLong( msg, nameIndex, 8 );		// 255 fields by struct should be enough
 	MSG_WriteUBitLong( msg, pField->flags, 10 );	// flags are indicated various input types
@@ -1114,20 +1114,13 @@ int Delta_TestBaseline( entity_state_t *from, entity_state_t *to, qboolean playe
 	Assert( dt && dt->bInitialized );
 
 	countBits++; // entityType flag
-#if 0
-	if( to->entityType != from->entityType )
-		countBits += 2;
-#endif
+
 	pField = dt->pFields;
 	Assert( pField != NULL );
-#if 1
-	// set all fields is active by default
-	for( i = 0; i < dt->numFields; i++ )
-		dt->pFields[i].bInactive = false;
-#else
+
 	// activate fields and call custom encode func
 	Delta_CustomEncode( dt, from, to );
-#endif
+
 	// process fields
 	for( i = 0; i < dt->numFields; i++, pField++ )
 	{
@@ -1507,7 +1500,7 @@ qboolean MSG_WriteDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *t
 	// activate fields and call custom encode func
 	Delta_CustomEncode( dt, from, to );
 
-	MSG_WriteByte( msg, svc_deltamovevars );
+	MSG_BeginServerCmd( msg, svc_deltamovevars );
 
 	// process fields
 	for( i = 0; i < dt->numFields; i++, pField++ )

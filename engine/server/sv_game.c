@@ -1257,7 +1257,9 @@ void pfnChangeLevel( const char *level, const char *landmark )
 	int		flags, smooth = false;
 	static uint	last_spawncount = 0;
 	char		mapname[MAX_QPATH];
+	char		landname[MAX_QPATH];
 	char		*spawn_entity;
+	char		*text;
 
 	if( !COM_CheckString( level ) || sv.state != ss_active )
 		return; // ???
@@ -1270,16 +1272,26 @@ void pfnChangeLevel( const char *level, const char *landmark )
 	// hold mapname to other place
 	Q_strncpy( mapname, level, sizeof( mapname ));
 	COM_StripExtension( mapname );
+	landname[0] ='\0';
 
+	// g-cont. some level-designers wrote landmark name with space
+	// and Cmd_TokenizeString separating all the after space as next argument
+	// emulate this bug for compatibility
 	if( COM_CheckString( landmark ))
+	{
+		text = (char *)landname;
+		while( *landmark && ((byte)*landmark) != ' ' )
+			*text++ = *landmark++;
 		smooth = true;
+		*text = '\0';
+	}
 
 	// determine spawn entity classname
 	if( svs.maxclients == 1 )
 		spawn_entity = GI->sp_entity;
 	else spawn_entity = GI->mp_entity;
 
-	flags = SV_MapIsValid( mapname, spawn_entity, landmark );
+	flags = SV_MapIsValid( mapname, spawn_entity, landname );
 
 	if( FBitSet( flags, MAP_INVALID_VERSION ))
 	{
@@ -1299,7 +1311,7 @@ void pfnChangeLevel( const char *level, const char *landmark )
 		{
 			// NOTE: we find valid map but specified landmark it's doesn't exist
 			// run simple changelevel like in q1, throw warning
-			Con_Printf( S_WARN "changelevel: %s doesn't contain landmark [%s]. smooth transition was disabled\n", mapname, landmark );
+			Con_Printf( S_WARN "changelevel: %s doesn't contain landmark [%s]. smooth transition was disabled\n", mapname, landname );
 			smooth = false;
 		}
 	}
@@ -1335,7 +1347,7 @@ void pfnChangeLevel( const char *level, const char *landmark )
 	SV_SkipUpdates ();
 
 	// changelevel will be executed on a next frame
-	if( smooth ) COM_ChangeLevel( mapname, landmark );	// Smoothed Half-Life changelevel
+	if( smooth ) COM_ChangeLevel( mapname, landname );	// Smoothed Half-Life changelevel
 	else COM_ChangeLevel( mapname, NULL );			// Classic Quake changlevel
 }
 
@@ -3983,7 +3995,7 @@ pfnGetCurrentPlayer
 */
 int pfnGetCurrentPlayer( void )
 {
-	int	idx = svs.clients - sv.current_client;
+	int	idx = sv.current_client - svs.clients;
 
 	if( idx < 0 || idx >= svs.maxclients )
 		return -1;
@@ -4093,7 +4105,7 @@ void pfnForceUnmodified( FORCE_TYPE type, float *mins, float *maxs, const char *
 			{
 				if( mins ) VectorCopy( mins, pc->mins );
 				if( maxs ) VectorCopy( maxs, pc->maxs );
-				pc->filename = copystring( filename );
+				pc->filename = SV_CopyString( filename );
 				pc->check_type = type;
 				return;
 			}
@@ -4112,7 +4124,6 @@ void pfnForceUnmodified( FORCE_TYPE type, float *mins, float *maxs, const char *
 			if( !Q_strcmp( filename, pc->filename ))
 				return;
 		}
-
 		Con_Printf( S_ERROR "no precache: %s\n", filename );
 	}
 }

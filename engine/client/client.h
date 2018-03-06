@@ -192,8 +192,6 @@ typedef struct
 // at every server map change
 typedef struct
 {
-	int		timeoutcount;
-
 	int		servercount;		// server identification for prespawns
 	int		validsequence;		// this is the sequence number of the last good
 						// world snapshot/update we got.  If this is 0, we can't
@@ -728,7 +726,7 @@ void SCR_TimeRefresh_f( void );
 //
 // cl_custom.c
 //
-qboolean CL_CheckFile( sizebuf_t *msg, const char *filename );
+qboolean CL_CheckFile( sizebuf_t *msg, resource_t *pResource );
 void CL_AddToResourceList( resource_t *pResource, resource_t *pList );
 void CL_RemoveFromResourceList( resource_t *pResource );
 void CL_MoveToOnHandList( resource_t *pResource );
@@ -838,6 +836,7 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message );
 void CL_ParseTempEntity( sizebuf_t *msg );
 qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
 qboolean CL_RequestMissingResources( void );
+void CL_RegisterResources ( sizebuf_t *msg );
 
 //
 // cl_scrn.c

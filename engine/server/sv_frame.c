@@ -90,7 +90,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 	svgame.dllFuncs.pfnSetupVisibility( pViewEnt, pClient, &clientpvs, &clientphs );
 	if( !clientpvs ) fullvis = true;
 
-	// don't send the world
+	// g-cont: of course we can send world but not want to do it :-)
 	for( e = 1; e < svgame.numEntities; e++ )
 	{
 		byte	*pset;
@@ -158,7 +158,7 @@ Encode a client frame onto the network channel
 
 =============================================================================
 */
-int SV_FindBestBaseline( int index, entity_state_t **baseline, entity_state_t *to, client_frame_t *frame, qboolean player )
+int SV_FindBestBaseline( sv_client_t *cl, int index, entity_state_t **baseline, entity_state_t *to, client_frame_t *frame, qboolean player )
 {
 	int	bestBitCount;
 	int	i, bitCount;
@@ -288,7 +288,7 @@ static void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_
 			// trying to reduce message by select optimal baseline
 			if( !sv_instancedbaseline.value || !sv.instanced.count || sv.last_valid_baseline > newnum )
 			{
-				offset = SV_FindBestBaseline( newindex, &baseline, newent, to, player );
+				offset = SV_FindBestBaseline( cl, newindex, &baseline, newent, to, player );
 			}
 			else
 			{

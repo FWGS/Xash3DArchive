@@ -143,7 +143,7 @@ void SV_FailDownload( sv_client_t *cl, const char *filename )
 	if ( !filename || !filename[0] )
 		return;
 
-	MSG_WriteByte( &cl->netchan.message, svc_filetxferfailed );
+	MSG_BeginServerCmd( &cl->netchan.message, svc_filetxferfailed );
 	MSG_WriteString( &cl->netchan.message, filename );
 }
 
@@ -1207,7 +1207,7 @@ void SV_PutClientInServer( sv_client_t *cl )
 			svgame.globals->pSaveData = &levelData;
 			svgame.dllFuncs.pfnParmsChangeLevel();
 
-			MSG_WriteByte( &msg, svc_restore );
+			MSG_BeginServerCmd( &msg, svc_restore );
 			Q_snprintf( name, sizeof( name ), "save/%s.HL2", sv.name );
 			COM_FixSlashes( name );
 			MSG_WriteString( &msg, name );
@@ -1971,9 +1971,9 @@ static qboolean SV_DownloadFile_f( sv_client_t *cl )
 		memset( &custResource, 0, sizeof( custResource ) );
 		COM_HexConvert( name + 4, 32, md5 );
 
-		if( HPAK_ResourceForHash( "custom.hpk", md5, &custResource ))
+		if( HPAK_ResourceForHash( CUSTOM_RES_PATH, md5, &custResource ))
 		{
-			if( HPAK_GetDataPointer( "custom.hpk", &custResource, &pbuf, &size ))
+			if( HPAK_GetDataPointer( CUSTOM_RES_PATH, &custResource, &pbuf, &size ))
 			{
 				if( size )
 				{
@@ -2426,7 +2426,7 @@ void SV_ParseResourceList( sv_client_t *cl, sizebuf_t *msg )
 		MsgDev( D_REPORT, "resources to request: %s\n", Q_memprint( totalsize ));
 	}
 
-	cl->upload = us_processing;
+	cl->upstate = us_processing;
 	SV_BatchUploadRequest( cl );
 }
 

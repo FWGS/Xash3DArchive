@@ -414,9 +414,10 @@ void *Mod_LoadAliasGroup( void *pin, maliasframedesc_t *frame )
 Mod_CreateSkinData
 ===============
 */
-rgbdata_t *Mod_CreateSkinData( byte *data, int width, int height )
+rgbdata_t *Mod_CreateSkinData( model_t *mod, byte *data, int width, int height )
 {
 	static rgbdata_t	skin;
+	char		name[MAX_QPATH];
 	int		i;
 
 	skin.width = width;
@@ -439,6 +440,35 @@ rgbdata_t *Mod_CreateSkinData( byte *data, int width, int height )
 		}
 	}
 
+	COM_FileBase( loadmodel->name, name );
+
+	// for alias models only player can have remap textures
+	if( mod != NULL && !Q_stricmp( name, "player" ))
+	{
+		texture_t	*tx = NULL;
+		int	i, size;
+
+		i = mod->numtextures;
+		mod->textures = (texture_t **)Mem_Realloc( mod->mempool, mod->textures, ( i + 1 ) * sizeof( texture_t* ));
+		size = width * height + 768;
+		tx = Mem_Alloc( mod->mempool, sizeof( *tx ) + size );
+		mod->textures[i] = tx;
+
+		Q_strncpy( tx->name, "DM_Skin", sizeof( tx->name ));
+		tx->anim_min = SHIRT_HUE_START; // topcolor start
+		tx->anim_max = SHIRT_HUE_END; // topcolor end
+		// bottomcolor start always equal is (topcolor end + 1)
+		tx->anim_total = PANTS_HUE_END;// bottomcolor end
+
+		tx->width = width;
+		tx->height = height;
+
+		// the pixels immediately follow the structures
+		memcpy( (tx+1), data, width * height );
+		memcpy( ((byte *)(tx+1)+(width * height)), skin.palette, 768 );
+		mod->numtextures++;	// done
+	}
+
 	// make an copy
 	return FS_CopyImage( &skin );
 }
@@ -450,7 +480,7 @@ void *Mod_LoadSingleSkin( daliasskintype_t *pskintype, int skinnum, int size )
 
 	Q_snprintf( name, sizeof( name ), "%s:frame%i", loadmodel->name, skinnum );
 	Q_snprintf( lumaname, sizeof( lumaname ), "%s:luma%i", loadmodel->name, skinnum );
-	pic = Mod_CreateSkinData( (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+	pic = Mod_CreateSkinData( loadmodel, (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
 
 	m_pAliasHeader->gl_texturenum[skinnum][0] =
 	m_pAliasHeader->gl_texturenum[skinnum][1] =
@@ -460,7 +490,7 @@ void *Mod_LoadSingleSkin( daliasskintype_t *pskintype, int skinnum, int size )
 
 	if( R_GetTexture( m_pAliasHeader->gl_texturenum[skinnum][0] )->flags & TF_HAS_LUMA )
 	{
-		pic = Mod_CreateSkinData( (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+		pic = Mod_CreateSkinData( NULL, (byte *)(pskintype + 1), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
 		m_pAliasHeader->fb_texturenum[skinnum][0] =
 		m_pAliasHeader->fb_texturenum[skinnum][1] =
 		m_pAliasHeader->fb_texturenum[skinnum][2] =
@@ -488,14 +518,14 @@ void *Mod_LoadGroupSkin( daliasskintype_t *pskintype, int skinnum, int size )
 	for( i = 0; i < pinskingroup->numskins; i++ )
 	{
 		Q_snprintf( name, sizeof( name ), "%s_%i_%i", loadmodel->name, skinnum, i );
-		pic = Mod_CreateSkinData( (byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+		pic = Mod_CreateSkinData( loadmodel, (byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
 		m_pAliasHeader->gl_texturenum[skinnum][i & 3] = GL_LoadTextureInternal( name, pic, 0, false );
 		FS_FreeImage( pic );
 
 		if( R_GetTexture( m_pAliasHeader->gl_texturenum[skinnum][i & 3] )->flags & TF_HAS_LUMA )
 		{
 			Q_snprintf( lumaname, sizeof( lumaname ), "%s_%i_%i_luma", loadmodel->name, skinnum, i );
-			pic = Mod_CreateSkinData((byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
+			pic = Mod_CreateSkinData( NULL, (byte *)(pskintype), m_pAliasHeader->skinwidth, m_pAliasHeader->skinheight );
 			m_pAliasHeader->fb_texturenum[skinnum][i & 3] = GL_LoadTextureInternal( lumaname, pic, TF_MAKELUMA, false );
 			FS_FreeImage( pic );
 		}
