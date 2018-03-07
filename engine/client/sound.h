@@ -97,10 +97,10 @@ typedef struct
 
 typedef struct sfx_s
 {
-	char		name[64];
+	char		name[MAX_QPATH];
 	wavdata_t		*cache;
 
-	int		touchFrame;
+	int		servercount;
 	uint		hashValue;
 	struct sfx_s	*hashNext;
 } sfx_t;

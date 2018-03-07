@@ -1616,7 +1616,7 @@ static void Mod_LoadPlanes( dbspmodel_t *bmod )
 		}
 
 		if( VectorLength( out->normal ) < 0.5f )
-			Host_Error( "Mod_LoadPlanes: bad normal for plane #%i\n", i );
+			Con_Printf( S_ERROR "bad normal for plane #%i\n", i );
 
 		out->dist = in->dist;
 		out->type = in->type;

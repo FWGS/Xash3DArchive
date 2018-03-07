@@ -1047,7 +1047,7 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cls.timestart = Sys_DoubleTime();
 
 	cls.demowaiting = false;	// server is changed
-	clgame.load_sequence++;	// now all hud sprites are invalid
+	CL_ClearSpriteTextures();	// now all hud sprites are invalid
 
 	// wipe the client_t struct
 	if( !cls.changelevel && !cls.changedemo )
@@ -1637,37 +1637,6 @@ void CL_UpdateUserPings( sizebuf_t *msg )
 	}
 }
 
-void CL_PrecacheBSPModels( const char *pfilename )
-{
-	resource_t	*p, *n;
-
-	if( !pfilename ) return;
-
-	if( Q_strnicmp( pfilename, "maps/", 5 ) || !Q_strstr( pfilename, ".bsp" ))
-		return;
-
-	for( p = cl.resourcesonhand.pNext; p != &cl.resourcesonhand; p = n )
-	{
-		n = p->pNext;
-
-		if( p->type == t_model && p->szFileName[0] == '*' )
-		{
-			cl.models[p->nIndex] = Mod_ForName( p->szFileName, false, false );
-
-			if( cl.models[p->nIndex] == NULL )
-			{
-				MsgDev( D_ERROR, "model %s not found\n", p->szFileName );
-
-				if( FBitSet( p->ucFlags, RES_FATALIFMISSING ))
-				{
-					CL_Disconnect_f();
-					break;
-				}
-			}
-		}
-	}
-}
-
 void CL_SendConsistencyInfo( sizebuf_t *msg )
 {
 	qboolean		user_changed_diskfile;
@@ -1741,6 +1710,7 @@ Clean up and move to next part of sequence.
 */
 void CL_RegisterResources( sizebuf_t *msg )
 {
+	model_t	*mod;
 	int	i;
 
 	if( cls.dl.custom || cls.signon == SIGNONS && cls.state == ca_active )
@@ -1759,7 +1729,6 @@ void CL_RegisterResources( sizebuf_t *msg )
 	{
 		ASSERT( clgame.entities != NULL );
 		clgame.entities->model = cl.worldmodel;
-		CL_PrecacheBSPModels( cl.worldmodel->name );
 
 		if( cls.state != ca_disconnected )
 		{
@@ -1784,11 +1753,10 @@ void CL_RegisterResources( sizebuf_t *msg )
 				clgame.drawFuncs.R_NewMap();
 
 			// release unused SpriteTextures
-			for( i = 1; i < MAX_IMAGES; i++ )
+			for( i = 1, mod = clgame.sprites; i < MAX_CLIENT_SPRITES; i++, mod++ )
 			{
-				if( !clgame.sprites[i].name[0] ) continue; // free slot
-				if( clgame.sprites[i].needload != clgame.load_sequence )
-					Mod_UnloadSpriteModel( &clgame.sprites[i] );
+				if( mod->needload == NL_UNREFERENCED && COM_CheckString( mod->name ))
+					Mod_UnloadSpriteModel( mod );
 			}
 
 			Mod_FreeUnused ();

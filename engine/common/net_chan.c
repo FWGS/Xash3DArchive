@@ -27,7 +27,9 @@ GNU General Public License for more details.
 
 #define FLOW_AVG			( 2.0 / 3.0 )	// how fast to converge flow estimates
 #define FLOW_INTERVAL		0.1		// don't compute more often than this    
+
 #define MAX_RELIABLE_PAYLOAD		1200		// biggest packet that has frag and or reliable data
+#define MAX_RESEND_PAYLOAD		1400
 
 // forward declarations
 void Netchan_FlushIncoming( netchan_t *chan, int stream );
@@ -94,7 +96,7 @@ int	net_drop;
 netadr_t	net_from;
 sizebuf_t	net_message;
 byte	*net_mempool;
-byte	net_message_buffer[NET_MAX_MESSAGE];
+byte	net_message_buffer[MAX_INIT_MSG];
 
 const char *ns_strings[NS_COUNT] =
 {
@@ -583,10 +585,7 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 
 	if( chan->pfnBlockSize != NULL )
 		chunksize = chan->pfnBlockSize( chan->client );
-	else chunksize = (FRAGMENT_MAX_SIZE >> 1);
-
-	if( Netchan_IsLocal( chan ))
-		chunksize = NET_MAX_PAYLOAD;
+	else chunksize = FRAGMENT_SV2CL_MAX_SIZE;
 
 	wait = (fragbufwaiting_t *)Mem_Alloc( net_mempool, sizeof( fragbufwaiting_t ));
 
@@ -744,7 +743,7 @@ void Netchan_CreateFileFragmentsFromBuffer( netchan_t *chan, char *filename, byt
 
 	if( chan->pfnBlockSize != NULL )
 		chunksize = chan->pfnBlockSize( chan->client );
-	else chunksize = (FRAGMENT_MAX_SIZE >> 1);
+	else chunksize = FRAGMENT_SV2CL_MAX_SIZE;
 
 	wait = ( fragbufwaiting_t * )Mem_Alloc( net_mempool, sizeof( fragbufwaiting_t ));
 
@@ -821,7 +820,7 @@ int Netchan_CreateFileFragments( netchan_t *chan, const char *filename )
 	
 	if( chan->pfnBlockSize != NULL )
 		chunksize = chan->pfnBlockSize( chan->client );
-	else chunksize = (FRAGMENT_MAX_SIZE >> 1);
+	else chunksize = FRAGMENT_SV2CL_MAX_SIZE;
 	filesize = FS_FileSize( filename, false );
 
 	if( filesize <= 0 )
@@ -1007,9 +1006,27 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 		return false;
 	}
 
+	if( filename[0] != '!' && !COM_IsSafeFileToDownload( filename ))
+	{
+		Con_Printf( "File fragment received with bad path, ignoring\n" );
+
+		// Clear out bufs
+		Netchan_FlushIncoming( chan, FRAG_FILE_STREAM );
+		return false;
+	}
+
+	if( host.type == HOST_DEDICATED && filename[0] != '!' )
+	{
+		Con_Printf( "File fragment received with bad path, ignoring (2)\n" );
+
+		// Clear out bufs
+		Netchan_FlushIncoming( chan, FRAG_FILE_STREAM );
+		return false;
+	}
+
 	Q_strncpy( chan->incomingfilename, filename, sizeof( chan->incomingfilename ));
 
-	if( FS_FileExists( filename, false ))
+	if( filename[0] != '!' && FS_FileExists( filename, false ))
 	{
 		MsgDev( D_ERROR, "Can't download %s, already exists\n", filename );
 		
@@ -1061,8 +1078,24 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 		p = n;
 	}
 
-	FS_WriteFile( filename, buffer, pos );
-	Mem_Free( buffer );
+	if( filename[0] == '!' )
+	{
+		if( chan->tempbuffer )
+		{
+			Con_DPrintf( "Netchan_CopyFragments:  Freeing holdover tempbuffer\n" );
+			Mem_Free( chan->tempbuffer );
+		}
+
+		chan->tempbuffer = buffer;
+		chan->tempbuffersize = nsize;
+	}
+	else
+	{
+		// g-cont. it's will be stored downloaded files directly into game folder
+		Con_Printf( "write file: %s\n", filename );
+		FS_WriteFile( filename, buffer, pos );
+		Mem_Free( buffer );
+	}
 
 	// clear remnants
 	MSG_Clear( msg );
@@ -1077,50 +1110,33 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 
 qboolean Netchan_Validate( netchan_t *chan, sizebuf_t *sb, qboolean *frag_message, uint *fragid, int *frag_offset, int *frag_length )
 {
-	int	i, j, frag_end;
-	int	chunksize;
+	int	i, buffer, offset;
+	int	count, length;
 
 	for( i = 0; i < MAX_STREAMS; i++ )
 	{
 		if( !frag_message[i] )
 			continue;
 
-		// total fragments should be <= MAX_FRAGMENTS and current fragment can't be > total fragments
-		if( i == FRAG_NORMAL_STREAM && FRAG_GETCOUNT( fragid[i] ) > MAX_NORMAL_FRAGMENTS )
+		buffer = FRAG_GETID( fragid[i] );
+		count = FRAG_GETCOUNT( fragid[i] );
+		offset = BitByte( frag_offset[i] );
+		length = BitByte( frag_length[i] );
+
+		if( buffer < 0 || buffer > 25000 )
 			return false;
 
-		if( i == FRAG_FILE_STREAM && FRAG_GETCOUNT( fragid[i] ) > MAX_FILE_FRAGMENTS )
+		if( count < 0 || count > 25000 )
 			return false;
 
-		if( FRAG_GETID( fragid[i] ) > FRAG_GETCOUNT( fragid[i] ))
+		if( length < 0 || length > 2048 )
 			return false;
 
-		if( !frag_length[i] )
+		if( offset < 0 || offset > 16384 )
 			return false;
-
-		chunksize = FRAGMENT_MAX_SIZE;
-
-		if( i == FRAG_NORMAL_STREAM && Netchan_IsLocal( chan ))
-			chunksize = NET_MAX_PAYLOAD;
-
-		if( BitByte( frag_length[i] ) > chunksize || BitByte( frag_offset[i] ) > ( NET_MAX_PAYLOAD - 1 ))
-			return false;
-
-		frag_end = frag_offset[i] + frag_length[i];
-
-		// end of fragment is out of the packet
-		if( frag_end + MSG_GetNumBitsRead( sb ) > MSG_GetMaxBits( sb ))
-			return false;
-
-		// fragment overlaps next stream's fragment or placed after it
-		for( j = i + 1; j < MAX_STREAMS; j++ )
-		{
-			if( frag_end > frag_offset[j] && frag_message[j] ) // don't add msg_readcount for comparison
-				return false;
-		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 /*
@@ -1135,6 +1151,9 @@ void Netchan_UpdateProgress( netchan_t *chan )
 	int	i, c = 0;
 	int	total = 0;
 	float	bestpercent = 0.0;
+
+	scr_download->value = -1.0f;
+	host.downloadfile[0] = '\0';
 
 	// do show slider for file downloads.
 	if( !chan->incomingbufs[FRAG_FILE_STREAM] )
@@ -1157,7 +1176,7 @@ void Netchan_UpdateProgress( netchan_t *chan )
 
 			if( total )
 			{
-				float	percent = 100.0f * ( float )c / ( float )total;
+				float	percent = 100.0f * (float)c / (float)total;
 
 				if( percent > bestpercent )
 					bestpercent = percent;
@@ -1182,6 +1201,9 @@ void Netchan_UpdateProgress( netchan_t *chan )
 						break;
 				}
 				*out = '\0';
+
+				if( Q_strlen( sz ) > 0 && sz[0] != '!' )
+					Q_strncpy( host.downloadfile, sz, sizeof( host.downloadfile ));
 			}
 		}
 		else if( chan->fragbufs[i] )	// Sending data
@@ -1197,7 +1219,7 @@ void Netchan_UpdateProgress( netchan_t *chan )
 
 	}
 
-	Cvar_SetValue( "scr_download", bestpercent );
+	scr_download->value = bestpercent;
 }
 
 /*
@@ -1252,16 +1274,6 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 		// will be true if we are active and should let chan->message get some bandwidth
 		int	send_from_frag[MAX_STREAMS] = { 0, 0 };
 		int	send_from_regular = false;
-		int	frag_size = MAX_MSGLEN;
-
-		if( Netchan_IsLocal( chan ))
-			frag_size = (NET_MAX_PAYLOAD - MAX_MSGLEN);
-
-		if( MSG_GetNumBytesWritten( &chan->message ) > frag_size )
-		{
-			Netchan_CreateFragments_( chan, &chan->message );
-			MSG_Clear( &chan->message );
-		}
 
 		// if we have data in the waiting list(s) and we have cleared the current queue(s), then 
 		// push the waitlist(s) into the current queue(s)
@@ -1439,8 +1451,8 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	}
 
 	// is there room for the unreliable payload?
-	max_send_size = (FRAGMENT_MAX_SIZE << 3);
-	if( !send_resending || Netchan_IsLocal( chan ))
+	max_send_size = (MAX_RESEND_PAYLOAD << 3);
+	if( !send_resending )
 		max_send_size = MSG_GetMaxBits( &send );
 
 	if(( max_send_size - MSG_GetNumBitsWritten( &send )) >= length )

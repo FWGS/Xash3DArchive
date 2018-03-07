@@ -64,6 +64,7 @@ BuildCmds= \
 	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Paranoia2\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Quake\xash.dll" \
+	copy $(TargetDir)\xash.dll "E:\Xash3D\xash.dll" \
 	
 
 "D:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -73,6 +74,9 @@ BuildCmds= \
    $(BuildCmds)
 
 "D:\Quake\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"E:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
 # End Custom Build
 
@@ -112,6 +116,7 @@ BuildCmds= \
 	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Paranoia2\xash.dll" \
 	copy $(TargetDir)\xash.dll "D:\Quake\xash.dll" \
+	copy $(TargetDir)\xash.dll "E:\Xash3D\xash.dll" \
 	
 
 "D:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -121,6 +126,9 @@ BuildCmds= \
    $(BuildCmds)
 
 "D:\Quake\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+   $(BuildCmds)
+
+"E:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
    $(BuildCmds)
 # End Custom Build
 

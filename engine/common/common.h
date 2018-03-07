@@ -337,6 +337,7 @@ typedef struct host_parm_s
 	dword		errorframe;	// to prevent multiple host error
 	byte		*mempool;		// static mempool for misc allocations
 	string		finalmsg;		// server shutdown final message
+	string		downloadfile;	// filename to be downloading
 	host_redirect_t	rd;		// remote console
 
 	// command line parms

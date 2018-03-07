@@ -2047,9 +2047,9 @@ void GL_RebuildLightmaps( void )
 
 	LM_InitBlock();	
 
-	for( i = 1; i < cl.nummodels; i++ )
+	for( i = 0; i < cl.nummodels; i++ )
 	{
-		if(( m = CL_ModelHandle( i )) == NULL )
+		if(( m = CL_ModelHandle( i + 1 )) == NULL )
 			continue;
 
 		if( m->name[0] == '*' || m->type != mod_brush )
@@ -2110,9 +2110,9 @@ void GL_BuildLightmaps( void )
 
 	LM_InitBlock();	
 
-	for( i = 1; i < cl.nummodels; i++ )
+	for( i = 0; i < cl.nummodels; i++ )
 	{
-		if(( m = CL_ModelHandle( i )) == NULL )
+		if(( m = CL_ModelHandle( i + 1 )) == NULL )
 			continue;
 
 		if( m->name[0] == '*' || m->type != mod_brush )
@@ -2147,6 +2147,10 @@ void GL_BuildLightmaps( void )
 		// build lightmaps on the client-side
 		clgame.drawFuncs.GL_BuildLightmaps( );
 	}
+
+	// now gamma and brightness are valid
+	ClearBits( vid_brightness->flags, FCVAR_CHANGED );
+	ClearBits( vid_gamma->flags, FCVAR_CHANGED );
 
 	if( !gl_keeptjunctions->value )
 		MsgDev( D_INFO, "Eliminate %i vertexes\n", nColinElim );

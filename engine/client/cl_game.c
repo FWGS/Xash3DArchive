@@ -1164,6 +1164,21 @@ void CL_ClearEdicts( void )
 }
 
 /*
+==================
+CL_ClearSpriteTextures
+
+free studio cache on change level
+==================
+*/
+void CL_ClearSpriteTextures( void )
+{
+	int	i;
+
+	for( i = 1; i < MAX_CLIENT_SPRITES; i++ )
+		clgame.sprites[i].needload = NL_UNREFERENCED;
+}
+
+/*
 =============
 CL_LoadHudSprite
 
@@ -1213,9 +1228,10 @@ tent sprites or overview images
 static model_t *CL_LoadSpriteModel( const char *filename, uint type, uint texFlags )
 {
 	char	name[64];
+	model_t	*mod;
 	int	i;
 
-	if( !filename || !*filename )
+	if( !COM_CheckString( filename ))
 	{
 		MsgDev( D_ERROR, "CL_LoadSpriteModel: bad name!\n" );
 		return NULL;
@@ -1225,35 +1241,33 @@ static model_t *CL_LoadSpriteModel( const char *filename, uint type, uint texFla
 	COM_FixSlashes( name );
 
 	// slot 0 isn't used
-	for( i = 1; i < MAX_IMAGES; i++ )
+	for( i = 1, mod = clgame.sprites; i < MAX_CLIENT_SPRITES; i++, mod++ )
 	{
-		if( !Q_stricmp( clgame.sprites[i].name, name ))
+		if( !Q_stricmp( mod->name, name ))
 		{
-			// prolonge registration
-			clgame.sprites[i].needload = clgame.load_sequence;
-			return &clgame.sprites[i];
+			if( mod->mempool )
+				mod->needload = NL_PRESENT;
+			else mod->needload = NL_NEEDS_LOADED;
+
+			return mod;
 		}
 	}
 
 	// find a free model slot spot
-	for( i = 1; i < MAX_IMAGES; i++ )
-	{
-		if( !clgame.sprites[i].name[0] )
-			break; // this is a valid spot
-	}
+	for( i = 1, mod = clgame.sprites; i < MAX_CLIENT_SPRITES; i++, mod++ )
+		if( !mod->name[0] ) break; // this is a valid spot
 
-	if( i == MAX_IMAGES ) 
+	if( i == MAX_CLIENT_SPRITES ) 
 	{
-		MsgDev( D_ERROR, "CL_LoadSpriteModel: can't load %s, MAX_SPRITES limit exceeded\n", filename );
+		Con_Printf( S_ERROR "MAX_CLIENT_SPRITES limit exceeded (%d)\n", MAX_CLIENT_SPRITES );
 		return NULL;
 	}
 
 	// load new map sprite
-	if( CL_LoadHudSprite( name, &clgame.sprites[i], type, texFlags ))
+	if( CL_LoadHudSprite( name, mod, type, texFlags ))
 	{
-		if( i < ( MAX_IMAGES - 1 ))
-			clgame.sprites[i].needload = clgame.load_sequence;
-		return &clgame.sprites[i];
+		mod->needload = NL_PRESENT;
+		return mod;
 	}
 
 	return NULL;
@@ -1317,7 +1331,7 @@ CL_GetSpritePointer
 */
 const model_t *CL_GetSpritePointer( HSPRITE hSprite )
 {
-	if( hSprite <= 0 || hSprite > ( MAX_IMAGES - 1 ))
+	if( hSprite <= 0 || hSprite >= MAX_CLIENT_SPRITES )
 		return NULL; // bad image
 	return &clgame.sprites[hSprite];
 }
@@ -2235,22 +2249,22 @@ int CL_FindModelIndex( const char *m )
 	static float	lasttimewarn;
 	int		i;
 
-	if( !m || !m[0] )
+	if( !COM_CheckString( m ))
 		return 0;
 
-	for( i = 1; i < cl.nummodels; i++ )
+	for( i = 0; i < cl.nummodels; i++ )
 	{
-		if( !cl.models[i] )
+		if( !cl.models[i+1] )
 			continue;
 
-		if( !Q_stricmp( cl.models[i]->name, m ))
+		if( !Q_stricmp( cl.models[i+1]->name, m ))
 			return i;
 	}
 
 	if( lasttimewarn < host.realtime )
 	{
 		// tell user about problem (but don't spam console)
-		MsgDev( D_ERROR, "CL_ModelIndex: %s not precached\n", m );
+		Con_Printf( S_ERROR "%s not precached\n", m );
 		lasttimewarn = host.realtime + 1.0f;
 	}
 

@@ -37,22 +37,16 @@ GNU General Public License for more details.
 
 // NETWORKING INFO
 
-// Max size of udp packet payload
-#define MAX_UDP_PACKET		4010 // 9 bytes SPLITHEADER + 4000 payload?
-
 // Max length of a multicast message
 #define MAX_MULTICAST		8192 // some mods spamming for rain effect
-
-// Max length of a reliable message
-#define MAX_MSGLEN			3990 // 10 reserved for fragheader?
 
 // Max length of unreliable message
 #define MAX_DATAGRAM		4000
 
-#define MAX_INIT_MSG		0x10000	// max length of possible message
+#define MAX_INIT_MSG		0x20000	// max length of possible message
 
 // This is the packet payload without any header bytes (which are attached for actual sending)
-#define NET_MAX_PAYLOAD		131072
+#define NET_MAX_PAYLOAD		3990
 
 // This is the payload plus any header info (excluding UDP header)
 
@@ -99,10 +93,6 @@ NET
 #define MAX_LATENT			32
 #define MASK_LATENT			( MAX_LATENT - 1 )
 
-// size of fragmentation buffer internal buffers
-#define FRAGMENT_MAX_SIZE 		1024
-#define LOCAL_FRAGMENT_MAX_SIZE	32768
-
 #define FRAG_NORMAL_STREAM		0
 #define FRAG_FILE_STREAM		1
 
@@ -123,23 +113,8 @@ typedef struct
 	int		totalbytes;
 } flow_t;
 
-#define FRAGMENT_CL2SV_MIN_SIZE	16
-#define FRAGMENT_CL2SV_MAX_SIZE	1024
-
 #define FRAGMENT_SV2CL_MIN_SIZE	256
 #define FRAGMENT_SV2CL_MAX_SIZE	1024
-
-#define CLIENT_FRAGMENT_SIZE_ONCONNECT	128
-#define CUSTOMIZATION_MAX_SIZE	20480
-
-#define FRAGMENT_MAX_SIZE 		1024
-
-// client sends normal fragments only while connecting
-#define MAX_NORMAL_FRAGMENTS		(NET_MAX_PAYLOAD / CLIENT_FRAGMENT_SIZE_ONCONNECT)
-
-// while client is connecting it sending fragments with minimal size, also it transfers sprays with minimal fragments...
-// but with sv_delayed_spray_upload it sends with cl_dlmax fragment size
-#define MAX_FILE_FRAGMENTS		(CUSTOMIZATION_MAX_SIZE / FRAGMENT_CL2SV_MIN_SIZE)
 
 // generic fragment structure
 typedef struct fragbuf_s
@@ -230,7 +205,7 @@ typedef struct netchan_s
 extern netadr_t		net_from;
 extern netadr_t		net_local;
 extern sizebuf_t		net_message;
-extern byte		net_message_buffer[NET_MAX_MESSAGE];
+extern byte		net_message_buffer[MAX_INIT_MSG];
 extern convar_t		*net_speeds;
 extern int		net_drop;
 

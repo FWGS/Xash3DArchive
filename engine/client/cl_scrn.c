@@ -676,7 +676,7 @@ void SCR_VidInit( void )
 
 	VGui_Startup ();
 
-	clgame.load_sequence++; // now all hud sprites are invalid
+	CL_ClearSpriteTextures(); // now all hud sprites are invalid
 	
 	// vid_state has changed
 	if( gameui.hInstance ) gameui.dllFuncs.pfnVidInit();
@@ -700,7 +700,7 @@ void SCR_Init( void )
 	cl_levelshot_name = Cvar_Get( "cl_levelshot_name", "*black", 0, "contains path to current levelshot" );
 	cl_allow_levelshots = Cvar_Get( "allow_levelshots", "0", FCVAR_ARCHIVE, "allow engine to use indivdual levelshots instead of 'loading' image" );
 	scr_loading = Cvar_Get( "scr_loading", "0", 0, "loading bar progress" );
-	scr_download = Cvar_Get( "scr_download", "0", 0, "downloading bar progress" );
+	scr_download = Cvar_Get( "scr_download", "-1", 0, "downloading bar progress" );
 	cl_testlights = Cvar_Get( "cl_testlights", "0", 0, "test dynamic lights" );
 	cl_envshot_size = Cvar_Get( "cl_envshot_size", "256", FCVAR_ARCHIVE, "envshot size of cube side" );
 	v_dark = Cvar_Get( "v_dark", "0", 0, "starts level from dark screen" );

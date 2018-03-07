@@ -98,7 +98,9 @@ CVAR_DEFINE_AUTO( sv_skydir_z, "1", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "sky rotation
 CVAR_DEFINE_AUTO( sv_skyangle, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skybox rotational angle (in degrees)" );
 CVAR_DEFINE_AUTO( sv_skyspeed, "0", 0, "skybox rotational speed" );
 
-// obsolete cvars which we should keep because game DLL's will be relies on it
+CVAR_DEFINE( sv_spawntime, "host_spawntime", "0.1", FCVAR_ARCHIVE, "host.frametime on spawn new map (force to 0.8 if have problems)" );
+CVAR_DEFINE( sv_changetime, "host_changetime", "0.001", FCVAR_ARCHIVE, "host.frametime on changelevel (force to 0.1 if have player stucks)" );
+
 CVAR_DEFINE_AUTO( showtriggers, "0", FCVAR_LATCH, "debug cvar shows triggers" );
 CVAR_DEFINE_AUTO( sv_airmove, "1", FCVAR_SERVER, "obsolete, compatibility issues" );
 CVAR_DEFINE_AUTO( sv_version, "", FCVAR_READ_ONLY, "engine version string" );
@@ -837,6 +839,8 @@ void SV_Init( void )
 	sv_hostmap = Cvar_Get( "hostmap", GI->startmap, 0, "keep name of last entered map" );
 	Cvar_RegisterVariable (&sv_password);
 	Cvar_RegisterVariable (&sv_lan);
+	Cvar_RegisterVariable (&sv_spawntime);
+	Cvar_RegisterVariable (&sv_changetime);
 	Cvar_RegisterVariable (&violence_ablood);
 	Cvar_RegisterVariable (&violence_hblood);
 	Cvar_RegisterVariable (&violence_agibs);
@@ -944,6 +948,9 @@ void SV_Shutdown( const char *finalmsg )
 {
 	// already freed
 	if( !SV_Initialized( )) return;
+
+	if( COM_CheckString( finalmsg ))
+		Con_Printf( "%s", finalmsg );
 
 	// rcon will be disconnected
 	SV_EndRedirect();

@@ -18,10 +18,16 @@ GNU General Public License for more details.
 #include "netchan.h"
 #include "mathlib.h"
 
-#define PORT_ANY		-1
-#define MAX_LOOPBACK	4
-#define MASK_LOOPBACK	(MAX_LOOPBACK - 1)
-#define NET_MAX_FRAGMENTS	32
+#define PORT_ANY			-1
+
+#define MAX_LOOPBACK		4
+#define MASK_LOOPBACK		(MAX_LOOPBACK - 1)
+
+#define MAX_ROUTEABLE_PACKET		1400
+#define SPLIT_SIZE			( MAX_ROUTEABLE_PACKET - sizeof( SPLITPACKET ))
+
+#define MAX_UDP_PACKET		4010 // 9 bytes SPLITHEADER + 4000 payload?
+#define NET_MAX_FRAGMENTS		32
 
 // wsock32.dll exports
 static int (_stdcall *pWSACleanup)( void );
@@ -104,7 +110,7 @@ typedef struct
 	int		current_sequence;
 	int		split_count;
 	int		total_size;
-	char		buffer[NET_MAX_PAYLOAD];
+	char		buffer[MAX_UDP_PACKET];
 } LONGPACKET;
 
 // use this to pick apart the network stream, must be packed

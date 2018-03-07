@@ -44,7 +44,7 @@ void S_SoundList_f( void )
 
 	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++ )
 	{
-		if( !sfx->touchFrame )
+		if( !sfx->servercount )
 			continue;
 
 		sc = sfx->cache;
@@ -190,7 +190,7 @@ sfx_t *S_FindName( const char *pname, int *pfInCache )
 				*pfInCache = ( sfx->cache != NULL ) ? true : false;
 			}
 			// prolonge registration
-			sfx->touchFrame = s_registration_sequence;
+			sfx->servercount = s_registration_sequence;
 			return sfx;
 		}
 	}
@@ -213,7 +213,7 @@ sfx_t *S_FindName( const char *pname, int *pfInCache )
 	memset( sfx, 0, sizeof( *sfx ));
 	if( pfInCache ) *pfInCache = false;
 	Q_strncpy( sfx->name, name, MAX_STRING );
-	sfx->touchFrame = s_registration_sequence;
+	sfx->servercount = s_registration_sequence;
 	sfx->hashValue = COM_HashKey( sfx->name, MAX_SFX_HASH );
 
 	// link it in
@@ -303,7 +303,7 @@ void S_EndRegistration( void )
 	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++ )
 	{
 		if( !sfx->name[0] ) continue;
-		if( sfx->touchFrame != s_registration_sequence )
+		if( sfx->servercount != s_registration_sequence )
 			S_FreeSound( sfx ); // don't need this sound
 	}
 
@@ -341,7 +341,7 @@ sound_t S_RegisterSound( const char *name )
 	sfx = S_FindName( name, NULL );
 	if( !sfx ) return -1;
 
-	sfx->touchFrame = s_registration_sequence;
+	sfx->servercount = s_registration_sequence;
 	if( !s_registering ) S_LoadSound( sfx );
 
 	return sfx - s_knownSfx;

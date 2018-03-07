@@ -1902,6 +1902,19 @@ Draws the debug messages (not passed to console history)
 */
 void Con_DrawDebug( void )
 {
+	int	x, y, stringLen;
+	string	dlstring;
+	int	charH;
+
+	if( scr_download->value != -1.0f )
+	{
+		Q_snprintf( dlstring, sizeof( dlstring ), "Downloading: ^2%s^7       ", host.downloadfile ); 
+		Con_DrawStringLen( dlstring, &stringLen, &charH );
+		Q_snprintf( dlstring, sizeof( dlstring ), "Downloading: ^2%s^7 %5.1f%%", host.downloadfile, scr_download->value ); 
+		x = glState.width - stringLen;
+		y = charH * 1.05f;
+		Con_DrawString( x, y, dlstring, g_color_table[7] );
+	}
 	if( !host_developer.value || Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" ))
 		return;
 
@@ -2222,14 +2235,15 @@ void Con_RunConsole( void )
 	// decide on the destination height of the console
 	if( host.allow_console && cls.key_dest == key_console )
 	{
-		if( cls.state == ca_disconnected )
+		if( cls.state < ca_active || cl.first_frame )
 			con.showlines = glState.height;	// full screen
 		else con.showlines = (glState.height >> 1);	// half screen	
 	}
 	else con.showlines = 0; // none visible
 
-	if( cls.state == ca_connecting || cls.state == ca_connected || cls.state == ca_validate || cl.first_frame )
-		host.realframetime = 0.000001f; // don't accumulate frametime
+	// HACKHACK: don't accumulate frametime
+	if( cls.state < ca_active || cl.first_frame )
+		host.realframetime = 0.0f;
 
 	lines_per_frame = fabs( scr_conspeed->value ) * host.realframetime;
 

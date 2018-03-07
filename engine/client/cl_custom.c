@@ -32,8 +32,8 @@ qboolean CL_CheckFile( sizebuf_t *msg, resource_t *pResource )
 	}
 
 	// resource was missed on server
-	if( pResource->nDownloadSize <= 0 )
-		return true;
+//	if( pResource->nDownloadSize <= 0 )
+//		return true;
 
 	if( pResource->type == t_sound )
 		Q_strncpy( filepath, va( "sound/%s", pResource->szFileName ), sizeof( filepath ));

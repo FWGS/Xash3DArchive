@@ -36,7 +36,7 @@ GNU General Public License for more details.
 #define MAX_DEMOS		32
 #define MAX_MOVIES		8
 #define MAX_CDTRACKS	32
-#define MAX_IMAGES		256	// SpriteTextures
+#define MAX_CLIENT_SPRITES	256	// SpriteTextures
 #define MAX_EFRAGS		8192	// Arcane Dimensions required
 #define MAX_REQUESTS	64
 
@@ -268,7 +268,7 @@ typedef struct
 	char		sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char		event_precache[MAX_EVENTS][MAX_QPATH];
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
-	model_t		*models[MAX_MODELS+1];		// precached models (plus one slot for menu preview)
+	model_t		*models[MAX_MODELS+1];		// precached models (plus sentinel slot)
 	int		nummodels;
 
 	consistency_t	consistency_list[MAX_MODELS];
@@ -433,6 +433,7 @@ typedef struct
 
 typedef struct
 {
+	unsigned short	textures[MAX_SKINS];// alias textures
 	struct mstudiotex_s	*ptexture;	// array of textures with local copy of remapped textures
 	short		numtextures;	// textures count
 	short		topcolor;		// cached value
@@ -492,9 +493,7 @@ typedef struct
 
 	string		cdtracks[MAX_CDTRACKS];	// 32 cd-tracks read from cdaudio.txt
 
-	model_t		sprites[MAX_IMAGES];	// client spritetextures
-	int		load_sequence;		// for unloading unneeded sprites
-
+	model_t		sprites[MAX_CLIENT_SPRITES];	// client spritetextures
 	int		viewport[4];		// viewport sizes
 
 	client_draw_t	ds;			// draw2d stuff (hud, weaponmenu etc)
@@ -575,7 +574,7 @@ typedef struct
 	char		physinfo[MAX_INFO_STRING];	// read-only
 
 	sizebuf_t		datagram;			// unreliable stuff. gets sent in CL_Move about cl_cmdrate times per second.
-	byte		datagram_buf[NET_MAX_PAYLOAD];
+	byte		datagram_buf[MAX_DATAGRAM];
 
 	netchan_t		netchan;
 	int		serverProtocol;		// in case we are doing some kind of version hack
@@ -690,7 +689,6 @@ extern convar_t	*cl_lw;		// local weapons
 extern convar_t	*cl_showevents;
 extern convar_t	*scr_centertime;
 extern convar_t	*scr_viewsize;
-extern convar_t	*scr_download;
 extern convar_t	*scr_loading;
 extern convar_t	*v_dark;	// start from dark
 extern convar_t	*net_graph;
@@ -800,6 +798,7 @@ void CL_InitEdicts( void );
 void CL_FreeEdicts( void );
 void CL_ClearWorld( void );
 void CL_DrawCenterPrint( void );
+void CL_ClearSpriteTextures( void );
 void CL_FreeEntity( cl_entity_t *pEdict );
 void CL_CenterPrint( const char *text, float y );
 void CL_TextMessageParse( byte *pMemFile, int fileSize );
@@ -834,6 +833,7 @@ _inline cl_entity_t *CL_EDICT_NUM( int n )
 //
 void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message );
 void CL_ParseTempEntity( sizebuf_t *msg );
+void CL_StartResourceDownloading( const char *pszMessage, qboolean bCustom );
 qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf );
 qboolean CL_RequestMissingResources( void );
 void CL_RegisterResources ( sizebuf_t *msg );

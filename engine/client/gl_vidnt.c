@@ -1694,16 +1694,17 @@ R_Shutdown
 */
 void R_Shutdown( void )
 {
+	model_t	*mod;
 	int	i;
 
 	if( !glw_state.initialized )
 		return;
 
 	// release SpriteTextures
-	for( i = 1; i < MAX_IMAGES; i++ )
+	for( i = 1, mod = clgame.sprites; i < MAX_CLIENT_SPRITES; i++, mod++ )
 	{
-		if( !clgame.sprites[i].name[0] ) continue;
-		Mod_UnloadSpriteModel( &clgame.sprites[i] );
+		if( !mod->name[0] ) continue;
+		Mod_UnloadSpriteModel( mod );
 	}
 	memset( clgame.sprites, 0, sizeof( clgame.sprites ));
 

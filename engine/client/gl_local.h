@@ -89,6 +89,8 @@ typedef struct gltexture_s
 	float		xscale;
 	float		yscale;
 
+	int		servercount;
+	uint		hashValue;
 	struct gltexture_s	*nextHash;
 } gltexture_t;
 
@@ -416,6 +418,7 @@ struct mstudiotex_s *R_StudioGetTexture( cl_entity_t *e );
 float CL_GetStudioEstimatedFrame( cl_entity_t *ent );
 int R_GetEntityRenderMode( cl_entity_t *ent );
 void R_DrawStudioModel( cl_entity_t *e );
+player_info_t *pfnPlayerInfo( int index );
 
 //
 // gl_alias.c

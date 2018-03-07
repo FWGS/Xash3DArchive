@@ -464,7 +464,8 @@ void Mod_FreeUnused( void )
 	model_t	*mod;
 	int	i;
 
-	for( i = 0, mod = mod_known; i < mod_numknown; i++, mod++ )
+	// never tries to release worldmodel
+	for( i = 1, mod = &mod_known[1]; i < mod_numknown; i++, mod++ )
 	{
 		if( mod->needload == NL_UNREFERENCED && COM_CheckString( mod->name ))
 			Mod_FreeModel( mod );

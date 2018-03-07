@@ -53,6 +53,7 @@ ALIAS MODEL DISPLAY LIST GENERATION
 
 =================================================================
 */
+static qboolean	m_fDoRemap;
 static aliashdr_t	*m_pAliasHeader;
 static trivertex_t	*g_poseverts[MAXALIASFRAMES];
 static dtriangle_t	g_triangles[MAXALIASTRIS];
@@ -86,6 +87,7 @@ R_StudioInit
 void R_AliasInit( void )
 {
 	g_alias.interpolate = true;
+	m_fDoRemap = false;
 }
 
 /*
@@ -424,7 +426,7 @@ rgbdata_t *Mod_CreateSkinData( model_t *mod, byte *data, int width, int height )
 	skin.height = height;
 	skin.depth = 1;
 	skin.type = PF_INDEXED_24;
-	skin.flags = IMAGE_HAS_COLOR;
+	skin.flags = IMAGE_HAS_COLOR|IMAGE_QUAKEPAL;
 	skin.encode = DXT_ENCODE_DEFAULT;
 	skin.numMips = 1;
 	skin.buffer = data;
@@ -1016,6 +1018,23 @@ void R_AliasLighting( float *lv, const vec3_t normal )
 }
 
 /*
+===============
+R_AliasSetRemapColors
+
+===============
+*/
+void R_AliasSetRemapColors( int newTop, int newBottom )
+{
+	CL_AllocRemapInfo( newTop, newBottom );
+
+	if( CL_GetRemapInfoForEntity( RI.currententity ))
+	{
+		CL_UpdateRemapInfo( newTop, newBottom );
+		m_fDoRemap = true;
+	}
+}
+
+/*
 =============
 GL_DrawAliasFrame
 =============
@@ -1334,6 +1353,8 @@ static void R_AliasSetupTimings( void )
 		// menu stuff
 		g_alias.time = host.realtime;
 	}
+
+	m_fDoRemap = false;
 }
 
 /*
@@ -1346,8 +1367,10 @@ void R_DrawAliasModel( cl_entity_t *e )
 {
 	model_t		*clmodel;
 	vec3_t		absmin, absmax;
+	remap_info_t	*pinfo = NULL;
 	int		anim, skin;
 	alight_t		lighting;
+	player_info_t	*playerinfo;
 	vec3_t		dir, angles;
 
 	clmodel = RI.currententity->model;
@@ -1397,6 +1420,15 @@ void R_DrawAliasModel( cl_entity_t *e )
 	R_AliasSetupLighting( &lighting );
 	GL_SetRenderMode( e->curstate.rendermode );
 
+	// setup remapping only for players
+	if( e->player && ( playerinfo = pfnPlayerInfo( e->curstate.number - 1 )) != NULL )
+	{
+		// get remap colors
+		int topcolor = bound( 0, playerinfo->topcolor, 13 );
+		int bottomcolor = bound( 0, playerinfo->bottomcolor, 13 );
+		R_AliasSetRemapColors( topcolor, bottomcolor );
+	}
+
 	pglTranslatef( m_pAliasHeader->scale_origin[0], m_pAliasHeader->scale_origin[1], m_pAliasHeader->scale_origin[2] );
 
 	if( tr.fFlipViewModel )
@@ -1405,10 +1437,14 @@ void R_DrawAliasModel( cl_entity_t *e )
 
 	anim = (int)(g_alias.time * 10) & 3;
 	skin = bound( 0, RI.currententity->curstate.skin, m_pAliasHeader->numskins - 1 );
+	if( m_fDoRemap ) pinfo = CL_GetRemapInfoForEntity( e );
 
 	if( r_lightmap->value && !r_fullbright->value )
 		GL_Bind( GL_TEXTURE0, tr.whiteTexture );
+	else if( pinfo != NULL && pinfo->textures[skin] != 0 )
+		GL_Bind( GL_TEXTURE0, pinfo->textures[skin] );	// FIXME: allow remapping for skingroups someday
 	else GL_Bind( GL_TEXTURE0, m_pAliasHeader->gl_texturenum[skin][anim] );
+
 	pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
 	if( GL_Support( GL_ARB_MULTITEXTURE ) && m_pAliasHeader->fb_texturenum[skin][anim] )

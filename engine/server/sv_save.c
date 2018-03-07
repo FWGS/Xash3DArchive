@@ -874,7 +874,7 @@ SAVERESTOREDATA *SV_LoadSaveData( const char *level )
 	pFile = FS_Open( name, "rb", true );
 	if( !pFile )
 	{
-		Con_Printf( S_ERROR "couldn't open.\n" );
+		Con_DPrintf( S_ERROR "couldn't open.\n" );
 		return NULL;
 	}
 

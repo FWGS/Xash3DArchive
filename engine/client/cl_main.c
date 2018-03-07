@@ -1254,7 +1254,7 @@ void CL_ClearState( void )
 	cl.local.interp_amount = 0.1f;
 	cl.local.scr_fov = 90.0f;
 
-	Cvar_SetValue( "scr_download", 0.0f );
+	Cvar_SetValue( "scr_download", -1.0f );
 	Cvar_SetValue( "scr_loading", 0.0f );
 	host.allow_console = host.allow_console_init;
 }
@@ -1709,6 +1709,7 @@ Call before entering a new level, or after changing dlls
 */
 void CL_PrepVideo( void )
 {
+	model_t	*mod;
 	int	i;
 
 	if( !cl.models[WORLD_INDEX] )
@@ -1749,11 +1750,10 @@ void CL_PrepVideo( void )
 		clgame.drawFuncs.R_NewMap();
 
 	// release unused SpriteTextures
-	for( i = 1; i < MAX_IMAGES; i++ )
+	for( i = 1, mod = clgame.sprites; i < MAX_CLIENT_SPRITES; i++, mod++ )
 	{
-		if( !clgame.sprites[i].name[0] ) continue; // free slot
-		if( clgame.sprites[i].needload != clgame.load_sequence )
-			Mod_UnloadSpriteModel( &clgame.sprites[i] );
+		if( mod->needload == NL_UNREFERENCED && COM_CheckString( mod->name ))
+			Mod_UnloadSpriteModel( mod );
 	}
 
 	Mod_FreeUnused ();
@@ -2051,8 +2051,6 @@ void CL_ReadPackets( void )
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))
 		return;
 
-	Netchan_UpdateProgress( &cls.netchan );
-
 	// if in the debugger last frame, don't timeout
 	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
           
@@ -2194,15 +2192,17 @@ void CL_ProcessFile( qboolean successfully_received, const char *filename )
 
 			cls.netchan.tempbuffersize = 0;
 			cls.netchan.tempbuffer = NULL;
-			CL_MoveToOnHandList( p );
 		}
+
+		// moving to 'onhandle' list even if file was missed
+		CL_MoveToOnHandList( p );
 	}
 
 	if( cls.state != ca_disconnected )
 	{
 		if( cl.resourcesneeded.pNext == &cl.resourcesneeded )
 		{
-			byte	msg_buf[32768];
+			byte	msg_buf[MAX_INIT_MSG];
 			sizebuf_t msg;
 
 			MSG_Init( &msg, "Resource Registration", msg_buf, sizeof( msg_buf ));
@@ -2335,34 +2335,67 @@ void CL_Precache_f( void )
 
 qboolean CL_PrecacheResources( void )
 {
-	resource_t	*pResource;
-	resource_t	*next;
+	resource_t	*pRes;
 
 	S_BeginRegistration();
 
-	for( pResource = cl.resourcesonhand.pNext; pResource && pResource != &cl.resourcesonhand; pResource = next )
+	// NOTE: world need to be loaded as first model
+	for( pRes = cl.resourcesonhand.pNext; pRes && pRes != &cl.resourcesonhand; pRes = pRes->pNext )
 	{
-		next = pResource->pNext;
-
-		if( FBitSet( pResource->ucFlags, RES_PRECACHED ))
+		if( pRes->type != t_model || pRes->nIndex != WORLD_INDEX )
 			continue;
 
-		switch( pResource->type )
+		cl.models[pRes->nIndex] = Mod_LoadWorld( pRes->szFileName, true );
+		SetBits( pRes->ucFlags, RES_PRECACHED );
+		cl.nummodels = 1;
+		break;
+	}
+
+	// then we set up all the world submodels
+	for( pRes = cl.resourcesonhand.pNext; pRes && pRes != &cl.resourcesonhand; pRes = pRes->pNext )
+	{
+		if( pRes->type == t_model && pRes->szFileName[0] == '*' )
+		{
+			cl.models[pRes->nIndex] = Mod_ForName( pRes->szFileName, false, false );
+			cl.nummodels = Q_max( cl.nummodels, pRes->nIndex + 1 );
+			SetBits( pRes->ucFlags, RES_PRECACHED );
+
+			if( cl.models[pRes->nIndex] == NULL )
+			{
+				MsgDev( D_ERROR, "submodel %s not found\n", pRes->szFileName );
+
+				if( FBitSet( pRes->ucFlags, RES_FATALIFMISSING ))
+				{
+					S_EndRegistration();
+					CL_Disconnect_f();
+					return false;
+				}
+			}
+		}
+	}
+
+	// precache all the remaining resources where order is doesn't matter
+	for( pRes = cl.resourcesonhand.pNext; pRes && pRes != &cl.resourcesonhand; pRes = pRes->pNext )
+	{
+		if( FBitSet( pRes->ucFlags, RES_PRECACHED ))
+			continue;
+
+		switch( pRes->type )
 		{
 		case t_sound:
-			if( FBitSet( pResource->ucFlags, RES_WASMISSING ))
+			if( FBitSet( pRes->ucFlags, RES_WASMISSING ))
 			{
-				cl.sound_precache[pResource->nIndex][0] = 0;
-				cl.sound_index[pResource->nIndex] = 0;
+				cl.sound_precache[pRes->nIndex][0] = 0;
+				cl.sound_index[pRes->nIndex] = 0;
 			}
 			else
 			{
-				Q_strncpy( cl.sound_precache[pResource->nIndex], pResource->szFileName, sizeof( cl.sound_precache[0] )); 
-				cl.sound_index[pResource->nIndex] = S_RegisterSound( pResource->szFileName );
+				Q_strncpy( cl.sound_precache[pRes->nIndex], pRes->szFileName, sizeof( cl.sound_precache[0] )); 
+				cl.sound_index[pRes->nIndex] = S_RegisterSound( pRes->szFileName );
 
-				if( !cl.sound_index[pResource->nIndex] )
+				if( !cl.sound_index[pRes->nIndex] )
 				{
-					if( FBitSet( pResource->ucFlags, RES_FATALIFMISSING ))
+					if( FBitSet( pRes->ucFlags, RES_FATALIFMISSING ))
 					{
 						S_EndRegistration();
 						CL_Disconnect_f();
@@ -2374,24 +2407,17 @@ qboolean CL_PrecacheResources( void )
 		case t_skin:
 			break;
 		case t_model:
-			if( pResource->nIndex >= cl.nummodels )
+			cl.nummodels = Q_max( cl.nummodels, pRes->nIndex + 1 );
+			if( pRes->szFileName[0] != '*' )
 			{
-				cl.nummodels = pResource->nIndex + 1;
-				cl.nummodels = Q_min( cl.nummodels, MAX_MODELS );
-			}
+				cl.models[pRes->nIndex] = Mod_ForName( pRes->szFileName, false, true );
 
-			if( pResource->szFileName[0] != '*' )
-			{
-				if( pResource->nIndex == WORLD_INDEX )
-					cl.models[pResource->nIndex] = Mod_LoadWorld( pResource->szFileName, true );
-				else cl.models[pResource->nIndex] = Mod_ForName( pResource->szFileName, false, true );
-
-				if( cl.models[pResource->nIndex] == NULL )
+				if( cl.models[pRes->nIndex] == NULL )
 				{
-					if( pResource->ucFlags != 0 )
-						MsgDev( D_WARN, "model %s not found and not available\n", pResource->szFileName );
+					if( pRes->ucFlags != 0 )
+						MsgDev( D_WARN, "model %s not found and not available\n", pRes->szFileName );
 
-					if( FBitSet( pResource->ucFlags, RES_FATALIFMISSING ))
+					if( FBitSet( pRes->ucFlags, RES_FATALIFMISSING ))
 					{
 						S_EndRegistration();
 						CL_Disconnect_f();
@@ -2401,24 +2427,25 @@ qboolean CL_PrecacheResources( void )
 			}
 			break;
 		case t_decal:
-			if( !FBitSet( pResource->ucFlags, RES_CUSTOM ))
-				Q_strncpy( host.draw_decals[pResource->nIndex], pResource->szFileName, sizeof( host.draw_decals[0] ));
+			if( !FBitSet( pRes->ucFlags, RES_CUSTOM ))
+				Q_strncpy( host.draw_decals[pRes->nIndex], pRes->szFileName, sizeof( host.draw_decals[0] ));
 			break;
 		case t_generic:
 			break;
 		case t_eventscript:
-			Q_strncpy( cl.event_precache[pResource->nIndex], pResource->szFileName, sizeof( cl.event_precache[0] ));
-			CL_SetEventIndex( cl.event_precache[pResource->nIndex], pResource->nIndex );
+			Q_strncpy( cl.event_precache[pRes->nIndex], pRes->szFileName, sizeof( cl.event_precache[0] ));
+			CL_SetEventIndex( cl.event_precache[pRes->nIndex], pRes->nIndex );
 			break;
 		default:
 			MsgDev( D_REPORT, "unknown resource type\n" );
 			break;
 		}
 
-		SetBits( pResource->ucFlags, RES_PRECACHED );
-		pResource = next;
+		SetBits( pRes->ucFlags, RES_PRECACHED );
 	}
 
+	// make sure modelcount is in-range
+	cl.nummodels = bound( 0, cl.nummodels, MAX_MODELS );
 	S_EndRegistration();
 
 	return true;

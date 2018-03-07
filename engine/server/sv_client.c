@@ -1181,7 +1181,7 @@ a deathmatch.
 */
 void SV_PutClientInServer( sv_client_t *cl )
 {
-	static byte    	msg_buf[NET_MAX_MESSAGE*2];
+	static byte    	msg_buf[MAX_INIT_MSG];
 	edict_t		*ent = cl->edict;
 	sizebuf_t		msg;
 
@@ -1511,7 +1511,7 @@ static qboolean SV_WriteModels_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && start < MAX_MODELS )
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_DATAGRAM ) && start < MAX_MODELS )
 	{
 		if( sv.model_precache[start][0] )
 		{
@@ -1555,7 +1555,7 @@ static qboolean SV_WriteSounds_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && start < MAX_SOUNDS )
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_DATAGRAM ) && start < MAX_SOUNDS )
 	{
 		if( sv.sound_precache[start][0] )
 		{
@@ -1599,7 +1599,7 @@ static qboolean SV_WriteEvents_f( sv_client_t *cl )
 	start = Q_atoi( Cmd_Argv( 2 ));
 
 	// write a packet full of data
-	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_UDP_PACKET ) && start < MAX_EVENTS )
+	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_DATAGRAM ) && start < MAX_EVENTS )
 	{
 		if( sv.event_precache[start][0] )
 		{
@@ -2475,10 +2475,10 @@ Parse a client packet
 */
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 {
-	int		c, stringCmdCount = 0;
 	qboolean		move_issued = false;
 	client_frame_t	*frame;
 	char		*s;
+	int		c;
 
 	ASSERT( cl->frames != NULL );
 
@@ -2529,7 +2529,7 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 		case clc_stringcmd:	
 			s = MSG_ReadString( msg );
 			// malicious users may try using too many string commands
-			if( ++stringCmdCount < 8 ) SV_ExecuteClientCommand( cl, s );
+			SV_ExecuteClientCommand( cl, s );
 			if( cl->state == cs_zombie ) return; // disconnect command
 			break;
 		case clc_resourcelist:

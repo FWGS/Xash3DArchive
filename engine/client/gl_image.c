@@ -1305,12 +1305,12 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	uint		i, hash;
 	uint		picFlags = 0;
 
-	if( !name || !name[0] || !glw_state.initialized )
+	if( !COM_CheckString( name ) || !glw_state.initialized )
 		return 0;
 
 	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
-		MsgDev( D_ERROR, "GL_LoadTexture: too long name %s\n", name );
+		Con_Printf( S_ERROR "LoadTexture: too long name %s (%d)\n", name, Q_strlen( name ));
 		return 0;
 	}
 
@@ -1375,9 +1375,9 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
-	hash = COM_HashKey( tex->name, TEXTURES_HASH_SIZE );
-	tex->nextHash = r_texturesHashTable[hash];
-	r_texturesHashTable[hash] = tex;
+	tex->hashValue = COM_HashKey( tex->name, TEXTURES_HASH_SIZE );
+	tex->nextHash = r_texturesHashTable[tex->hashValue];
+	r_texturesHashTable[tex->hashValue] = tex;
 
 	// NOTE: always return texnum as index in array or engine will stop work !!!
 	return i;
@@ -1420,7 +1420,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 
 	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
-		MsgDev( D_ERROR, "GL_LoadTextureArray: too long name %s\n", name );
+		Con_Printf( S_ERROR "LoadTextureArray: too long name %s (%d)\n", name, Q_strlen( name ));
 		return 0;
 	}
 
@@ -1546,9 +1546,9 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 	FS_FreeImage( pic ); // release source texture
 
 	// add to hash table
-	hash = COM_HashKey( tex->name, TEXTURES_HASH_SIZE );
-	tex->nextHash = r_texturesHashTable[hash];
-	r_texturesHashTable[hash] = tex;
+	tex->hashValue = COM_HashKey( tex->name, TEXTURES_HASH_SIZE );
+	tex->nextHash = r_texturesHashTable[tex->hashValue];
+	r_texturesHashTable[tex->hashValue] = tex;
 
 	// NOTE: always return texnum as index in array or engine will stop work !!!
 	return i;
@@ -1564,12 +1564,12 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	gltexture_t	*tex;
 	uint		i, hash;
 
-	if( !name || !name[0] || !glw_state.initialized )
+	if( !COM_CheckString( name ) || !glw_state.initialized )
 		return 0;
 
 	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
-		MsgDev( D_ERROR, "GL_LoadTexture: too long name %s\n", name );
+		Con_Printf( S_ERROR "LoadTexture: too long name %s (%d)\n", name, Q_strlen( name ));
 		return 0;
 	}
 
@@ -1631,9 +1631,9 @@ int GL_LoadTextureInternal( const char *name, rgbdata_t *pic, texFlags_t flags, 
 	if( !update )
           {
 		// add to hash table
-		hash = COM_HashKey( tex->name, TEXTURES_HASH_SIZE );
-		tex->nextHash = r_texturesHashTable[hash];
-		r_texturesHashTable[hash] = tex;
+		tex->hashValue = COM_HashKey( tex->name, TEXTURES_HASH_SIZE );
+		tex->nextHash = r_texturesHashTable[tex->hashValue];
+		r_texturesHashTable[tex->hashValue] = tex;
 	}
 
 	return (tex - r_textures);
@@ -1784,12 +1784,12 @@ int GL_FindTexture( const char *name )
 	gltexture_t	*tex;
 	uint		hash;
 
-	if( !name || !name[0] || !glw_state.initialized )
+	if( !COM_CheckString( name ) || !glw_state.initialized )
 		return 0;
 
 	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
-		MsgDev( D_ERROR, "GL_FindTexture: too long name %s\n", name );
+		Con_Printf( S_ERROR "FindTexture: too long name %s (%d)\n", name, Q_strlen( name ));
 		return 0;
 	}
 
@@ -1817,12 +1817,12 @@ void GL_FreeImage( const char *name )
 	gltexture_t	*tex;
 	uint		hash;
 
-	if( !name || !name[0] || !glw_state.initialized )
+	if( !COM_CheckString( name ) || !glw_state.initialized )
 		return;
 
 	if( Q_strlen( name ) >= sizeof( r_textures->name ))
 	{
-		MsgDev( D_ERROR, "GL_FreeImage: too long name %s\n", name );
+		Con_Printf( S_ERROR "FreeTexture: too long name %s (%d)\n", name, Q_strlen( name ));
 		return;
 	}
 
@@ -1861,7 +1861,6 @@ R_FreeImage
 */
 void R_FreeImage( gltexture_t *image )
 {
-	uint		hash;
 	gltexture_t	*cur;
 	gltexture_t	**prev;
 
@@ -1875,8 +1874,7 @@ void R_FreeImage( gltexture_t *image )
 	}
 
 	// remove from hash table
-	hash = COM_HashKey( image->name, TEXTURES_HASH_SIZE );
-	prev = &r_texturesHashTable[hash];
+	prev = &r_texturesHashTable[image->hashValue];
 
 	while( 1 )
 	{
@@ -2725,8 +2723,8 @@ R_InitImages
 */
 void R_InitImages( void )
 {
-	uint	i, hash;
 	float	f;
+	uint	i;
 
 	memset( r_textures, 0, sizeof( r_textures ));
 	memset( r_texturesHashTable, 0, sizeof( r_texturesHashTable ));
@@ -2734,9 +2732,9 @@ void R_InitImages( void )
 
 	// create unused 0-entry
 	Q_strncpy( r_textures->name, "*unused*", sizeof( r_textures->name ));
-	hash = COM_HashKey( r_textures->name, TEXTURES_HASH_SIZE );
-	r_textures->nextHash = r_texturesHashTable[hash];
-	r_texturesHashTable[hash] = r_textures;
+	r_textures->hashValue = COM_HashKey( r_textures->name, TEXTURES_HASH_SIZE );
+	r_textures->nextHash = r_texturesHashTable[r_textures->hashValue];
+	r_texturesHashTable[r_textures->hashValue] = r_textures;
 	r_numTextures = 1;
 
 	// build luminance table

@@ -25,10 +25,6 @@ typedef enum
 
 #include "netadr.h"
 
-#define MAX_ROUTEABLE_PACKET		1400
-
-#define SPLIT_SIZE			( MAX_ROUTEABLE_PACKET - sizeof( SPLITPACKET ))
-
 extern convar_t	*net_showpackets;
 extern convar_t	*net_clockwindow;
 

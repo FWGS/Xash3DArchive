@@ -649,7 +649,7 @@ SV_SendClientDatagram
 */
 void SV_SendClientDatagram( sv_client_t *cl )
 {
-	static byte    	msg_buf[NET_MAX_MESSAGE];
+	static byte    	msg_buf[MAX_INIT_MSG];
 	sizebuf_t		msg;
 
 	// if we running server with fixed fps so no reason

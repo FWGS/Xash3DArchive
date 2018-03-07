@@ -178,19 +178,19 @@ qboolean SV_ValidateMap( const char *pMapName, qboolean check_spawn )
 
 	if( FBitSet( flags, MAP_INVALID_VERSION ))
 	{
-		MsgDev( D_ERROR, "map %s is invalid or not supported\n", pMapName );
+		Con_Printf( S_ERROR "map %s is invalid or not supported\n", pMapName );
 		return false;
 	}
 
 	if( !FBitSet( flags, MAP_IS_EXIST ))
 	{
-		MsgDev( D_ERROR, "map %s doesn't exist\n", pMapName );
+		Con_Printf( S_ERROR "map %s doesn't exist\n", pMapName );
 		return false;
 	}
 
 	if( check_spawn && !FBitSet( flags, MAP_HAS_SPAWNPOINT ))
 	{
-		MsgDev( D_ERROR, "map %s doesn't have a valid spawnpoint\n", pMapName );
+		Con_Printf( S_ERROR "map %s doesn't have a valid spawnpoint\n", pMapName );
 		return false;
 	}
 

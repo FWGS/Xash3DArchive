@@ -38,6 +38,8 @@ int SV_ModelIndex( const char *filename )
 	if( !COM_CheckString( filename ))
 		return 0;
 
+	if( *filename == '\\' || *filename == '/' )
+		filename++;
 	Q_strncpy( name, filename, sizeof( name ));
 	COM_FixSlashes( name );
 
@@ -87,6 +89,8 @@ int SV_SoundIndex( const char *filename )
 	if( filename[0] == '!' )
 		Host_Error( "SV_SoundIndex: '%s' do not precache sentence names!\n", filename );
 
+	if( *filename == '\\' || *filename == '/' )
+		filename++;
 	Q_strncpy( name, filename, sizeof( name ));
 	COM_FixSlashes( name );
 
@@ -482,12 +486,12 @@ void SV_ActivateServer( int runPhysics )
 
 	if( runPhysics )
 	{
+		sv.frametime = bound( 0.1, sv_spawntime.value, 0.8 );
 		numFrames = (svs.maxclients <= 1) ? 2 : 8;
-		sv.frametime = 0.1;
 	}
 	else
 	{
-		sv.frametime = (svgame.globals->changelevel) ? 0.1 : 0.001;
+		sv.frametime = bound( 0.001, sv_changetime.value, 0.1 );
 		numFrames = 1;
 	}
 

@@ -71,14 +71,14 @@ void HPAK_FlushHostQueue( void )
 {
 	hash_pack_queue_t	*p;
 
-	for( p = gp_hpak_queue; p != NULL; p = gp_hpak_queue )
+	for( p = gp_hpak_queue; p != NULL; p = p->next )
 	{
-		gp_hpak_queue = gp_hpak_queue->next; // it's here so we get that null check in first
 		HPAK_AddLump( false, p->name, &p->resource, p->data, NULL );
 		freestring( p->name );
 		Mem_Free( p->data );
 		Mem_Free( p );
 	}
+	gp_hpak_queue = NULL;
 }
 
 void HPAK_CreatePak( const char *filename, resource_t *pResource, byte *pData, file_t *fin )

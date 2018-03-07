@@ -710,9 +710,9 @@ qboolean CL_ReadRawNetworkData( byte *buffer, size_t *length )
 		return false;
 	}
 
-	if( msglen > NET_MAX_PAYLOAD )
+	if( msglen > MAX_INIT_MSG )
 	{
-		MsgDev( D_ERROR, "Demo message %i > %i\n", msglen, NET_MAX_PAYLOAD );
+		MsgDev( D_ERROR, "Demo message %i > %i\n", msglen, MAX_INIT_MSG );
 		CL_DemoCompleted();
 		return false;
 	}

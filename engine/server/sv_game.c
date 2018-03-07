@@ -1130,8 +1130,10 @@ int pfnPrecacheModel( const char *s )
 		*s++;
 	}
 
-	i = SV_ModelIndex( s );
-	sv.models[i] = Mod_ForName( s, false, true );
+	if(( i = SV_ModelIndex( s )) == 0 )
+		return 0;
+
+	sv.models[i] = Mod_ForName( sv.model_precache[i], false, true );
 
 	if( !optional )
 		SetBits( sv.model_precache_flags[i], RES_FATALIFMISSING );
@@ -1190,7 +1192,8 @@ void pfnSetModel( edict_t *e, const char *m )
 	}
 
 	// set the model size
-	if( mod ) SV_SetMinMaxSize( e, mod->mins, mod->maxs, true );
+	if( mod && mod->type != mod_studio )
+		SV_SetMinMaxSize( e, mod->mins, mod->maxs, true );
 	else SV_SetMinMaxSize( e, vec3_origin, vec3_origin, true );
 }
 
@@ -3353,15 +3356,7 @@ vaild map must contain one info_player_deatchmatch
 */
 int pfnIsMapValid( char *filename )
 {
-	char	*spawn_entity;
-	int	flags;
-
-	// determine spawn entity classname
-	if( svs.maxclients <= 1 )
-		spawn_entity = GI->sp_entity;
-	else spawn_entity = GI->mp_entity;
-
-	flags = SV_MapIsValid( filename, spawn_entity, NULL );
+	int	flags = SV_MapIsValid( filename, GI->mp_entity, NULL );
 
 	if( FBitSet( flags, MAP_IS_EXIST ) && FBitSet( flags, MAP_HAS_SPAWNPOINT ))
 		return true;

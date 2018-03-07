@@ -300,7 +300,7 @@ qboolean Host_IsLocalGame( void )
 qboolean Host_IsLocalClient( void )
 {
 	// only the local client have the active server
-	if( CL_Active( ) && SV_Active( ))
+	if( CL_Initialized( ) && SV_Initialized( ))
 		return true;
 	return false;
 }
@@ -559,9 +559,6 @@ Host_Frame
 */
 void Host_Frame( float time )
 {
-	if( setjmp( host.abortframe ))
-		return;
-
 	Host_CheckSleep();
 
 	// decide the simulation time
@@ -638,6 +635,7 @@ void Host_Error( const char *error, ... )
 	Q_sprintf( host.finalmsg, "Server crashed: %s", hosterror1 );
 
 	// clearing cmd buffer to prevent execute any commands
+	COM_InitHostState();
 	Cbuf_Clear();
 
 	Host_ShutdownServer();

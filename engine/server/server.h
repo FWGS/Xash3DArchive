@@ -190,7 +190,7 @@ typedef struct server_s
 	byte		multicast_buf[MAX_MULTICAST];
 
 	sizebuf_t		signon;
-	byte		signon_buf[NET_MAX_PAYLOAD];	// need a get to maximum size
+	byte		signon_buf[MAX_INIT_MSG];	// need a get to maximum size
 
 	sizebuf_t		spec_datagram;
 	byte		spectator_buf[MAX_MULTICAST];
@@ -448,6 +448,8 @@ extern convar_t		sv_skyangle;
 extern convar_t		sv_consistency;
 extern convar_t		sv_password;
 extern convar_t		sv_uploadmax;
+extern convar_t		sv_spawntime;
+extern convar_t		sv_changetime;
 extern convar_t		deathmatch;
 extern convar_t		hostname;
 extern convar_t		skill;

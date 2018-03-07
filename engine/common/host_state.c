@@ -141,6 +141,9 @@ void COM_Frame( float time )
 {
 	int	loopCount = 0;
 
+	if( setjmp( host.abortframe ))
+		return;
+
 	while( 1 )
 	{
 		int	oldState = GameState->curstate;

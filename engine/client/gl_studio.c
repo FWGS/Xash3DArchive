@@ -114,7 +114,7 @@ static r_studio_interface_t	*pStudioDraw;
 static studio_draw_state_t	g_studio;		// global studio state
 
 // global variables
-qboolean			m_fDoRemap;
+static qboolean		m_fDoRemap;
 mstudiomodel_t		*m_pSubModel;
 mstudiobodyparts_t		*m_pBodyPart;
 player_info_t		*m_pPlayerInfo;
@@ -385,7 +385,7 @@ pfnPlayerInfo
 
 ===============
 */
-static player_info_t *pfnPlayerInfo( int index )
+player_info_t *pfnPlayerInfo( int index )
 {
 	if( !RI.drawWorld )
 		return &gameui.playerinfo;
