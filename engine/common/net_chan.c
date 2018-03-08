@@ -28,8 +28,10 @@ GNU General Public License for more details.
 #define FLOW_AVG			( 2.0 / 3.0 )	// how fast to converge flow estimates
 #define FLOW_INTERVAL		0.1		// don't compute more often than this    
 
-#define MAX_RELIABLE_PAYLOAD		1200		// biggest packet that has frag and or reliable data
-#define MAX_RESEND_PAYLOAD		1400
+#define MAX_RELIABLE_PAYLOAD		32768		// biggest packet that has frag and or reliable data
+#define MAX_RELIABLE_PAYLOAD_BITS	(MAX_RELIABLE_PAYLOAD<<3)
+#define MAX_RESEND_PAYLOAD		36000
+#define MAX_RESEND_PAYLOAD_BITS	(MAX_RESEND_PAYLOAD<<3)
 
 // forward declarations
 void Netchan_FlushIncoming( netchan_t *chan, int stream );
@@ -502,7 +504,7 @@ void Netchan_FragSend( netchan_t *chan )
 		// already something queued up, just leave in waitlist
 		if( chan->fragbufs[i] ) continue;
 
-		wait = chan->waitlist[i] ;
+		wait = chan->waitlist[i];
 
 		// nothing to queue?
 		if( !wait ) continue;
@@ -587,6 +589,8 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 		chunksize = chan->pfnBlockSize( chan->client );
 	else chunksize = FRAGMENT_SV2CL_MAX_SIZE;
 
+chunksize = 8192;
+
 	wait = (fragbufwaiting_t *)Mem_Alloc( net_mempool, sizeof( fragbufwaiting_t ));
 
 	remaining = MSG_GetNumBitsWritten( msg );
@@ -609,8 +613,8 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 
 		MSG_StartReading( &temp, MSG_GetData( msg ), MSG_GetMaxBytes( msg ), MSG_GetNumBitsWritten( msg ), -1 );
 		MSG_SeekToBit( &temp, pos );
-		MSG_ReadBits( &temp, buffer, bits );
 
+		MSG_ReadBits( &temp, buffer, bits );
 		MSG_WriteBits( &buf->frag_message, buffer, bits );
 
 		Netchan_AddFragbufToTail( wait, buf );
@@ -718,8 +722,8 @@ void Netchan_CheckForCompletion( netchan_t *chan, int stream, int intotalbuffers
 	// received final message
 	if( c == intotalbuffers )
 	{
+//		MsgDev( D_NOTE, "\n%s: incoming is complete %i bytes waiting\n", ns_strings[chan->sock], size );
 		chan->incomingready[stream] = true;
-		MsgDev( D_NOTE, "\n%s: incoming is complete %i bytes waiting\n", ns_strings[chan->sock], size );
 	}
 }
 
@@ -822,7 +826,7 @@ int Netchan_CreateFileFragments( netchan_t *chan, const char *filename )
 		chunksize = chan->pfnBlockSize( chan->client );
 	else chunksize = FRAGMENT_SV2CL_MAX_SIZE;
 	filesize = FS_FileSize( filename, false );
-
+chunksize = 32768;
 	if( filesize <= 0 )
 	{
 		MsgDev( D_WARN, "Unable to open %s for transfer\n", filename );
@@ -1092,7 +1096,6 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 	else
 	{
 		// g-cont. it's will be stored downloaded files directly into game folder
-		Con_Printf( "write file: %s\n", filename );
 		FS_WriteFile( filename, buffer, pos );
 		Mem_Free( buffer );
 	}
@@ -1112,6 +1115,8 @@ qboolean Netchan_Validate( netchan_t *chan, sizebuf_t *sb, qboolean *frag_messag
 {
 	int	i, buffer, offset;
 	int	count, length;
+
+return true;
 
 	for( i = 0; i < MAX_STREAMS; i++ )
 	{
@@ -1152,8 +1157,11 @@ void Netchan_UpdateProgress( netchan_t *chan )
 	int	total = 0;
 	float	bestpercent = 0.0;
 
-	scr_download->value = -1.0f;
-	host.downloadfile[0] = '\0';
+	if( host.downloadcount == 0 )
+	{
+		scr_download->value = -1.0f;
+		host.downloadfile[0] = '\0';
+	}
 
 	// do show slider for file downloads.
 	if( !chan->incomingbufs[FRAG_FILE_STREAM] )
@@ -1295,7 +1303,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 			send_from_regular = false;
 
 			// if the reliable buffer has gotten too big, queue it at the end of everything and clear out buffer
-			if( MSG_GetNumBytesWritten( &chan->message ) > MAX_RELIABLE_PAYLOAD )
+			if( MSG_GetNumBitsWritten( &chan->message ) > MAX_RELIABLE_PAYLOAD_BITS )
 			{
 				Netchan_CreateFragments_( chan, &chan->message );
 				MSG_Clear( &chan->message );
@@ -1345,7 +1353,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 
 			if( pbuf )
 			{
-				fragment_size = MSG_GetNumBytesWritten( &pbuf->frag_message );
+				fragment_size = MSG_GetNumBitsWritten( &pbuf->frag_message );
 				
 				// files set size a bit differently.
 				if( pbuf->isfile && !pbuf->isbuffer )
@@ -1355,7 +1363,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 			}
 
 			// make sure we have enought space left
-			if( send_from_frag[i] && pbuf && (( chan->reliable_length + fragment_size ) < MAX_RELIABLE_PAYLOAD ))
+			if( send_from_frag[i] && pbuf && (( chan->reliable_length + fragment_size ) < MAX_RELIABLE_PAYLOAD_BITS ))
 			{
 				sizebuf_t	temp;
 
@@ -1451,7 +1459,7 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	}
 
 	// is there room for the unreliable payload?
-	max_send_size = (MAX_RESEND_PAYLOAD << 3);
+	max_send_size = MAX_RESEND_PAYLOAD_BITS;
 	if( !send_resending )
 		max_send_size = MSG_GetMaxBits( &send );
 
@@ -1462,8 +1470,6 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 	// deal with packets that are too small for some networks
 	if( MSG_GetNumBytesWritten( &send ) < 16 && !NET_IsLocalAddress( chan->remote_address )) // packet too small for some networks
 	{
-		int	i;
-
 		// go ahead and pad a full 16 extra bytes -- this only happens during authentication / signon
 		for( i = MSG_GetNumBytesWritten( &send ); i < 16; i++ )		
 		{

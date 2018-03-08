@@ -18,16 +18,21 @@ GNU General Public License for more details.
 #include "netchan.h"
 #include "mathlib.h"
 
-#define PORT_ANY			-1
+//#define NET_USE_FRAGMENTS		// disabled until revision of netchan will be done
 
+#define PORT_ANY			-1
 #define MAX_LOOPBACK		4
 #define MASK_LOOPBACK		(MAX_LOOPBACK - 1)
 
 #define MAX_ROUTEABLE_PACKET		1400
 #define SPLIT_SIZE			( MAX_ROUTEABLE_PACKET - sizeof( SPLITPACKET ))
-
-#define MAX_UDP_PACKET		4010 // 9 bytes SPLITHEADER + 4000 payload?
 #define NET_MAX_FRAGMENTS		32
+
+#ifdef NET_USE_FRAGMENTS
+#define MAX_UDP_PACKET		4010 // 9 bytes SPLITHEADER + 4000 payload?
+#else
+#define MAX_UDP_PACKET		NET_MAX_MESSAGE
+#endif
 
 // wsock32.dll exports
 static int (_stdcall *pWSACleanup)( void );
@@ -84,7 +89,7 @@ dll_info_t winsock_dll = { "wsock32.dll", winsock_funcs, false };
 
 typedef struct
 {
-	byte		data[NET_MAX_MESSAGE];
+	byte		data[MAX_INIT_MSG];
 	int		datalen;
 } net_loopmsg_t;
 
@@ -977,6 +982,7 @@ Fragment long packets, send short directly
 */
 int NET_SendLong( netsrc_t sock, int net_socket, const char *buf, int len, int flags, const struct sockaddr *to, int tolen )
 {
+#ifdef NET_USE_FRAGMENTS
 	// do we need to break this packet up?
 	if( sock == NS_SERVER && len > MAX_ROUTEABLE_PACKET )
 	{
@@ -1029,6 +1035,9 @@ int NET_SendLong( netsrc_t sock, int net_socket, const char *buf, int len, int f
 		// no fragmenantion for client connection
 		return pSendTo( net_socket, buf, len, flags, to, tolen );
 	}
+#else
+	return pSendTo( net_socket, buf, len, flags, to, tolen );
+#endif
 }
 
 /*

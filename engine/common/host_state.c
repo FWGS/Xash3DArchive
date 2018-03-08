@@ -73,12 +73,13 @@ void COM_LoadGame( char const *pMapName )
 	GameState->loadGame = true;
 }
 
-void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName )
+void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName, qboolean background )
 {
 	if( GameState->nextstate != STATE_RUNFRAME )
 		return;
 
 	Q_strncpy( GameState->levelName, pNewLevel, sizeof( GameState->levelName ));
+	GameState->backgroundMap = background;
 
 	if( COM_CheckString( pLandmarkName ))
 	{
@@ -128,7 +129,7 @@ void Host_RunFrame( float time )
 		Host_SetState( STATE_GAME_SHUTDOWN, false );
 		break;
 	case STATE_CHANGELEVEL:
-		SCR_BeginLoadingPlaque( false );
+		SCR_BeginLoadingPlaque( GameState->backgroundMap );
 		Host_SetState( GameState->nextstate, true );
 		break;
 	default:

@@ -652,7 +652,7 @@ void SV_ClearSaveDir( void );
 void SV_SaveGame( const char *pName );
 qboolean SV_LoadGame( const char *pName );
 int SV_LoadGameState( char const *level, qboolean changelevel );
-void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start );
+void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start, qboolean background );
 void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
 const char *SV_GetLatestSave( void );
 void SV_InitSaveRestore( void );

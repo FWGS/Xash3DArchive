@@ -88,9 +88,13 @@ qboolean CL_Initialized( void )
 //======================================================================
 qboolean CL_IsInGame( void )
 {
-	if( host.type == HOST_DEDICATED ) return true;	// always active for dedicated servers
-	if( CL_GetMaxClients() > 1 ) return true;	// always active for multiplayer
-	return ( cls.key_dest == key_game );		// active if not menu or console
+	if( host.type == HOST_DEDICATED )
+		return true; // always active for dedicated servers
+
+	if( cl.background || CL_GetMaxClients() > 1 )
+		return true; // always active for multiplayer or background map
+
+	return ( cls.key_dest == key_game ); // active if not menu or console
 }
 
 qboolean CL_IsInMenu( void )
@@ -623,7 +627,7 @@ void CL_CreateCmd( void )
 	{
 		VectorCopy( angles, pcmd->cmd.viewangles );
 		VectorCopy( angles, cl.viewangles );
-		pcmd->cmd.msec = 0;
+		if( !cl.background ) pcmd->cmd.msec = 0;
 	}
 
 	// demo always have commands so don't overwrite them
@@ -1672,103 +1676,6 @@ void CL_SetupOverviewParams( void )
 }
 
 /*
-======================
-CL_PrepSound
-
-Call before entering a new level, or after changing dlls
-======================
-*/
-void CL_PrepSound( void )
-{
-	int	i, sndcount;
-
-	MsgDev( D_NOTE, "CL_PrepSound: %s\n", clgame.mapname );
-	for( i = 0, sndcount = 0; i < MAX_SOUNDS && cl.sound_precache[i+1][0]; i++ )
-		sndcount++; // total num sounds
-
-	S_BeginRegistration();
-
-	for( i = 0; i < MAX_SOUNDS && cl.sound_precache[i+1][0]; i++ )
-	{
-		cl.sound_index[i+1] = S_RegisterSound( cl.sound_precache[i+1] );
-		Cvar_SetValue( "scr_loading", scr_loading->value + 5.0f / sndcount );
-		if( cl_allow_levelshots->value || host_developer.value || cl.background )
-			SCR_UpdateScreen();
-	}
-
-	S_EndRegistration();
-	cl.audio_prepped = true;
-}
-
-/*
-=================
-CL_PrepVideo
-
-Call before entering a new level, or after changing dlls
-=================
-*/
-void CL_PrepVideo( void )
-{
-	model_t	*mod;
-	int	i;
-
-	if( !cl.models[WORLD_INDEX] )
-		return; // no map loaded
-
-	Cvar_SetValue( "scr_loading", 0.0f ); // reset progress bar
-	MsgDev( D_NOTE, "CL_PrepVideo: %s\n", clgame.mapname );
-
-	// let the render dll load the map
-	world.loading = true;
-	cl.worldmodel = Mod_LoadModel( cl.models[WORLD_INDEX], true );
-	world.loading = false;
-	Cvar_SetValue( "scr_loading", 25.0f );
-
-	SCR_UpdateScreen();
-
-	for( i = WORLD_INDEX; i < cl.nummodels - 1; i++ )
-	{
-		Mod_LoadModel( cl.models[i+1], false );
-		Cvar_SetValue( "scr_loading", scr_loading->value + 75.0f / cl.nummodels );
-		if( cl_allow_levelshots->value || host_developer.value || cl.background )
-			SCR_UpdateScreen();
-	}
-
-	// load tempent sprites (glowshell, muzzleflashes etc)
-	CL_LoadClientSprites ();
-
-	// invalidate all decal indexes
-	memset( cl.decal_index, 0, sizeof( cl.decal_index ));
-
-	CL_ClearWorld ();
-
-	R_NewMap(); // tell the render about new map
-
-	CL_SetupOverviewParams(); // set overview bounds
-
-	if( clgame.drawFuncs.R_NewMap != NULL )
-		clgame.drawFuncs.R_NewMap();
-
-	// release unused SpriteTextures
-	for( i = 1, mod = clgame.sprites; i < MAX_CLIENT_SPRITES; i++, mod++ )
-	{
-		if( mod->needload == NL_UNREFERENCED && COM_CheckString( mod->name ))
-			Mod_UnloadSpriteModel( mod );
-	}
-
-	Mod_FreeUnused ();
-
-	Cvar_SetValue( "scr_loading", 100.0f );	// all done
-
-	if( !host_developer.value )
-		Con_ClearNotify(); // clear any lines of console text
-
-	cl.video_prepped = true;
-
-	SCR_UpdateScreen ();
-}
-
-/*
 =================
 CL_ConnectionlessPacket
 
@@ -1803,7 +1710,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		}
 
 		CL_Reconnect( true );
-		UI_SetActiveMenu( false );
+		UI_SetActiveMenu( cl.background );
 	}
 	else if( !Q_strcmp( c, "info" ))
 	{
@@ -2136,7 +2043,7 @@ void CL_ProcessFile( qboolean successfully_received, const char *filename )
 	if( COM_CheckString( filename ) && successfully_received )
 	{
 		if( filename[0] != '!' )
-			Con_Printf( "Processing %s\n", filename );
+			Con_Printf( "processing %s\n", filename );
 	}
 	else if( !successfully_received )
 	{
@@ -2152,15 +2059,23 @@ void CL_ProcessFile( qboolean successfully_received, const char *filename )
 	{
 		if( !Q_strnicmp( filename, "!MD5", 4 ))
 		{
-			COM_HexConvert( pfilename + 4, 32, rgucMD5_hash );
+			COM_HexConvert( filename + 4, 32, rgucMD5_hash );
 
 			if( !memcmp( p->rgucMD5_hash, rgucMD5_hash, 16 ))
 				break;
 		}
 		else
 		{
-			if( !Q_stricmp( p->szFileName, filename ))
-				break;
+			if( p->type == t_generic )
+			{
+				if( !Q_stricmp( p->szFileName, filename ))
+					break;
+			}
+			else
+			{
+				if( !Q_stricmp( p->szFileName, pfilename ))
+					break;
+			}
 		}
 	}
 
@@ -2200,6 +2115,11 @@ void CL_ProcessFile( qboolean successfully_received, const char *filename )
 
 	if( cls.state != ca_disconnected )
 	{
+		host.downloadcount = 0;
+
+		for( p = cl.resourcesneeded.pNext; p != &cl.resourcesneeded; p = p->pNext )
+			host.downloadcount++;
+
 		if( cl.resourcesneeded.pNext == &cl.resourcesneeded )
 		{
 			byte	msg_buf[MAX_INIT_MSG];
@@ -2312,32 +2232,9 @@ void CL_Physinfo_f( void )
 	Con_Printf( "Total %i symbols\n", Q_strlen( cls.physinfo ));
 }
 
-/*
-=================
-CL_Precache_f
-
-The server will send this command right
-before allowing the client into the server
-=================
-*/
-void CL_Precache_f( void )
-{
-	int	spawncount;
-
-	spawncount = Q_atoi( Cmd_Argv( 1 ));
-
-	CL_PrepSound();
-	CL_PrepVideo();
-
-	MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
-	MSG_WriteString( &cls.netchan.message, va( "spawn %i\n", spawncount ));
-}
-
 qboolean CL_PrecacheResources( void )
 {
 	resource_t	*pRes;
-
-	S_BeginRegistration();
 
 	// NOTE: world need to be loaded as first model
 	for( pRes = cl.resourcesonhand.pNext; pRes && pRes != &cl.resourcesonhand; pRes = pRes->pNext )
@@ -2366,13 +2263,14 @@ qboolean CL_PrecacheResources( void )
 
 				if( FBitSet( pRes->ucFlags, RES_FATALIFMISSING ))
 				{
-					S_EndRegistration();
 					CL_Disconnect_f();
 					return false;
 				}
 			}
 		}
 	}
+
+	S_BeginRegistration();
 
 	// precache all the remaining resources where order is doesn't matter
 	for( pRes = cl.resourcesonhand.pNext; pRes && pRes != &cl.resourcesonhand; pRes = pRes->pNext )
@@ -2383,25 +2281,33 @@ qboolean CL_PrecacheResources( void )
 		switch( pRes->type )
 		{
 		case t_sound:
-			if( FBitSet( pRes->ucFlags, RES_WASMISSING ))
+			if( pRes->nIndex != -1 )
 			{
-				cl.sound_precache[pRes->nIndex][0] = 0;
-				cl.sound_index[pRes->nIndex] = 0;
+				if( FBitSet( pRes->ucFlags, RES_WASMISSING ))
+				{
+					cl.sound_precache[pRes->nIndex][0] = 0;
+					cl.sound_index[pRes->nIndex] = 0;
+				}
+				else
+				{
+					Q_strncpy( cl.sound_precache[pRes->nIndex], pRes->szFileName, sizeof( cl.sound_precache[0] )); 
+					cl.sound_index[pRes->nIndex] = S_RegisterSound( pRes->szFileName );
+
+					if( !cl.sound_index[pRes->nIndex] )
+					{
+						if( FBitSet( pRes->ucFlags, RES_FATALIFMISSING ))
+						{
+							S_EndRegistration();
+							CL_Disconnect_f();
+							return false;
+						}
+					}
+				}
 			}
 			else
 			{
-				Q_strncpy( cl.sound_precache[pRes->nIndex], pRes->szFileName, sizeof( cl.sound_precache[0] )); 
-				cl.sound_index[pRes->nIndex] = S_RegisterSound( pRes->szFileName );
-
-				if( !cl.sound_index[pRes->nIndex] )
-				{
-					if( FBitSet( pRes->ucFlags, RES_FATALIFMISSING ))
-					{
-						S_EndRegistration();
-						CL_Disconnect_f();
-						return false;
-					}
-				}
+				// client sounds
+				S_RegisterSound( pRes->szFileName );
 			}
 			break;
 		case t_skin:
@@ -2410,19 +2316,26 @@ qboolean CL_PrecacheResources( void )
 			cl.nummodels = Q_max( cl.nummodels, pRes->nIndex + 1 );
 			if( pRes->szFileName[0] != '*' )
 			{
-				cl.models[pRes->nIndex] = Mod_ForName( pRes->szFileName, false, true );
-
-				if( cl.models[pRes->nIndex] == NULL )
+				if( pRes->nIndex != -1 )
 				{
-					if( pRes->ucFlags != 0 )
-						MsgDev( D_WARN, "model %s not found and not available\n", pRes->szFileName );
+					cl.models[pRes->nIndex] = Mod_ForName( pRes->szFileName, false, true );
 
-					if( FBitSet( pRes->ucFlags, RES_FATALIFMISSING ))
+					if( cl.models[pRes->nIndex] == NULL )
 					{
-						S_EndRegistration();
-						CL_Disconnect_f();
-						return false;
+						if( pRes->ucFlags != 0 )
+							MsgDev( D_WARN, "model %s not found and not available\n", pRes->szFileName );
+
+						if( FBitSet( pRes->ucFlags, RES_FATALIFMISSING ))
+						{
+							S_EndRegistration();
+							CL_Disconnect_f();
+							return false;
+						}
 					}
+				}
+				else
+				{
+					CL_LoadClientSprite( pRes->szFileName );
 				}
 			}
 			break;
@@ -2611,7 +2524,6 @@ void CL_InitLocal( void )
 	Cmd_AddCommand ("reconnect", CL_Reconnect_f, "reconnect to current level" );
 
 	Cmd_AddCommand ("rcon", CL_Rcon_f, "sends a command to the server console (rcon_password and rcon_address required)" );
-	Cmd_AddCommand ("precache", CL_Precache_f, "precache specified resource (by index)" );
 }
 
 //============================================================================
@@ -2661,9 +2573,6 @@ void Host_ClientBegin( void )
 {
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
-
-	// evaluate console animation
-	Con_RunConsole ();
 
 	// exec console commands
 	Cbuf_Execute ();

@@ -23,6 +23,14 @@ typedef enum
 	NS_COUNT
 } netsrc_t;
 
+// Max length of unreliable message
+#define MAX_DATAGRAM		4000
+
+// Max length of a multicast message
+#define MAX_MULTICAST		8192	// some mods spamming for rain effect
+
+#define MAX_INIT_MSG		0x20000	// max length of possible message
+
 #include "netadr.h"
 
 extern convar_t	*net_showpackets;

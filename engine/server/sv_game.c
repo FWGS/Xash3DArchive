@@ -1350,8 +1350,8 @@ void pfnChangeLevel( const char *level, const char *landmark )
 	SV_SkipUpdates ();
 
 	// changelevel will be executed on a next frame
-	if( smooth ) COM_ChangeLevel( mapname, landname );	// Smoothed Half-Life changelevel
-	else COM_ChangeLevel( mapname, NULL );			// Classic Quake changlevel
+	if( smooth ) COM_ChangeLevel( mapname, landname, sv.background );	// Smoothed Half-Life changelevel
+	else COM_ChangeLevel( mapname, NULL, sv.background );		// Classic Quake changlevel
 }
 
 /*

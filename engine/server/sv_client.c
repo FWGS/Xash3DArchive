@@ -1489,138 +1489,6 @@ static qboolean SV_New_f( sv_client_t *cl )
 }
 
 /*
-==================
-SV_WriteModels_f
-==================
-*/
-static qboolean SV_WriteModels_f( sv_client_t *cl )
-{
-	int	start;
-	string	cmd;
-
-	if( cl->state != cs_connected )
-		return false;
-
-	// handle the case of a level changing while a client was connecting
-	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
-	{
-		SV_New_f( cl );
-		return true;
-	}
-	
-	start = Q_atoi( Cmd_Argv( 2 ));
-
-	// write a packet full of data
-	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_DATAGRAM ) && start < MAX_MODELS )
-	{
-		if( sv.model_precache[start][0] )
-		{
-			MSG_BeginServerCmd( &cl->netchan.message, svc_modelindex );
-			MSG_WriteUBitLong( &cl->netchan.message, start, MAX_MODEL_BITS );
-			MSG_WriteString( &cl->netchan.message, sv.model_precache[start] );
-		}
-		start++;
-	}
-
-	if( start == MAX_MODELS ) Q_snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, 0 );
-	else Q_snprintf( cmd, MAX_STRING, "cmd modellist %i %i\n", svs.spawncount, start );
-
-	// send next command
-	MSG_BeginServerCmd( &cl->netchan.message, svc_stufftext );
-	MSG_WriteString( &cl->netchan.message, cmd );
-
-	return true;
-}
-
-/*
-==================
-SV_WriteSounds_f
-==================
-*/
-static qboolean SV_WriteSounds_f( sv_client_t *cl )
-{
-	int	start;
-	string	cmd;
-
-	if( cl->state != cs_connected )
-		return false;
-
-	// handle the case of a level changing while a client was connecting
-	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
-	{
-		SV_New_f( cl );
-		return true;
-	}
-	
-	start = Q_atoi( Cmd_Argv( 2 ));
-
-	// write a packet full of data
-	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_DATAGRAM ) && start < MAX_SOUNDS )
-	{
-		if( sv.sound_precache[start][0] )
-		{
-			MSG_BeginServerCmd( &cl->netchan.message, svc_soundindex );
-			MSG_WriteUBitLong( &cl->netchan.message, start, MAX_SOUND_BITS );
-			MSG_WriteString( &cl->netchan.message, sv.sound_precache[start] );
-		}
-		start++;
-	}
-
-	if( start == MAX_SOUNDS ) Q_snprintf( cmd, MAX_STRING, "cmd eventlist %i %i\n", svs.spawncount, 0 );
-	else Q_snprintf( cmd, MAX_STRING, "cmd soundlist %i %i\n", svs.spawncount, start );
-
-	// send next command
-	MSG_BeginServerCmd( &cl->netchan.message, svc_stufftext );
-	MSG_WriteString( &cl->netchan.message, cmd );
-
-	return true;
-}
-
-/*
-==================
-SV_WriteEvents_f
-==================
-*/
-static qboolean SV_WriteEvents_f( sv_client_t *cl )
-{
-	int	start;
-	string	cmd;
-
-	if( cl->state != cs_connected )
-		return false;
-
-	// handle the case of a level changing while a client was connecting
-	if( Q_atoi( Cmd_Argv( 1 )) != svs.spawncount )
-	{
-		SV_New_f( cl );
-		return true;
-	}
-	
-	start = Q_atoi( Cmd_Argv( 2 ));
-
-	// write a packet full of data
-	while(( MSG_GetNumBytesLeft( &cl->netchan.message ) > MAX_DATAGRAM ) && start < MAX_EVENTS )
-	{
-		if( sv.event_precache[start][0] )
-		{
-			MSG_BeginServerCmd( &cl->netchan.message, svc_eventindex );
-			MSG_WriteUBitLong( &cl->netchan.message, start, MAX_EVENT_BITS );
-			MSG_WriteString( &cl->netchan.message, sv.event_precache[start] );
-		}
-		start++;
-	}
-
-	if( start == MAX_EVENTS ) Q_snprintf( cmd, MAX_STRING, "precache %i\n", svs.spawncount );
-	else Q_snprintf( cmd, MAX_STRING, "cmd eventlist %i %i\n", svs.spawncount, start );
-
-	// send next command
-	MSG_BeginServerCmd( &cl->netchan.message, svc_stufftext );
-	MSG_WriteString( &cl->netchan.message, cmd );
-
-	return true;
-}
-
-/*
 =================
 SV_Disconnect_f
 
@@ -1951,6 +1819,13 @@ static qboolean SV_DownloadFile_f( sv_client_t *cl )
 			{
 				if( Netchan_CreateFileFragments( &cl->netchan, name ))
 				{
+					// also check the model textures
+					if( !Q_stricmp( COM_FileExtension( name ), "mdl" ))
+					{
+						if( FS_FileExists( Mod_StudioTexName( name ), false ) > 0 )
+							Netchan_CreateFileFragments( &cl->netchan, Mod_StudioTexName( name ));
+					}
+
 					Netchan_FragSend( &cl->netchan );
 					return true;
 				}
@@ -2050,9 +1925,6 @@ ucmd_t ucmds[] =
 { "notarget", SV_Notarget_f },
 { "info", SV_ShowServerinfo_f },
 { "dlfile", SV_DownloadFile_f },
-{ "modellist", SV_WriteModels_f },
-{ "soundlist", SV_WriteSounds_f },
-{ "eventlist", SV_WriteEvents_f },
 { "disconnect", SV_Disconnect_f },
 { "userinfo", SV_UpdateUserinfo_f },
 { NULL, NULL }

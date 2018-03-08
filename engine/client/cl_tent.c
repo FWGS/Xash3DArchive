@@ -46,6 +46,48 @@ model_t		*cl_sprite_ricochet = NULL;
 model_t		*cl_sprite_shell = NULL;
 model_t		*cl_sprite_glow = NULL;
 
+const char *cl_default_sprites[] =
+{
+	// built-in sprites
+	"sprites/muzzleflash1.spr",
+	"sprites/muzzleflash2.spr",
+	"sprites/muzzleflash3.spr",
+	"sprites/dot.spr",
+	"sprites/animglow01.spr",
+	"sprites/richo1.spr",
+	"sprites/shellchrome.spr",
+};
+
+const char *cl_player_shell_sounds[] =
+{
+	"player/pl_shell1.wav",
+	"player/pl_shell2.wav",
+	"player/pl_shell3.wav",
+};
+
+const char *cl_weapon_shell_sounds[] =
+{
+	"weapons/sshell1.wav",
+	"weapons/sshell2.wav",
+	"weapons/sshell3.wav",
+};
+
+const char *cl_ricochet_sounds[] =
+{
+	"weapons/ric1.wav",
+	"weapons/ric2.wav",
+	"weapons/ric3.wav",
+	"weapons/ric4.wav",
+	"weapons/ric5.wav",
+};
+
+const char *cl_explode_sounds[] =
+{
+	"weapons/explode3.wav",
+	"weapons/explode4.wav",
+	"weapons/explode5.wav",
+};
+
 /*
 ================
 CL_LoadClientSprites
@@ -55,14 +97,91 @@ INTERNAL RESOURCE
 */
 void CL_LoadClientSprites( void )
 {
-	cl_sprite_muzzleflash[0] = CL_LoadClientSprite( "sprites/muzzleflash1.spr" );
-	cl_sprite_muzzleflash[1] = CL_LoadClientSprite( "sprites/muzzleflash2.spr" );
-	cl_sprite_muzzleflash[2] = CL_LoadClientSprite( "sprites/muzzleflash3.spr" );
+	cl_sprite_muzzleflash[0] = CL_LoadClientSprite( cl_default_sprites[0] );
+	cl_sprite_muzzleflash[1] = CL_LoadClientSprite( cl_default_sprites[1] );
+	cl_sprite_muzzleflash[2] = CL_LoadClientSprite( cl_default_sprites[2] );
 
-	cl_sprite_dot = CL_LoadClientSprite( "sprites/dot.spr" );
-	cl_sprite_glow = CL_LoadClientSprite( "sprites/animglow01.spr" );
-	cl_sprite_ricochet = CL_LoadClientSprite( "sprites/richo1.spr" );
-	cl_sprite_shell = CL_LoadClientSprite( "sprites/shellchrome.spr" );
+	cl_sprite_dot = CL_LoadClientSprite( cl_default_sprites[3] );
+	cl_sprite_glow = CL_LoadClientSprite( cl_default_sprites[4] );
+	cl_sprite_ricochet = CL_LoadClientSprite( cl_default_sprites[5] );
+	cl_sprite_shell = CL_LoadClientSprite( cl_default_sprites[6] );
+}
+
+/*
+================
+CL_AddClientResource
+
+add client-side resource to list
+================
+*/
+void CL_AddClientResource( const char *filename, int type )
+{
+	resource_t	*pResource;
+
+	pResource = Mem_Alloc( cls.mempool, sizeof( resource_t ));
+
+	Q_strncpy( pResource->szFileName, filename, sizeof( pResource->szFileName ));
+	pResource->type = type;
+	pResource->nIndex = -1; // client resource marker
+	pResource->nDownloadSize = 1;
+	pResource->ucFlags |= RES_WASMISSING;
+
+	CL_AddToResourceList( pResource, &cl.resourcesneeded );
+}
+
+/*
+================
+CL_AddClientResources
+
+client resources not precached by server
+================
+*/
+void CL_AddClientResources( void )
+{
+	char	filepath[MAX_QPATH];
+	int	i;
+
+	// check sprites first
+	for( i = 0; i < ARRAYSIZE( cl_default_sprites ); i++ )
+	{
+		if( !FS_FileExists( cl_default_sprites[i], false ))
+			CL_AddClientResource( cl_default_sprites[i], t_model );
+	}
+
+	// then check sounds
+	for( i = 0; i < ARRAYSIZE( cl_player_shell_sounds ); i++ )
+	{
+		Q_snprintf( filepath, sizeof( filepath ), "%s%s", DEFAULT_SOUNDPATH, cl_player_shell_sounds[i] );
+
+		if( !FS_FileExists( filepath, false ))
+			CL_AddClientResource( cl_player_shell_sounds[i], t_sound );
+	}
+
+	for( i = 0; i < ARRAYSIZE( cl_weapon_shell_sounds ); i++ )
+	{
+		Q_snprintf( filepath, sizeof( filepath ), "%s%s", DEFAULT_SOUNDPATH, cl_weapon_shell_sounds[i] );
+
+		if( !FS_FileExists( filepath, false ))
+			CL_AddClientResource( cl_weapon_shell_sounds[i], t_sound );
+	}
+
+	for( i = 0; i < ARRAYSIZE( cl_explode_sounds ); i++ )
+	{
+		Q_snprintf( filepath, sizeof( filepath ), "%s%s", DEFAULT_SOUNDPATH, cl_explode_sounds[i] );
+
+		if( !FS_FileExists( filepath, false ))
+			CL_AddClientResource( cl_explode_sounds[i], t_sound );
+	}
+
+#if 0	// ric sounds was precached by server-side
+	for( i = 0; i < ARRAYSIZE( cl_ricochet_sounds ); i++ )
+	{
+		Q_snprintf( filepath, sizeof( filepath ), "%s%s", DEFAULT_SOUNDPATH, cl_ricochet_sounds[i] );
+
+		if( !FS_FileExists( filepath, false ))
+			CL_AddClientResource( cl_ricochet_sounds[i], t_sound );
+	}
+#endif
 }
 
 /*
@@ -311,15 +430,15 @@ void CL_TempEntPlaySound( TEMPENTITY *pTemp, float damp )
 		Q_snprintf( soundname, sizeof( soundname ), "debris/wood%i.wav", COM_RandomLong( 1, 4 ));
 		break;
 	case BOUNCE_SHRAP:
-		Q_snprintf( soundname, sizeof( soundname ), "weapons/ric%i.wav", COM_RandomLong( 1, 5 ));
+		Q_snprintf( soundname, sizeof( soundname ), "%s", cl_ricochet_sounds[COM_RandomLong( 0, 4 )] );
 		break;
 	case BOUNCE_SHOTSHELL:
-		Q_snprintf( soundname, sizeof( soundname ), "weapons/sshell%i.wav", COM_RandomLong( 1, 3 ));
+		Q_snprintf( soundname, sizeof( soundname ), "%s", cl_weapon_shell_sounds[COM_RandomLong( 0, 2 )] );
 		isshellcasing = true; // shell casings have different playback parameters
 		fvol = 0.5f;
 		break;
 	case BOUNCE_SHELL:
-		Q_snprintf( soundname, sizeof( soundname ), "player/pl_shell%i.wav", COM_RandomLong( 1, 3 ));
+		Q_snprintf( soundname, sizeof( soundname ), "%s", cl_player_shell_sounds[COM_RandomLong( 0, 2 )] );
 		isshellcasing = true; // shell casings have different playback parameters
 		break;
 	case BOUNCE_CONCRETE:
@@ -1518,7 +1637,7 @@ void R_RicochetSound( const vec3_t pos )
 	char	soundpath[32];
 	sound_t	handle;
 
-	Q_snprintf( soundpath, sizeof( soundpath ), "weapons/ric%i.wav", COM_RandomLong( 1, 5 ));
+	Q_snprintf( soundpath, sizeof( soundpath ), "%s", cl_ricochet_sounds[COM_RandomLong( 0, 4 )] );
 	handle = S_RegisterSound( soundpath );
 
 	S_StartSound( pos, 0, CHAN_AUTO, handle, fvol, ATTN_NORM, iPitch, 0 );
@@ -1668,7 +1787,7 @@ void R_Explosion( vec3_t pos, int model, float scale, float framerate, int flags
 
 	if( !FBitSet( flags, TE_EXPLFLAG_NOSOUND ))
 	{
-		hSound = S_RegisterSound( va( "weapons/explode%i.wav", COM_RandomLong( 3, 5 )));
+		hSound = S_RegisterSound( va( "%s", cl_explode_sounds[COM_RandomLong( 0, 3 )] ));
 		S_StartSound( pos, 0, CHAN_STATIC, hSound, VOL_NORM, 0.3f, PITCH_NORM, 0 );
 	}
 }

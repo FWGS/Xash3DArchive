@@ -654,6 +654,7 @@ qboolean CL_RequestMissingResources( void )
 		if( p == &cl.resourcesneeded )
 		{
 			cls.dl.doneregistering = true;
+			host.downloadcount = 0;
 			cls.dl.custom = false;
 		}
 		else if( !FBitSet( p->ucFlags, RES_WASMISSING ))
@@ -672,6 +673,9 @@ void CL_BatchResourceRequest( void )
 	sizebuf_t		msg;
 
 	MSG_Init( &msg, "Resource Batch", data, sizeof( data ));
+
+	// client resources is not precached by server
+	CL_AddClientResources();
 
 	for( p = cl.resourcesneeded.pNext; p && p != &cl.resourcesneeded; p = n )
 	{
@@ -748,6 +752,7 @@ void CL_BatchResourceRequest( void )
 			CL_RegisterResources( &msg );
 		}
 
+		Msg( "download request %d bytes\n", MSG_GetNumBytesWritten( &msg ));
 		Netchan_CreateFragments( &cls.netchan, &msg );
 		Netchan_FragSend( &cls.netchan );
 	}
@@ -765,7 +770,7 @@ int CL_EstimateNeededResources( void )
 		{
 		case t_sound:
 			nSize = FS_FileSize( va( "sound/%s", p->szFileName ), false );
-			if( p->szFileName[0] != '*' && ( nSize == 0 || nSize == -1 ))
+			if( p->szFileName[0] != '*' && nSize == -1 )
 			{
 				SetBits( p->ucFlags, RES_WASMISSING );
 				nTotalSize += p->nDownloadSize;
@@ -773,7 +778,7 @@ int CL_EstimateNeededResources( void )
 			break;
 		case t_model:
 			nSize = FS_FileSize( p->szFileName, false );
-			if( p->szFileName[0] != '*' && p->ucFlags != 0 && ( nSize == 0 || nSize == -1 ))
+			if( p->szFileName[0] != '*' && p->ucFlags && nSize == -1 )
 			{
 				SetBits( p->ucFlags, RES_WASMISSING );
 				nTotalSize += p->nDownloadSize;
@@ -783,7 +788,7 @@ int CL_EstimateNeededResources( void )
 		case t_generic:
 		case t_eventscript:
 			nSize = FS_FileSize( p->szFileName, false );
-			if( nSize == 0 || nSize == -1 )
+			if( nSize == -1 )
 			{
 				SetBits( p->ucFlags, RES_WASMISSING );
 				nTotalSize += p->nDownloadSize;
@@ -1152,20 +1157,14 @@ void CL_ParseServerData( sizebuf_t *msg )
 		cls.scrshot_request = scrshot_plaque; // request levelshot even if exist (check filetime)
 	}
 
-	// begin fetching modellist
-	MSG_BeginClientCmd( &cls.netchan.message, clc_stringcmd );
-#if 0
-	MSG_WriteString( &cls.netchan.message, va( "modellist %i\n", cl.servercount ));
-#else
-	MSG_WriteString( &cls.netchan.message, va( "sendres %i\n", cl.servercount ));
-#endif
-	// need to prep refresh at next oportunity
-	cl.video_prepped = false;
-	cl.audio_prepped = false;
+	// request resources from server
+	CL_ServerCommand( true, "sendres %i\n", cl.servercount );
 
 	memset( &clgame.movevars, 0, sizeof( clgame.movevars ));
 	memset( &clgame.oldmovevars, 0, sizeof( clgame.oldmovevars ));
 	memset( &clgame.centerPrint, 0, sizeof( clgame.centerPrint ));
+	cl.video_prepped = false;
+	cl.audio_prepped = false;
 }
 
 /*
@@ -2277,6 +2276,7 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 {
 	size_t	bufStart, playerbytes;
 	int	cmd, param1, param2;
+	int	old_background;
 
 	cls_message_debug.parsing = true;		// begin parsing
 	starting_count = MSG_GetNumBytesRead( msg );	// updates each frame
@@ -2334,6 +2334,7 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			cl.frames[cl.parsecountmod].graphdata.event += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_changing:
+			old_background = cl.background;
 			if( MSG_ReadOneBit( msg ))
 			{
 				cls.changelevel = true;
@@ -2362,6 +2363,7 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 				// g-cont. local client skip the challenge
 				if( SV_Active()) cls.state = ca_disconnected;
 				else cls.state = ca_connecting;
+				cl.background = old_background;
 				cls.connect_time = MAX_HEARTBEAT;
 			}
 			break;

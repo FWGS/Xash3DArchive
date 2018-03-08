@@ -1902,19 +1902,23 @@ Draws the debug messages (not passed to console history)
 */
 void Con_DrawDebug( void )
 {
-	int	x, y, stringLen;
-	string	dlstring;
-	int	charH;
+	static double	timeStart;
+	string		dlstring;
+	int		x, y;
 
 	if( scr_download->value != -1.0f )
 	{
-		Q_snprintf( dlstring, sizeof( dlstring ), "Downloading: ^2%s^7       ", host.downloadfile ); 
-		Con_DrawStringLen( dlstring, &stringLen, &charH );
-		Q_snprintf( dlstring, sizeof( dlstring ), "Downloading: ^2%s^7 %5.1f%%", host.downloadfile, scr_download->value ); 
-		x = glState.width - stringLen;
-		y = charH * 1.05f;
+		Q_snprintf( dlstring, sizeof( dlstring ), "Downloading [%d remaining]: ^2%s^7 %5.1f%%",
+		host.downloadcount, host.downloadfile, scr_download->value, Sys_DoubleTime() - timeStart ); 
+		x = glState.width - 400;
+		y = con.curFont->charHeight * 1.05f;
 		Con_DrawString( x, y, dlstring, g_color_table[7] );
 	}
+	else
+	{
+		timeStart = Sys_DoubleTime();
+	}
+
 	if( !host_developer.value || Cvar_VariableInteger( "cl_background" ) || Cvar_VariableInteger( "sv_background" ))
 		return;
 
@@ -2240,10 +2244,6 @@ void Con_RunConsole( void )
 		else con.showlines = (glState.height >> 1);	// half screen	
 	}
 	else con.showlines = 0; // none visible
-
-	// HACKHACK: don't accumulate frametime
-	if( cls.state < ca_active || cl.first_frame )
-		host.realframetime = 0.0f;
 
 	lines_per_frame = fabs( scr_conspeed->value ) * host.realframetime;
 

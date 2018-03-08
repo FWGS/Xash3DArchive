@@ -702,9 +702,6 @@ void CL_DecayLights( void );
 
 //=================================================
 
-void CL_PrepVideo( void );
-void CL_PrepSound( void );
-
 //
 // cl_cmds.c
 //
@@ -939,6 +936,7 @@ void CL_FireCustomDecal( int textureIndex, int entityIndex, int modelIndex, floa
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
 void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos );
 void R_FreeDeadParticles( struct particle_s **ppparticles );
+void CL_AddClientResources( void );
 int CL_FxBlend( cl_entity_t *e );
 void CL_InitParticles( void );
 void CL_ClearParticles( void );

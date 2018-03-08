@@ -1922,7 +1922,7 @@ void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName )
 SV_ChangeLevel
 =============
 */
-void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start )
+void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start, qboolean background )
 {
 	char		level[MAX_QPATH];
 	char		oldlevel[MAX_QPATH];
@@ -1958,7 +1958,7 @@ void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char
 	SV_FinalMessage( "", true );
 	SV_DeactivateServer ();
 
-	if( !SV_SpawnServer( level, startspot, false ))
+	if( !SV_SpawnServer( level, startspot, background ))
 		return;	// ???
 
 	if( loadfromsavedgame )

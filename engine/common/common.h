@@ -338,6 +338,7 @@ typedef struct host_parm_s
 	byte		*mempool;		// static mempool for misc allocations
 	string		finalmsg;		// server shutdown final message
 	string		downloadfile;	// filename to be downloading
+	int		downloadcount;	// how many files remain to downloading
 	host_redirect_t	rd;		// remote console
 
 	// command line parms
@@ -699,7 +700,7 @@ void COM_InitHostState( void );
 void COM_NewGame( char const *pMapName );
 void COM_LoadLevel( char const *pMapName, qboolean background );
 void COM_LoadGame( char const *pSaveFileName );
-void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName );
+void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName, qboolean background );
 void COM_Frame( float time );
 
 /*

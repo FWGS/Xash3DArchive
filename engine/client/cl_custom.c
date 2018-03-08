@@ -32,11 +32,14 @@ qboolean CL_CheckFile( sizebuf_t *msg, resource_t *pResource )
 	}
 
 	// resource was missed on server
-//	if( pResource->nDownloadSize <= 0 )
-//		return true;
+	if( pResource->nDownloadSize == -1 )
+	{
+		ClearBits( pResource->ucFlags, RES_FATALIFMISSING );
+		return true;
+	}
 
 	if( pResource->type == t_sound )
-		Q_strncpy( filepath, va( "sound/%s", pResource->szFileName ), sizeof( filepath ));
+		Q_strncpy( filepath, va( "%s%s", DEFAULT_SOUNDPATH, pResource->szFileName ), sizeof( filepath ));
 	else Q_strncpy( filepath, pResource->szFileName, sizeof( filepath ));
  
 	if( !COM_IsSafeFileToDownload( filepath ))
@@ -67,7 +70,8 @@ qboolean CL_CheckFile( sizebuf_t *msg, resource_t *pResource )
 	}
 
 	MSG_BeginClientCmd( msg, clc_stringcmd );
-	MSG_WriteString( msg, va( "dlfile %s", pResource->szFileName ));
+	MSG_WriteString( msg, va( "dlfile %s", filepath ));
+	host.downloadcount++;
 
 	return false;
 }

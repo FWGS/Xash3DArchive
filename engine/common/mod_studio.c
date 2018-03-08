@@ -727,11 +727,11 @@ Mod_StudioTexName
 extract texture filename from modelname
 ===============
 */
-const char *Mod_StudioTexName( model_t *mod )
+const char *Mod_StudioTexName( const char *modname )
 {
 	static char	texname[MAX_QPATH];
 
-	Q_strncpy( texname, mod->name, sizeof( texname ));
+	Q_strncpy( texname, modname, sizeof( texname ));
 	COM_StripExtension( texname );
 	Q_strncat( texname, "T.mdl", sizeof( texname ));
 
@@ -813,7 +813,7 @@ void Mod_LoadStudioModel( model_t *mod, const void *buffer, qboolean *loaded )
 		void		*buffer2 = NULL;
 		size_t		size1, size2;
 
-		buffer2 = FS_LoadFile( Mod_StudioTexName( mod ), NULL, false );
+		buffer2 = FS_LoadFile( Mod_StudioTexName( mod->name ), NULL, false );
 		thdr = R_StudioLoadHeader( mod, buffer2 );
 
 		if( !thdr )

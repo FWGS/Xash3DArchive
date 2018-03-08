@@ -279,8 +279,7 @@ void SV_CreateResourceList( void )
 	{
 		s = sv.files_precache[i];
 		if( !COM_CheckString( s )) break; // end of list
-		nSize = ( svs.maxclients > 1 ) ? FS_FileSize( s, false ) : 0;
-		if( nSize < 0 ) nSize = 0;
+		nSize = FS_FileSize( s, false );
 		SV_AddResource( t_generic, s, nSize, RES_FATALIFMISSING, i );
 	}
 
@@ -300,8 +299,7 @@ void SV_CreateResourceList( void )
 		}
 		else
 		{
-			nSize = ( svs.maxclients > 1 ) ? FS_FileSize( va( "sound/%s", s ), false ) : 0;
-			if( nSize < 0 ) nSize = 0;
+			nSize = FS_FileSize( va( "sound/%s", s ), false );
 			SV_AddResource( t_sound, s, nSize, 0, i );
 		}
 	}
@@ -310,8 +308,7 @@ void SV_CreateResourceList( void )
 	{
 		s = sv.model_precache[i];
 		if( !COM_CheckString( s )) break; // end of list
-		nSize = ( svs.maxclients > 1 && s[0] != '*' ) ? FS_FileSize( s, false ) : 0;
-		if( nSize < 0 ) nSize = 0;
+		nSize = ( s[0] != '*' ) ? FS_FileSize( s, false ) : 0;
 		SV_AddResource( t_model, s, nSize, sv.model_precache_flags[i], i );
 	}
 
@@ -325,8 +322,7 @@ void SV_CreateResourceList( void )
 	{
 		s = sv.event_precache[i];
 		if( !COM_CheckString( s )) break; // end of list
-		nSize = ( svs.maxclients > 1 ) ? FS_FileSize( s, false ) : 0;
-		if( nSize < 0 ) nSize = 0;
+		nSize = FS_FileSize( s, false );
 		SV_AddResource( t_eventscript, s, nSize, RES_FATALIFMISSING, i );
 	}
 }
@@ -908,5 +904,5 @@ State machine exec changelevel path
 */
 void SV_ExecChangeLevel( void )
 {
-	SV_ChangeLevel( GameState->loadGame, GameState->levelName, GameState->landmarkName );
+	SV_ChangeLevel( GameState->loadGame, GameState->levelName, GameState->landmarkName, GameState->backgroundMap );
 }

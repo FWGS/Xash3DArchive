@@ -2381,9 +2381,9 @@ return size of file in bytes
 */
 long FS_FileSize( const char *filename, qboolean gamedironly )
 {
-	file_t	*fp;
 	int	length = -1; // in case file was missed
-	
+	file_t	*fp;	
+
 	fp = FS_Open( filename, "rb", gamedironly );
 
 	if( fp )

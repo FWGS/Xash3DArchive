@@ -54,9 +54,9 @@ void MSG_InitMasks( void )
  
 void MSG_InitExt( sizebuf_t *sb, const char *pDebugName, void *pData, int nBytes, int nMaxBits )
 {
-	sb->pDebugName = pDebugName;
-
 	MSG_StartWriting( sb, pData, nBytes, 0, nMaxBits );
+
+	sb->pDebugName = pDebugName;
 }
 
 void MSG_StartWriting( sizebuf_t *sb, void *pData, int nBytes, int iStartBit, int nBits )
@@ -64,6 +64,7 @@ void MSG_StartWriting( sizebuf_t *sb, void *pData, int nBytes, int iStartBit, in
 	// make sure it's dword aligned and padded.
 	Assert(((dword)pData & 3 ) == 0 );
 
+	sb->pDebugName = "Unnamed";
 	sb->pData = (byte *)pData;
 
 	if( nBits == -1 )
@@ -654,7 +655,7 @@ void MSG_ExciseBits( sizebuf_t *sb, int startbit, int bitstoremove )
 	int	remaining_to_end = sb->nDataBits - endbit;
 	sizebuf_t	temp;
 
-	MSG_StartWriting( &temp, sb->pData, sb->nDataBits << 3, startbit, -1 );
+	MSG_StartWriting( &temp, sb->pData, MSG_GetMaxBytes( sb ), startbit, -1 );
 	MSG_SeekToBit( sb, endbit );
 
 	for( i = 0; i < remaining_to_end; i++ )

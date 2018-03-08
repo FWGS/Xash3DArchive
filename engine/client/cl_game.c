@@ -2246,25 +2246,29 @@ CL_FindModelIndex
 */
 int CL_FindModelIndex( const char *m )
 {
+	char		filepath[MAX_QPATH];
 	static float	lasttimewarn;
 	int		i;
 
 	if( !COM_CheckString( m ))
 		return 0;
 
+	Q_strncpy( filepath, m, sizeof( filepath ));
+	COM_FixSlashes( filepath );
+
 	for( i = 0; i < cl.nummodels; i++ )
 	{
 		if( !cl.models[i+1] )
 			continue;
 
-		if( !Q_stricmp( cl.models[i+1]->name, m ))
-			return i;
+		if( !Q_stricmp( cl.models[i+1]->name, filepath ))
+			return i+1;
 	}
 
 	if( lasttimewarn < host.realtime )
 	{
 		// tell user about problem (but don't spam console)
-		Con_Printf( S_ERROR "%s not precached\n", m );
+		Con_Printf( S_ERROR "%s not precached\n", filepath );
 		lasttimewarn = host.realtime + 1.0f;
 	}
 

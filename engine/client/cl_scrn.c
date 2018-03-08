@@ -319,7 +319,7 @@ void SCR_BeginLoadingPlaque( qboolean is_background )
 	if( cls.state == ca_disconnected || cls.disable_screen )
 		return; // already set
 
-	cls.draw_changelevel = is_background ? false : true;
+	cls.draw_changelevel = !is_background;
 	SCR_UpdateScreen();
 	cls.disable_screen = host.realtime;
 	cls.disable_servercount = cl.servercount;
@@ -454,6 +454,7 @@ void SCR_UpdateScreen( void )
 	switch( cls.state )
 	{
 	case ca_disconnected:
+		Con_RunConsole ();
 		break;
 	case ca_connecting:
 	case ca_connected:
@@ -461,6 +462,7 @@ void SCR_UpdateScreen( void )
 		SCR_DrawPlaque();
 		break;
 	case ca_active:
+		Con_RunConsole ();
 		V_RenderView();
 		break;
 	case ca_cinematic:

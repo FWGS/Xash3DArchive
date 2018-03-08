@@ -37,16 +37,8 @@ GNU General Public License for more details.
 
 // NETWORKING INFO
 
-// Max length of a multicast message
-#define MAX_MULTICAST		8192 // some mods spamming for rain effect
-
-// Max length of unreliable message
-#define MAX_DATAGRAM		4000
-
-#define MAX_INIT_MSG		0x20000	// max length of possible message
-
 // This is the packet payload without any header bytes (which are attached for actual sending)
-#define NET_MAX_PAYLOAD		3990
+#define NET_MAX_PAYLOAD		MAX_INIT_MSG
 
 // This is the payload plus any header info (excluding UDP header)
 
@@ -122,7 +114,7 @@ typedef struct fragbuf_s
 	struct fragbuf_s	*next;				// next buffer in chain
 	int		bufferid;				// id of this buffer
 	sizebuf_t		frag_message;			// message buffer where raw data is stored
-	byte		frag_message_buf[NET_MAX_PAYLOAD];	// the actual data sits here
+	byte		frag_message_buf[NET_MAX_MESSAGE];	// the actual data sits here
 	qboolean		isfile;				// is this a file buffer?
 	qboolean		isbuffer;				// is this file buffer from memory ( custom decal, etc. ).
 	char		filename[MAX_OSPATH];		// name of the file to save out on remote host
@@ -165,12 +157,12 @@ typedef struct netchan_s
 
 	// staging and holding areas
 	sizebuf_t		message;
-	byte		message_buf[NET_MAX_PAYLOAD];
+	byte		message_buf[NET_MAX_MESSAGE];
 
 	// reliable message buffer.
 	// we keep adding to it until reliable is acknowledged.  Then we clear it.
 	int		reliable_length;
-	byte		reliable_buf[NET_MAX_PAYLOAD];	// unacked reliable message (max size for loopback connection)
+	byte		reliable_buf[NET_MAX_MESSAGE];	// unacked reliable message (max size for loopback connection)
 
 	// Waiting list of buffered fragments to go onto queue.
 	// Multiple outgoing buffers can be queued in succession
@@ -182,8 +174,8 @@ typedef struct netchan_s
 	fragbuf_t		*fragbufs[MAX_STREAMS];	// the current fragment being set
 	int		fragbufcount[MAX_STREAMS];	// the total number of fragments in this stream
 
-	short		frag_startpos[MAX_STREAMS];	// position in outgoing buffer where frag data starts
-	short		frag_length[MAX_STREAMS];	// length of frag data in the buffer
+	int		frag_startpos[MAX_STREAMS];	// position in outgoing buffer where frag data starts
+	int		frag_length[MAX_STREAMS];	// length of frag data in the buffer
 
 	fragbuf_t		*incomingbufs[MAX_STREAMS];	// incoming fragments are stored here
 	qboolean		incomingready[MAX_STREAMS];	// set to true when incoming data is ready
