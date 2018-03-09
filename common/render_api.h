@@ -209,13 +209,13 @@ typedef struct render_api_s
 
 	// Misc renderer functions
 	void		(*GL_DrawParticles)( const struct ref_viewpass_s *rvp, qboolean trans_pass, float frametime );
-	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot, int shotsize ); // creates a cubemap or skybox into gfx\env folder
+	void		(*EnvShot)( const float *vieworg, const char *name, qboolean skyshot, int shotsize ); // store skybox into gfx\env folder
 	int		(*SPR_LoadExt)( const char *szPicName, unsigned int texFlags ); // extended version of SPR_Load
 	colorVec		(*LightVec)( const float *start, const float *end, float *lightspot );
 	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );
 	const struct ref_overview_s *( *GetOverviewParms )( void );
-	void		(*R_Reserved0)( void );	// for potential interface expansion without broken compatibility
-	void		(*R_Reserved1)( void );
+	const char	*( *GetFileByIndex )( int fileindex );
+	void		(*R_Reserved1)( void );	// for potential interface expansion without broken compatibility
 	void		(*R_Reserved2)( void );
 
 	// static allocations
@@ -245,8 +245,6 @@ typedef struct render_interface_s
 	void		(*GL_BuildLightmaps)( void );
 	// setup map bounds for ortho-projection when we in dev_overview mode
 	void		(*GL_OrthoBounds)( const float *mins, const float *maxs );
-	// handle decals which hit mod_studio or mod_sprite
-	void		(*R_StudioDecalShoot)( int decalTexture, struct cl_entity_s *ent, const float *start, const float *pos, int flags, modelstate_t *state );
 	// prepare studio decals for save
 	int		(*R_CreateStudioDecalList)( decallist_t *pList, int count );
 	// clear decals by engine request (e.g. for demo recording or vid_restart)

@@ -477,11 +477,14 @@ long _stdcall Sys_Crash( PEXCEPTION_POINTERS pInfo )
 		else host.status = HOST_CRASHED;
 
 		Con_Printf( "unhandled exception: %p at address %p\n", pInfo->ExceptionRecord->ExceptionAddress, pInfo->ExceptionRecord->ExceptionCode );
-#ifdef NDEBUG
-		// no reason to call debugger in release build - just exit
-		Sys_Quit();
-		return EXCEPTION_CONTINUE_EXECUTION;
-#endif
+
+		if( !host_developer.value )
+		{
+			// for non-development mode
+			Sys_Quit();
+			return EXCEPTION_CONTINUE_EXECUTION;
+		}
+
 		// all other states keep unchanged to let debugger find bug
 		Con_DestroyConsole();
 	}

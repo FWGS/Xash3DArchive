@@ -60,7 +60,8 @@ qboolean CL_CheckFile( sizebuf_t *msg, resource_t *pResource )
 		return true;
 	}
 
-	if( FS_FileExists( filepath, false ))
+	// don't request downloads from local client it's silly
+	if( Host_IsLocalClient() || FS_FileExists( filepath, false ))
 		return true;
 
 	if( cls.demoplayback )

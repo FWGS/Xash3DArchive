@@ -135,7 +135,7 @@ word CL_EventIndex( const char *name )
 {
 	int	i;
 	
-	if( !name || !name[0] )
+	if( !COM_CheckString( name ))
 		return 0;
 
 	for( i = 1; i < MAX_EVENTS && cl.event_precache[i][0]; i++ )
@@ -144,20 +144,6 @@ word CL_EventIndex( const char *name )
 			return i;
 	}
 	return 0;
-}
-
-/*
-=============
-CL_EventIndex
-
-=============
-*/
-const char *CL_IndexEvent( word index )
-{
-	if( index < 0 || index >= MAX_EVENTS )
-		return 0;
-
-	return cl.event_precache[index];
 }
 
 /*

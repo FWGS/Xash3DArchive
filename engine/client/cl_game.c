@@ -3566,9 +3566,7 @@ static event_api_t gEventApi =
 	pfnTraceTexture,
 	pfnStopAllSounds,
 	pfnKillEvents,
-	CL_EventIndex,		// Xash3D added
-	CL_IndexEvent,
-	CL_PlayerTraceExt,
+	CL_PlayerTraceExt,		// Xash3D added
 	CL_SoundFromIndex,
 	pfnTraceSurface,
 	pfnGetMoveVars,

@@ -174,7 +174,7 @@ void CL_CheckClientState( void )
 		cls.state = ca_active;
 		cls.changelevel = false;		// changelevel is done
 		cls.changedemo = false;		// changedemo is done
-		cl.first_frame = true;
+		cl.first_frame = true;		// first rendering frame
 
 		SCR_MakeLevelShot();		// make levelshot if needs
 		Cvar_SetValue( "scr_loading", 0.0f );	// reset progress bar	
@@ -183,7 +183,6 @@ void CL_CheckClientState( void )
 		Con_DPrintf( "client connected at %.2f sec\n", Sys_DoubleTime() - cls.timestart ); 
 		if(( cls.demoplayback || cls.disable_servercount != cl.servercount ) && cl.video_prepped )
 			SCR_EndLoadingPlaque(); // get rid of loading plaque
-		cl.first_frame = true;
 	}
 }
 
@@ -2344,6 +2343,8 @@ qboolean CL_PrecacheResources( void )
 				Q_strncpy( host.draw_decals[pRes->nIndex], pRes->szFileName, sizeof( host.draw_decals[0] ));
 			break;
 		case t_generic:
+			Q_strncpy( cl.files_precache[pRes->nIndex], pRes->szFileName, sizeof( cl.files_precache[0] ));
+			cl.numfiles = Q_max( cl.numfiles, pRes->nIndex + 1 );
 			break;
 		case t_eventscript:
 			Q_strncpy( cl.event_precache[pRes->nIndex], pRes->szFileName, sizeof( cl.event_precache[0] ));
@@ -2359,6 +2360,7 @@ qboolean CL_PrecacheResources( void )
 
 	// make sure modelcount is in-range
 	cl.nummodels = bound( 0, cl.nummodels, MAX_MODELS );
+	cl.numfiles = bound( 0, cl.numfiles, MAX_CUSTOM );
 	S_EndRegistration();
 
 	return true;

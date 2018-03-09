@@ -866,7 +866,6 @@ struct pmtrace_s *PM_TraceLine( float *start, float *end, int flags, int usehull
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
 void SV_StartMusic( const char *curtrack, const char *looptrack, long position );
 void SV_CreateDecal( struct sizebuf_s *msg, const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags, float scale );
-void SV_CreateStudioDecal( struct sizebuf_s *bf, const float *v0, const float *v1, int decal, int ent, int model, int flags, struct modelstate_s *s );
 void Log_Printf( const char *fmt, ... );
 struct sizebuf_s *SV_GetReliableDatagram( void );
 void SV_BroadcastCommand( const char *fmt, ... );
@@ -945,6 +944,10 @@ void Cmd_AutoComplete( char *complete_string );
 void COM_SetRandomSeed( long lSeed );
 long COM_RandomLong( long lMin, long lMax );
 float COM_RandomFloat( float fMin, float fMax );
+qboolean LZSS_IsCompressed( const byte *source );
+uint LZSS_GetActualSize( const byte *source );
+byte *LZSS_Compress( byte *pInput, int inputLength, uint *pOutputSize );
+uint LZSS_Decompress( const byte *pInput, byte *pOutput );
 const byte *GL_TextureData( unsigned int texnum );
 void GL_FreeImage( const char *name );
 void VID_InitDefaultResolution( void );

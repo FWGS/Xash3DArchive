@@ -440,17 +440,9 @@ void Host_RestartDecals( void )
 
 		decalIndex = pfnDecalIndex( entry->name );
 
-		// BSP and studio decals has different messages
-		if( entry->flags & FDECAL_STUDIO )
-		{
-			// NOTE: studio decal trace start saved into impactPlaneNormal
-			SV_CreateStudioDecal( msg, entry->position, entry->impactPlaneNormal, decalIndex, entry->entityIndex,
-			modelIndex, entry->flags, &entry->studio_state );
-		}
-		else
-		{
+		// studiodecals will be restored at game-side
+		if( !FBitSet( entry->flags, FDECAL_STUDIO ))
 			SV_CreateDecal( msg, entry->position, decalIndex, entry->entityIndex, modelIndex, entry->flags, entry->scale );
-		}
 	}
 
 	Z_Free( host.decalList );

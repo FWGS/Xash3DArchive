@@ -202,7 +202,6 @@ typedef struct server_s
 
 	// statistics
 	int		ignored_static_ents;
-	int		ignored_studio_decals;
 	int		ignored_world_decals;
 	int		static_ents_overflow;
 } server_t;

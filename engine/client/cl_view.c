@@ -143,7 +143,11 @@ void V_SetRefParams( ref_params_t *fd )
 	fd->demoplayback = cls.demoplayback;
 	fd->hardware = 1; // OpenGL
 
-	if( cl.first_frame ) fd->smoothing = true;	// NOTE: currently this used to prevent ugly un-duck effect while level is changed
+	if( cl.first_frame )
+	{
+		cl.first_frame = false;		// now can be unlocked
+		fd->smoothing = true;		// NOTE: currently this used to prevent ugly un-duck effect while level is changed
+	}
 	else fd->smoothing = cl.local.pushmsec;		// enable smoothing in multiplayer by server request (AMX uses)
 
 	// get pointers to movement vars and user cmd

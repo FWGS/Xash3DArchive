@@ -492,57 +492,6 @@ void SV_CreateDecal( sizebuf_t *msg, const float *origin, int decalIndex, int en
 
 /*
 =======================
-SV_CreateStudioDecal
-
-NOTE: static decals only accepted when game is loading
-=======================
-*/
-void SV_CreateStudioDecal( sizebuf_t *msg, const float *origin, const float *start, int decalIndex, int entityIndex, int modelIndex, int flags, modelstate_t *state )
-{
-	int	i;
-
-	if( msg == &sv.signon && sv.state != ss_loading )
-		return;
-
-	// bad model or bad entity (e.g. changelevel)
-	if( !entityIndex || !modelIndex )
-		return;
-
-	Assert( origin != NULL );
-	Assert( start != NULL );
-
-	// this can happens if serialized map contain 4096 static decals...
-	if( MSG_GetNumBytesLeft( msg ) < 50 )
-	{
-		sv.ignored_studio_decals++;
-		return;
-	}
-
-	// static decals are posters, it's always reliable
-	MSG_BeginServerCmd( msg, svc_studiodecal );
-	MSG_WriteVec3Coord( msg, origin );
-	MSG_WriteVec3Coord( msg, start );
-	MSG_WriteWord( msg, decalIndex );
-	MSG_WriteWord( msg, entityIndex );
-	MSG_WriteByte( msg, flags );
-
-	// write model state
-	MSG_WriteShort( msg, state->sequence );
-	MSG_WriteShort( msg, state->frame );
-	MSG_WriteByte( msg, state->blending[0] );
-	MSG_WriteByte( msg, state->blending[1] );
-	for( i = 0; i < 4; i++ )
-		MSG_WriteByte( msg, state->controller[i] );
-	for( i = 0; i < 16; i++ )
-		MSG_WriteByte( msg, state->poseparam[i] );
-	MSG_WriteWord( msg, modelIndex );
-	MSG_WriteByte( msg, state->body );
-	MSG_WriteByte( msg, state->skin );
-	MSG_WriteWord( msg, state->scale );
-}
-
-/*
-=======================
 SV_CreateStaticEntity
 
 NOTE: static entities only accepted when game is loading
@@ -3016,13 +2965,13 @@ edict_t *pfnPEntityOfEntIndex( int iEntIndex )
 	{
 		edict_t	*pEdict = EDICT_NUM( iEntIndex );
 
-		if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		if( !iEntIndex || FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 			return pEdict; // just get access to array
 
 		if( SV_IsValidEdict( pEdict ) && pEdict->pvPrivateData )
 			return pEdict;
 
-		// g-cont: clients can be acessed even without private data!
+		// g-cont: world and clients can be acessed even without private data!
 		if( SV_IsValidEdict( pEdict ) && SV_IsPlayerIndex( iEntIndex ))
 			return pEdict;
 	}

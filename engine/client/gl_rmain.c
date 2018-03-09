@@ -1402,6 +1402,19 @@ static uint pfnFileBufferCRC32( const void *buffer, const int length )
 
 	return modelCRC;
 }
+
+/*
+=============
+CL_GenericHandle
+
+=============
+*/
+const char *CL_GenericHandle( int fileindex )
+{
+	if( fileindex < 0 || fileindex >= MAX_CUSTOM )
+		return 0;
+	return cl.files_precache[fileindex];
+}
 	
 static render_api_t gRenderAPI =
 {
@@ -1456,7 +1469,7 @@ static render_api_t gRenderAPI =
 	R_LightVec,
 	R_StudioGetTexture,
 	GL_GetOverviewParms,
-	NULL,
+	CL_GenericHandle,
 	NULL,
 	NULL,
 	R_Mem_Alloc,

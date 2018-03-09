@@ -50,6 +50,7 @@
 #define FL_ONTRAIN		(1<<24)	// Player is _controlling_ a train, so movement commands should be ignored on client during prediction.
 #define FL_WORLDBRUSH	(1<<25)	// Not moveable/removeable brush entity (really part of the world, but represented as an entity for transparency or something)
 #define FL_SPECTATOR	(1<<26)	// This client is a spectator, don't run touch functions, etc.
+#define FL_LASERDOT		(1<<27)	// Predicted laser spot from rocket launcher
 
 #define FL_CUSTOMENTITY	(1<<29)	// This is a custom entity
 #define FL_KILLME		(1<<30)	// This entity is marked for death -- This allows the engine to kill ents at the appropriate time
@@ -112,8 +113,6 @@
 #define EF_NOINTERP			32	// don't interpolate the next frame
 #define EF_LIGHT			64	// rocket flare glow sprite
 #define EF_NODRAW			128	// don't draw entity
-
-
 
 #define EF_WATERSIDES		(1<<26)	// Do not remove sides for func_water entity
 #define EF_FULLBRIGHT		(1<<27)	// Just get fullbright

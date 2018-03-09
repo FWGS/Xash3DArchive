@@ -542,7 +542,7 @@ void SV_SendResources( sv_client_t *cl, sizebuf_t *msg )
 	MSG_WriteLong( msg, svs.spawncount );
 	MSG_WriteLong( msg, 0 );
 
-	if( sv_downloadurl.string && sv_downloadurl.string[0] && Q_strlen( sv_downloadurl.string ) < 256 )
+	if( COM_CheckString( sv_downloadurl.string ) && Q_strlen( sv_downloadurl.string ) < 256 )
 	{
 		MSG_BeginServerCmd( msg, svc_resourcelocation );
 		MSG_WriteString( msg, sv_downloadurl.string );

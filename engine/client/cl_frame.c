@@ -868,12 +868,6 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 		// Clear loading plaque.
 		CL_SignonReply ();
 	}
-	else if( cls.state == ca_active )
-	{
-		// g-cont: now stair climbing interpolation
-		// is prepared for a new level and ready to use
-		cl.first_frame = false;
-	}
 
 	return playerbytes;
 }

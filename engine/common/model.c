@@ -106,7 +106,8 @@ static void Mod_FreeModel( model_t *mod )
 	if( !mod || !mod->name[0] )
 		return;
 
-	Mod_FreeUserData( mod );
+	if( mod->name[0] != '*' )
+		Mod_FreeUserData( mod );
 
 	// select the properly unloader
 	switch( mod->type )
@@ -405,6 +406,9 @@ void Mod_PurgeStudioCache( void )
 {
 	int	i;
 
+	// release previois map
+	Mod_FreeModel( mod_known );	// world is stuck on slot #0 always
+
 	// we should release all the world submodels
 	// and clear studio sequences
 	for( i = 1; i < mod_numknown; i++ )
@@ -437,9 +441,6 @@ model_t *Mod_LoadWorld( const char *name, qboolean preload )
 
 	// free sequence files on studiomodels
 	Mod_PurgeStudioCache();
-
-	// release previois map
-	Mod_FreeModel( mod_known );	// world is stuck on slot #0 always
 
 	// load the newmap
 	world.loading = true;

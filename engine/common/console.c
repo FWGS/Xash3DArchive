@@ -1008,6 +1008,7 @@ void Con_Print( const char *txt )
 {
 	static int	cr_pending = 0;
 	static char	buf[MAX_PRINT_MSG];
+	static qboolean	inupdate;
 	static int	bufpos = 0;
 	int		c, mask = 0;
 
@@ -1054,6 +1055,16 @@ void Con_Print( const char *txt )
 				bufpos = 0;
 			}
 			break;
+		}
+	}
+
+	if( cls.state != ca_disconnected && cls.state < ca_active && !cl.video_prepped && !cls.disable_screen )
+	{
+		if( !inupdate )
+		{
+			inupdate = true;
+			SCR_UpdateScreen ();
+			inupdate = false;
 		}
 	}
 }

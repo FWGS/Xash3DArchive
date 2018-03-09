@@ -45,7 +45,7 @@ const char *svc_strings[svc_lastmsg+1] =
 	"svc_updateuserinfo",
 	"svc_deltatable",
 	"svc_clientdata",
-	"svc_studiodecal",
+	"svc_fileindex",
 	"svc_pings",
 	"svc_particle",
 	"svc_restoresound",
@@ -1543,24 +1543,17 @@ prceache model from server
 */
 void CL_PrecacheModel( sizebuf_t *msg )
 {
-	const char	*s;
-	int		i;
+	int	modelIndex;
 
-	i = MSG_ReadUBitLong( msg, MAX_MODEL_BITS );
-	s = MSG_ReadString( msg );
+	modelIndex = MSG_ReadUBitLong( msg, MAX_MODEL_BITS );
 
-	if( i < 0 || i >= MAX_MODELS )
-		Host_Error( "CL_PrecacheModel: bad modelindex %i\n", i );
+	if( modelIndex < 0 || modelIndex >= MAX_MODELS )
+		Host_Error( "CL_PrecacheModel: bad modelindex %i\n", modelIndex );
 
-	if( i == WORLD_INDEX )
-		cl.models[i] = Mod_LoadWorld( s, false );
-	else cl.models[i] = Mod_FindName( s, false );
+	cl.models[modelIndex] = Mod_ForName( MSG_ReadString( msg ), false, false );
 
-	if( i >= cl.nummodels )
-	{
-		cl.nummodels = i + 1;
-		cl.nummodels = Q_min( cl.nummodels, MAX_MODELS );
-	}
+	cl.nummodels = Q_max( cl.nummodels, modelIndex + 1 );
+	cl.nummodels = bound( 0, cl.nummodels, MAX_MODELS );
 }
 
 /*
@@ -1607,6 +1600,28 @@ void CL_PrecacheEvent( sizebuf_t *msg )
 
 	// can be set now
 	CL_SetEventIndex( cl.event_precache[eventIndex], eventIndex );
+}
+
+/*
+================
+CL_PrecacheFile
+
+prceache generic resource from server
+================
+*/
+void CL_PrecacheFile( sizebuf_t *msg )
+{
+	int	fileIndex;
+
+	fileIndex = MSG_ReadUBitLong( msg, MAX_CUSTOM_BITS );
+
+	if( fileIndex < 0 || fileIndex >= MAX_CUSTOM )
+		Host_Error( "CL_PrecacheFile: bad fileindex %i\n", fileIndex );
+
+	Q_strncpy( cl.files_precache[fileIndex], MSG_ReadString( msg ), sizeof( cl.files_precache[0] ));
+
+	cl.numfiles = Q_max( cl.numfiles, fileIndex + 1 );
+	cl.numfiles = bound( 0, cl.numfiles, MAX_CUSTOM );
 }
 
 /*
@@ -1971,53 +1986,6 @@ void CL_ParseDirector( sizebuf_t *msg )
 
 /*
 ==============
-CL_ParseStudioDecal
-
-Studio Decal message. Used by engine in case
-we need save\restore decals
-==============
-*/
-void CL_ParseStudioDecal( sizebuf_t *msg )
-{
-	modelstate_t	state;
-	vec3_t		start, pos;
-	int		decalIndex, entityIndex;
-	int		modelIndex = 0;
-	int		i, flags;
-
-	MSG_ReadVec3Coord( msg, pos );
-	MSG_ReadVec3Coord( msg, start );
-	decalIndex = MSG_ReadWord( msg );
-	entityIndex = MSG_ReadWord( msg );
-	flags = MSG_ReadByte( msg );
-
-	state.sequence = MSG_ReadShort( msg );
-	state.frame = MSG_ReadShort( msg );
-	state.blending[0] = MSG_ReadByte( msg );
-	state.blending[1] = MSG_ReadByte( msg );
-	for( i = 0; i < 4; i++ )
-		state.controller[i] = MSG_ReadByte( msg );
-	for( i = 0; i < 16; i++ )
-		state.poseparam[i] = MSG_ReadByte( msg );
-	modelIndex = MSG_ReadWord( msg );
-	state.body = MSG_ReadByte( msg );
-	state.skin = MSG_ReadByte( msg );
-	state.scale = MSG_ReadWord( msg );
-
-	if( clgame.drawFuncs.R_StudioDecalShoot != NULL )
-	{
-		int decalTexture = CL_DecalIndex( decalIndex );
-		cl_entity_t *ent = CL_GetEntityByIndex( entityIndex );
-
-		if( ent && !ent->model && modelIndex != 0 )
-			ent->model = CL_ModelHandle( modelIndex );
-
-		clgame.drawFuncs.R_StudioDecalShoot( decalTexture, ent, start, pos, flags, &state );
-	}
-}
-
-/*
-==============
 CL_ParseScreenShake
 
 Set screen shake
@@ -2347,11 +2315,11 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 					SCR_BeginLoadingPlaque( cl.background );
 					cls.changedemo = true;
 				}
+
+				CL_ClearState ();
+				CL_InitEdicts (); // re-arrange edicts
 			}
 			else MsgDev( D_INFO, "Server disconnected, reconnecting\n" );
-
-			CL_ClearState ();
-			CL_InitEdicts (); // re-arrange edicts
 
 			if( cls.demoplayback )
 			{
@@ -2403,8 +2371,8 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			CL_ParseClientData( msg );
 			cl.frames[cl.parsecountmod].graphdata.client += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
-		case svc_studiodecal:
-			CL_ParseStudioDecal( msg );
+		case svc_fileindex:
+			CL_PrecacheFile( msg );
 			break;
 		case svc_pings:
 			CL_UpdateUserPings( msg );

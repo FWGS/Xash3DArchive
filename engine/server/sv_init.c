@@ -195,15 +195,16 @@ int SV_GenericIndex( const char *filename )
 		return 0;
 	}
 
-	if( sv.state != ss_loading )
-	{
-		// g-cont. can we downloading resources in-game ? need testing
-		Host_Error( "SV_PrecacheGeneric: ( %s ). Precache can only be done in spawn functions.", name );
-		return 0;
-	}
-
 	// register new generic resource
 	Q_strncpy( sv.files_precache[i], name, sizeof( sv.files_precache[i] ));
+
+	if( sv.state != ss_loading )
+	{
+		// send the update to everyone
+		MSG_BeginServerCmd( &sv.reliable_datagram, svc_fileindex );
+		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_CUSTOM_BITS );
+		MSG_WriteString( &sv.reliable_datagram, name );
+	}
 
 	return i;
 }
@@ -542,8 +543,8 @@ void SV_ActivateServer( int runPhysics )
 	if( sv.ignored_static_ents )
 		Con_Printf( S_WARN "%i static entities was rejected due buffer overflow\n", sv.ignored_static_ents );
 
-	if( sv.ignored_studio_decals || sv.ignored_world_decals )
-		Con_Printf( S_WARN "%i static decals was rejected due buffer overflow\n", sv.ignored_studio_decals + sv.ignored_world_decals );
+	if( sv.ignored_world_decals )
+		Con_Printf( S_WARN "%i static decals was rejected due buffer overflow\n", sv.ignored_world_decals );
 
 	if( svs.maxclients > 1 )
 	{

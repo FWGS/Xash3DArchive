@@ -35,7 +35,7 @@ GNU General Public License for more details.
 #define svc_updateuserinfo		13	// [byte] playernum, [string] userinfo
 #define svc_deltatable		14	// [table header][...]
 #define svc_clientdata		15	// [...]
-#define svc_studiodecal		16	// [float*3][float*3][short][short][byte]
+#define svc_fileindex		16	// [index][filepath]
 #define svc_pings			17	// [bit][idx][ping][packet_loss]
 #define svc_particle		18	// [float*3][char*3][byte][byte]
 #define svc_restoresound		19	// <see code>
@@ -125,7 +125,8 @@ GNU General Public License for more details.
 #define MAX_EDICTS_BYTES		((MAX_EDICTS + 7) / 8)
 #define LAST_EDICT			(MAX_EDICTS - 1)
 
-#define MAX_CUSTOM			1024		// max custom resources per level
+#define MAX_CUSTOM_BITS		10
+#define MAX_CUSTOM			(1<<MAX_CUSTOM_BITS)// 10 bits == 1024 generic file
 #define MAX_USER_MESSAGES		197		// another 58 messages reserved for engine routines
 #define MAX_DLIGHTS			32		// dynamic lights (rendered per one frame)
 #define MAX_ELIGHTS			64		// entity only point lights

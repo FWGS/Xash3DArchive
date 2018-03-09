@@ -51,6 +51,8 @@ qboolean NET_StringToAdr( const char *string, netadr_t *adr );
 qboolean NET_CompareAdr( const netadr_t a, const netadr_t b );
 qboolean NET_CompareBaseAdr( const netadr_t a, const netadr_t b );
 qboolean NET_GetPacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length );
+qboolean NET_BufferToBufferCompress( char *dest, uint *destLen, char *source, uint sourceLen );
+qboolean NET_BufferToBufferDecompress( char *dest, uint *destLen, char *source, uint sourceLen );
 void NET_SendPacket( netsrc_t sock, size_t length, const void *data, netadr_t to );
 void NET_ClearLagData( qboolean bClient, qboolean bServer );
 

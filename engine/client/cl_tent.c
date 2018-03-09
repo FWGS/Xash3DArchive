@@ -141,6 +141,9 @@ void CL_AddClientResources( void )
 	char	filepath[MAX_QPATH];
 	int	i;
 
+	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		return;
+
 	// check sprites first
 	for( i = 0; i < ARRAYSIZE( cl_default_sprites ); i++ )
 	{

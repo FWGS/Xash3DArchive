@@ -447,15 +447,14 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 	if( SV_RestoreCustomDecal( entry, pEdict, adjacent ))
 		return; // decal was sucessfully restored at the game-side
 
+	// studio decals are handled at game-side
+	if( FBitSet( flags, FDECAL_STUDIO ))
+		return;
+
 	// NOTE: at this point all decal indexes is valid
 	decalIndex = pfnDecalIndex( entry->name );
 
-	if( FBitSet( flags, FDECAL_STUDIO ))
-	{
-		// NOTE: studio decal trace start saved into impactPlaneNormal
-		SV_CreateStudioDecal( &sv.signon, entry->position, entry->impactPlaneNormal, decalIndex, entityIndex, modelIndex, flags, &entry->studio_state );
-	}
-	else if( adjacent && entityIndex != 0 && !SV_IsValidEdict( pEdict ))
+	if( adjacent && entityIndex != 0 && !SV_IsValidEdict( pEdict ))
 	{
 		vec3_t	testspot, testend;
 		trace_t	tr;

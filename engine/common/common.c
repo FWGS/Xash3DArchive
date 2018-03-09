@@ -148,6 +148,287 @@ long COM_RandomLong( long lLow, long lHigh )
 }
 
 /*
+===============================================================================
+
+	LZSS Compression
+
+===============================================================================
+*/
+#define LZSS_ID		(('S'<<24)|('S'<<16)|('Z'<<8)|('L'))
+#define LZSS_LOOKSHIFT	4
+#define LZSS_WINDOW_SIZE	4096
+#define LZSS_LOOKAHEAD	BIT( LZSS_LOOKSHIFT )
+
+
+typedef struct
+{
+	unsigned int	id;
+	unsigned short	size;
+} lzss_header_t;
+
+// expected to be sixteen bytes
+typedef struct lzss_node_s
+{
+	const byte	*data;
+	struct lzss_node_s	*prev;
+	struct lzss_node_s	*next;
+	char		pad[4];
+} lzss_node_t;
+
+typedef struct
+{
+	lzss_node_t	*start;
+	lzss_node_t	*end;
+} lzss_list_t;
+
+typedef struct
+{
+	lzss_list_t	*hash_table;	
+	lzss_node_t	*hash_node;
+	int		window_size;
+} lzss_state_t;
+
+qboolean LZSS_IsCompressed( const byte *source )
+{
+	lzss_header_t	*phdr = (lzss_header_t *)source;
+
+	if( phdr && phdr->id == LZSS_ID )
+		return true;
+	return false;
+}
+
+uint LZSS_GetActualSize( const byte *source )
+{
+	lzss_header_t	*phdr = (lzss_header_t *)source;
+
+	if( phdr && phdr->id == LZSS_ID )
+		return phdr->size;
+	return 0;
+}
+
+static void LZSS_BuildHash( lzss_state_t *state, const byte *source )
+{
+	lzss_list_t	*list;
+	lzss_node_t	*node;
+	unsigned int	targetindex = (uint)source & ( state->window_size - 1 );
+
+	node = &state->hash_node[targetindex];
+
+	if( node->data )
+	{
+		list = &state->hash_table[*node->data];
+		if( node->prev )
+		{
+			list->end = node->prev;
+			node->prev->next = NULL;
+		}
+		else
+		{
+			list->start = NULL;
+			list->end = NULL;
+		}
+	}
+
+	list = &state->hash_table[*source];
+	node->data = source;
+	node->prev = NULL;
+	node->next = list->start;
+	if( list->start )
+		list->start->prev = node;
+	else list->end = node;
+	list->start = node;
+}
+
+byte *LZSS_CompressNoAlloc( lzss_state_t *state, byte *pInput, int input_length, byte *pOutputBuf, uint *pOutputSize )
+{
+	byte		*pStart = pOutputBuf; // allocate the output buffer, compressed buffer is expected to be less, caller will free
+	byte		*pEnd = pStart + input_length - sizeof( lzss_header_t ) - 8; // prevent compression failure
+	lzss_header_t	*header = (lzss_header_t *)pStart;
+	byte		*pOutput = pStart + sizeof( lzss_header_t );
+	const byte	*pEncodedPosition = NULL;
+	byte		*pLookAhead = pInput; 
+	byte		*pWindow = pInput;
+	int		i, putCmdByte = 0;
+	byte		*pCmdByte = NULL;
+
+	if( input_length <= sizeof( lzss_header_t ) + 8 )
+		return NULL;
+
+	// set LZSS header
+	header->id = LZSS_ID;
+	header->size = input_length;
+
+	// create the compression work buffers, small enough (~64K) for stack
+	state->hash_table = (lzss_list_t *)_alloca( 256 * sizeof( lzss_list_t ));
+	memset( state->hash_table, 0, 256 * sizeof( lzss_list_t ));
+	state->hash_node = (lzss_node_t *)_alloca( state->window_size * sizeof( lzss_node_t ));
+	memset( state->hash_node, 0, state->window_size * sizeof( lzss_node_t ));
+
+	while( input_length > 0 )
+	{
+		int		lookAheadLength = input_length < LZSS_LOOKAHEAD ? input_length : LZSS_LOOKAHEAD;
+		lzss_node_t	*hash = state->hash_table[pLookAhead[0]].start;
+		int		encoded_length = 0;
+
+		pWindow = pLookAhead - state->window_size;
+
+		if( pWindow < pInput )
+			pWindow = pInput;
+
+		if( !putCmdByte )
+		{
+			pCmdByte = pOutput++;
+			*pCmdByte = 0;
+		}
+
+		putCmdByte = ( putCmdByte + 1 ) & 0x07;
+
+		while( hash != NULL )
+		{
+			int	length = lookAheadLength;
+			int	match_length = 0;
+
+			while( length-- && hash->data[match_length] == pLookAhead[match_length] )
+				match_length++;
+
+			if( match_length > encoded_length )
+			{
+				encoded_length = match_length;
+				pEncodedPosition = hash->data;
+			}
+
+			if( match_length == lookAheadLength )
+				break;
+
+			hash = hash->next;
+		}
+
+		if ( encoded_length >= 3 )
+		{
+			*pCmdByte = (*pCmdByte >> 1) | 0x80;
+			*pOutput++ = (( pLookAhead - pEncodedPosition - 1 ) >> LZSS_LOOKSHIFT );
+			*pOutput++ = (( pLookAhead - pEncodedPosition - 1 ) << LZSS_LOOKSHIFT ) | ( encoded_length - 1 );
+		} 
+		else 
+		{ 
+			*pCmdByte = ( *pCmdByte >> 1 );
+			*pOutput++ = *pLookAhead;
+			encoded_length = 1;
+		}
+
+		for( i = 0; i < encoded_length; i++ )
+		{
+			LZSS_BuildHash( state, pLookAhead++ );
+		}
+
+		input_length -= encoded_length;
+
+		if( pOutput >= pEnd )
+		{
+			// compression is worse, abandon
+			return NULL;
+		}
+	}
+
+	if( input_length != 0 )
+	{
+		// unexpected failure
+		Assert( 0 );
+		return NULL;
+	}
+
+	if( !putCmdByte )
+	{
+		pCmdByte = pOutput++;
+		*pCmdByte = 0x01;
+	}
+	else
+	{
+		*pCmdByte = (( *pCmdByte >> 1 ) | 0x80 ) >> ( 7 - putCmdByte );
+	}
+
+	// put two ints at end of buffer
+	*pOutput++ = 0;
+	*pOutput++ = 0;
+
+	if( pOutputSize )
+		*pOutputSize = pOutput - pStart;
+
+	return pStart;
+}
+
+byte *LZSS_Compress( byte *pInput, int inputLength, uint *pOutputSize )
+{
+	byte		*pStart = (byte *)malloc( inputLength );
+	byte		*pFinal = NULL;
+	lzss_state_t	state;
+
+	memset( &state, 0, sizeof( state ));
+	state.window_size = LZSS_WINDOW_SIZE;
+
+	pFinal = LZSS_CompressNoAlloc( &state, pInput, inputLength, pStart, pOutputSize );
+
+	if( !pFinal )
+	{
+		free( pStart );
+		return NULL;
+	}
+
+	return pStart;
+}
+
+uint LZSS_Decompress( const byte *pInput, byte *pOutput )
+{
+	uint	totalBytes = 0;
+	int	getCmdByte = 0;
+	int	cmdByte = 0;
+	uint	actualSize = LZSS_GetActualSize( pInput );
+
+	if( !actualSize )
+		return 0;
+
+	pInput += sizeof( lzss_header_t );
+
+	while( 1 )
+	{
+		if( !getCmdByte ) 
+			cmdByte = *pInput++;
+		getCmdByte = ( getCmdByte + 1 ) & 0x07;
+
+		if( cmdByte & 0x01 )
+		{
+			int	position = *pInput++ << LZSS_LOOKSHIFT;
+			int	i, count;
+			byte	*pSource;
+
+			position |= ( *pInput >> LZSS_LOOKSHIFT );
+			count = ( *pInput++ & 0x0F ) + 1;
+
+			if( count == 1 ) 
+				break;
+
+			pSource = pOutput - position - 1;
+			for( i = 0; i < count; i++ )
+				*pOutput++ = *pSource++;
+			totalBytes += count;
+		} 
+		else 
+		{
+			*pOutput++ = *pInput++;
+			totalBytes++;
+		}
+		cmdByte = cmdByte >> 1;
+	}
+
+	if( totalBytes != actualSize )
+	{
+		Assert( 0 );
+		return 0;
+	}
+	return totalBytes;
+}
+
+/*
 ============
 COM_FileBase
 

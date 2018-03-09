@@ -267,9 +267,11 @@ typedef struct
 
 	char		sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char		event_precache[MAX_EVENTS][MAX_QPATH];
+	char		files_precache[MAX_CUSTOM][MAX_QPATH];
 	lightstyle_t	lightstyles[MAX_LIGHTSTYLES];
 	model_t		*models[MAX_MODELS+1];		// precached models (plus sentinel slot)
 	int		nummodels;
+	int		numfiles;
 
 	consistency_t	consistency_list[MAX_MODELS];
 	int		num_consistency;
@@ -776,9 +778,8 @@ void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
 void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook func );
-word CL_EventIndex( const char *name );
-const char *CL_IndexEvent( word index );
 void CL_ResetEvent( event_info_t *ei );
+word CL_EventIndex( const char *name );
 void CL_FireEvents( void );
 
 //

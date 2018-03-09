@@ -319,6 +319,9 @@ void SCR_BeginLoadingPlaque( qboolean is_background )
 	if( cls.state == ca_disconnected || cls.disable_screen )
 		return; // already set
 
+	if( cls.key_dest == key_console )
+		return;
+
 	cls.draw_changelevel = !is_background;
 	SCR_UpdateScreen();
 	cls.disable_screen = host.realtime;
