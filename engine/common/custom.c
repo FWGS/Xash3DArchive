@@ -32,24 +32,24 @@ qboolean CustomDecal_Validate( void *raw, int nFileSize )
 
 void COM_ClearCustomizationList( customization_t *pHead, qboolean bCleanDecals )
 {
-	customization_t	*pNext, *pCurrent;
+	customization_t	*pCurrent;
+	customization_t	*pNext;
 
-	for( pCurrent = pHead->pNext; pCurrent; pCurrent = pNext )
+	for( pCurrent = pHead->pNext; pCurrent != NULL; pCurrent = pNext )
 	{
 		pNext = pCurrent->pNext;
 
 		if( pCurrent->bInUse && pCurrent->pBuffer )
-		{
 			Mem_Free( pCurrent->pBuffer );
-		}
 
 		if( pCurrent->bInUse && pCurrent->pInfo )
 		{
 			if( pCurrent->resource.type == t_decal )
 			{
 				if( bCleanDecals && CL_Active( ))
-					R_DecalRemoveAll( ~pCurrent->resource.playernum );
+					R_DecalRemoveAll( pCurrent->nUserData1 );
 			}
+
 			FS_FreeImage( pCurrent->pInfo );
 		}
 		Mem_Free( pCurrent );
@@ -60,9 +60,9 @@ void COM_ClearCustomizationList( customization_t *pHead, qboolean bCleanDecals )
 
 qboolean COM_CreateCustomization( customization_t *pListHead, resource_t *pResource, int playernumber, int flags, customization_t **pOut, int *nLumps )
 {
-	customization_t	*pCust;
 	qboolean		bError = false;
-	void		*pNewBuffer = NULL;
+	int		checksize = 0;
+	customization_t	*pCust;
 
 	if( pOut ) *pOut = NULL;
 
@@ -81,9 +81,10 @@ qboolean COM_CreateCustomization( customization_t *pListHead, resource_t *pResou
 	}
 	else
 	{
-		int checksize = 0;
-		pCust->pBuffer = COM_LoadFile( pResource->szFileName, 5, &checksize );
-		Msg( "loading %s, check %d, downoad %d\n", pResource->szFileName, checksize, pCust->resource.nDownloadSize );
+
+		pCust->pBuffer = FS_LoadFile( pResource->szFileName, &checksize, true );
+		if( checksize != pCust->resource.nDownloadSize )
+			bError = true;
 	}
 
 	if( bError )
@@ -99,6 +100,10 @@ qboolean COM_CreateCustomization( customization_t *pListHead, resource_t *pResou
 			{
 				if( pResource->nDownloadSize >= (1 * 1024) && pResource->nDownloadSize <= ( 16 * 1024 ))
 				{
+					pCust->bTranslated = true;
+					pCust->nUserData1 = 0;
+					pCust->nUserData2 = 1;
+
 					if( !FBitSet( flags, FCUST_WIPEDATA ))
 						pCust->pInfo = FS_LoadImage( "#logo.bmp", pCust->pBuffer, pCust->resource.nDownloadSize );
 					else pCust->pInfo = NULL;

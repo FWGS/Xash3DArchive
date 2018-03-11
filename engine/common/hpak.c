@@ -71,8 +71,9 @@ void HPAK_FlushHostQueue( void )
 {
 	hash_pack_queue_t	*p;
 
-	for( p = gp_hpak_queue; p != NULL; p = p->next )
+	for( p = gp_hpak_queue; p != NULL; p = gp_hpak_queue )
 	{
+		gp_hpak_queue = p->next;
 		HPAK_AddLump( false, p->name, &p->resource, p->data, NULL );
 		freestring( p->name );
 		Mem_Free( p->data );
@@ -193,9 +194,9 @@ static qboolean HPAK_FindResource( hpak_info_t *hpk, byte *hash, resource_t *pRe
 void HPAK_AddLump( qboolean bUseQueue, const char *name, resource_t *pResource, byte *pData, file_t *pFile )
 {
 	int		i, j, position, length;
+	hpak_lump_t	*pCurrentEntry = NULL;
 	string		srcname, dstname;
 	hpak_info_t	srcpak, dstpak;
-	hpak_lump_t	*pCurrentEntry;
 	file_t		*file_src;
 	file_t		*file_dst;
 	char		md5[16];
@@ -318,7 +319,7 @@ void HPAK_AddLump( qboolean bUseQueue, const char *name, resource_t *pResource, 
 
 	for( i = 0; i < srcpak.count; i++ )
 	{
-		if( memcmp( md5, srcpak.entries[i].resource.rgucMD5_hash, 16 ) < 0 )
+		if( memcmp( md5, srcpak.entries[i].resource.rgucMD5_hash, 16 ))
 		{
 			pCurrentEntry = &dstpak.entries[i];
 
@@ -516,7 +517,7 @@ qboolean HPAK_ResourceForHash( const char *filename, byte *hash, resource_t *pRe
 	file_t		*f;
 	hash_pack_queue_t	*p;
 
-	if( !filename || !filename[0] )
+	if( !COM_CheckString( filename ))
 		return false;
 	
 	for( p = gp_hpak_queue; p != NULL; p = p->next )
@@ -639,7 +640,7 @@ qboolean HPAK_GetDataPointer( const char *filename, resource_t *pResource, byte 
 	file_t		*f;
 	int		i;
 
-	if( !filename || !filename[0] )
+	if( !COM_CheckString( filename ))
 		return false;
 
 	if( buffer ) *buffer = NULL;

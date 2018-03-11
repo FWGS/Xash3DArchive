@@ -154,10 +154,10 @@ GNU General Public License for more details.
 // decal flags
 #define FDECAL_PERMANENT		0x01	// This decal should not be removed in favor of any new decals
 #define FDECAL_USE_LANDMARK		0x02	// This is a decal applied on a bmodel without origin-brush so we done in absoulute pos
-#define FDECAL_DONTSAVE		0x04	// Decal was loaded from adjacent level, don't save it for this level
-// reserved			0x08
-// reserved			0x10
-// reserved			0x20
+#define FDECAL_CUSTOM		0x04	// This is a custom clan logo and should not be saved/restored
+// reserved
+// reserved
+#define FDECAL_DONTSAVE		0x20	// Decal was loaded from adjacent level, don't save it for this level
 #define FDECAL_STUDIO		0x40	// Indicates a studio decal
 #define FDECAL_LOCAL_SPACE		0x80	// decal is in local space (any decal after serialization)
 
@@ -173,6 +173,10 @@ GNU General Public License for more details.
 
 #define MAX_RESOURCES		(MAX_MODELS+MAX_SOUNDS+MAX_CUSTOM+MAX_EVENTS)
 #define MAX_RESOURCE_BITS		13	// 13 bits 8192 resource (4096 models + 2048 sounds + 1024 events + 1024 files)
+
+#define FRAGMENT_MIN_SIZE		1200		// default MTU
+#define FRAGMENT_MAX_SIZE		64000		// minimal acceptable value without testing network bandwith
+#define FRAGMENT_LOCAL_SIZE		FRAGMENT_MAX_SIZE	// local connection
 
 extern const char	*svc_strings[svc_lastmsg+1];
 extern const char	*clc_strings[clc_lastmsg+1];

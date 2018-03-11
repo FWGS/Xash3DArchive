@@ -89,24 +89,15 @@ void SV_GetChallenge( netadr_t from )
 
 int SV_GetFragmentSize( sv_client_t *cl )
 {
-	int	size = FRAGMENT_SV2CL_MAX_SIZE;
-	int	cl_size;
+	int	cl_frag_size;
 
-	if( cl->state == cs_spawned )
-	{
-		cl_size = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_dlmax" ));
+	if( Netchan_IsLocal( &cl->netchan ))
+		return FRAGMENT_LOCAL_SIZE;
 
-		if( cl_size != 0 )
-		{
-			size = bound( FRAGMENT_SV2CL_MIN_SIZE, cl_size, FRAGMENT_SV2CL_MAX_SIZE );
-		}
-		else
-		{
-			size = FRAGMENT_SV2CL_MIN_SIZE;
-		}
-	}
+	cl_frag_size = Q_atoi( Info_ValueForKey( cl->userinfo, "cl_dlmax" ));
+	cl_frag_size = bound( FRAGMENT_MIN_SIZE, cl_frag_size, FRAGMENT_MAX_SIZE );
 
-	return size;
+	return cl_frag_size;
 }
 
 /*
@@ -687,6 +678,58 @@ const char *SV_GetClientIDString( sv_client_t *cl )
 	}
 
 	return result;
+}
+
+/*
+================
+SV_TestBandWidth
+
+================
+*/
+void SV_TestBandWidth( netadr_t from )
+{
+	int	version = Q_atoi( Cmd_Argv( 1 ));
+	int	packetsize = Q_atoi( Cmd_Argv( 2 ));
+	byte	send_buf[FRAGMENT_MAX_SIZE];
+	dword	crcValue = 0;
+	byte	*filepos;
+	int	crcpos;
+	file_t	*test;
+	sizebuf_t	send;
+
+	// don't waste time of protocol mismatched
+	if( version != PROTOCOL_VERSION )
+	{
+		SV_RejectConnection( from, "unsupported protocol (%i should be %i)\n", version, PROTOCOL_VERSION );
+		return;
+	}
+
+	test = FS_Open( "gfx.wad", "rb", false );
+
+	if( FS_FileLength( test ) < sizeof( send_buf ))
+	{
+		// skip the test and just get challenge
+		SV_GetChallenge( from );
+		return;
+	}
+
+	// write the packet header
+	MSG_Init( &send, "BandWidthPacket", send_buf, sizeof( send_buf ));
+	MSG_WriteLong( &send, -1 );	// -1 sequence means out of band
+	MSG_WriteString( &send, "testpacket" );
+	crcpos = MSG_GetNumBytesWritten( &send );
+	MSG_WriteLong( &send, 0 ); // reserve space for crc
+	filepos = send.pData + MSG_GetNumBytesWritten( &send );
+	packetsize = packetsize - MSG_GetNumBytesWritten( &send ); // adjust the packet size
+	FS_Read( test, filepos, packetsize );
+	FS_Close( test );
+
+	CRC32_ProcessBuffer( &crcValue, filepos, packetsize );	// calc CRC
+	MSG_SeekToBit( &send, packetsize << 3, SEEK_CUR );
+	*(uint *)&send.pData[crcpos] = crcValue;
+
+	// send the datagram
+	NET_SendPacket( NS_SERVER, MSG_GetNumBytesWritten( &send ), MSG_GetData( &send ), from );
 }
 
 /*
@@ -1817,15 +1860,15 @@ static qboolean SV_DownloadFile_f( sv_client_t *cl )
 		{
 			if( sv_send_resources.value )
 			{
+				// also check the model textures
+				if( !Q_stricmp( COM_FileExtension( name ), "mdl" ))
+				{
+					if( FS_FileExists( Mod_StudioTexName( name ), false ) > 0 )
+						Netchan_CreateFileFragments( &cl->netchan, Mod_StudioTexName( name ));
+				}
+
 				if( Netchan_CreateFileFragments( &cl->netchan, name ))
 				{
-					// also check the model textures
-					if( !Q_stricmp( COM_FileExtension( name ), "mdl" ))
-					{
-						if( FS_FileExists( Mod_StudioTexName( name ), false ) > 0 )
-							Netchan_CreateFileFragments( &cl->netchan, Mod_StudioTexName( name ));
-					}
-
 					Netchan_FragSend( &cl->netchan );
 					return true;
 				}
@@ -2064,6 +2107,7 @@ void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	if( !Q_strcmp( pcmd, "ping" )) SV_Ping( from );
 	else if( !Q_strcmp( pcmd, "ack" )) SV_Ack( from );
 	else if( !Q_strcmp( pcmd, "info" )) SV_Info( from );
+	else if( !Q_strcmp( pcmd, "bandwidth" )) SV_TestBandWidth( from );
 	else if( !Q_strcmp( pcmd, "getchallenge" )) SV_GetChallenge( from );
 	else if( !Q_strcmp( pcmd, "connect" )) SV_ConnectClient( from );
 	else if( !Q_strcmp( pcmd, "rcon" )) SV_RemoteCommand( from, msg );
@@ -2231,7 +2275,7 @@ void SV_ParseResourceList( sv_client_t *cl, sizebuf_t *msg )
 	SV_ClearResourceList( &cl->resourcesneeded );
 	SV_ClearResourceList( &cl->resourcesonhand );
 
-	for ( i = 0; i < total; i++ )
+	for( i = 0; i < total; i++ )
 	{
 		resource = Z_Malloc( sizeof( resource_t ) );
 		Q_strncpy( resource->szFileName, MSG_ReadString( msg ), sizeof( resource->szFileName ));

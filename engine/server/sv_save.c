@@ -461,8 +461,6 @@ void ReapplyDecal( SAVERESTOREDATA *pSaveData, decallist_t *entry, qboolean adja
 
 		// these entities might not exist over transitions,
 		// so we'll use the saved plane and do a traceline instead
-		flags |= FDECAL_DONTSAVE;
-
 		MsgDev( D_ERROR, "couldn't restore entity index %i, do trace for decal\n", entityIndex );
 
 		VectorCopy( entry->position, testspot );
@@ -2254,7 +2252,8 @@ void SV_SaveGame( const char *pName )
 	SV_BuildSaveComment( comment, sizeof( comment ));
 	SV_SaveGameSlot( savename, comment );
 
-	CL_HudMessage( "GAMESAVED" ); // defined in titles.txt
+	if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		CL_HudMessage( "GAMESAVED" ); // defined in titles.txt
 }
 
 /* 

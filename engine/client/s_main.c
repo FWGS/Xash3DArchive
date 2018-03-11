@@ -946,7 +946,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 		VOX_LoadSound( target_chan, S_SkipSoundChar( sfx->name ));
 		Q_strncpy( target_chan->name, sfx->name, sizeof( target_chan->name ));
 		sfx = target_chan->sfx;
-		pSource = sfx->cache;
+		if( sfx ) pSource = sfx->cache;
 	}
 	else
 	{
@@ -1092,7 +1092,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 		else
 		{
 			sfx = target_chan->sfx;
-			pSource = sfx->cache;
+			if( sfx ) pSource = sfx->cache;
 		}
 	}
 	else
@@ -1183,7 +1183,7 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 		VOX_LoadSound( ch, S_SkipSoundChar( sfx->name ));
 		Q_strncpy( ch->name, sfx->name, sizeof( ch->name ));
 		sfx = ch->sfx;
-		pSource = sfx->cache;
+		if( sfx ) pSource = sfx->cache;
 		fvox = 1;
 	}
 	else

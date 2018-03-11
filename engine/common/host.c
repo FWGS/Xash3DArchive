@@ -850,6 +850,7 @@ void Host_FreeCommon( void )
 	Image_Shutdown();
 	Sound_Shutdown();
 	Netchan_Shutdown();
+	HPAK_FlushHostQueue();
 	FS_Shutdown();
 
 	Mem_FreePool( &host.mempool );

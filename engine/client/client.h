@@ -568,6 +568,8 @@ typedef struct
 	// connection information
 	char		servername[MAX_QPATH];	// name of server from original connect
 	double		connect_time;		// for connection retransmits
+	int		max_fragment_size;		// we needs to test a real network bandwidth
+	int		connect_retry;		// how many times we send a connect packet to the server
 	qboolean		spectator;		// not a real player, just spectator
 
 	local_state_t	spectator_state;		// init as client startup
@@ -737,6 +739,7 @@ void CL_SendCommand( void );
 void CL_Disconnect_f( void );
 void CL_ProcessFile( qboolean successfully_received, const char *filename );
 void CL_WriteUsercmd( sizebuf_t *msg, int from, int to );
+int CL_GetFragmentSize( void *unused );
 qboolean CL_PrecacheResources( void );
 void CL_SetupOverviewParams( void );
 void CL_UpdateFrameLerp( void );
@@ -935,8 +938,9 @@ void CL_TestLights( void );
 void CL_DrawParticlesExternal( const ref_viewpass_t *rvp, qboolean trans_pass, float frametime );
 void CL_FireCustomDecal( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags, float scale );
 void CL_DecalShoot( int textureIndex, int entityIndex, int modelIndex, float *pos, int flags );
-void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos );
+void CL_PlayerDecal( int playerIndex, int textureIndex, int entityIndex, float *pos );
 void R_FreeDeadParticles( struct particle_s **ppparticles );
+void CL_AddClientResource( const char *filename, int type );
 void CL_AddClientResources( void );
 int CL_FxBlend( cl_entity_t *e );
 void CL_InitParticles( void );

@@ -106,9 +106,29 @@ qboolean MSG_CheckOverflow( sizebuf_t *sb )
 	return MSG_Overflow( sb, 0 );
 }
 
-void MSG_SeekToBit( sizebuf_t *sb, int bitPos )
+int MSG_SeekToBit( sizebuf_t *sb, int bitPos, int whence )
 {
+	// compute the file offset
+	switch( whence )
+	{
+	case SEEK_CUR:
+		bitPos += sb->iCurBit;
+		break;
+	case SEEK_SET:
+		break;
+	case SEEK_END:
+		bitPos += sb->nDataBits;
+		break;
+	default: 
+		return -1;
+	}
+
+	if( bitPos < 0 || bitPos > sb->nDataBits )
+		return -1;
+
 	sb->iCurBit = bitPos;
+
+	return 0;
 }
 
 void MSG_SeekToByte( sizebuf_t *sb, int bytePos )
@@ -656,13 +676,13 @@ void MSG_ExciseBits( sizebuf_t *sb, int startbit, int bitstoremove )
 	sizebuf_t	temp;
 
 	MSG_StartWriting( &temp, sb->pData, MSG_GetMaxBytes( sb ), startbit, -1 );
-	MSG_SeekToBit( sb, endbit );
+	MSG_SeekToBit( sb, endbit, SEEK_SET );
 
 	for( i = 0; i < remaining_to_end; i++ )
 	{
 		MSG_WriteOneBit( &temp, MSG_ReadOneBit( sb ));
 	}
 
-	MSG_SeekToBit( sb, startbit );
+	MSG_SeekToBit( sb, startbit, SEEK_SET );
 	sb->nDataBits -= bitstoremove;
 }

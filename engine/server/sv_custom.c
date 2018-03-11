@@ -56,7 +56,7 @@ void SV_CreateCustomizationList( sv_client_t *cl )
 		}
 		else
 		{
-			MsgDev( D_REPORT, "SV_CreateCustomization list, ignoring dup. resource for player %s\n", cl->name );
+			Con_Printf( S_WARN "SV_CreateCustomization list, ignoring dup. resource for player %s\n", cl->name );
 		}
 	}
 }
@@ -335,10 +335,10 @@ void SV_AddToResourceList( resource_t *pResource, resource_t *pList )
 	pList->pPrev = pResource;
 }
 
-void SV_SendCustomization( sv_client_t *cl, resource_t *pResource )
+void SV_SendCustomization( sv_client_t *cl, int playernum, resource_t *pResource )
 {
 	MSG_BeginServerCmd( &cl->netchan.message, svc_customization );
-	MSG_WriteByte( &cl->netchan.message, ( cl - svs.clients ));	// playernum
+	MSG_WriteByte( &cl->netchan.message, playernum );	// playernum
 	MSG_WriteByte( &cl->netchan.message, pResource->type );
 	MSG_WriteString( &cl->netchan.message, pResource->szFileName );
 	MSG_WriteShort( &cl->netchan.message, pResource->nIndex );
@@ -391,11 +391,11 @@ int SV_EstimateNeededResources( sv_client_t *cl )
 		if( p->type != t_decal )
 			continue;
 
-		if( HPAK_ResourceForHash( CUSTOM_RES_PATH, p->rgucMD5_hash, NULL ))
+		if( !HPAK_ResourceForHash( CUSTOM_RES_PATH, p->rgucMD5_hash, NULL ))
 		{
 			if( p->nDownloadSize != 0 )
 			{
-				p->ucFlags |= RES_WASMISSING;
+				SetBits( p->ucFlags, RES_WASMISSING );
 				size += p->nDownloadSize;
 			}
 			else
@@ -420,7 +420,7 @@ void SV_Customization( sv_client_t *pClient, resource_t *pResource, qboolean bSk
 
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
-		if( !cl->state != cs_spawned )
+		if( cl->state != cs_spawned )
 			continue;
 
 		if( FBitSet( cl->flags, FCL_FAKECLIENT ))
@@ -429,7 +429,7 @@ void SV_Customization( sv_client_t *pClient, resource_t *pResource, qboolean bSk
 		if( cl == pClient && bSkipPlayer )
 			continue;
 
-		SV_SendCustomization( cl, pResource );
+		SV_SendCustomization( cl, nPlayerNumber, pResource );
 	}
 }
 
@@ -442,7 +442,7 @@ void SV_PropagateCustomizations( sv_client_t *pHost )
 
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
-		if( !cl->state != cs_spawned )
+		if( cl->state != cs_spawned )
 			continue;
 
 		if( FBitSet( cl->flags, FCL_FAKECLIENT ))
@@ -452,7 +452,7 @@ void SV_PropagateCustomizations( sv_client_t *pHost )
 		{
 			if( !pCust->bInUse ) continue;
 			pResource = &pCust->resource;
-			SV_SendCustomization( pHost, pResource );
+			SV_SendCustomization( pHost, i, pResource );
 		}
 	}
 }
@@ -517,7 +517,7 @@ void SV_BatchUploadRequest( sv_client_t *cl )
 		{
 			if( FBitSet( p->ucFlags, RES_CUSTOM ))
 			{
-				Q_snprintf( filename, sizeof( filename ) - 4, "!MD5%s", MD5_Print( p->rgucMD5_hash ));
+				Q_snprintf( filename, sizeof( filename ), "!MD5%s", MD5_Print( p->rgucMD5_hash ));
 
 				if( SV_CheckFile( &cl->netchan.message, filename ))
 					SV_MoveToOnHandList( cl, p );

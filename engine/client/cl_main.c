@@ -25,6 +25,8 @@ GNU General Public License for more details.
 #define MAX_TOTAL_CMDS		32
 #define MAX_CMD_BUFFER		8000
 #define CONNECTION_PROBLEM_TIME	15.0	// 15 seconds
+#define CL_CONNECTION_RETRIES		10
+#define CL_TEST_RETRIES		5
 
 CVAR_DEFINE_AUTO( mp_decals, "300", FCVAR_ARCHIVE, "decals limit in multiplayer" );
 CVAR_DEFINE_AUTO( dev_overview, "0", 0, "draw level in overview-mode" );
@@ -184,6 +186,14 @@ void CL_CheckClientState( void )
 		if(( cls.demoplayback || cls.disable_servercount != cl.servercount ) && cl.video_prepped )
 			SCR_EndLoadingPlaque(); // get rid of loading plaque
 	}
+}
+
+int CL_GetFragmentSize( void *unused )
+{
+	if( Netchan_IsLocal( &cls.netchan ))
+		return FRAGMENT_LOCAL_SIZE;
+
+	return FRAGMENT_MAX_SIZE;
 }
 
 /*
@@ -702,7 +712,7 @@ void CL_WritePacket( void )
 	if( cl.maxclients == 1 || ( NET_IsLocalAddress( cls.netchan.remote_address ) && !host_limitlocal->value ))
 		send_command = true;
 
-	if(( host.realtime >= cls.nextcmdtime ) && Netchan_CanPacket( &cls.netchan ))
+	if(( host.realtime >= cls.nextcmdtime ) && Netchan_CanPacket( &cls.netchan, true ))
 		send_command = true;
 
 	if( cl.send_reply )
@@ -1064,16 +1074,40 @@ void CL_CheckForResend( void )
 	if( !NET_StringToAdr( cls.servername, &adr ))
 	{
 		MsgDev( D_ERROR, "CL_CheckForResend: bad server address\n" );
-		cls.state = ca_disconnected;
-		cls.signon = 0;
+		CL_Disconnect();
+		return;
+	}
+
+	// only retry so many times before failure.
+	if( cls.connect_retry >= CL_CONNECTION_RETRIES )
+	{
+		MsgDev( D_ERROR, "CL_CheckForResend: couldn't connected\n" );
+		CL_Disconnect();
 		return;
 	}
 
 	if( adr.port == 0 ) adr.port = MSG_BigShort( PORT_SERVER );
+
+	if( cls.connect_retry == CL_TEST_RETRIES )
+	{
+		// too many fails use default connection method
+		Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
+		Cvar_SetValue( "cl_dlmax", FRAGMENT_MAX_SIZE );
+		cls.connect_time = host.realtime;
+		cls.connect_retry++;
+		return;
+	}
+
+	cls.max_fragment_size = Q_max( FRAGMENT_MAX_SIZE, cls.max_fragment_size >> Q_min( 1, cls.connect_retry ));
 	cls.connect_time = host.realtime; // for retransmit requests
+	cls.connect_retry++;
 
 	Con_Printf( "Connecting to %s...\n", cls.servername );
+#if 0
 	Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
+#else
+	Netchan_OutOfBandPrint( NS_CLIENT, adr, "bandwidth %i %i\n", PROTOCOL_VERSION, cls.max_fragment_size );
+#endif
 }
 
 resource_t *CL_AddResource( resourcetype_t type, const char *name, int size, qboolean bFatalIfMissing, int index )
@@ -1157,6 +1191,8 @@ void CL_Connect_f( void )
 	cls.state = ca_connecting;
 	Q_strncpy( cls.servername, server, sizeof( cls.servername ));
 	cls.connect_time = MAX_HEARTBEAT; // CL_CheckForResend() will fire immediately
+	cls.max_fragment_size = FRAGMENT_MAX_SIZE; // guess a we can establish connection with maximum fragment size
+	cls.connect_retry = 0;
 	cls.spectator = false;
 	cls.signon = 0;
 }
@@ -1229,16 +1265,17 @@ void CL_ClearState( void )
 {
 	int	i;
 
+	CL_ClearResourceLists();
+
+	for( i = 0; i < MAX_CLIENTS; i++ )
+		COM_ClearCustomizationList( &cl.players[i].customdata, false );
+
 	S_StopAllSounds ( true );
 	CL_ClearEffects ();
 	CL_FreeEdicts ();
 
 	CL_ClearPhysEnts ();
 	NetAPI_CancelAllRequests();
-	CL_ClearResourceLists();
-
-	for( i = 0; i < MAX_CLIENTS; i++ )
-		COM_ClearCustomizationList( &cl.players[i].customdata, false );
 
 	// wipe the entire cl structure
 	memset( &cl, 0, sizeof( cl ));
@@ -1284,9 +1321,9 @@ void CL_SendDisconnectMessage( void )
 		cls.netchan.remote_address.type = NA_LOOPBACK;
 
 	// make sure message will be delivered
-	Netchan_Transmit( &cls.netchan, MSG_GetNumBytesWritten( &buf ), MSG_GetData( &buf ));
-	Netchan_Transmit( &cls.netchan, MSG_GetNumBytesWritten( &buf ), MSG_GetData( &buf ));
-	Netchan_Transmit( &cls.netchan, MSG_GetNumBytesWritten( &buf ), MSG_GetData( &buf ));
+	Netchan_TransmitBits( &cls.netchan, MSG_GetNumBitsWritten( &buf ), MSG_GetData( &buf ));
+	Netchan_TransmitBits( &cls.netchan, MSG_GetNumBitsWritten( &buf ), MSG_GetData( &buf ));
+	Netchan_TransmitBits( &cls.netchan, MSG_GetNumBitsWritten( &buf ), MSG_GetData( &buf ));
 }
 
 /*
@@ -1300,7 +1337,7 @@ void CL_Reconnect( qboolean setup_netchan )
 {
 	if( setup_netchan )
 	{
-		Netchan_Setup( NS_CLIENT, &cls.netchan, net_from, Cvar_VariableValue( "net_qport" ), NULL, NULL );
+		Netchan_Setup( NS_CLIENT, &cls.netchan, net_from, Cvar_VariableInteger( "net_qport" ), NULL, CL_GetFragmentSize );
 	}
 	else
 	{
@@ -1340,6 +1377,7 @@ void CL_Disconnect( void )
 
 	cls.connect_time = 0;
 	cls.changedemo = false;
+	cls.max_fragment_size = FRAGMENT_MAX_SIZE; // reset fragment size
 	CL_Stop_f();
 
 	// send a disconnect message to the server
@@ -1353,6 +1391,7 @@ void CL_Disconnect( void )
 	Netchan_Clear( &cls.netchan );
 
 	cls.state = ca_disconnected;
+	cls.connect_retry = 0;
 	cls.signon = 0;
 
 	// back to menu in non-developer mode
@@ -1740,6 +1779,60 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 	{
 		// print command from somewhere
 		Con_Printf( "%s", MSG_ReadString( msg ));
+	}
+	else if( !Q_strcmp( c, "testpacket" ))
+	{
+		byte	recv_buf[NET_MAX_FRAGMENT];
+		dword	crcValue = MSG_ReadLong( msg );
+		int	realsize = MSG_GetMaxBytes( msg ) - MSG_GetNumBytesRead( msg );
+		dword	crcValue2 = 0;
+
+		if( cls.max_fragment_size != MSG_GetMaxBytes( msg ))
+		{
+			if( cls.connect_retry >= CL_TEST_RETRIES )
+			{
+				// too many fails use default connection method
+				Netchan_OutOfBandPrint( NS_CLIENT, from, "getchallenge\n" );
+				Cvar_SetValue( "cl_dlmax", FRAGMENT_MAX_SIZE );
+				cls.connect_time = host.realtime;
+				return;
+			}
+
+			// if we waiting more than cl_timeout or packet was trashed
+			Msg( "got testpacket, size mismatched %d should be %d\n", MSG_GetMaxBytes( msg ), cls.max_fragment_size );
+			cls.connect_time = MAX_HEARTBEAT;
+			return; // just wait for a next responce
+		}
+
+		// reading test buffer
+		MSG_ReadBytes( msg, recv_buf, realsize );
+
+		// procssing the CRC
+		CRC32_ProcessBuffer( &crcValue2, recv_buf, realsize );
+
+		if( crcValue == crcValue2 )
+		{
+			// packet was sucessfully delivered, adjust the fragment size and get challenge
+			Msg( "CRC %p is matched, get challenge, fragment size %d\n", crcValue, cls.max_fragment_size );
+			Netchan_OutOfBandPrint( NS_CLIENT, from, "getchallenge\n" );
+			Cvar_SetValue( "cl_dlmax", cls.max_fragment_size );
+			cls.connect_time = host.realtime;
+		}
+		else
+		{
+			if( cls.connect_retry >= CL_TEST_RETRIES )
+			{
+				// too many fails use default connection method
+				Netchan_OutOfBandPrint( NS_CLIENT, from, "getchallenge\n" );
+				Cvar_SetValue( "cl_dlmax", FRAGMENT_MAX_SIZE );
+				cls.connect_time = host.realtime;
+				return;
+			}
+
+			Msg( "got testpacket, CRC mismatched %p should be %p, trying next fragment size %d\n", crcValue2, crcValue, cls.max_fragment_size >> 1 );
+			// trying the next size of packet
+			cls.connect_time = MAX_HEARTBEAT;
+		}
 	}
 	else if( !Q_strcmp( c, "ping" ))
 	{

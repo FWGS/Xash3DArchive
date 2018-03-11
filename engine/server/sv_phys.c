@@ -1758,7 +1758,7 @@ static void SV_Physics_Entity( edict_t *ent )
 
 	// g-cont. don't alow free entities during loading because
 	// this produce a corrupted baselines
-	if( sv.state == ss_active && ent->v.flags & FL_KILLME )
+	if( sv.state == ss_active && FBitSet( ent->v.flags, FL_KILLME ))
 		SV_FreeEdict( ent );
 }
 

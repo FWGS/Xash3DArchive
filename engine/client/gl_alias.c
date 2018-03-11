@@ -1079,7 +1079,7 @@ void GL_DrawAliasFrame( aliashdr_t *paliashdr )
 			}
 			else
 			{
-				pglTexCoord2f (((float *)order)[0], ((float *)order)[1]);
+				pglTexCoord2f( ((float *)order)[0], ((float *)order)[1] );
 			}
 			order += 2;
 

@@ -89,7 +89,7 @@ dll_info_t winsock_dll = { "wsock32.dll", winsock_funcs, false };
 
 typedef struct
 {
-	byte		data[MAX_INIT_MSG];
+	byte		data[NET_MAX_MESSAGE];
 	int		datalen;
 } net_loopmsg_t;
 

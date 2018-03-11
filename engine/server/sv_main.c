@@ -271,7 +271,7 @@ void SV_ProcessFile( sv_client_t *cl, const char *filename )
 	qboolean		bFound;
 	qboolean		bError;
 
-	if( filename[0] == '!' )
+	if( filename[0] != '!' )
 	{
 		Con_Printf( "Ignoring non-customization file upload of %s\n", filename );
 		return;
@@ -971,6 +971,7 @@ void SV_Shutdown( const char *finalmsg )
 	SV_FreeClients();
 	svs.maxclients = 0;
 
+	HPAK_FlushHostQueue();
 	Log_Printf( "Server shutdown\n" );
 	Log_Close();
 

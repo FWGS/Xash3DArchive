@@ -410,8 +410,6 @@ extern	server_t		sv;			// local server
 extern	svgame_static_t	svgame;			// persistant game info
 extern	areanode_t	sv_areanodes[];		// AABB dynamic tree
 
-extern convar_t		sv_lan;
-extern convar_t		sv_lan_rate;
 extern convar_t		mp_logecho;
 extern convar_t		mp_logfile;
 extern convar_t		sv_unlag;

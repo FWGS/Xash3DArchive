@@ -88,7 +88,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		return false;          
 
 	// special hack for loading qfont
-	if( !Q_strncmp( "#XASH_SYSTEMFONT_001", name, 20 ))
+	if( !Q_strncmp( name, "#XASH_SYSTEMFONT_001", 20 ))
 	{
 		// NOTE: same as system font we can use 4-bit bmps only
 		// step1: move main layer into alpha-channel (give grayscale from RED channel)
@@ -112,6 +112,14 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 
 	memcpy( palette, buf_p, cbPalBytes );
 
+	// setup gradient alpha for player decal
+	if( !Q_strncmp( name, "#logo", 5 ))
+	{
+		for( i = 0; i < bhdr.colors; i++ )
+			palette[i][3] = i;
+		image.flags |= IMAGE_HAS_ALPHA;
+	}
+
 	if( host.overview_loading && bhdr.bitsPerPixel == 8 )
 	{
 		// convert green background into alpha-layer, make opacity for all other entries
@@ -129,8 +137,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	if( Image_CheckFlag( IL_KEEP_8BIT ) && bhdr.bitsPerPixel == 8 )
 	{
 		pixbuf = image.palette = Mem_Alloc( host.imagepool, 1024 );
-		image.flags |= IMAGE_HAS_COLOR;
- 
+
 		// bmp have a reversed palette colors
 		for( i = 0; i < bhdr.colors; i++ )
 		{

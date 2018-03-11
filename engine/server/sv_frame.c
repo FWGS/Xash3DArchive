@@ -649,8 +649,9 @@ SV_SendClientDatagram
 */
 void SV_SendClientDatagram( sv_client_t *cl )
 {
-	static byte    	msg_buf[MAX_INIT_MSG];
-	sizebuf_t		msg;
+	static int message_peak = 0;
+	byte	msg_buf[MAX_DATAGRAM];
+	sizebuf_t	msg;
 
 	// if we running server with fixed fps so no reason
 	// to send updates too fast: time just not changed
@@ -674,7 +675,7 @@ void SV_SendClientDatagram( sv_client_t *cl )
 	// for this client out to the message
 	if( MSG_CheckOverflow( &cl->datagram ))
 	{
-		MsgDev( D_WARN, "datagram overflowed for %s\n", cl->name );
+		Con_Printf( S_WARN "%s overflowed for %s\n", MSG_GetName( &cl->datagram ), cl->name );
 	}
 	else
 	{
@@ -685,10 +686,16 @@ void SV_SendClientDatagram( sv_client_t *cl )
 
 	MSG_Clear( &cl->datagram );
 
+	if( MSG_GetNumBytesWritten( &msg ) > message_peak )
+	{
+		Msg( "max bytes %d for datagram\n", MSG_GetNumBytesWritten( &msg ));
+		message_peak = MSG_GetNumBytesWritten( &msg );
+	}
+
 	if( MSG_CheckOverflow( &msg ))
 	{	
 		// must have room left for the packet header
-		MsgDev( D_WARN, "msg overflowed for %s\n", cl->name );
+		Con_Printf( S_ERROR, "%s overflowed for %s\n", MSG_GetName( &msg ), cl->name );
 		MSG_Clear( &msg );
 	}
 
@@ -862,7 +869,7 @@ void SV_SendClientMessages( void )
 		if( FBitSet( cl->flags, FCL_SEND_NET_MESSAGE ))
 		{
 			// bandwidth choke active?
-			if( !Netchan_CanPacket( &cl->netchan ))
+			if( !Netchan_CanPacket( &cl->netchan, cl->state == cs_spawned ))
 			{
 				cl->chokecount++;
 				continue;
@@ -875,7 +882,7 @@ void SV_SendClientMessages( void )
 			// NOTE: we should send frame even if server is not simulated to prevent overflow
 			if( cl->state == cs_spawned )
 				SV_SendClientDatagram( cl );
-			else Netchan_Transmit( &cl->netchan, 0, NULL ); // just update reliable
+			else Netchan_TransmitBits( &cl->netchan, 0, NULL ); // just update reliable
 		}
 	}
 

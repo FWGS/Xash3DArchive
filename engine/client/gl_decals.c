@@ -146,7 +146,7 @@ static void R_GetDecalDimensions( int texture, int *width, int *height )
 //-----------------------------------------------------------------------------
 // compute the decal basis based on surface normal
 //-----------------------------------------------------------------------------
-void R_DecalComputeBasis( msurface_t *surf, vec3_t textureSpaceBasis[3] )
+void R_DecalComputeBasis( msurface_t *surf, int flags, vec3_t textureSpaceBasis[3] )
 {
 	vec3_t	surfaceNormal;
 
@@ -155,9 +155,31 @@ void R_DecalComputeBasis( msurface_t *surf, vec3_t textureSpaceBasis[3] )
 		VectorNegate( surf->plane->normal, surfaceNormal );
 	else VectorCopy( surf->plane->normal, surfaceNormal );
 
+	VectorNormalize2( surfaceNormal, textureSpaceBasis[2] );
+#if 0
+	if( FBitSet( flags, FDECAL_CUSTOM ))
+	{
+		vec3_t	pSAxis = { 1, 0, 0 };
+
+		// T = S cross N
+		CrossProduct( pSAxis, textureSpaceBasis[2], textureSpaceBasis[1] );
+
+		// Name sure they aren't parallel or antiparallel
+		// In that case, fall back to the normal algorithm.
+		if( DotProduct( textureSpaceBasis[1], textureSpaceBasis[1] ) > 1e-6 )
+		{
+			// S = N cross T
+			CrossProduct( textureSpaceBasis[2], textureSpaceBasis[1], textureSpaceBasis[0] );
+
+			VectorNormalizeFast( textureSpaceBasis[0] );
+			VectorNormalizeFast( textureSpaceBasis[1] );
+			return;
+		}
+		// Fall through to the standard algorithm for parallel or antiparallel
+	}
+#endif
 	VectorNormalize2( surf->texinfo->vecs[0], textureSpaceBasis[0] );
 	VectorNormalize2( surf->texinfo->vecs[1], textureSpaceBasis[1] );
-	VectorNormalize2( surfaceNormal, textureSpaceBasis[2] );
 }
 
 void R_SetupDecalTextureSpaceBasis( decal_t *pDecal, msurface_t *surf, int texture, vec3_t textureSpaceBasis[3], float decalWorldScale[2] )
@@ -165,7 +187,7 @@ void R_SetupDecalTextureSpaceBasis( decal_t *pDecal, msurface_t *surf, int textu
 	int	width, height;
 
 	// Compute the non-scaled decal basis
-	R_DecalComputeBasis( surf, textureSpaceBasis );
+	R_DecalComputeBasis( surf, pDecal->flags, textureSpaceBasis );
 	R_GetDecalDimensions( texture, &width, &height );
 
 	// world width of decal = ptexture->width / pDecal->scale
@@ -427,7 +449,7 @@ static decal_t *R_DecalIntersect( decalinfo_t *decalinfo, msurface_t *surf, int 
 
 		// Don't steal bigger decals and replace them with smaller decals
 		// Don't steal permanent decals
-		if(!( pDecal->flags & FDECAL_PERMANENT ))
+		if( !FBitSet( pDecal->flags, FDECAL_PERMANENT ))
 		{
 			vec3_t	testBasis[3];
 			vec3_t	testPosition[2];
@@ -624,7 +646,7 @@ void R_DecalSurface( msurface_t *surf, decalinfo_t *decalinfo )
 	// Determine the decal basis (measured in world space)
 	// Note that the decal basis vectors 0 and 1 will always lie in the same
 	// plane as the texture space basis vectorstextureVecsTexelsPerWorldUnits.
-	R_DecalComputeBasis( surf, decalinfo->m_Basis );
+	R_DecalComputeBasis( surf, decalinfo->m_Flags, decalinfo->m_Basis );
 
 	// Compute an effective width and height (axis aligned) in the parent texture space
 	// How does this work? decalBasis[0] represents the u-direction (width)
@@ -1151,7 +1173,7 @@ int R_CreateDecalList( decallist_t *pList )
 			decal_t	*pdecals;
 			
 			// decal is in use and is not a custom decal
-			if( decal->psurface == NULL || FBitSet( decal->flags, FDECAL_DONTSAVE ))	
+			if( decal->psurface == NULL || ( decal->flags & FDECAL_DONTSAVE ))
 				 continue;
 
 			// compute depth

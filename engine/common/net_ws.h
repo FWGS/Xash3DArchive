@@ -24,7 +24,7 @@ typedef enum
 } netsrc_t;
 
 // Max length of unreliable message
-#define MAX_DATAGRAM		4000
+#define MAX_DATAGRAM		16384
 
 // Max length of a multicast message
 #define MAX_MULTICAST		8192	// some mods spamming for rain effect

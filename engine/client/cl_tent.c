@@ -116,7 +116,16 @@ add client-side resource to list
 */
 void CL_AddClientResource( const char *filename, int type )
 {
-	resource_t	*pResource;
+	resource_t	*p, *pResource;
+
+	for( p = cl.resourcesneeded.pNext; p != &cl.resourcesneeded; p = p->pNext )
+	{
+		if( !Q_stricmp( p->szFileName, filename ))
+			break;
+	}
+
+	if( p == &cl.resourcesneeded )
+		return; // already existed ?
 
 	pResource = Mem_Alloc( cls.mempool, sizeof( resource_t ));
 
@@ -2392,13 +2401,13 @@ void CL_ParseTempEntity( sizebuf_t *msg )
 		R_RicochetSound( pos );
 		break;
 	case TE_PLAYERDECAL:
-		color = MSG_ReadByte( &buf );	// playernum
+		color = MSG_ReadByte( &buf ) - 1; // playernum
 		pos[0] = MSG_ReadCoord( &buf );
 		pos[1] = MSG_ReadCoord( &buf );
 		pos[2] = MSG_ReadCoord( &buf );
 		entityIndex = MSG_ReadShort( &buf );
 		decalIndex = MSG_ReadByte( &buf );
-		CL_PlayerDecal( CL_DecalIndex( decalIndex ), entityIndex, pos );
+		CL_PlayerDecal( color, decalIndex, entityIndex, pos );
 		break;
 	case TE_BUBBLES:
 	case TE_BUBBLETRAIL:
@@ -2973,9 +2982,28 @@ CL_PlayerDecal
 spray custom colored decal (clan logo etc)
 ===============
 */
-void CL_PlayerDecal( int textureIndex, int entityIndex, float *pos )
+void CL_PlayerDecal( int playernum, int customIndex, int entityIndex, float *pos )
 {
-	R_DecalShoot( textureIndex, entityIndex, 0, pos, 0, 1.0f );
+	int		textureIndex = 0;
+	customization_t	*pCust = NULL;
+
+	if( playernum < MAX_CLIENTS )
+		pCust = cl.players[playernum].customdata.pNext;
+
+	if( pCust != NULL && pCust->pBuffer != NULL && pCust->pInfo != NULL )
+	{
+		if( FBitSet( pCust->resource.ucFlags, RES_CUSTOM ) && pCust->resource.type == t_decal && pCust->bTranslated )
+		{
+			if( !pCust->nUserData1 && pCust->pInfo != NULL )
+			{
+				const char *decalname = va( "player%dlogo%d", playernum, customIndex );
+				pCust->nUserData1 = GL_LoadTextureInternal( decalname, pCust->pInfo, TF_DECAL, false );
+			}
+			textureIndex = pCust->nUserData1;
+		}
+	}
+
+	R_DecalShoot( textureIndex, entityIndex, 0, pos, FDECAL_CUSTOM, 1.0f );
 }
 
 /*

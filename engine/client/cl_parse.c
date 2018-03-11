@@ -865,17 +865,17 @@ void CL_RemoveCustomization( int nPlayerNum, customization_t *pRemove )
 
 		if( pList->bInUse && pList->pInfo )
 		{
-			if ( pList->resource.type == t_decal )
+			if( pList->resource.type == t_decal )
 			{
 				if( cls.state == ca_active )
-					R_DecalRemoveAll( ~nPlayerNum );
-
+					R_DecalRemoveAll( pList->nUserData1 );
 				FS_FreeImage( pList->pInfo );
 			}
 		}
 
 		cl.players[nPlayerNum].customdata.pNext = pNext;
-		Mem_Free( pRemove );
+		Mem_Free( pList );
+		break;
 	}
 }
 
@@ -888,64 +888,66 @@ CL_ParseCustomization
 void CL_ParseCustomization( sizebuf_t *msg )
 {
 	customization_t	*pExistingCustomization;
-	resource_t	*resource;
 	customization_t	*pList;
 	qboolean		bFound;
+	resource_t	*pRes;
 	int		i;
 
 	i = MSG_ReadByte( msg );
 	if( i >= MAX_CLIENTS )
 		Host_Error( "Bogus player index during customization parsing.\n" );
 
-	resource = Mem_Alloc( cls.mempool, sizeof( resource_t ));
-	resource->type = MSG_ReadByte( msg );
+	pRes = Mem_Alloc( cls.mempool, sizeof( resource_t ));
+	pRes->type = MSG_ReadByte( msg );
 
-	Q_strncpy( resource->szFileName, MSG_ReadString( msg ), sizeof( resource->szFileName ));
-	resource->nIndex = MSG_ReadShort( msg );
-	resource->nDownloadSize = MSG_ReadLong( msg );
-	resource->ucFlags = MSG_ReadByte( msg ) & ~RES_WASMISSING;
-	resource->pNext = resource->pPrev = NULL;
+	Q_strncpy( pRes->szFileName, MSG_ReadString( msg ), sizeof( pRes->szFileName ));
+	pRes->nIndex = MSG_ReadShort( msg );
+	pRes->nDownloadSize = MSG_ReadLong( msg );
+	pRes->ucFlags = MSG_ReadByte( msg ) & ~RES_WASMISSING;
+	pRes->pNext = pRes->pPrev = NULL;
 
-	if( FBitSet( resource->ucFlags, RES_CUSTOM ))
-		MSG_ReadBytes( msg, resource->rgucMD5_hash, 16 );
-	resource->playernum = i;
+	if( FBitSet( pRes->ucFlags, RES_CUSTOM ))
+		MSG_ReadBytes( msg, pRes->rgucMD5_hash, 16 );
+	pRes->playernum = i;
 
 	if( !cl_allow_download.value )
 	{
 		Con_DPrintf( "Refusing new resource, cl_allow_download set to 0\n" );
-		Mem_Free( resource );
+		Mem_Free( pRes );
 		return;
 	}
 
 	if( cls.state == ca_active && !cl_download_ingame.value )
 	{
 		Con_DPrintf( "Refusing new resource, cl_download_ingame set to 0\n" );
-		Mem_Free( resource );
+		Mem_Free( pRes );
 		return;
 	}
 
-	pExistingCustomization = CL_PlayerHasCustomization( i, resource->type );
+	pExistingCustomization = CL_PlayerHasCustomization( i, pRes->type );
 
 	if( pExistingCustomization )
 		CL_RemoveCustomization( i, pExistingCustomization );
 	bFound = false;
 
-	for( pList = cl.players[resource->playernum].customdata.pNext; pList; pList = pList->pNext )
+	for( pList = cl.players[pRes->playernum].customdata.pNext; pList; pList = pList->pNext )
 	{
-		if( !memcmp( pList->resource.rgucMD5_hash, resource->rgucMD5_hash, 16 ) )
+		if( !memcmp( pList->resource.rgucMD5_hash, pRes->rgucMD5_hash, 16 ))
 		{
 			bFound = true;
 			break;
 		}
 	}
 
-	if( HPAK_GetDataPointer( CUSTOM_RES_PATH, resource, NULL, NULL ))
+	if( HPAK_GetDataPointer( CUSTOM_RES_PATH, pRes, NULL, NULL ))
 	{
 		qboolean	bError = false;
 
 		if( !bFound )
 		{
-			if( !COM_CreateCustomization( &cl.players[resource->playernum].customdata, resource, resource->playernum, RES_FATALIFMISSING, NULL, NULL ))
+			pList = &cl.players[pRes->playernum].customdata;
+
+			if( !COM_CreateCustomization( pList, pRes, pRes->playernum, FCUST_FROMHPAK, NULL, NULL ))
 				bError = true;
 		}
 		else
@@ -954,13 +956,13 @@ void CL_ParseCustomization( sizebuf_t *msg )
 		}
 
 		if( bError ) Con_DPrintf( "Error loading customization\n" );
-		Mem_Free( resource );
+		Mem_Free( pRes );
 	}
 	else
 	{
-		resource->ucFlags |= RES_WASMISSING;
-		CL_AddToResourceList( resource, &cl.resourcesneeded );
-		Con_Printf( "Requesting %s from server\n", resource );
+		SetBits( pRes->ucFlags, RES_WASMISSING );
+		CL_AddToResourceList( pRes, &cl.resourcesneeded );
+		Con_Printf( "Requesting %s from server\n", pRes->szFileName );
 		CL_StartResourceDownloading( "Custom resource propagation...\n", true );
 	}
 }
@@ -1013,6 +1015,31 @@ void CL_ParseResourceRequest( sizebuf_t *msg )
 	{
 		Netchan_CreateFragments( &cls.netchan, &sbuf );
 		Netchan_FragSend( &cls.netchan );
+	}
+}
+
+/*
+==================
+CL_CreateCustomizationList
+
+loading custom decal for self
+==================
+*/
+void CL_CreateCustomizationList( void )
+{
+	resource_t	*pResource;
+	player_info_t	*pPlayer;
+	int		i;
+
+	pPlayer = &cl.players[cl.playernum];
+	pPlayer->customdata.pNext = NULL;
+
+	for( i = 0; i < cl.num_resources; i++ )
+	{
+		pResource = &cl.resourcelist[i];
+
+		if( !COM_CreateCustomization( &pPlayer->customdata, pResource, cl.playernum, 0, NULL, NULL ))
+			Con_Printf( "problem with client customization %i, ignoring...", pResource );
 	}
 }
 
@@ -1156,6 +1183,10 @@ void CL_ParseServerData( sizebuf_t *msg )
 			Cvar_Set( "cl_levelshot_name", "*black" ); // render a black screen
 		cls.scrshot_request = scrshot_plaque; // request levelshot even if exist (check filetime)
 	}
+
+	for( i = 0; i < MAX_CLIENTS; i++ )
+		COM_ClearCustomizationList( &cl.players[i].customdata, true );
+	CL_CreateCustomizationList();
 
 	// request resources from server
 	CL_ServerCommand( true, "sendres %i\n", cl.servercount );

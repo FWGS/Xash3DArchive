@@ -40,6 +40,15 @@ GNU General Public License for more details.
 // This is the packet payload without any header bytes (which are attached for actual sending)
 #define NET_MAX_PAYLOAD		MAX_INIT_MSG
 
+// Theoretically maximum size of UDP-packet without header and hardware-specific data
+#define NET_MAX_FRAGMENT		65536
+
+// because encoded as highpart of uint32
+#define NET_MAX_BUFFER_ID		32767
+
+// because encoded as lowpart of uint32
+#define NET_MAX_BUFFERS_COUNT		32767
+
 // This is the payload plus any header info (excluding UDP header)
 
 // Packet header is:
@@ -105,16 +114,13 @@ typedef struct
 	int		totalbytes;
 } flow_t;
 
-#define FRAGMENT_SV2CL_MIN_SIZE	256
-#define FRAGMENT_SV2CL_MAX_SIZE	1024
-
 // generic fragment structure
 typedef struct fragbuf_s
 {
 	struct fragbuf_s	*next;				// next buffer in chain
 	int		bufferid;				// id of this buffer
 	sizebuf_t		frag_message;			// message buffer where raw data is stored
-	byte		frag_message_buf[NET_MAX_MESSAGE];	// the actual data sits here
+	byte		frag_message_buf[NET_MAX_FRAGMENT];	// the actual data sits here
 	qboolean		isfile;				// is this a file buffer?
 	qboolean		isbuffer;				// is this file buffer from memory ( custom decal, etc. ).
 	char		filename[MAX_OSPATH];		// name of the file to save out on remote host
@@ -197,8 +203,10 @@ typedef struct netchan_s
 extern netadr_t		net_from;
 extern netadr_t		net_local;
 extern sizebuf_t		net_message;
-extern byte		net_message_buffer[MAX_INIT_MSG];
+extern byte		net_message_buffer[NET_MAX_MESSAGE];
 extern convar_t		*net_speeds;
+extern convar_t		sv_lan;
+extern convar_t		sv_lan_rate;
 extern int		net_drop;
 
 void Netchan_Init( void );
@@ -216,7 +224,8 @@ void Netchan_OutOfBandPrint( int net_socket, netadr_t adr, char *format, ... );
 qboolean Netchan_Process( netchan_t *chan, sizebuf_t *msg );
 void Netchan_UpdateProgress( netchan_t *chan );
 qboolean Netchan_IncomingReady( netchan_t *chan );
-qboolean Netchan_CanPacket( netchan_t *chan );
+qboolean Netchan_CanPacket( netchan_t *chan, qboolean choke );
+qboolean Netchan_IsLocal( netchan_t *chan );
 void Netchan_ReportFlow( netchan_t *chan );
 void Netchan_FragSend( netchan_t *chan );
 void Netchan_Clear( netchan_t *chan );

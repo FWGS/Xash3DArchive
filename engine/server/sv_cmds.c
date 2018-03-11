@@ -73,7 +73,7 @@ void SV_BroadcastPrintf( sv_client_t *ignore, char *fmt, ... )
 	}
 
 	// echo to console
-	Con_Printf( string );
+	Con_DPrintf( string );
 }
 
 /*

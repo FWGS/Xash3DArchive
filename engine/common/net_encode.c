@@ -1512,7 +1512,7 @@ qboolean MSG_WriteDeltaMovevars( sizebuf_t *msg, movevars_t *from, movevars_t *t
 	// if we have no changes - kill the message
 	if( !numChanges )
 	{
-		MSG_SeekToBit( msg, startBit );
+		MSG_SeekToBit( msg, startBit, SEEK_SET );
 		return false;
 	}
 	return true;
@@ -1583,7 +1583,7 @@ void MSG_WriteClientData( sizebuf_t *msg, clientdata_t *from, clientdata_t *to, 
 
 	if( numChanges ) return; // we have updates
 
-	MSG_SeekToBit( msg, startBit );
+	MSG_SeekToBit( msg, startBit, SEEK_SET );
 	MSG_WriteOneBit( msg, 0 ); // no changes
 }
 
@@ -1662,7 +1662,7 @@ void MSG_WriteWeaponData( sizebuf_t *msg, weapon_data_t *from, weapon_data_t *to
 	}
 
 	// if we have no changes - kill the message
-	if( !numChanges ) MSG_SeekToBit( msg, startBit );
+	if( !numChanges ) MSG_SeekToBit( msg, startBit, SEEK_SET );
 }
 
 /*
@@ -1790,7 +1790,7 @@ void MSG_WriteDeltaEntity( entity_state_t *from, entity_state_t *to, sizebuf_t *
 	}
 
 	// if we have no changes - kill the message
-	if( !numChanges && !force ) MSG_SeekToBit( msg, startBit );
+	if( !numChanges && !force ) MSG_SeekToBit( msg, startBit, SEEK_SET );
 }
 
 /*
