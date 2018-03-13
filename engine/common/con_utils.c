@@ -44,6 +44,8 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 	search_t		*t;
 	file_t		*f;
 	string		message;
+	string		compiler;
+	string		generator;
 	string		matchbuf;
 	byte		buf[MAX_SYSPATH]; // 1 kb
 	int		i, nummaps;
@@ -67,6 +69,8 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 
 		if( Q_stricmp( ext, "bsp" )) continue;
 		Q_strncpy( message, "^1error^7", sizeof( message ));
+		Q_strncpy( compiler, "", sizeof( compiler ));
+		Q_strncpy( generator, "", sizeof( generator ));
 		f = FS_Open( t->filenames[i], "rb", con_gamemaps->value );
 	
 		if( f )
@@ -120,6 +124,16 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 						// get the message contents
 						pfile = COM_ParseFile( pfile, message );
 					}
+					else if( !Q_strcmp( token, "generator" ) || !Q_strcmp( token, "_compiler" ))
+					{
+						// get the message contents
+						pfile = COM_ParseFile( pfile, compiler );
+					}
+					else if( !Q_strcmp( token, "generator" ) || !Q_strcmp( token, "_generator" ))
+					{
+						// get the message contents
+						pfile = COM_ParseFile( pfile, generator );
+					}
 				}
 				Mem_Free( ents );
 			}
@@ -148,7 +162,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 		default:	Q_strncpy( buf, "??", sizeof( buf )); break;
 		}
 
-		Con_Printf( "%16s (%s) ^3%s^7\n", matchbuf, buf, message );
+		Con_Printf( "%16s (%s) ^3%s^7 ^2%s %s^7\n", matchbuf, buf, message, compiler, generator );
 		nummaps++;
 	}
 

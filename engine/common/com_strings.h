@@ -44,6 +44,11 @@ GNU General Public License for more details.
 // path to folders where placed all sounds
 #define DEFAULT_SOUNDPATH		"sound/"
 
+// playlist for startup videos
+#define DEFAULT_VIDEOLIST_PATH	"media/StartupVids.txt"
+
 #define CVAR_GLCONFIG_DESCRIPTION	"enable or disable %s"
+
+#define DEFAULT_BSP_BUILD_ERROR	"%s can't be loaded in this build. Please rebuild engine with enabled SUPPORT_BSP2_FORMAT\n"
 
 #endif//COM_STRINGS_H

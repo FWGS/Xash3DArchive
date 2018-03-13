@@ -286,17 +286,17 @@ static void SV_EmitPacketEntities( sv_client_t *cl, client_frame_t *to, sizebuf_
 			int		offset = 0;
 
 			// trying to reduce message by select optimal baseline
-			if( !sv_instancedbaseline.value || !sv.instanced.count || sv.last_valid_baseline > newnum )
+			if( !sv_instancedbaseline.value || !sv.num_instanced || sv.last_valid_baseline > newnum )
 			{
 				offset = SV_FindBestBaseline( cl, newindex, &baseline, newent, to, player );
 			}
 			else
 			{
-				for( i = 0; i < sv.instanced.count; i++ )
+				for( i = 0; i < sv.num_instanced; i++ )
 				{
-					if( !Q_strcmp( classname, sv.instanced.classnames[i] ))
+					if( !Q_strcmp( classname, sv.instanced[i].classname ))
 					{
-						baseline = &sv.instanced.baselines[i];
+						baseline = &sv.instanced[i].baseline;
 						offset = -i;
 						break;
 					}
@@ -649,7 +649,6 @@ SV_SendClientDatagram
 */
 void SV_SendClientDatagram( sv_client_t *cl )
 {
-	static int message_peak = 0;
 	byte	msg_buf[MAX_DATAGRAM];
 	sizebuf_t	msg;
 
@@ -685,12 +684,6 @@ void SV_SendClientDatagram( sv_client_t *cl )
 	}
 
 	MSG_Clear( &cl->datagram );
-
-	if( MSG_GetNumBytesWritten( &msg ) > message_peak )
-	{
-		Msg( "max bytes %d for datagram\n", MSG_GetNumBytesWritten( &msg ));
-		message_peak = MSG_GetNumBytesWritten( &msg );
-	}
 
 	if( MSG_CheckOverflow( &msg ))
 	{	

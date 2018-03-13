@@ -87,7 +87,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 	if( !Image_ValidSize( name ))
 		return false;          
 
-	// special hack for loading qfont
+	// special case for loading qfont (menu font)
 	if( !Q_strncmp( name, "#XASH_SYSTEMFONT_001", 20 ))
 	{
 		// NOTE: same as system font we can use 4-bit bmps only
@@ -120,7 +120,7 @@ qboolean Image_LoadBMP( const char *name, const byte *buffer, size_t filesize )
 		image.flags |= IMAGE_HAS_ALPHA;
 	}
 
-	if( host.overview_loading && bhdr.bitsPerPixel == 8 )
+	if( Image_CheckFlag( IL_OVERVIEW ) && bhdr.bitsPerPixel == 8 )
 	{
 		// convert green background into alpha-layer, make opacity for all other entries
 		for( i = 0; i < bhdr.colors; i++ )

@@ -1190,7 +1190,7 @@ void R_BeamDraw( BEAM *pbeam, float frametime )
 	{
 		cl_entity_t	*pStart;
 
-		// HACKHACK: get brightness from head entity
+		// XASH SPECIFIC: get brightness from head entity
 		pStart = R_BeamGetEntity( pbeam->startEntity ); 
 		if( pStart && pStart->curstate.rendermode != kRenderNormal )
 			pbeam->brightness = CL_FxBlend( pStart ) / 255.0f;

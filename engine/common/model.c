@@ -261,12 +261,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	byte		*buf;
 	model_info_t	*p;
 
-	if( !mod )
-	{
-		if( crash ) Host_Error( "Mod_ForName: NULL model\n" );
-		else MsgDev( D_ERROR, "Mod_ForName: NULL model\n" );
-		return NULL;		
-	}
+	ASSERT( mod != NULL );
 
 	// check if already loaded (or inline bmodel)
 	if( mod->mempool || mod->name[0] == '*' )
@@ -287,8 +282,8 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 	{
 		memset( mod, 0, sizeof( model_t ));
 
-		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", tempname );
-		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", tempname );
+		if( crash ) Host_Error( "%s couldn't load\n", tempname );
+		else Con_Printf( S_ERROR "%s couldn't load\n", tempname );
 
 		return NULL;
 	}
@@ -317,8 +312,8 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		break;
 	default:
 		Mem_Free( buf );
-		if( crash ) Host_Error( "Mod_ForName: %s unknown format\n", tempname );
-		else MsgDev( D_ERROR, "Mod_ForName: %s unknown format\n", tempname );
+		if( crash ) Host_Error( "%s has unknown format\n", tempname );
+		else Con_Printf( S_ERROR "%s has unknown format\n", tempname );
 		return NULL;
 	}
 
@@ -327,8 +322,8 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		Mod_FreeModel( mod );
 		Mem_Free( buf );
 
-		if( crash ) Host_Error( "Mod_ForName: %s couldn't load\n", tempname );
-		else MsgDev( D_ERROR, "Mod_ForName: %s couldn't load\n", tempname );
+		if( crash ) Host_Error( "%s couldn't load\n", tempname );
+		else Con_Printf( S_ERROR "%s couldn't load\n", tempname );
 
 		return NULL;
 	}

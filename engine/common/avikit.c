@@ -303,7 +303,7 @@ qboolean AVI_GetAudioInfo( movie_state_t *Avi, wavdata_t *snd_info )
 	else snd_info->width = 2; // assume compressed audio is always 16 bit
 
 	snd_info->size = snd_info->rate * snd_info->width * snd_info->channels;
-	snd_info->loopStart = 0;	// HACKHACK: use loopStart as streampos
+	snd_info->loopStart = 0; // using loopStart as streampos
 
 	return true;
 }
@@ -316,7 +316,7 @@ qboolean AVI_SeekPosition( movie_state_t *Avi, dword offset )
 	if( offset < Avi->cpa_blockoffset ) // well, shit. we can't seek backwards... restart
 	{
 		if( Avi->cpa_blockoffset - offset < 500000 )
-			return false; // don't bother if it's gonna catch up soon (cheap hack! works!)
+			return false; // don't bother if it's gonna catch up soon
 
 		Avi->cpa_blocknum = 0; // start at 0, eh.
 		Avi->cpa_blockpos = 0;

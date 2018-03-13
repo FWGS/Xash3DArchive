@@ -752,7 +752,6 @@ void CL_BatchResourceRequest( void )
 			CL_RegisterResources( &msg );
 		}
 
-		Msg( "download request %d bytes\n", MSG_GetNumBytesWritten( &msg ));
 		Netchan_CreateFragments( &cls.netchan, &msg );
 		Netchan_FragSend( &cls.netchan );
 	}
@@ -1079,21 +1078,17 @@ void CL_ParseServerData( sizebuf_t *msg )
 	cls.timestart = Sys_DoubleTime();
 
 	cls.demowaiting = false;	// server is changed
-	CL_ClearSpriteTextures();	// now all hud sprites are invalid
 
 	// wipe the client_t struct
 	if( !cls.changelevel && !cls.changedemo )
 		CL_ClearState ();
 	cls.state = ca_connected;
 
-	// Re-init hud video, especially if we changed game directories
-	clgame.dllFuncs.pfnVidInit();
-
 	// parse protocol version number
-	cls.serverProtocol = MSG_ReadLong( msg );
+	i = MSG_ReadLong( msg );
 
-	if( cls.serverProtocol != PROTOCOL_VERSION )
-		Host_Error( "Server use invalid protocol (%i should be %i)\n", cls.serverProtocol, PROTOCOL_VERSION );
+	if( i != PROTOCOL_VERSION )
+		Host_Error( "Server use invalid protocol (%i should be %i)\n", i, PROTOCOL_VERSION );
 
 	cl.servercount = MSG_ReadLong( msg );
 	cl.checksum = MSG_ReadLong( msg );
@@ -1108,21 +1103,24 @@ void CL_ParseServerData( sizebuf_t *msg )
 	Q_strncpy( gamefolder, MSG_ReadString( msg ), MAX_QPATH );
 	host.features = (uint)MSG_ReadLong( msg );
 
+	// receive the player hulls
+	for( i = 0; i < MAX_MAP_HULLS * 3; i++ )
+	{
+		host.player_mins[i/3][i%3] = MSG_ReadChar( msg );
+		host.player_maxs[i/3][i%3] = MSG_ReadChar( msg );
+	}
+
 	if( clgame.maxModels > MAX_MODELS )
-		MsgDev( D_WARN, "server model limit is above client model limit %i > %i\n", clgame.maxModels, MAX_MODELS );
+		Con_Printf( S_WARN "server model limit is above client model limit %i > %i\n", clgame.maxModels, MAX_MODELS );
+
+	// Re-init hud video, especially if we changed game directories
+	clgame.dllFuncs.pfnVidInit();
 
 	if( Con_FixedFont( ))
 	{
 		// seperate the printfs so the server message can have a color
 		Con_Print( "\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n" );
 		Con_Print( va( "%c%s\n\n", 2, clgame.maptitle ));
-	}
-
-	// receive the player hulls
-	for( i = 0; i < MAX_MAP_HULLS * 3; i++ )
-	{
-		host.player_mins[i/3][i%3] = MSG_ReadChar( msg );
-		host.player_maxs[i/3][i%3] = MSG_ReadChar( msg );
 	}
 
 	// multiplayer game?
@@ -2226,14 +2224,15 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 	{
 		clgame.msg[i].func( clgame.msg[i].name, iSize, pbuf );
 
-		// HACKHACK: run final credits for Half-Life
-		// because hl1 doesn't have call END_SECTION
+#ifdef HACKS_RELATED_HLMODS
+		// run final credits for Half-Life because hl1 doesn't have call END_SECTION
 		if( !Q_stricmp( clgame.msg[i].name, "HudText" ) && !Q_stricmp( GI->gamefolder, "valve" ))
 		{
 			// it's a end, so we should run credits
 			if( !Q_strcmp( (char *)pbuf, "END3" ))
 				Host_Credits();
 		}
+#endif
 	}
 	else
 	{

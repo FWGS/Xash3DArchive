@@ -123,6 +123,7 @@ typedef struct fragbuf_s
 	byte		frag_message_buf[NET_MAX_FRAGMENT];	// the actual data sits here
 	qboolean		isfile;				// is this a file buffer?
 	qboolean		isbuffer;				// is this file buffer from memory ( custom decal, etc. ).
+	qboolean		iscompressed;			// is compressed file, we should using filename.ztmp
 	char		filename[MAX_OSPATH];		// name of the file to save out on remote host
 	int		foffset;				// offset in file from which to read data  
 	int		size;				// size of data to read at that offset

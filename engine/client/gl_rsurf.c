@@ -32,11 +32,11 @@ static int		nColinElim; // stats
 static vec2_t		world_orthocenter;
 static vec2_t		world_orthohalf;
 static uint		r_blocklights[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*3];
-static glpoly_t		*fullbright_polys[MAX_TEXTURES];
-static qboolean		draw_fullbrights = false;
+static mextrasurf_t		*fullbright_surfaces[MAX_TEXTURES];
 static mextrasurf_t		*detail_surfaces[MAX_TEXTURES];
 static int		rtable[MOD_FRAMES][MOD_FRAMES];
 static qboolean		draw_alpha_surfaces = false;
+static qboolean		draw_fullbrights = false;
 static qboolean		draw_details = false;
 static msurface_t		*skychain = NULL;
 static gllightmapstate_t	gl_lms;
@@ -731,8 +731,7 @@ void DrawGLPoly( glpoly_t *p, float xScale, float yScale )
 
 	if( !p ) return;
 
-	// special hack for non-lightmapped surfaces
-	if( p->flags & SURF_DRAWTILED )
+	if( FBitSet( p->flags, SURF_DRAWTILED ))
 		GL_ResetFogColor();
 
 	if( p->flags & SURF_CONVEYOR )
@@ -781,8 +780,7 @@ void DrawGLPoly( glpoly_t *p, float xScale, float yScale )
 
 	pglEnd();
 
-	// special hack for non-lightmapped surfaces
-	if( p->flags & SURF_DRAWTILED )
+	if( FBitSet( p->flags, SURF_DRAWTILED ))
 		GL_SetupFogColorForSurfaces();
 }
 
@@ -969,8 +967,8 @@ R_RenderFullbrights
 */
 void R_RenderFullbrights( void )
 {
-	glpoly_t	*p;
-	int	i;
+	mextrasurf_t	*es, *p;
+	int		i;
 
 	if( !draw_fullbrights )
 		return;
@@ -984,13 +982,16 @@ void R_RenderFullbrights( void )
 
 	for( i = 1; i < MAX_TEXTURES; i++ )
 	{
-		if( !fullbright_polys[i] )
-			continue;
+		es = fullbright_surfaces[i];
+		if( !es ) continue;
+
 		GL_Bind( GL_TEXTURE0, i );
 
-		for( p = fullbright_polys[i]; p; p = p->next )
-			DrawGLPoly( p, 0.0f, 0.0f );
-		fullbright_polys[i] = NULL;		
+		for( p = es; p; p = p->lumachain )
+			DrawGLPoly( p->surf->polys, 0.0f, 0.0f );
+
+		fullbright_surfaces[i] = NULL;
+		es->lumachain = NULL;
 	}
 
 	pglDisable( GL_BLEND );
@@ -1072,18 +1073,17 @@ void R_RenderBrushPoly( msurface_t *fa, int cull_type )
 
 	GL_Bind( GL_TEXTURE0, t->gl_texturenum );
 
-	if( fa->flags & SURF_DRAWTURB )
+	if( FBitSet( fa->flags, SURF_DRAWTURB ))
 	{	
 		// warp texture, no lightmaps
 		EmitWaterPolys( fa, (cull_type == CULL_BACKSIDE));
 		return;
 	}
 
-	if( t->fb_texturenum && fa->polys )
+	if( t->fb_texturenum )
 	{
-		// HACKHACK: store fullbrights in poly->next (only for non-water surfaces)
-		fa->polys->next = fullbright_polys[t->fb_texturenum];
-		fullbright_polys[t->fb_texturenum] = fa->polys;
+		fa->info->lumachain = fullbright_surfaces[t->fb_texturenum];
+		fullbright_surfaces[t->fb_texturenum] = fa->info;
 		draw_fullbrights = true;
 	}
 
@@ -1417,9 +1417,18 @@ void R_SetRenderMode( cl_entity_t *e )
 	case kRenderTransAlpha:
 		pglEnable( GL_ALPHA_TEST );
 		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+		if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		{
+			pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+			pglColor4f( 1.0f, 1.0f, 1.0f, tr.blend );
+			pglEnable( GL_BLEND );
+		}
+		else
+		{
+			pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+			pglDisable( GL_BLEND );
+		}
 		pglAlphaFunc( GL_GREATER, 0.25f );
-		pglDisable( GL_BLEND );
 		break;
 	default:
 		pglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
@@ -1440,6 +1449,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 {
 	int		i, k, num_sorted;
 	vec3_t		origin_l, oldorigin;
+	int		old_rendermode;
 	vec3_t		mins, maxs;
 	int		cull_type;
 	msurface_t	*psurf;
@@ -1471,10 +1481,14 @@ void R_DrawBrushModel( cl_entity_t *e )
 		return;
 
 	memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
+	old_rendermode = e->curstate.rendermode;
 	gl_lms.dynamic_surfaces = NULL;
 
 	if( rotated ) R_RotateForEntity( e );
 	else R_TranslateForEntity( e );
+
+	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ) && FBitSet( clmodel->flags, MODEL_TRANSPARENT ))
+		e->curstate.rendermode = kRenderTransAlpha;
 
 	e->visframe = tr.realframecount; // visible
 
@@ -1554,6 +1568,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	if( e->curstate.rendermode == kRenderTransAdd )
 		R_AllowFog( true );
 
+	e->curstate.rendermode = old_rendermode;
 	pglDisable( GL_ALPHA_TEST );
 	pglAlphaFunc( GL_GREATER, 0.0f );
 	pglDisable( GL_BLEND );
@@ -1863,7 +1878,7 @@ void R_DrawWorld( void )
 
 	VectorCopy( RI.cullorigin, tr.modelorg );
 	memset( gl_lms.lightmap_surfaces, 0, sizeof( gl_lms.lightmap_surfaces ));
-	memset( fullbright_polys, 0, sizeof( fullbright_polys ));
+	memset( fullbright_surfaces, 0, sizeof( fullbright_surfaces ));
 	memset( detail_surfaces, 0, sizeof( detail_surfaces ));
 
 	gl_lms.dynamic_surfaces = NULL;

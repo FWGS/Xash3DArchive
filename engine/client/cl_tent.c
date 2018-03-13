@@ -124,8 +124,8 @@ void CL_AddClientResource( const char *filename, int type )
 			break;
 	}
 
-	if( p == &cl.resourcesneeded )
-		return; // already existed ?
+	if( p != &cl.resourcesneeded )
+		return; // already in list?
 
 	pResource = Mem_Alloc( cls.mempool, sizeof( resource_t ));
 
@@ -150,7 +150,8 @@ void CL_AddClientResources( void )
 	char	filepath[MAX_QPATH];
 	int	i;
 
-	if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+	// don't request resources from localhost or in quake-compatibility mode
+	if( cl.maxclients <= 1 || FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 		return;
 
 	// check sprites first
@@ -223,7 +224,6 @@ int CL_FxBlend( cl_entity_t *e )
 	case kRenderFxPulseFast:
 		blend = e->curstate.renderamt + 0x10 * sin( cl.time * 8 + offset );
 		break;
-	// JAY: HACK for now -- not time based
 	case kRenderFxFadeSlow:			
 		if( RP_NORMALPASS( ))
 		{
@@ -2891,7 +2891,7 @@ void CL_AddModelEffects( cl_entity_t *ent )
 		dl->color.r = dl->color.g = dl->color.b = 200;
 		VectorCopy( ent->origin, dl->origin );
 
-		// HACKHACK: get radius from head entity
+		// XASH SPECIFIC: get radius from head entity
 		if( ent->curstate.rendermode != kRenderNormal )
 			dl->radius = Q_max( 0, ent->curstate.renderamt - 55 );
 		else dl->radius = 200;
@@ -3040,10 +3040,12 @@ int CL_DecalIndex( int id )
 {
 	id = bound( 0, id, MAX_DECALS - 1 );
 
-	host.decal_loading = true;
 	if( cl.decal_index[id] == 0 )
+	{
+		Image_SetForceFlags( IL_LOAD_DECAL );
 		cl.decal_index[id] = GL_LoadTexture( host.draw_decals[id], NULL, 0, TF_DECAL, NULL );
-	host.decal_loading = false;
+		Image_ClearForceFlags();
+	}
 
 	return cl.decal_index[id];
 }

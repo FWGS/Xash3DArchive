@@ -87,7 +87,10 @@ int SV_SoundIndex( const char *filename )
 		return 0;
 
 	if( filename[0] == '!' )
-		Host_Error( "SV_SoundIndex: '%s' do not precache sentence names!\n", filename );
+	{
+		Con_Printf( S_WARN "'%s' do not precache sentence names!\n", filename );
+		return 0;
+	}
 
 	if( *filename == '\\' || *filename == '/' )
 		filename++;
@@ -415,11 +418,11 @@ void SV_CreateBaseline( void )
 	}
 
 	MSG_WriteUBitLong( &sv.signon, LAST_EDICT, MAX_ENTITY_BITS ); // end of baselines
-	MSG_WriteUBitLong( &sv.signon, sv.instanced.count, 6 );
+	MSG_WriteUBitLong( &sv.signon, sv.num_instanced, 6 );
 
-	for( entnum = 0; entnum < sv.instanced.count; entnum++ )
+	for( entnum = 0; entnum < sv.num_instanced; entnum++ )
 	{
-		base = &sv.instanced.baselines[entnum];
+		base = &sv.instanced[entnum].baseline;
 		MSG_WriteDeltaEntity( &nullstate, base, &sv.signon, true, false, 1.0f, 0 );
 	}
 }
@@ -481,16 +484,11 @@ void SV_ActivateServer( int runPhysics )
 	// parse user-specified resources
 	SV_CreateGenericResources();
 
+	sv.frametime = SV_SPAWN_TIME;
+
 	if( runPhysics )
-	{
-		sv.frametime = bound( 0.1, sv_spawntime.value, 0.8 );
 		numFrames = (svs.maxclients <= 1) ? 2 : 8;
-	}
-	else
-	{
-		sv.frametime = bound( 0.001, sv_changetime.value, 0.1 );
-		numFrames = 1;
-	}
+	else numFrames = 1;
 
 	// run some frames to allow everything to settle
 	for( i = 0; i < numFrames; i++ )

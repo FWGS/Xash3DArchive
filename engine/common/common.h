@@ -32,8 +32,12 @@ HACKHACK				- unexpected behavior on some input params (or something like)
 BUGBUG				- code doesn't working properly in most cases!
 TESTTEST				- this code may be unstable and needs to be more tested
 g-cont:				- notes from engine author
+XASH SPECIFIC			- sort of hack that works only in Xash3D not in GoldSrc
 ===================================================================================================================================
 */
+
+// configuration
+#define HACKS_RELATED_HLMODS		// some HL-mods works differently under Xash and can't be fixed without some hacks at least at current time
 
 // disable some warnings
 #pragma warning(disable : 4244)	// MIPS
@@ -369,8 +373,6 @@ typedef struct host_parm_s
 	qboolean		change_game;	// initialize when game is changed
 	qboolean		mouse_visible;	// vgui override cursor control
 	qboolean		shutdown_issued;	// engine is shutting down
-	qboolean		decal_loading;	// nasty hack to tell imagelib about decal
-	qboolean		overview_loading;	// another nasty hack to tell imagelib about ovierview
 	qboolean		force_draw_version;	// used when fraps is loaded
 	qboolean		write_to_clipboard;	// put image to clipboard instead of disk
 	qboolean		apply_game_config;	// when true apply only to game cvars and ignore all other commands
@@ -497,6 +499,8 @@ typedef enum
 	IL_ALLOW_OVERWRITE	= BIT(2),	// allow to overwrite stored images
 	IL_DONTFLIP_TGA	= BIT(3),	// Steam background completely ignore tga attribute 0x20 (stupid lammers!)
 	IL_DDS_HARDWARE	= BIT(4),	// DXT compression is support
+	IL_LOAD_DECAL	= BIT(5),	// special mode for load gradient decals
+	IL_OVERVIEW	= BIT(6),	// overview required some unque operations
 } ilFlags_t;
 
 // goes into rgbdata_t->encode
@@ -600,6 +604,7 @@ void Image_PaletteHueReplace( byte *palSrc, int newHue, int start, int end, int 
 void Image_PaletteTranslate( byte *palSrc, int top, int bottom, int pal_size );
 void Image_SetForceFlags( uint flags );	// set image force flags on loading
 size_t Image_DXTGetLinearSize( int type, int width, int height, int depth );
+void Image_ClearForceFlags( void );
 
 /*
 ========================================================================

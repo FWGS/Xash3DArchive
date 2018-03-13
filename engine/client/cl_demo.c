@@ -759,9 +759,6 @@ qboolean CL_DemoReadMessage( byte *buffer, size_t *length )
 		return false;
 	}
 
-	// HACKHACK: changedemo issues
-	if( !cls.netchan.remote_address.type ) cls.netchan.remote_address.type = NA_LOOPBACK;
-
 	if(( !cl.background && ( cl.paused || cls.key_dest != key_game )) || cls.key_dest == key_console )
 	{
 		demo.starttime += host.frametime;

@@ -163,7 +163,7 @@ long COM_RandomLong( long lLow, long lHigh )
 typedef struct
 {
 	unsigned int	id;
-	unsigned short	size;
+	unsigned int	size;
 } lzss_header_t;
 
 // expected to be sixteen bytes

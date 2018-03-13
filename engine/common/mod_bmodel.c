@@ -124,7 +124,7 @@ typedef struct
 	dmiptexlump_t		*textures;
 	size_t			texdatasize;
 
-	// intermediate arrays (pointers will lost after loading, bet keep the data)
+	// intermediate arrays (pointers will lost after loading, but keep the data)
 	color24			*deluxedata_out;	// deluxemap data pointer
 	byte			*shadowdata_out;	// occlusion data pointer
 	dclipnode32_t		*clipnodes_out;	// temporary 32-bit array to hold clipnodes
@@ -134,7 +134,7 @@ typedef struct
 	int			lightmap_samples;	// samples per lightmap (1 or 3)
 	int			version;		// model version
 	qboolean			isworld;
-	qboolean			vis_errors;	// don't spam about vis
+	qboolean			vis_errors;	// don't spam about vis decompression errors
 } dbspmodel_t;
 
 typedef struct
@@ -431,9 +431,11 @@ void Mod_PrintWorldStats_f( void )
 	Con_Printf( "World size ( %g %g %g ) units\n", world.size[0], world.size[1], world.size[2] );
 	Con_Printf( "Supports transparency world water: %s\n", FBitSet( world.flags, FWORLD_WATERALPHA ) ? "Yes" : "No" );
 	Con_Printf( "Lighting: %s\n", FBitSet( w->flags, MODEL_COLORED_LIGHTING ) ? "colored" : "monochrome" );
+	Con_Printf( "World total leafs: %d\n", worldmodel->numleafs + 1 );
 	Con_Printf( "original name: ^1%s\n", worldmodel->name );
 	Con_Printf( "internal name: %s\n", (world.message[0]) ? va( "^2%s", world.message ) : "none" );
 	Con_Printf( "map compiler: %s\n", (world.compiler[0]) ? va( "^3%s", world.compiler ) : "unknown" );
+	Con_Printf( "map editor: %s\n", (world.generator[0]) ? va( "^2%s", world.generator ) : "unknown" );
 }
 
 /*
@@ -1379,13 +1381,14 @@ static void Mod_SetupSubmodels( dbspmodel_t *bmod )
 		{
 			Mod_FindModelOrigin( ents, va( "*%i", i ), bm->origin );
 
-			// HACKHACK: c2a1 issues
-			if( !Q_stricmp( loadmodel->name, "maps/c2a1.bsp" ) && ( i == 11 ))
-				SetBits( mod->flags, MODEL_HAS_ORIGIN );
-
-			// flag 2 is indicated model with origin brush!
+			// mark models that have origin brushes
 			if( !VectorIsNull( bm->origin ))
 				SetBits( mod->flags, MODEL_HAS_ORIGIN );
+#ifdef HACKS_RELATED_HLMODS
+			// c2a1 doesn't have origin brush it's just placed at center of the level
+			if( !Q_stricmp( loadmodel->name, "maps/c2a1.bsp" ) && ( i == 11 ))
+				SetBits( mod->flags, MODEL_HAS_ORIGIN );
+#endif
 		}
 
 		// sets the model flags
@@ -1528,6 +1531,7 @@ static void Mod_LoadEntities( dbspmodel_t *bmod )
 	if( !bmod->isworld ) return;
 
 	pfile = (char *)loadmodel->entities;
+	world.generator[0] = '\0';
 	world.compiler[0] = '\0';
 	world.message[0] = '\0';
 	bmod->wadlist.count = 0;
@@ -1585,6 +1589,8 @@ static void Mod_LoadEntities( dbspmodel_t *bmod )
 				Q_strncpy( world.message, token, sizeof( world.message ));
 			else if( !Q_stricmp( keyname, "compiler" ) || !Q_stricmp( keyname, "_compiler" ))
 				Q_strncpy( world.compiler, token, sizeof( world.compiler ));
+			else if( !Q_stricmp( keyname, "generator" ) || !Q_stricmp( keyname, "_generator" ))
+				Q_strncpy( world.generator, token, sizeof( world.generator ));
 		}
 		return;	// all done
 	}
@@ -2606,7 +2612,7 @@ qboolean Mod_LoadBmodelLumps( const byte *mod_base, qboolean isworld )
 #ifndef SUPPORT_BSP2_FORMAT
 	if( header->version == QBSP2_VERSION )
 	{
-		MsgDev( D_ERROR, "%s can't be loaded in this build. Please rebuild engine with enabled SUPPORT_BSP2_FORMAT\n", loadmodel->name );
+		Con_Printf( S_ERROR DEFAULT_BSP_BUILD_ERROR, loadmodel->name );
 		return false;
 	}
 #endif
@@ -2698,7 +2704,7 @@ qboolean Mod_TestBmodelLumps( const char *name, const byte *mod_base, qboolean s
 	if( header->version == QBSP2_VERSION )
 	{
 		if( !FBitSet( flags, LUMP_SILENT ))
-			MsgDev( D_ERROR, "%s can't be loaded in this build. Please rebuild engine with enabled SUPPORT_BSP2_FORMAT\n", name );
+			Con_Printf( S_ERROR DEFAULT_BSP_BUILD_ERROR, name );
 		return false;
 	}
 #endif

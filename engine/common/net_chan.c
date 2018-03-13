@@ -367,7 +367,7 @@ void Netchan_OutOfBand( int net_socket, netadr_t adr, int length, byte *data )
 	// write the packet header
 	MSG_Init( &send, "SequencePacket", send_buf, sizeof( send_buf ));
 	
-	MSG_WriteLong( &send, -1 );	// -1 sequence means out of band
+	MSG_WriteLong( &send, NET_HEADER_OUTOFBANDPACKET ); // -1 sequence means out of band
 	MSG_WriteBytes( &send, data, length );
 
 	if( !CL_IsPlaybackDemo( ))
@@ -580,6 +580,21 @@ static void Netchan_CreateFragments_( netchan_t *chan, sizebuf_t *msg )
 
 	wait = (fragbufwaiting_t *)Mem_Alloc( net_mempool, sizeof( fragbufwaiting_t ));
 
+	if( !LZSS_IsCompressed( MSG_GetData( msg )))
+	{
+		uint	uCompressedSize = 0;
+		uint	uSourceSize = MSG_GetNumBytesWritten( msg );
+		byte	*pbOut = LZSS_Compress( msg->pData, uSourceSize, &uCompressedSize );
+
+		if( pbOut && uCompressedSize > 0 && uCompressedSize < uSourceSize )
+		{
+			Con_DPrintf( "Compressing split packet (%d -> %d bytes)\n", uSourceSize, uCompressedSize );
+			memcpy( msg->pData, pbOut, uCompressedSize );
+			MSG_SeekToBit( msg, uCompressedSize << 3, SEEK_SET );
+		}
+		if( pbOut ) free( pbOut );
+	}
+
 	remaining = MSG_GetNumBytesWritten( msg );
 	pos = 0;	// current position in bytes
 
@@ -727,6 +742,20 @@ void Netchan_CreateFileFragmentsFromBuffer( netchan_t *chan, char *filename, byt
 		chunksize = chan->pfnBlockSize( chan->client );
 	else chunksize = FRAGMENT_MAX_SIZE; // fallback
 
+	if( !LZSS_IsCompressed( pbuf ))
+	{
+		uint	uCompressedSize = 0;
+		byte	*pbOut = LZSS_Compress( pbuf, size, &uCompressedSize );
+
+		if( pbOut && uCompressedSize > 0 && uCompressedSize < size )
+		{
+			Con_DPrintf( "Compressing filebuffer (%s -> %s)\n", Q_memprint( size ), Q_memprint( uCompressedSize ));
+			memcpy( pbuf, pbOut, uCompressedSize );
+			size = uCompressedSize;
+		}
+		if( pbOut ) free( pbOut );
+	}
+
 	wait = (fragbufwaiting_t *)Mem_Alloc( net_mempool, sizeof( fragbufwaiting_t ));
 	remaining = size;
 	pos = 0;
@@ -793,7 +822,11 @@ int Netchan_CreateFileFragments( netchan_t *chan, const char *filename )
 	int		remaining;
 	int		bufferid = 1;
 	int		filesize = 0;
+	char		compressedfilename[MAX_OSPATH];
+	int		compressedFileTime;
+	int		fileTime;
 	qboolean		firstfragment = true;
+	qboolean		bCompressed = false;
 	fragbufwaiting_t	*wait, *p;
 	fragbuf_t		*buf;
 	
@@ -806,6 +839,37 @@ int Netchan_CreateFileFragments( netchan_t *chan, const char *filename )
 	if( chan->pfnBlockSize != NULL )
 		chunksize = chan->pfnBlockSize( chan->client );
 	else chunksize = FRAGMENT_MAX_SIZE; // fallback
+
+	Q_strncpy( compressedfilename, filename, sizeof( compressedfilename ));
+	COM_ReplaceExtension( compressedfilename, ".ztmp" );
+	compressedFileTime = FS_FileTime( compressedfilename, false );
+	fileTime = FS_FileTime( filename, false );
+
+	if( compressedFileTime >= fileTime )
+	{
+		// if compressed file already created and newer than source
+		if( FS_FileSize( compressedfilename, false ) != -1 )
+			bCompressed = true;
+	}
+	else
+	{
+		uint	uCompressedSize;
+		byte	*uncompressed;
+		byte	*compressed;
+
+		uncompressed = FS_LoadFile( filename, &filesize, false );
+		compressed = LZSS_Compress( uncompressed, filesize, &uCompressedSize );
+
+		if( compressed )
+		{
+			Con_DPrintf( "compressed file %s (%s -> %s)\n", filename, Q_memprint( filesize ), Q_memprint( uCompressedSize ));
+			FS_WriteFile( compressedfilename, compressed, uCompressedSize );
+			filesize = uCompressedSize;
+			bCompressed = true;
+			free( compressed );
+		}
+		Mem_Free( uncompressed );
+	}
 
 	wait = (fragbufwaiting_t *)Mem_Alloc( net_mempool, sizeof( fragbufwaiting_t ));
 	remaining = filesize;
@@ -835,6 +899,7 @@ int Netchan_CreateFileFragments( netchan_t *chan, const char *filename )
 		buf->isfile = true;
 		buf->size = send;
 		buf->foffset = pos;
+		buf->iscompressed = bCompressed;
 		Q_strncpy( buf->filename, filename, sizeof( buf->filename ));
 
 		pos += send;
@@ -917,6 +982,24 @@ qboolean Netchan_CopyNormalFragments( netchan_t *chan, sizebuf_t *msg, size_t *l
 
 		Mem_Free( p );
 		p = n;
+	}
+
+	if( LZSS_IsCompressed( MSG_GetData( msg )))
+	{
+		uint	uDecompressedLen = LZSS_GetActualSize( MSG_GetData( msg ));
+		byte	buf[NET_MAX_MESSAGE];
+
+		if( uDecompressedLen <= sizeof( buf ))
+		{
+			size = LZSS_Decompress( MSG_GetData( msg ), buf );
+			memcpy( msg->pData, buf, size );
+		}
+		else
+		{
+			// g-cont. this should not happens
+			Con_Printf( S_ERROR "buffer to small to decompress message\n" );
+			return false;
+		}
 	}
 	
 	chan->incomingbufs[FRAG_NORMAL_STREAM] = NULL;
@@ -1024,6 +1107,16 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 		p = n;
 	}
 
+	if( LZSS_IsCompressed( buffer ))
+	{
+		uint	uncompressedSize = LZSS_GetActualSize( buffer ) + 1;
+		byte	*uncompressedBuffer = Mem_Alloc( net_mempool, uncompressedSize );
+
+		nsize = LZSS_Decompress( buffer, uncompressedBuffer );
+		Mem_Free( buffer );
+		buffer = uncompressedBuffer;
+	}
+
 	// customization files goes int tempbuffer
 	if( filename[0] == '!' )
 	{
@@ -1035,7 +1128,7 @@ qboolean Netchan_CopyFileFragments( netchan_t *chan, sizebuf_t *msg )
 	else
 	{
 		// g-cont. it's will be stored downloaded files directly into game folder
-		FS_WriteFile( filename, buffer, pos );
+		FS_WriteFile( filename, buffer, nsize );
 		Mem_Free( buffer );
 	}
 
@@ -1309,7 +1402,16 @@ void Netchan_TransmitBits( netchan_t *chan, int length, byte *data )
 					byte	filebuffer[NET_MAX_FRAGMENT];
 					file_t	*file;
 
-					file = FS_Open( pbuf->filename, "rb", false );
+					if( pbuf->iscompressed )
+					{
+						char	compressedfilename[MAX_OSPATH];
+
+						Q_strncpy( compressedfilename, pbuf->filename, sizeof( compressedfilename ));
+						COM_ReplaceExtension( compressedfilename, ".ztmp" );
+						file = FS_Open( compressedfilename, "rb", false );
+					}
+					else file = FS_Open( pbuf->filename, "rb", false );
+
 					FS_Seek( file, pbuf->foffset, SEEK_SET );
 					FS_Read( file, filebuffer, pbuf->size );
 

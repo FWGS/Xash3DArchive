@@ -650,13 +650,15 @@ static void R_CheckFog( void )
 		return;
 	}
 
-	// special hack fog Spirit 1.9 that used direct calls of glFog-functions
+#ifdef HACKS_RELATED_HLMODS
+	// special condition for Spirit 1.9 that used direct calls of glFog-functions
 	if(( !RI.fogEnabled && !RI.fogCustom ) && pglIsEnabled( GL_FOG ) && VectorIsNull( RI.fogColor ))
 	{
+		// fill the fog color from GL-state machine
 		pglGetFloatv( GL_FOG_COLOR, RI.fogColor );
 		RI.fogSkybox = true;
 	}
-
+#endif
 	RI.fogEnabled = false;
 
 	if( RI.onlyClientDraw || cl.local.waterlevel < 3 || !RI.drawWorld || !RI.viewleaf )

@@ -695,7 +695,6 @@ float SND_GetGain( channel_t *ch, qboolean fplayersound, qboolean flooping, floa
 	{
 		// player weapon sounds get extra gain - this compensates
 		// for npc distance effect weapons which mix louder as L+R into L, R
-		// Hack.
 		if( ch->entchannel == CHAN_WEAPON )
 			gain = gain * dB_To_Gain( SND_GAIN_PLAYER_WEAPON_DB );
 	}

@@ -312,9 +312,9 @@ void Mod_LoadMapSprite( model_t *mod, const void *buffer, size_t size, qboolean 
 
 	if( loaded ) *loaded = false;
 	Q_snprintf( texname, sizeof( texname ), "#%s", mod->name );
-	host.overview_loading = true;
+	Image_SetForceFlags( IL_OVERVIEW );
 	pix = FS_LoadImage( texname, buffer, size );
-	host.overview_loading = false;
+	Image_ClearForceFlags();
 	if( !pix ) return;	// bad image or something else
 
 	mod->type = mod_sprite;
@@ -428,31 +428,33 @@ void Mod_UnloadSpriteModel( model_t *mod )
 
 	Assert( mod != NULL );
 
-	if( mod->type != mod_sprite )
-		return; // not a sprite
-
-	psprite = mod->cache.data;
-	if( !psprite ) return; // already freed
-
-	// release all textures
-	for( i = 0; i < psprite->numframes; i++ )
+	if( mod->type == mod_sprite )
 	{
-		if( host.type == HOST_DEDICATED )
-			break; // nothing to release
-
-		if( psprite->frames[i].type == SPR_SINGLE )
+		if( host.type != HOST_DEDICATED )
 		{
-			pspriteframe = psprite->frames[i].frameptr;
-			GL_FreeTexture( pspriteframe->gl_texturenum );
-		}
-		else
-		{
-			pspritegroup = (mspritegroup_t *)psprite->frames[i].frameptr;
+			psprite = mod->cache.data;
 
-			for( j = 0; j < pspritegroup->numframes; j++ )
+			if( psprite )
 			{
-				pspriteframe = pspritegroup->frames[i];
-				GL_FreeTexture( pspriteframe->gl_texturenum );
+				// release all textures
+				for( i = 0; i < psprite->numframes; i++ )
+				{
+					if( psprite->frames[i].type == SPR_SINGLE )
+					{
+						pspriteframe = psprite->frames[i].frameptr;
+						GL_FreeTexture( pspriteframe->gl_texturenum );
+					}
+					else
+					{
+						pspritegroup = (mspritegroup_t *)psprite->frames[i].frameptr;
+
+						for( j = 0; j < pspritegroup->numframes; j++ )
+						{
+							pspriteframe = pspritegroup->frames[i];
+							GL_FreeTexture( pspriteframe->gl_texturenum );
+						}
+					}
+				}
 			}
 		}
 	}

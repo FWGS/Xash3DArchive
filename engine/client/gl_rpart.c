@@ -392,7 +392,7 @@ void CL_DrawParticles( double frametime )
 		{
 			size = PART_SIZE; // get initial size of particle
 
-			// HACKHACK a scale up to keep particles from disappearing
+			// scale up to keep particles from disappearing
 			size += (p->org[0] - RI.vieworg[0]) * RI.cull_vforward[0];
 			size += (p->org[1] - RI.vieworg[1]) * RI.cull_vforward[1];
 			size += (p->org[2] - RI.vieworg[2]) * RI.cull_vforward[2];

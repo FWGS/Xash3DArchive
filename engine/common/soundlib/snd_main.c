@@ -81,8 +81,9 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
 		}
 	}
 
-	// HACKHACK: skip any checks, load file from buffer
-	if( filename[0] == '#' && buffer && size ) goto load_internal;
+	// special mode: skip any checks, load file from buffer
+	if( filename[0] == '#' && buffer && size )
+		goto load_internal;
 
 	// now try all the formats in the selected list
 	for( format = sound.loadformats; format && format->formatstring; format++)

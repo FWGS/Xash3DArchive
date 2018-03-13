@@ -45,6 +45,8 @@ extern int SV_UPDATE_BACKUP;
 #define MAP_HAS_LANDMARK	BIT( 2 )
 #define MAP_INVALID_VERSION	BIT( 3 )
 
+#define SV_SPAWN_TIME	0.1
+
 // group flags
 #define GROUP_OP_AND	0
 #define GROUP_OP_NAND	1
@@ -100,10 +102,9 @@ typedef enum
 // instanced baselines container
 typedef struct
 {
-	int		count;
-	const char	*classnames[MAX_CUSTOM_BASELINES];
-	entity_state_t	baselines[MAX_CUSTOM_BASELINES];
-} sv_baselines_t;
+	const char	*classname;
+	entity_state_t	baseline;
+} sv_baseline_t;
 
 typedef struct
 {
@@ -116,7 +117,7 @@ typedef struct
 // like as entity_state_t in Quake
 typedef struct
 {
-	char		model[64];	// name of static-entity model for right precache
+	char		model[MAX_QPATH];	// name of static-entity model for right precache
 	vec3_t		origin;
 	vec3_t		angles;
 	byte		sequence;
@@ -147,11 +148,11 @@ typedef struct server_s
 	struct sv_client_s	*current_client;	// current client who network message sending on
 
 	int		hostflags;	// misc server flags: predicting etc
-	CRC32_t		worldmapCRC;
-	int		progsCRC;
+	CRC32_t		worldmapCRC;	// check crc for catch cheater maps
+	int		progsCRC;		// this is used with feature ENGINE_QUAKE_COMPATIBLE 
 
-	string		name;		// map name
-	string		startspot;	// player_start name on nextmap
+	char		name[MAX_QPATH];	// map name
+	char		startspot[MAX_QPATH];
 
 	double		lastchecktime;
 	int		lastcheck;	// number of last checked client
@@ -174,8 +175,9 @@ typedef struct server_s
 	int		num_consistency;	// typically check model bounds on this
 	int		num_resources;
 
-	sv_baselines_t	instanced;	// instanced baselines
+	sv_baseline_t	instanced[MAX_CUSTOM_BASELINES];	// instanced baselines
 	int		last_valid_baseline;// all the entities with number more than that was created in-game and doesn't have the baseline
+	int		num_instanced;
 
 	// unreliable data to send to clients.
 	sizebuf_t		datagram;
@@ -239,13 +241,13 @@ typedef struct sv_client_s
 	double		cl_updaterate;		// client requested updaterate
 	double		timebase;			// client timebase
 	double		lastservertime;		// check if server time was not changed so no resaon to send update
+	double		connection_started;
 
 	char		hashedcdkey[34];		// MD5 hash is 32 hex #'s, plus trailing 0
 
 	customization_t	customdata;		// player customization linked list
 	resource_t	resourcesonhand;
 	resource_t	resourcesneeded;		// <mapname.res> from client (server downloading)
-	file_t		*upload;
 	usercmd_t		lastcmd;			// for filling in big drops
 
 	double		connecttime;
@@ -270,9 +272,7 @@ typedef struct sv_client_s
 	byte		datagram_buf[MAX_DATAGRAM];
 
 	client_frame_t	*frames;			// updates can be delta'd from here
-	event_state_t	events;
-
-	double		connection_started;
+	event_state_t	events;			// delta-updated events cycle
 
 	int		challenge;		// challenge of this user, randomly generated
 	int		userid;			// identifying number on server
@@ -345,35 +345,27 @@ typedef struct
 	edict_t		*msg_ent;			// user message member entity
 	vec3_t		msg_org;			// user message member origin
 
-	// catched user messages (nasty hack)
-	int		gmsgHudText;		// -1 if not catched (e.g. mod not registered this message)
-
 	void		*hInstance;		// pointer to game.dll
 	qboolean		config_executed;		// should to execute config.cfg once time to restore FCVAR_ARCHIVE that specified in hl.dll
 
-	union
-	{
-		edict_t	*edicts;			// acess by edict number
-		void	*vp;			// acess by offset in bytes
-	};
+	edict_t		*edicts;			// solid array of server entities
 	int		numEntities;		// actual entities count
 
-	movevars_t	movevars;			// curstate
-	movevars_t	oldmovevars;		// oldstate
+	movevars_t	movevars;			// movement variables curstate
+	movevars_t	oldmovevars;		// movement variables oldstate
 	playermove_t	*pmove;			// pmove state
 	sv_interp_t	interp[MAX_CLIENTS];	// interpolate clients
-
 	sv_pushed_t	pushed[MAX_PUSHED_ENTS];	// no reason to keep array for all edicts
 						// 256 it should be enough for any game situation
 
 	globalvars_t	*globals;			// server globals
+
 	DLL_FUNCTIONS	dllFuncs;			// dll exported funcs
 	NEW_DLL_FUNCTIONS	dllFuncs2;		// new dll exported funcs (may be NULL)
 	physics_interface_t	physFuncs;		// physics interface functions (Xash3D extension)
+
 	byte		*mempool;			// server premamnent pool: edicts etc
 	byte		*stringspool;		// for engine strings
-
-	SAVERESTOREDATA	SaveData;			// shared struct, used for save data
 } svgame_static_t;
 
 typedef struct
@@ -445,8 +437,6 @@ extern convar_t		sv_skyangle;
 extern convar_t		sv_consistency;
 extern convar_t		sv_password;
 extern convar_t		sv_uploadmax;
-extern convar_t		sv_spawntime;
-extern convar_t		sv_changetime;
 extern convar_t		deathmatch;
 extern convar_t		hostname;
 extern convar_t		skill;

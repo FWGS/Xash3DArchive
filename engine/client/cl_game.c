@@ -1193,14 +1193,31 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 
 	Assert( m_pSprite != NULL );
 
-	buf = FS_LoadFile( szSpriteName, &size, false );
-	if( !buf ) return false;
-
 	Q_strncpy( m_pSprite->name, szSpriteName, sizeof( m_pSprite->name ));
 
 	// it's hud sprite, make difference names to prevent free shared textures
 	if( type == SPR_CLIENT || type == SPR_HUDSPRITE )
 		SetBits( m_pSprite->flags, MODEL_CLIENT );
+	m_pSprite->numtexinfo = texFlags; // store texFlags into numtexinfo
+
+	if( FS_FileSize( szSpriteName, false ) == -1 )
+	{
+		if( cls.state != ca_active && cl.maxclients > 1 )
+		{
+			// trying to download sprite from server
+			CL_AddClientResource( szSpriteName, t_model );
+			m_pSprite->needload = NL_NEEDS_LOADED;
+			return true;
+		}
+		else
+		{
+			Mod_UnloadSpriteModel( m_pSprite );
+			return false;
+		}
+	}
+
+	buf = FS_LoadFile( szSpriteName, &size, false );
+	ASSERT( buf != NULL );
 
 	if( type == SPR_MAPSPRITE )
 		Mod_LoadMapSprite( m_pSprite, buf, size, &loaded );
@@ -1213,6 +1230,8 @@ static qboolean CL_LoadHudSprite( const char *szSpriteName, model_t *m_pSprite, 
 		Mod_UnloadSpriteModel( m_pSprite );
 		return false;
 	}
+
+	m_pSprite->needload = NL_PRESENT;
 
 	return true;
 }
@@ -1227,7 +1246,7 @@ tent sprites or overview images
 */
 static model_t *CL_LoadSpriteModel( const char *filename, uint type, uint texFlags )
 {
-	char	name[64];
+	char	name[MAX_QPATH];
 	model_t	*mod;
 	int	i;
 
@@ -1245,10 +1264,14 @@ static model_t *CL_LoadSpriteModel( const char *filename, uint type, uint texFla
 	{
 		if( !Q_stricmp( mod->name, name ))
 		{
-			if( mod->mempool )
-				mod->needload = NL_PRESENT;
-			else mod->needload = NL_NEEDS_LOADED;
+			if( mod->needload == NL_NEEDS_LOADED )
+			{
+				if( CL_LoadHudSprite( name, mod, type, texFlags ))
+					return mod;
+			}
 
+			// prolonge registration
+			mod->needload = NL_PRESENT;
 			return mod;
 		}
 	}
@@ -1265,11 +1288,7 @@ static model_t *CL_LoadSpriteModel( const char *filename, uint type, uint texFla
 
 	// load new map sprite
 	if( CL_LoadHudSprite( name, mod, type, texFlags ))
-	{
-		mod->needload = NL_PRESENT;
 		return mod;
-	}
-
 	return NULL;
 }
 
@@ -1331,9 +1350,27 @@ CL_GetSpritePointer
 */
 const model_t *CL_GetSpritePointer( HSPRITE hSprite )
 {
+	model_t	*mod;
+
 	if( hSprite <= 0 || hSprite >= MAX_CLIENT_SPRITES )
 		return NULL; // bad image
-	return &clgame.sprites[hSprite];
+	mod = &clgame.sprites[hSprite];
+
+	if( mod->needload == NL_NEEDS_LOADED )
+	{
+		int	type = FBitSet( mod->flags, MODEL_CLIENT ) ? SPR_HUDSPRITE : SPR_MAPSPRITE;
+
+		if( CL_LoadHudSprite( mod->name, mod, type, mod->numtexinfo ))
+			return mod;
+	}
+
+	if( mod->mempool )
+	{
+		mod->needload = NL_PRESENT;
+		return mod;
+	}
+
+	return NULL;
 }
 
 /*
@@ -3755,7 +3792,7 @@ qboolean CL_LoadProgs( const char *name )
 	clgame.mempool = Mem_AllocPool( "Client Edicts Zone" );
 	clgame.entities = NULL;
 
-	clgame.hInstance = COM_LoadLibrary( name, false );
+	clgame.hInstance = COM_LoadLibrary( name, false, false );
 	if( !clgame.hInstance ) return false;
 
 	// clear exports

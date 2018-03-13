@@ -852,7 +852,7 @@ edict_t *SV_AllocEdict( void )
 	}
 
 	if( i >= GI->max_edicts )
-		Sys_Error( "ED_AllocEdict: no free edicts (max is %d)\n", GI->max_edicts );
+		Host_Error( "ED_AllocEdict: no free edicts (max is %d)\n", GI->max_edicts );
 
 	svgame.numEntities++;
 	e = EDICT_NUM( i );
@@ -922,7 +922,7 @@ edict_t* SV_AllocPrivateData( edict_t *ent, string_t className )
 			return NULL;
 		}
 
-		SetBits( ent->v.flags, FL_CUSTOMENTITY ); // sort of hack
+		SetBits( ent->v.flags, FL_CUSTOMENTITY ); // it's a custom entity but not a beam!
 	}
 
 	SpawnEdict( &ent->v );
@@ -940,7 +940,8 @@ create specified entity, alloc private data
 edict_t* SV_CreateNamedEntity( edict_t *ent, string_t className )
 {
 	edict_t *ed = SV_AllocPrivateData( ent, className );
-
+	
+	// for some reasons this flag should be immediately cleared
 	if( ed ) ClearBits( ed->v.flags, FL_CUSTOMENTITY );
 
 	return ed;
@@ -1616,9 +1617,6 @@ edict_t* pfnFindClientInPVS( edict_t *pEdict )
 		VectorAdd( pEdict->v.origin, pEdict->v.view_ofs, view );
 	}
 
-	if( FBitSet( pEdict->v.effects, EF_INVLIGHT ))
-		view[2] -= 1.0f; // HACKHACK for barnacle
-
 	leaf = Mod_PointInLeaf( view, sv.worldmodel->nodes );
 
 	if( CHECKVISBIT( clientpvs, leaf->cluster ))
@@ -1732,6 +1730,7 @@ static void pfnMakeStatic( edict_t *ent )
 			Con_Printf( S_WARN "MAX_STATIC_ENTITIES limit exceeded (%d)\n", MAX_STATIC_ENTITIES );
 			sv.static_ents_overflow = true;
 		}
+		sv.ignored_static_ents++; // continue overflowed entities
 		return;
 	}
 
@@ -2465,13 +2464,6 @@ void pfnMessageEnd( void )
 	if( !svgame.msg_started ) Host_Error( "MessageEnd: called with no active message\n" );
 	svgame.msg_started = false;
 
-	// HACKHACK: clearing HudText in background mode
-	if( sv.background && svgame.msg_index >= 0 && svgame.msg[svgame.msg_index].number == svgame.gmsgHudText )
-	{
-		MSG_Clear( &sv.multicast );
-		return;
-	}
-
 	if( MSG_CheckOverflow( &sv.multicast ))
 	{
 		Con_Printf( S_ERROR "MessageEnd: %s has overflow multicast buffer\n", name );
@@ -2921,7 +2913,7 @@ pfnPEntityOfEntOffset
 */
 edict_t* pfnPEntityOfEntOffset( int iEntOffset )
 {
-	return (&((edict_t *)svgame.vp)[iEntOffset]);
+	return (edict_t *)((byte *)svgame.edicts + iEntOffset);
 }
 
 /*
@@ -2932,7 +2924,7 @@ pfnEntOffsetOfPEntity
 */
 int pfnEntOffsetOfPEntity( const edict_t *pEdict )
 {
-	return ((byte *)pEdict - (byte *)svgame.vp);
+	return (byte *)pEdict - (byte *)svgame.edicts;
 }
 
 /*
@@ -3084,10 +3076,6 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 	Q_strncpy( svgame.msg[i].name, pszName, sizeof( svgame.msg[i].name ));
 	svgame.msg[i].number = svc_lastmsg + i;
 	svgame.msg[i].size = iSize;
-
-	// catch some user messages
-	if( !Q_strcmp( pszName, "HudText" ))
-		svgame.gmsgHudText = svc_lastmsg + i;
 
 	if( sv.state == ss_active )
 	{
@@ -3966,15 +3954,15 @@ pfnCreateInstancedBaseline
 */
 int pfnCreateInstancedBaseline( int classname, struct entity_state_s *baseline )
 {
-	if( !baseline || sv.instanced.count >= MAX_CUSTOM_BASELINES )
+	if( !baseline || sv.num_instanced >= MAX_CUSTOM_BASELINES )
 		return 0;
 
 	// g-cont. must sure that classname is really allocated
-	sv.instanced.classnames[sv.instanced.count] = SV_CopyString( STRING( classname ));
-	sv.instanced.baselines[sv.instanced.count] = *baseline;
-	sv.instanced.count++;
+	sv.instanced[sv.num_instanced].classname = SV_CopyString( STRING( classname ));
+	sv.instanced[sv.num_instanced].baseline = *baseline;
+	sv.num_instanced++;
 
-	return sv.instanced.count;
+	return sv.num_instanced;
 }
 
 /*
@@ -4363,9 +4351,11 @@ ed should be a properly initialized empty edict.
 qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 {
 	KeyValueData	pkvd[256]; // per one entity
+	qboolean		adjust_origin = false;
 	int		i, numpairs = 0;
 	char		*classname = NULL;
 	char		token[2048];
+	vec3_t		origin;
 
 	// go through all the dictionary pairs
 	while( 1 )
@@ -4427,7 +4417,6 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 
 	if( FBitSet( ent->v.flags, FL_CUSTOMENTITY ))
 	{
-		ClearBits( ent->v.flags, FL_CUSTOMENTITY );
 		if( numpairs < 256 )
 		{
 			pkvd[numpairs].szClassName = "custom";
@@ -4436,7 +4425,21 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 			pkvd[numpairs].fHandled = false;
 			numpairs++;
 		}
+
+		// clear it now - no longer used
+		ClearBits( ent->v.flags, FL_CUSTOMENTITY );
 	}
+
+#ifdef HACKS_RELATED_HLMODS
+	// chemical existence have broked changelevels
+	if( !Q_stricmp( GI->gamedir, "ce" ))
+	{
+	 	if( !Q_stricmp( sv.name, "ce08_01" ) && !Q_stricmp( classname, "info_player_start" ))
+			adjust_origin = true;
+	 	if( !Q_stricmp( sv.name, "ce08_02" ) && !Q_stricmp( classname, "info_player_start_force" ))
+			adjust_origin = true;
+	}
+#endif
 
 	for( i = 0; i < numpairs; i++ )
 	{
@@ -4457,6 +4460,16 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 			else pkvd[i].szValue = copystring( "0 0 0" ); // technically an error
 		}
 
+#ifdef HACKS_RELATED_HLMODS
+		if( adjust_origin && !Q_strcmp( pkvd[i].szKeyName, "origin" ))
+		{
+			char	*pstart = pkvd[i].szValue;
+
+			COM_ParseVector( &pstart, origin, 3 );
+			Mem_Free( pkvd[i].szValue );	// release old value, so we don't need these
+			copystring( va( "%g %g %g", origin[0], origin[1], origin[2] - 16.0f ));
+		}
+#endif
 		if( !Q_strcmp( pkvd[i].szKeyName, "light" ))
 		{
 			Mem_Free( pkvd[i].szKeyName );
@@ -4644,7 +4657,7 @@ qboolean SV_LoadProgs( const char *name )
 	svgame.pmove = &gpMove;
 	svgame.globals = &gpGlobals;
 	svgame.mempool = Mem_AllocPool( "Server Edicts Zone" );
-	svgame.hInstance = COM_LoadLibrary( name, true );
+	svgame.hInstance = COM_LoadLibrary( name, true, false );
 	if( !svgame.hInstance ) return false;
 
 	// make sure what new dll functions is cleared
@@ -4742,9 +4755,6 @@ qboolean SV_LoadProgs( const char *name )
 
 	for( i = 0, e = svgame.edicts; i < GI->max_edicts; i++, e++ )
 		e->free = true; // mark all edicts as freed
-
-	// clear user messages
-	svgame.gmsgHudText = -1;
 
 	Cvar_FullSet( "host_gameloaded", "1", FCVAR_READ_ONLY );
 	svgame.stringspool = Mem_AllocPool( "Server Strings" );

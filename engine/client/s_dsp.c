@@ -777,7 +777,7 @@ void DSP_Process( int idsp, portable_samplepair_t *pbfront, int sampleCount )
 	if( dsp_off->value )
 		return;
 
-	// HACKHACK: don't process while in menu
+	// don't process DSP while in menu
 	if( cls.key_dest == key_menu || !sampleCount )
 		return;
 

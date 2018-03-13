@@ -147,7 +147,7 @@ static void FinalizeSections( MEMORYMODULE *module )
 		{         
 			// change memory access flags
 			if( !VirtualProtect((LPVOID)section->Misc.PhysicalAddress, size, protect, &oldProtect ))
-				Sys_Error( "FinalizeSections: error protecting memory page\n" );
+				Sys_Error( "error protecting memory page\n" );
 		}
 	}
 }
@@ -268,7 +268,7 @@ static int BuildImportTable( MEMORYMODULE *module )
 			void	*handle;
 
 			libname = (LPCSTR)CALCULATE_ADDRESS( codeBase, importDesc->Name );
-			handle = COM_LoadLibraryExt( libname, false, true );
+			handle = COM_LoadLibrary( libname, false, true );
 
 			if( handle == NULL )
 			{
@@ -753,7 +753,7 @@ table_error:
 	if( f ) FS_Close( f );
 	if( p_Names ) Mem_Free( p_Names );
 	FreeNameFuncGlobals( hInst );
-	MsgDev( D_ERROR, "LoadLibrary: %s\n", errorstring );
+	Con_Printf( S_ERROR "LoadLibrary: %s\n", errorstring );
 
 	return false;
 }
@@ -765,7 +765,7 @@ COM_LoadLibrary
 smart dll loader - can loading dlls from pack or wad files
 ================
 */
-void *COM_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolean directpath )
+void *COM_LoadLibrary( const char *dllname, int build_ordinals_table, qboolean directpath )
 {
 	dll_user_t *hInst;
 
@@ -776,7 +776,7 @@ void *COM_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolea
 	{
           	if( hInst->encrypted )
 		{
-			MsgDev( D_ERROR, "Sys_LoadLibrary: couldn't load encrypted library %s\n", dllname );
+			Con_Printf( S_ERROR "LoadLibrary: couldn't load encrypted library %s\n", dllname );
 			return NULL;
 		}
 
@@ -786,7 +786,7 @@ void *COM_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolea
 
 	if( !hInst->hInstance )
 	{
-		MsgDev( D_NOTE, "Sys_LoadLibrary: Loading %s - failed\n", dllname );
+		Con_DPrintf( "LoadLibrary: Loading %s - failed\n", dllname );
 		COM_FreeLibrary( hInst );
 		return NULL;
 	}
@@ -796,20 +796,15 @@ void *COM_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolea
 	{
 		if( !LibraryLoadSymbols( hInst ))
 		{
-			MsgDev( D_NOTE, "Sys_LoadLibrary: Loading %s - failed\n", dllname );
+			Con_DPrintf( "LoadLibrary: Loading %s - failed\n", dllname );
 			COM_FreeLibrary( hInst );
 			return NULL;
 		}
 	}
 
-	MsgDev( D_NOTE, "Sys_LoadLibrary: Loading %s - ok\n", dllname );
+	Con_DPrintf( "LoadLibrary: Loading %s - ok\n", dllname );
 
 	return hInst;
-}
-
-void *COM_LoadLibrary( const char *dllname, int build_ordinals_table )
-{
-	return COM_LoadLibraryExt( dllname, build_ordinals_table, false );
 }
 
 void *COM_GetProcAddress( void *hInstance, const char *name )

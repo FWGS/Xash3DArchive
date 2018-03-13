@@ -207,10 +207,10 @@ Image_CheckFlag
 */
 qboolean Image_CheckFlag( int bit )
 {
-	if( image.force_flags & bit )
+	if( FBitSet( image.force_flags, bit ))
 		return true;
 
-	if( image.cmd_flags & bit )
+	if( FBitSet( image.cmd_flags, bit ))
 		return true;
 
 	return false;
@@ -223,7 +223,17 @@ Image_SetForceFlags
 */
 void Image_SetForceFlags( uint flags )
 {
-	image.force_flags = flags;
+	SetBits( image.force_flags, flags );
+}
+
+/*
+=================
+Image_ClearForceFlags
+=================
+*/
+void Image_ClearForceFlags( void )
+{
+	image.force_flags = 0;
 }
 
 /*
@@ -233,7 +243,7 @@ Image_AddCmdFlags
 */
 void Image_AddCmdFlags( uint flags )
 {
-	image.cmd_flags |= flags;
+	SetBits( image.cmd_flags, flags );
 }
 
 qboolean Image_ValidSize( const char *name )
@@ -1160,11 +1170,8 @@ byte *Image_CreateLumaInternal( byte *fin, int width, int height, int type, int 
 	byte	*out;
 	int	i;
 
-	if(!( flags & IMAGE_HAS_LUMA ))
-	{
-		MsgDev( D_WARN, "Image_MakeLuma: image doesn't has luma pixels\n" );
+	if( !FBitSet( flags, IMAGE_HAS_LUMA ))
 		return (byte *)fin;	  
-	}
 
 	switch( type )
 	{
@@ -1174,29 +1181,9 @@ byte *Image_CreateLumaInternal( byte *fin, int width, int height, int type, int 
 		for( i = 0; i < width * height; i++ )
 			*out++ = fin[i] >= 224 ? fin[i] : 0;
 		break;
-	case PF_RGB_24:
-	case PF_BGR_24:
-		// clearing any gray pixels
-		for( i = 0; i < width * height; i++ )
-		{
-			if( fin[i*3+0] < 32 ) fin[i*3+0] = 0;
-			if( fin[i*3+1] < 32 ) fin[i*3+1] = 0;
-			if( fin[i*3+2] < 32 ) fin[i*3+2] = 0;
-		}
-		return (byte *)fin;
-	case PF_RGBA_32:
-	case PF_BGRA_32:
-		// clearing any gray pixels
-		for( i = 0; i < width * height; i++ )
-		{
-			if( fin[i*4+0] < 32 ) fin[i*4+0] = 0;
-			if( fin[i*4+1] < 32 ) fin[i*4+1] = 0;
-			if( fin[i*4+2] < 32 ) fin[i*4+2] = 0;
-		}
-		return (byte *)fin;
 	default:
 		// another formats does ugly result :(
-		MsgDev( D_WARN, "Image_MakeLuma: unsupported format %s\n", PFDesc[type].name );
+		Con_Printf( S_ERROR "Image_MakeLuma: unsupported format %s\n", PFDesc[type].name );
 		return (byte *)fin;	
 	}
 
@@ -1210,7 +1197,7 @@ qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
 
 	if( Image_CheckFlag( IL_KEEP_8BIT ))
 		expand_to_rgba = false;
-	else if( host.type == HOST_NORMAL && ( image.flags & ( IMAGE_HAS_LUMA|IMAGE_QUAKESKY )))
+	else if( FBitSet( image.flags, IMAGE_HAS_LUMA|IMAGE_QUAKESKY ))
 		expand_to_rgba = false;
 
 	image.size = mipsize;
@@ -1519,11 +1506,11 @@ qboolean Image_Process( rgbdata_t **pix, int width, int height, uint flags, imgf
 		return false; // no operation specfied
 	}
 
-	if( flags & IMAGE_MAKE_LUMA )
+	if( FBitSet( flags, IMAGE_MAKE_LUMA ))
 	{
 		out = Image_CreateLumaInternal( pic->buffer, pic->width, pic->height, pic->type, pic->flags );
 		if( pic->buffer != out ) memcpy( pic->buffer, image.tempbuffer, pic->size );
-		pic->flags &= ~IMAGE_HAS_LUMA;
+		ClearBits( pic->flags, IMAGE_HAS_LUMA );
 	}
 
 	if( flags & IMAGE_REMAP )

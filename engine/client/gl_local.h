@@ -17,7 +17,6 @@ GNU General Public License for more details.
 #define GL_LOCAL_H
 
 #include "gl_export.h"
-#include "com_model.h"
 #include "cl_entity.h"
 #include "render_api.h"
 #include "protocol.h"

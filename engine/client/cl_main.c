@@ -36,6 +36,7 @@ CVAR_DEFINE_AUTO( cl_allow_upload, "1", FCVAR_ARCHIVE, "allow to uploading resou
 CVAR_DEFINE_AUTO( cl_download_ingame, "1", FCVAR_ARCHIVE, "allow to downloading resources while client is active" );
 CVAR_DEFINE_AUTO( cl_logofile, "lambda", FCVAR_ARCHIVE, "player logo name" );
 CVAR_DEFINE_AUTO( cl_logocolor, "orange", FCVAR_ARCHIVE, "player logo color" );
+CVAR_DEFINE_AUTO( cl_test_bandwidth, "1", FCVAR_ARCHIVE, "test network bandwith before connection" );
 convar_t	*rcon_client_password;
 convar_t	*rcon_address;
 convar_t	*cl_timeout;
@@ -1103,11 +1104,10 @@ void CL_CheckForResend( void )
 	cls.connect_retry++;
 
 	Con_Printf( "Connecting to %s...\n", cls.servername );
-#if 0
-	Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
-#else
-	Netchan_OutOfBandPrint( NS_CLIENT, adr, "bandwidth %i %i\n", PROTOCOL_VERSION, cls.max_fragment_size );
-#endif
+
+	if( cl_test_bandwidth.value )
+		Netchan_OutOfBandPrint( NS_CLIENT, adr, "bandwidth %i %i\n", PROTOCOL_VERSION, cls.max_fragment_size );
+	else Netchan_OutOfBandPrint( NS_CLIENT, adr, "getchallenge\n" );
 }
 
 resource_t *CL_AddResource( resourcetype_t type, const char *name, int size, qboolean bFatalIfMissing, int index )
@@ -1285,11 +1285,13 @@ void CL_ClearState( void )
 	Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
 	cl.maxclients = 1; // allow to drawing player in menu
 	cl.mtime[0] = cl.mtime[1] = 1.0f; // because level starts from 1.0f second
+	cls.signon = 0;
 
 	cl.resourcesneeded.pNext = cl.resourcesneeded.pPrev = &cl.resourcesneeded;
 	cl.resourcesonhand.pNext = cl.resourcesonhand.pPrev = &cl.resourcesonhand;
 
 	CL_CreateResourceList();
+	CL_ClearSpriteTextures();	// now all hud sprites are invalid
 
 	cl.local.interp_amount = 0.1f;
 	cl.local.scr_fov = 90.0f;
@@ -1974,7 +1976,7 @@ void CL_ReadNetMessage( void )
 		// can't be a valid sequenced packet	
 		if( cls.state < ca_connected ) continue;
 
-		if( MSG_GetMaxBytes( &net_message ) < 8 )
+		if( !cls.demoplayback && MSG_GetMaxBytes( &net_message ) < 8 )
 		{
 			MsgDev( D_WARN, "%s: runt packet\n", NET_AdrToString( net_from ));
 			continue;
@@ -2414,9 +2416,6 @@ qboolean CL_PrecacheResources( void )
 
 					if( cl.models[pRes->nIndex] == NULL )
 					{
-						if( pRes->ucFlags != 0 )
-							MsgDev( D_WARN, "model %s not found and not available\n", pRes->szFileName );
-
 						if( FBitSet( pRes->ucFlags, RES_FATALIFMISSING ))
 						{
 							S_EndRegistration();
@@ -2518,6 +2517,7 @@ void CL_InitLocal( void )
 	Cvar_RegisterVariable( &cl_download_ingame );
 	Cvar_RegisterVariable( &cl_logofile );
 	Cvar_RegisterVariable( &cl_logocolor );
+	Cvar_RegisterVariable( &cl_test_bandwidth );
 
 	// register our variables
 	cl_crosshair = Cvar_Get( "crosshair", "1", FCVAR_ARCHIVE, "show weapon chrosshair" );

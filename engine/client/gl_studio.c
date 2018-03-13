@@ -161,8 +161,12 @@ int R_GetEntityRenderMode( cl_entity_t *ent )
 	int		i;
 
 	if(( phdr = Mod_StudioExtradata( ent->model )) == NULL )
+	{
+		// forcing to choose right sorting type
+		if(( ent->model && ent->model->type == mod_brush ) && FBitSet( ent->model->flags, MODEL_TRANSPARENT ))
+			return kRenderTransAlpha;
 		return ent->curstate.rendermode;
-
+	}
 	ptexture = (mstudiotexture_t *)((byte *)phdr + phdr->textureindex);
 
 	for( i = 0; i < phdr->numtextures; i++, ptexture++ )
@@ -3026,7 +3030,9 @@ void GL_StudioSetRenderMode( int rendermode )
 ===============
 GL_StudioDrawShadow
 
-NOTE: this code sucessfully working with ShadowHack only in Release build
+g-cont: don't modify this code it's 100% matched with
+original GoldSrc code and used in some mods to enable
+studio shadows with some asm tricks
 ===============
 */
 static void GL_StudioDrawShadow( void )
@@ -3655,7 +3661,7 @@ void R_DrawViewModel( void )
 	if( !RI.currententity->model )
 		return;
 
-	// hack the depth range to prevent view model from poking into walls
+	// adjust the depth range to prevent view model from poking into walls
 	pglDepthRange( gldepthmin, gldepthmin + 0.3f * ( gldepthmax - gldepthmin ));
 	RI.currentmodel = RI.currententity->model;
 
@@ -3719,8 +3725,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		tx = Mem_Alloc( mod->mempool, sizeof( *tx ) + size );
 		mod->textures[i] = tx;
 
-		// parse ranges and store it
-		// HACKHACK: store ranges into anim_min, anim_max etc
+		// store ranges into anim_min, anim_max etc
 		if( !Q_strnicmp( ptexture->name, "DM_Base", 7 ))
 		{
 			Q_strncpy( tx->name, "DM_Base", sizeof( tx->name ));
@@ -3731,14 +3736,14 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		}
 		else
 		{
-			Q_strncpy( tx->name, "DM_User", sizeof( tx->name ));	// custom remapped
+			Q_strncpy( tx->name, "DM_User", sizeof( tx->name )); // custom remapped
 			Q_strncpy( val, ptexture->name + 7, 4 );  
-			tx->anim_min = bound( 0, Q_atoi( val ), 255 );	// topcolor start
+			tx->anim_min = bound( 0, Q_atoi( val ), 255 ); // topcolor start
 			Q_strncpy( val, ptexture->name + 11, 4 ); 
-			tx->anim_max = bound( 0, Q_atoi( val ), 255 );	// topcolor end
+			tx->anim_max = bound( 0, Q_atoi( val ), 255 ); // topcolor end
 			// bottomcolor start always equal is (topcolor end + 1)
 			Q_strncpy( val, ptexture->name + 15, 4 ); 
-			tx->anim_total = bound( 0, Q_atoi( val ), 255 );	// bottomcolor end
+			tx->anim_total = bound( 0, Q_atoi( val ), 255 ); // bottomcolor end
 		}
 
 		tx->width = ptexture->width;

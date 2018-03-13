@@ -16,7 +16,6 @@ GNU General Public License for more details.
 #include "common.h"
 #include "client.h"
 #include "gl_local.h"
-#include "com_model.h"
 #include "wadfile.h"
 
 #define SKYCLOUDS_QUALITY	12
@@ -314,7 +313,7 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 
 	if( clgame.movevars.skyangle )
 	{
-		// HACK: force full sky to draw when it has angle
+		// force full sky to draw when it has angle
 		for( i = 0; i < 6; i++ )
 		{
 			RI.skyMins[0][i] = RI.skyMins[1][i] = -1.0f;

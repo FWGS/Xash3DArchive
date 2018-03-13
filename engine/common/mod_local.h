@@ -19,7 +19,6 @@ GNU General Public License for more details.
 #include "common.h"
 #include "edict.h"
 #include "eiface.h"
-#include "com_model.h"
 
 // 1/32 epsilon to keep floating point happy
 #define DIST_EPSILON		(1.0f / 32.0f)
@@ -110,6 +109,7 @@ typedef struct
 	// mapstats info
 	char		message[2048];	// just for debug
 	char		compiler[256];	// map compiler
+	char		generator[256];	// map editor
 
 	// translucent sorted array
 	sortedface_t	*draw_surfaces;	// used for sorting translucent surfaces

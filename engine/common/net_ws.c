@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #include "netchan.h"
 #include "mathlib.h"
 
-//#define NET_USE_FRAGMENTS		// disabled until revision of netchan will be done
+//#define NET_USE_FRAGMENTS
 
 #define PORT_ANY			-1
 #define MAX_LOOPBACK		4
@@ -26,13 +26,7 @@ GNU General Public License for more details.
 
 #define MAX_ROUTEABLE_PACKET		1400
 #define SPLIT_SIZE			( MAX_ROUTEABLE_PACKET - sizeof( SPLITPACKET ))
-#define NET_MAX_FRAGMENTS		32
-
-#ifdef NET_USE_FRAGMENTS
-#define MAX_UDP_PACKET		4010 // 9 bytes SPLITHEADER + 4000 payload?
-#else
-#define MAX_UDP_PACKET		NET_MAX_MESSAGE
-#endif
+#define NET_MAX_FRAGMENTS		( NET_MAX_FRAGMENT / SPLIT_SIZE )
 
 // wsock32.dll exports
 static int (_stdcall *pWSACleanup)( void );
@@ -115,7 +109,7 @@ typedef struct
 	int		current_sequence;
 	int		split_count;
 	int		total_size;
-	char		buffer[MAX_UDP_PACKET];
+	char		buffer[NET_MAX_FRAGMENT];
 } LONGPACKET;
 
 // use this to pick apart the network stream, must be packed
@@ -124,7 +118,7 @@ typedef struct
 {
 	int		net_id;
 	int		sequence_number;
-	byte		packet_id;
+	short		packet_id;
 } SPLITPACKET;
 #pragma pack(pop)
 
@@ -776,33 +770,32 @@ receive long packet from network
 */
 qboolean NET_GetLong( byte *pData, int size, int *outSize )
 {
-	uint		packet_number;
-	uint		packet_count;
-	int		i, sequence_number;
+	int		i, sequence_number, offset;
 	SPLITPACKET	*pHeader = (SPLITPACKET *)pData;
-	uint		packet_payload_size;
-	byte		packet_id;
+	int		packet_number;
+	int		packet_count;
+	short		packet_id;
 
 	if( size < sizeof( SPLITPACKET ))
 	{
-		MsgDev( D_ERROR, "invalid split packet length %i\n", size );
+		Con_Printf( S_ERROR "invalid split packet length %i\n", size );
 		return false;
 	}
 
 	sequence_number = pHeader->sequence_number;
 	packet_id = pHeader->packet_id;
-	packet_count = packet_id & 0xF;
-	packet_number = (uint)packet_id >> 4;
+	packet_count = ( packet_id & 0xFF );
+	packet_number = ( packet_id >> 8 );
 
 	if( packet_number >= NET_MAX_FRAGMENTS || packet_count > NET_MAX_FRAGMENTS )
 	{
-		MsgDev( D_ERROR, "malformed packet number (%i/%i)\n", packet_number + 1, packet_count );
+		Con_Printf( S_ERROR "malformed packet number (%i/%i)\n", packet_number + 1, packet_count );
 		return false;
 	}
 
 	if( net.split.current_sequence == -1 || sequence_number != net.split.current_sequence )
 	{
-		net.split.current_sequence = pHeader->sequence_number;
+		net.split.current_sequence = sequence_number;
 		net.split.split_count = packet_count;
 		net.split.total_size = 0;
 
@@ -814,70 +807,45 @@ qboolean NET_GetLong( byte *pData, int size, int *outSize )
 			Con_Printf( "<-- Split packet restart %i count %i seq\n", net.split.split_count, sequence_number );
 	}
 
-	packet_payload_size = size - sizeof( SPLITPACKET );
+	size -= sizeof( SPLITPACKET );
 
-	if( net.split_flags[packet_number] == sequence_number )
+	if( net.split_flags[packet_number] != sequence_number )
 	{
-		MsgDev( D_REPORT, "NET_GetLong: Ignoring duplicated split packet %i of %i ( %i bytes )\n",
-			packet_number + 1, packet_count, packet_payload_size );
-	}
-	else
-	{
-		if( packet_number == packet_count - 1 )
-			net.split.total_size = packet_payload_size + SPLIT_SIZE * ( packet_count - 1 );
+		if( packet_number == ( packet_count - 1 ))
+			net.split.total_size = size + SPLIT_SIZE * ( packet_count - 1 );
 
 		net.split.split_count--;
 		net.split_flags[packet_number] = sequence_number;
 
 		if( net_showpackets && net_showpackets->value == 4.0f )
-			Con_Printf( "<-- Split packet %i of %i, %i bytes %i seq\n",
-				packet_number + 1, packet_count, packet_payload_size, sequence_number );
+			Con_Printf( "<-- Split packet %i of %i, %i bytes %i seq\n", packet_number + 1, packet_count, size, sequence_number );
+	}
+	else
+	{
+		Con_DPrintf( "NET_GetLong: Ignoring duplicated split packet %i of %i ( %i bytes )\n", packet_number + 1, packet_count, size );
+	}
 
-		if( SPLIT_SIZE * packet_number + packet_payload_size > MAX_UDP_PACKET )
+	offset = (packet_number * SPLIT_SIZE);
+	memcpy( net.split.buffer + offset, pData + sizeof( SPLITPACKET ), size );
+
+	// have we received all of the pieces to the packet?
+	if( net.split.split_count <= 0 )
+	{
+		net.split.current_sequence = -1; // Clear packet
+
+		if( net.split.total_size > sizeof( net.split.buffer ))
 		{
-			MsgDev( D_ERROR, "malformed packet size (%i, %i)\n", SPLIT_SIZE * packet_number, packet_payload_size );
-			net.split.current_sequence = -1;
-
+			Con_Printf( "Split packet too large! %d bytes\n", net.split.total_size );
 			return false;
 		}
 
-		memcpy( &net.split.buffer[SPLIT_SIZE * packet_number], pHeader + 1, packet_payload_size );
-	}
-
-	if( net.split.split_count > 0 )
-		return false;
-
-	if( packet_count > 0 )
-	{
-		for( i = 0; i < packet_count; i++ )
-		{
-			if( net.split_flags[i] != net.split.current_sequence )
-			{
-				MsgDev( D_ERROR, "split packet without all %i parts, part %i had wrong sequence %i/%i\n",
-					packet_count, i + 1, net.split_flags[i], net.split.current_sequence );
-				net.split.current_sequence = -1; // no more parts can be attached, clear it
-
-				return false;
-			}
-		}
-	}
-
-	net.split.current_sequence = -1;
-
-	if( net.split.total_size <= MAX_UDP_PACKET )
-	{
 		memcpy( pData, net.split.buffer, net.split.total_size );
 		*outSize = net.split.total_size;
 
 		return true;
 	}
-	else
-	{
-		MsgDev( D_ERROR, "split packet too large! %d bytes\n", net.split.total_size );
-		*outSize = 0;
 
-		return FALSE;
-	}
+	return false;
 }
 
 /*
@@ -889,11 +857,11 @@ queue normal and lagged packets
 */
 qboolean NET_QueuePacket( netsrc_t sock, netadr_t *from, byte *data, size_t *length )
 {
-	struct sockaddr	addr;
-	int		addr_len;
-	int		net_socket;
-	byte		buf[MAX_UDP_PACKET];
+	byte		buf[NET_MAX_FRAGMENT];
 	int		ret = SOCKET_ERROR;
+	int		net_socket;
+	int		addr_len;
+	struct sockaddr	addr;
 
 	*length = 0;
 
@@ -908,14 +876,14 @@ qboolean NET_QueuePacket( netsrc_t sock, netadr_t *from, byte *data, size_t *len
 		{
 			NET_SockadrToNetadr( &addr, from );
 
-			if( ret < MAX_UDP_PACKET )
+			if( ret < NET_MAX_FRAGMENT )
 			{
 				// Transfer data
 				memcpy( data, buf, ret );
 				*length = ret;
 
 				// check for split message
-				if( *(int *)data == -2 )
+				if( *(int *)data == NET_HEADER_SPLITPACKET )
 				{
 					return NET_GetLong( data, ret, length );
 				}
@@ -997,7 +965,7 @@ int NET_SendLong( netsrc_t sock, int net_socket, const char *buf, int len, int f
 
 		pPacket = (SPLITPACKET *)packet;
 		pPacket->sequence_number = net.sequence_number;
-		pPacket->net_id = -2;
+		pPacket->net_id = NET_HEADER_SPLITPACKET;
 		packet_number = 0;
 		total_sent = 0;
 		packet_count = (len + SPLIT_SIZE - 1) / SPLIT_SIZE;
@@ -1005,7 +973,7 @@ int NET_SendLong( netsrc_t sock, int net_socket, const char *buf, int len, int f
 		while( len > 0 )
 		{
 			size = Q_min( SPLIT_SIZE, len );
-			pPacket->packet_id = (packet_number << 4) + packet_count;
+			pPacket->packet_id = (packet_number << 8) + packet_count;
 			memcpy( packet + sizeof( SPLITPACKET ), buf + ( packet_number * SPLIT_SIZE ), size );
 
 			if( net_showpackets && net_showpackets->value == 3.0f )
@@ -1026,18 +994,17 @@ int NET_SendLong( netsrc_t sock, int net_socket, const char *buf, int len, int f
 				total_sent += size;
 			len -= size;
 			packet_number++;
+			Sleep( 1 );
 		}
 
 		return total_sent;
 	}
 	else
+#endif
 	{
 		// no fragmenantion for client connection
 		return pSendTo( net_socket, buf, len, flags, to, tolen );
 	}
-#else
-	return pSendTo( net_socket, buf, len, flags, to, tolen );
-#endif
 }
 
 /*

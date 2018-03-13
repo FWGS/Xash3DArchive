@@ -247,8 +247,9 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 		}
 	}
 
-	// HACKHACK: skip any checks, load file from buffer
-	if( filename[0] == '#' && buffer && size ) goto load_internal;
+	// special mode: skip any checks, load file from buffer
+	if( filename[0] == '#' && buffer && size )
+		goto load_internal;
 
 	// now try all the formats in the selected list
 	for( format = image.loadformats; format && format->formatstring; format++)

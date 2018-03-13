@@ -852,8 +852,6 @@ void Host_FreeCommon( void )
 	Netchan_Shutdown();
 	HPAK_FlushHostQueue();
 	FS_Shutdown();
-
-	Mem_FreePool( &host.mempool );
 }
 
 /*
@@ -943,8 +941,8 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 
 	oldtime = Sys_DoubleTime() - 0.1;
 
-	if( host.type == HOST_DEDICATED && !SV_Active( ))
-		MsgDev( D_INFO, "type 'map <mapname>' to run server... (TAB-autocomplete is working too)\n" );
+	if( host.type == HOST_DEDICATED && GameState->nextstate == STATE_RUNFRAME )
+		Con_Printf( "type 'map <mapname>' to run server... (TAB-autocomplete is working too)\n" );
 
 	// main window message loop
 	while( !host.crashed )
@@ -981,6 +979,7 @@ void EXPORT Host_Shutdown( void )
 	NET_Shutdown();
 	Host_FreeCommon();
 	Con_DestroyConsole();
+	Mem_FreePool( &host.mempool );
 
 	// restore filter	
 	if( host.oldFilter ) SetUnhandledExceptionFilter( host.oldFilter );

@@ -716,26 +716,28 @@ int FS_CheckNastyPath( const char *path, qboolean isgamedir )
 	// all: never allow an empty path, as for gamedir it would access the parent directory and a non-gamedir path it is just useless
 	if( !COM_CheckString( path )) return 2;
 
+	if( fs_ext_path ) return 0;	// allow any path
+
 	// Mac: don't allow Mac-only filenames - : is a directory separator
 	// instead of /, but we rely on / working already, so there's no reason to
 	// support a Mac-only path
 	// Amiga and Windows: : tries to go to root of drive
-	if( Q_strstr( path, ":" ) && !fs_ext_path ) return 1; // non-portable attempt to go to root of drive
+	if( Q_strstr( path, ":" )) return 1; // non-portable attempt to go to root of drive
 
 	// Amiga: // is parent directory
-	if( Q_strstr( path, "//" )  && !fs_ext_path ) return 1; // non-portable attempt to go to parent directory
+	if( Q_strstr( path, "//" )) return 1; // non-portable attempt to go to parent directory
 
 	// all: don't allow going to parent directory (../ or /../)
-	if( Q_strstr( path, ".." ) && !fs_ext_path ) return 2; // attempt to go outside the game directory
+	if( Q_strstr( path, ".." )) return 2; // attempt to go outside the game directory
 
 	// Windows and UNIXes: don't allow absolute paths
-	if( path[0] == '/' && !fs_ext_path ) return 2; // attempt to go outside the game directory
+	if( path[0] == '/' ) return 2; // attempt to go outside the game directory
 
 	// all: forbid trailing slash on gamedir
-	if( isgamedir && !fs_ext_path && path[Q_strlen( path )-1] == '/' ) return 2;
+	if( isgamedir && path[Q_strlen( path )-1] == '/' ) return 2;
 
 	// all: forbid leading dot on any filename for any reason
-	if( Q_strstr( path, "/." ) && !fs_ext_path ) return 2; // attempt to go outside the game directory
+	if( Q_strstr( path, "/." )) return 2; // attempt to go outside the game directory
 
 	// after all these checks we're pretty sure it's a / separated filename
 	// and won't do much if any harm
@@ -2315,12 +2317,12 @@ dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath )
 	int		start = 0;
 
 	// check for bad exports
-	if( !dllname || !*dllname )
+	if( !COM_CheckString( dllname ))
 		return NULL;
 
 	fs_ext_path = directpath;
 
-	// HACKHACK: remove absoulte path to valve folder
+	// HACKHACK remove absoulte path to valve folder
 	if( !Q_strnicmp( dllname, "..\\valve\\", 9 ) || !Q_strnicmp( dllname, "../valve/", 9 ))
 		start += 9;
 

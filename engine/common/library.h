@@ -151,8 +151,7 @@ typedef struct dll_user_s
 } dll_user_t;
 
 dll_user_t *FS_FindLibrary( const char *dllname, qboolean directpath );
-void *COM_LoadLibrary( const char *dllname, int build_ordinals_table );
-void *COM_LoadLibraryExt( const char *dllname, int build_ordinals_table, qboolean directpath );
+void *COM_LoadLibrary( const char *dllname, int build_ordinals_table, qboolean directpath );
 void *COM_GetProcAddress( void *hInstance, const char *name );
 const char *COM_NameForFunction( void *hInstance, dword function );
 dword COM_FunctionFromName( void *hInstance, const char *pName );

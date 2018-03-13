@@ -370,11 +370,11 @@ static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long im
 	}
 
 	// add default parms to image
-	flags |= TF_IMAGE;
+	SetBits( flags, TF_IMAGE );
 
-	host.decal_loading = true; // allow decal images for menu
+	Image_SetForceFlags( IL_LOAD_DECAL ); // allow decal images for menu
 	tx = GL_LoadTexture( szPicName, image_buf, image_size, flags, NULL );
-	host.decal_loading = false;
+	Image_ClearForceFlags();
 
 	return tx;
 }
@@ -842,7 +842,7 @@ int pfnCheckGameDll( void )
 
 	if( SV_Initialized( )) return true;
 
-	if(( hInst = COM_LoadLibrary( GI->game_dll, true )) != NULL )
+	if(( hInst = COM_LoadLibrary( GI->game_dll, true, false )) != NULL )
 	{
 		COM_FreeLibrary( hInst );
 		return true;
@@ -885,13 +885,6 @@ pfnStartBackgroundTrack
 static void pfnStartBackgroundTrack( const char *introTrack, const char *mainTrack )
 {
 	S_StartBackgroundTrack( introTrack, mainTrack, 0, false );
-
-	// HACKHACK to remove glitches from background track while new game is started.
-	if( !introTrack && !mainTrack )
-	{
-		S_Activate( 0, host.hWnd );
-		S_Activate( 1, host.hWnd );
-	}
 }
 
 // engine callbacks
@@ -1008,20 +1001,13 @@ qboolean UI_LoadProgs( void )
 	// setup globals
 	gameui.globals = &gpGlobals;
 
-	if(!( gameui.hInstance = COM_LoadLibrary( va( "%s/menu.dll", GI->dll_path ), false )))
+	if(( gameui.hInstance = COM_LoadLibrary( va( "%s/menu.dll", GI->dll_path ), false, false )) == NULL )
 	{
-		FS_AllowDirectPaths( true );
-
-		if(!( gameui.hInstance = COM_LoadLibrary( "../menu.dll", false )))
-		{
-			FS_AllowDirectPaths( false );
+		if(( gameui.hInstance = COM_LoadLibrary( "menu.dll", false, true )) == NULL )
 			return false;
-		}
-
-		FS_AllowDirectPaths( false );
 	}
 
-	if(!( GetMenuAPI = (MENUAPI)COM_GetProcAddress( gameui.hInstance, "GetMenuAPI" )))
+	if(( GetMenuAPI = (MENUAPI)COM_GetProcAddress( gameui.hInstance, "GetMenuAPI" )) == NULL )
 	{
 		COM_FreeLibrary( gameui.hInstance );
 		MsgDev( D_NOTE, "UI_LoadProgs: can't init menu API\n" );

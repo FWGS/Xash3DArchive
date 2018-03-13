@@ -20,7 +20,6 @@ GNU General Public License for more details.
 #include "cdll_int.h"
 #include "menu_int.h"
 #include "cl_entity.h"
-#include "com_model.h"
 #include "mod_local.h"
 #include "pm_defs.h"
 #include "pm_movevars.h"
@@ -581,7 +580,6 @@ typedef struct
 	byte		datagram_buf[MAX_DATAGRAM];
 
 	netchan_t		netchan;
-	int		serverProtocol;		// in case we are doing some kind of version hack
 	int		challenge;		// from the server to use for connecting
 
 	float		packet_loss;

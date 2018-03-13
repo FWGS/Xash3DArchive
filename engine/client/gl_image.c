@@ -1332,10 +1332,6 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 	// set some image flags
 	Image_SetForceFlags( picFlags );
 
-	// HACKHACK: get rid of black vertical line on a 'BlackMesa map'
-	if( !Q_strcmp( name, "#lab1_map1.mip" ) || !Q_strcmp( name, "#lab1_map2.mip" ))
-		flags |= TF_NEAREST;
-
 	pic = FS_LoadImage( name, buf, size );
 	if( !pic ) return 0; // couldn't loading image
 
@@ -1659,23 +1655,23 @@ int GL_CreateTexture( const char *name, int width, int height, const void *buffe
 	r_empty.flags = IMAGE_HAS_COLOR | (( flags & TF_HAS_ALPHA ) ? IMAGE_HAS_ALPHA : 0 );
 	r_empty.buffer = (byte *)buffer;
 
-	if( flags & TF_TEXTURE_1D )
+	if( FBitSet( flags, TF_TEXTURE_1D ))
 	{
 		r_empty.height = 1;
 		r_empty.size = r_empty.width * 4;
 	}
-	else if( flags & TF_TEXTURE_3D )
+	else if( FBitSet( flags, TF_TEXTURE_3D ))
 	{
 		if( !GL_Support( GL_TEXTURE_3D_EXT ))
 			return 0;
 
-		r_empty.depth = r_empty.width; // HACKHACK
+		r_empty.depth = r_empty.width; // assume 3D texture as cube
 		r_empty.size = r_empty.width * r_empty.height * r_empty.depth * 4;
 	}
-	else if( flags & TF_CUBEMAP )
+	else if( FBitSet( flags, TF_CUBEMAP ))
 	{
-		flags &= ~TF_CUBEMAP; // will be set later
-		r_empty.flags |= IMAGE_CUBEMAP;
+		SetBits( r_empty.flags, IMAGE_CUBEMAP );
+		ClearBits( flags, TF_CUBEMAP ); // will be set later
 		r_empty.size *= 6;
 	}
 

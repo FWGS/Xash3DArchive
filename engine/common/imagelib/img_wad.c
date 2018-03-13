@@ -382,7 +382,7 @@ qboolean Image_LoadMIP( const char *name, const byte *buffer, size_t filesize )
 		if( Q_strrchr( name, '{' ))
 		{
 			// NOTE: decals with 'blue base' can be interpret as colored decals
-			if(( !host.decal_loading ) || ( pal[765] == 0 && pal[766] == 0 && pal[767] == 255 ))
+			if( !Image_CheckFlag( IL_LOAD_DECAL ) || ( pal[765] == 0 && pal[766] == 0 && pal[767] == 255 ))
 			{
 				rendermode = LUMP_MASKED;
 				image.flags |= IMAGE_ONEBIT_ALPHA;

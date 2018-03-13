@@ -1246,8 +1246,7 @@ void VID_CheckChanges( void )
 	{
 		if( !VID_SetMode( ))
 		{
-			Con_Printf( S_ERROR "can't initialize video subsystem\n" );
-			Host_NewInstance( va("#%s", GI->gamefolder ), "stopped" );
+			Sys_Error( "Can't re-initialize video subsystem\n" );
 		}
 		else
 		{
@@ -1664,8 +1663,7 @@ qboolean R_Init( void )
 		GL_RemoveCommands();
 		R_Free_OpenGL();
 
-		Con_Printf( S_ERROR "can't initialize video subsystem\n" );
-		Host_NewInstance( va( "#%s", GI->gamefolder ), "stopped" );
+		Sys_Error( "Can't initialize video subsystem\nProbably driver was not installed" );
 		return false;
 	}
 

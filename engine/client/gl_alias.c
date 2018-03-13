@@ -1390,7 +1390,7 @@ void R_DrawAliasModel( cl_entity_t *e )
 	// init time
 	R_AliasSetupTimings();
 
-	// HACKHACK: keep the angles unchanged
+	// angles will be modify below keep original
 	VectorCopy( e->angles, angles );
 
 	R_AliasLerpMovement( e );
@@ -1490,7 +1490,7 @@ void R_DrawAliasModel( cl_entity_t *e )
 		R_LoadIdentity();
 	}
 
-	// HACKHACK: keep the angles unchanged
+	// restore original angles
 	VectorCopy( angles, e->angles );
 }
 
