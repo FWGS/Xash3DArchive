@@ -365,92 +365,6 @@ void Host_InitDecals( void )
 }
 
 /*
-=================
-Host_RestartAmbientSounds
-
-Write ambient sounds into demo
-=================
-*/
-void Host_RestartAmbientSounds( void )
-{
-	soundlist_t	soundInfo[128];
-	string		curtrack, looptrack;
-	int		i, nSounds;
-	long		position;
-
-	if( !SV_Active( )) return;
-
-	nSounds = S_GetCurrentStaticSounds( soundInfo, 128 );
-	
-	for( i = 0; i < nSounds; i++ )
-	{
-		soundlist_t *si = &soundInfo[i];
-
-		if( !si->looping || si->entnum == -1 )
-			continue;
-
-		MsgDev( D_NOTE, "Restarting sound %s...\n", soundInfo[i].name );
-		S_StopSound( si->entnum, si->channel, si->name );
-		SV_StartSound( pfnPEntityOfEntIndex( si->entnum ), CHAN_STATIC, si->name, si->volume, si->attenuation, 0, si->pitch );
-	}
-
-	// restart soundtrack
-	if( S_StreamGetCurrentState( curtrack, looptrack, &position ))
-	{
-		SV_StartMusic( curtrack, looptrack, position );
-	}
-}
-
-/*
-=================
-Host_RestartDecals
-
-Write all the decals into demo
-=================
-*/
-void Host_RestartDecals( void )
-{
-	decallist_t	*entry;
-	int		decalIndex;
-	int		modelIndex;
-	sizebuf_t		*msg;
-	int		i;
-
-	if( !SV_Active( )) return;
-
-	// g-cont. add space for studiodecals if present
-	host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS * 2 );
-	host.numdecals = R_CreateDecalList( host.decalList );
-
-	// remove decals from map
-	R_ClearAllDecals();
-
-	// write decals into reliable datagram
-	msg = SV_GetReliableDatagram();
-
-	// restore decals and write them into network message
-	for( i = 0; i < host.numdecals; i++ )
-	{
-		entry = &host.decalList[i];
-		modelIndex = pfnPEntityOfEntIndex( entry->entityIndex )->v.modelindex;
-
-		// game override
-		if( SV_RestoreCustomDecal( entry, pfnPEntityOfEntIndex( entry->entityIndex ), false ))
-			continue;
-
-		decalIndex = pfnDecalIndex( entry->name );
-
-		// studiodecals will be restored at game-side
-		if( !FBitSet( entry->flags, FDECAL_STUDIO ))
-			SV_CreateDecal( msg, entry->position, decalIndex, entry->entityIndex, modelIndex, entry->flags, entry->scale );
-	}
-
-	Z_Free( host.decalList );
-	host.decalList = NULL;
-	host.numdecals = 0;
-}
-
-/*
 ===================
 Host_GetCommands
 
@@ -979,6 +893,8 @@ void EXPORT Host_Shutdown( void )
 	NET_Shutdown();
 	Host_FreeCommon();
 	Con_DestroyConsole();
+
+	// must be last, console uses this
 	Mem_FreePool( &host.mempool );
 
 	// restore filter	

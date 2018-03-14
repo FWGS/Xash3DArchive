@@ -121,7 +121,7 @@ typedef enum
 #include "crtlib.h"
 #include "cvar.h"
 
-#define XASH_VERSION	1.0f		// engine current version
+#define XASH_VERSION	0.99f		// engine current version
 
 // PERFORMANCE INFO
 #define MIN_FPS         	20.0		// host minimum fps value for maxfps.
@@ -683,8 +683,6 @@ int Host_CompareFileTime( long ft1, long ft2 );
 void Host_NewInstance( const char *name, const char *finalmsg );
 void Host_EndGame( qboolean abort, const char *message, ... );
 void Host_AbortCurrentFrame( void );
-void Host_RestartAmbientSounds( void );
-void Host_RestartDecals( void );
 void Host_WriteServerConfig( const char *name );
 void Host_WriteOpenGLConfig( void );
 void Host_WriteVideoConfig( void );
@@ -756,6 +754,7 @@ void pfnGetGameDir( char *szGetGameDir );
 int pfnDecalIndex( const char *m );
 int pfnGetModelType( model_t *mod );
 int pfnIsMapValid( char *filename );
+void Con_Reportf( char *szFmt, ... );
 void Con_DPrintf( char *fmt, ... );
 void Con_Printf( char *szFmt, ... );
 int pfnNumberOfEntities( void );

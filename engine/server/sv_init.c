@@ -25,6 +25,61 @@ svgame_static_t	svgame;	// persistant game info
 
 /*
 ================
+SV_AddResource
+
+generic method to put the resources into array
+================
+*/
+static void SV_AddResource( resourcetype_t type, const char *name, int size, byte flags, int index )
+{
+	resource_t	*pResource = &sv.resources[sv.num_resources];
+
+	if( sv.num_resources >= MAX_RESOURCES )
+		Host_Error( "MAX_RESOURCES limit exceeded (%d)\n", MAX_RESOURCES );
+	sv.num_resources++;
+
+	Q_strncpy( pResource->szFileName, name, sizeof( pResource->szFileName ));
+	pResource->nDownloadSize = size;
+	pResource->ucFlags = flags;
+	pResource->nIndex = index;
+	pResource->type = type;
+}
+
+/*
+================
+SV_SendSingleResource
+
+hot precache on a flying
+================
+*/
+void SV_SendSingleResource( const char *name, resourcetype_t type, int index, byte flags )
+{
+	resource_t	*pResource = &sv.resources[sv.num_resources];
+	int		nSize = 0;
+
+	if( !COM_CheckString( name ))
+		return;
+
+	switch( type )
+	{
+	case t_model:
+		nSize = ( name[0] != '*' ) ? FS_FileSize( name, false ) : 0;
+		break;
+	case t_sound:
+		nSize = FS_FileSize( va( "%s%s", DEFAULT_SOUNDPATH, name ), false );
+		break;
+	default:
+		nSize = FS_FileSize( name, false );
+		break;
+	}
+
+	SV_AddResource( type, name, nSize, flags, index );
+	MSG_BeginServerCmd( &sv.reliable_datagram, svc_resource );
+	SV_SendResource( pResource, &sv.reliable_datagram );
+}
+
+/*
+================
 SV_ModelIndex
 
 register unique model for a server and client
@@ -60,11 +115,9 @@ int SV_ModelIndex( const char *filename )
 
 	if( sv.state != ss_loading )
 	{	
-		Con_Printf( S_WARN "late precache of %s\n", name );
 		// send the update to everyone
-		MSG_BeginServerCmd( &sv.reliable_datagram, svc_modelindex );
-		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_MODEL_BITS );
-		MSG_WriteString( &sv.reliable_datagram, name );
+		SV_SendSingleResource( name, t_model, i, sv.model_precache_flags[i] );
+		Con_Printf( S_WARN "late precache of %s\n", name );
 	}
 
 	return i;
@@ -114,11 +167,9 @@ int SV_SoundIndex( const char *filename )
 
 	if( sv.state != ss_loading )
 	{	
-		Con_Printf( S_WARN "late precache of %s\n", name );
 		// send the update to everyone
-		MSG_BeginServerCmd( &sv.reliable_datagram, svc_soundindex );
-		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_SOUND_BITS );
-		MSG_WriteString( &sv.reliable_datagram, name );
+		SV_SendSingleResource( name, t_sound, i, 0 );
+		Con_Printf( S_WARN "late precache of %s\n", name );
 	}
 
 	return i;
@@ -160,9 +211,7 @@ int SV_EventIndex( const char *filename )
 	if( sv.state != ss_loading )
 	{
 		// send the update to everyone
-		MSG_BeginServerCmd( &sv.reliable_datagram, svc_eventindex );
-		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_EVENT_BITS );
-		MSG_WriteString( &sv.reliable_datagram, name );
+		SV_SendSingleResource( name, t_eventscript, i, RES_FATALIFMISSING );
 	}
 
 	return i;
@@ -204,9 +253,7 @@ int SV_GenericIndex( const char *filename )
 	if( sv.state != ss_loading )
 	{
 		// send the update to everyone
-		MSG_BeginServerCmd( &sv.reliable_datagram, svc_fileindex );
-		MSG_WriteUBitLong( &sv.reliable_datagram, i, MAX_CUSTOM_BITS );
-		MSG_WriteString( &sv.reliable_datagram, name );
+		SV_SendSingleResource( name, t_generic, i, RES_FATALIFMISSING );
 	}
 
 	return i;
@@ -224,21 +271,6 @@ model_t *SV_ModelHandle( int modelindex )
 	if( modelindex < 0 || modelindex >= MAX_MODELS )
 		return NULL;
 	return sv.models[modelindex];
-}
-
-void SV_AddResource( resourcetype_t type, const char *name, int size, byte flags, int index )
-{
-	resource_t	*pResource = &sv.resources[sv.num_resources];
-
-	if( sv.num_resources >= MAX_RESOURCES )
-		Host_Error( "MAX_RESOURCES limit exceeded (%d)\n", MAX_RESOURCES );
-	sv.num_resources++;
-
-	Q_strncpy( pResource->szFileName, name, sizeof( pResource->szFileName ));
-	pResource->nDownloadSize = size;
-	pResource->ucFlags = flags;
-	pResource->nIndex = index;
-	pResource->type = type;
 }
 
 void SV_CreateGenericResources( void )
@@ -303,7 +335,7 @@ void SV_CreateResourceList( void )
 		}
 		else
 		{
-			nSize = FS_FileSize( va( "sound/%s", s ), false );
+			nSize = FS_FileSize( va( "%s%s", DEFAULT_SOUNDPATH, s ), false );
 			SV_AddResource( t_sound, s, nSize, 0, i );
 		}
 	}
@@ -484,11 +516,16 @@ void SV_ActivateServer( int runPhysics )
 	// parse user-specified resources
 	SV_CreateGenericResources();
 
-	sv.frametime = SV_SPAWN_TIME;
-
 	if( runPhysics )
+	{
 		numFrames = (svs.maxclients <= 1) ? 2 : 8;
-	else numFrames = 1;
+		sv.frametime = SV_SPAWN_TIME;
+	}
+	else
+	{
+		sv.frametime = 0.001;
+		numFrames = 1;
+	}
 
 	// run some frames to allow everything to settle
 	for( i = 0; i < numFrames; i++ )
@@ -813,6 +850,7 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 			svs.clients[i].state = cs_connected;
 
 		ent = EDICT_NUM( i + 1 );
+		svs.clients[i].pViewEntity = NULL;
 		svs.clients[i].edict = ent;
 		SV_InitEdict( ent );
 	}

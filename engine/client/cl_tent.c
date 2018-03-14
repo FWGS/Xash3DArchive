@@ -1799,7 +1799,7 @@ void R_Explosion( vec3_t pos, int model, float scale, float framerate, int flags
 
 	if( !FBitSet( flags, TE_EXPLFLAG_NOSOUND ))
 	{
-		hSound = S_RegisterSound( va( "%s", cl_explode_sounds[COM_RandomLong( 0, 3 )] ));
+		hSound = S_RegisterSound( va( "%s", cl_explode_sounds[COM_RandomLong( 0, 2 )] ));
 		S_StartSound( pos, 0, CHAN_STATIC, hSound, VOL_NORM, 0.3f, PITCH_NORM, 0 );
 	}
 }

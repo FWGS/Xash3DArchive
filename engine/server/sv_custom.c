@@ -169,7 +169,7 @@ void SV_ParseConsistencyResponse( sv_client_t *cl, sizebuf_t *msg )
 	if( sv.num_consistency != c )
 	{
 		Con_Printf( S_WARN "%s:%s sent bad file data\n", cl->name, NET_AdrToString( cl->netchan.remote_address ));
-		SV_DropClient( cl );
+		SV_DropClient( cl, false );
 		return;
 	}
 
@@ -182,7 +182,7 @@ void SV_ParseConsistencyResponse( sv_client_t *cl, sizebuf_t *msg )
 		{
 			if( COM_CheckString( dropmessage ))
 				SV_ClientPrintf( cl, dropmessage );
-			SV_DropClient( cl );
+			SV_DropClient( cl, false );
 		}
 	}
 	else
@@ -212,7 +212,7 @@ void SV_TransferConsistencyInfo( void )
 		SetBits( pResource->ucFlags, RES_CHECKFILE );
 
 		if( pResource->type == t_sound )
-			Q_snprintf( filepath, sizeof( filepath ), "sound/%s", pResource->szFileName );
+			Q_snprintf( filepath, sizeof( filepath ), "%s%s", DEFAULT_SOUNDPATH, pResource->szFileName );
 		else Q_strncpy( filepath, pResource->szFileName, sizeof( filepath ));
 
 		MD5_HashFile( pResource->rgucMD5_hash, filepath, NULL );
@@ -362,7 +362,7 @@ void SV_ClearResourceList( resource_t *pList )
 	resource_t *p;
 	resource_t *n;
 
-	for ( p = pList->pNext; pList != p && p; p = n )
+	for( p = pList->pNext; pList != p && p; p = n )
 	{
 		n = p->pNext;
 
@@ -530,13 +530,31 @@ void SV_BatchUploadRequest( sv_client_t *cl )
 		}
 	}
 }
-   
+
+void SV_SendResource( resource_t *pResource, sizebuf_t *msg )
+{
+	static byte	nullrguc[36];
+
+	MSG_WriteUBitLong( msg, pResource->type, 4 );
+	MSG_WriteString( msg, pResource->szFileName );
+	MSG_WriteUBitLong( msg, pResource->nIndex, MAX_MODEL_BITS );
+	MSG_WriteSBitLong( msg, pResource->nDownloadSize, 24 ); // prevent to download a very big files?
+	MSG_WriteUBitLong( msg, pResource->ucFlags & ( RES_FATALIFMISSING|RES_WASMISSING ), 3 );
+
+	if( FBitSet( pResource->ucFlags, RES_CUSTOM ))
+		MSG_WriteBytes( msg, pResource->rgucMD5_hash, sizeof( pResource->rgucMD5_hash ));
+
+	if( memcmp( nullrguc, pResource->rguc_reserved, sizeof( nullrguc )))
+	{
+		MSG_WriteOneBit( msg, 1 );
+		MSG_WriteBytes( msg, pResource->rguc_reserved, sizeof( pResource->rguc_reserved ));
+	}
+	else MSG_WriteOneBit( msg, 0 );
+}
+ 
 void SV_SendResources( sv_client_t *cl, sizebuf_t *msg )
 {
-	byte	nullrguc[36];
 	int	i;
-
-	memset( nullrguc, 0, sizeof( nullrguc ));
 
 	MSG_BeginServerCmd( msg, svc_resourcerequest );
 	MSG_WriteLong( msg, svs.spawncount );
@@ -553,21 +571,7 @@ void SV_SendResources( sv_client_t *cl, sizebuf_t *msg )
 
 	for( i = 0; i < sv.num_resources; i++ )
 	{
-		MSG_WriteUBitLong( msg, sv.resources[i].type, 4 );
-		MSG_WriteString( msg, sv.resources[i].szFileName );
-		MSG_WriteUBitLong( msg, sv.resources[i].nIndex, MAX_MODEL_BITS );
-		MSG_WriteSBitLong( msg, sv.resources[i].nDownloadSize, 24 ); // prevent to download a very big files?
-		MSG_WriteUBitLong( msg, sv.resources[i].ucFlags & ( RES_FATALIFMISSING|RES_WASMISSING ), 3 );
-
-		if( FBitSet( sv.resources[i].ucFlags, RES_CUSTOM ))
-			MSG_WriteBytes( msg, sv.resources[i].rgucMD5_hash, sizeof( sv.resources[i].rgucMD5_hash ));
-
-		if( memcmp( nullrguc, sv.resources[i].rguc_reserved, sizeof( nullrguc )))
-		{
-			MSG_WriteOneBit( msg, 1 );
-			MSG_WriteBytes( msg, sv.resources[i].rguc_reserved, sizeof( sv.resources[i].rguc_reserved ));
-		}
-		else MSG_WriteOneBit( msg, 0 );
+		SV_SendResource( &sv.resources[i], msg );
 	}
 
 	SV_SendConsistencyList( cl, msg );

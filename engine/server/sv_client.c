@@ -131,7 +131,7 @@ tell the client about this problem
 */
 void SV_FailDownload( sv_client_t *cl, const char *filename )
 {
-	if ( !filename || !filename[0] )
+	if( !COM_CheckString( filename ))
 		return;
 
 	MSG_BeginServerCmd( &cl->netchan.message, svc_filetxferfailed );
@@ -232,9 +232,8 @@ A connection request that did not come from the master
 void SV_ConnectClient( netadr_t from )
 {
 	char		userinfo[MAX_INFO_STRING];
-	char		physinfo[MAX_PHYSINFO_STRING];
 	char		protinfo[MAX_INFO_STRING];
-	sv_client_t	temp, *cl, *newcl;
+	sv_client_t	*cl, *newcl = NULL;
 	qboolean		reconnect = false;
 	int		nClientSlot = 0;
 	int		qport, version;
@@ -306,12 +305,6 @@ void SV_ConnectClient( netadr_t from )
 		return;
 	}
 
-	// force the IP key/value pair so the game can filter based on ip
-	Info_SetValueForKey( userinfo, "ip", NET_AdrToString( from ), MAX_INFO_STRING );
-
-	newcl = &temp;
-	memset( newcl, 0, sizeof( sv_client_t ));
-
 	// if there is already a slot for this ip, reuse it
 	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
 	{
@@ -330,7 +323,7 @@ void SV_ConnectClient( netadr_t from )
 	// the slot will be wiped clean.
 	if( !reconnect )
 	{
-		// cConnect the client if there are empty slots.
+		// connect the client if there are empty slots.
 		if( !SV_FindEmptySlot( from, &nClientSlot, &newcl ))
 			return;
 	}
@@ -344,55 +337,56 @@ void SV_ConnectClient( netadr_t from )
 
 	// build a new connection
 	// accept the new client
-	// this is the only place a sv_client_t is ever initialized
-	if( svs.maxclients == 1 ) // save physinfo for singleplayer
-		Q_strncpy( physinfo, newcl->physinfo, sizeof( physinfo ));
-
-	*newcl = temp;	// FIXME: don't clearing all the fields
-
-	if( svs.maxclients == 1 ) // restore physinfo for singleplayer
-		Q_strncpy( newcl->physinfo, physinfo, sizeof( physinfo ));
-
 	sv.current_client = newcl;
 	newcl->edict = EDICT_NUM( (newcl - svs.clients) + 1 );
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->frames = (client_frame_t *)Z_Malloc( sizeof( client_frame_t ) * SV_UPDATE_BACKUP );
 	newcl->userid = g_userid++;	// create unique userid
+	newcl->state = cs_connected;
 
-	// initailize netchan here because SV_DropClient will clear network buffer
+	// reset viewentities (from previous level)
+	memset( newcl->viewentity, 0, sizeof( newcl->viewentity ));
+	newcl->num_viewents = 0;
+	newcl->listeners = 0;
+
+	// initailize netchan
 	Netchan_Setup( NS_SERVER, &newcl->netchan, from, qport, newcl, SV_GetFragmentSize );
 	MSG_Init( &newcl->datagram, "Datagram", newcl->datagram_buf, sizeof( newcl->datagram_buf )); // datagram buf
-
-	// get the game a chance to reject this connection or modify the userinfo
-	if( !( SV_ClientConnect( newcl->edict, userinfo )))
-	{
-		if( *Info_ValueForKey( userinfo, "rejmsg" )) 
-			SV_RejectConnection( from, "%s\n", Info_ValueForKey( userinfo, "rejmsg" ));
-		else SV_RejectConnection( from, "game rejected a connection\n" );
-		SV_DropClient( newcl );
-		return;
-	}
-
-	// after this point connection is accepted
 
 	// send the connect packet to the client
 	Netchan_OutOfBandPrint( NS_SERVER, from, "client_connect" );
 
-	newcl->state = cs_connected;
+	newcl->upstate = us_inactive;
 	newcl->connection_started = host.realtime;
 	newcl->cl_updaterate = 0.05;	// 20 fps as default
 	newcl->delta_sequence = -1;
+	newcl->flags = 0;
 
 	Q_strncpy( newcl->hashedcdkey, Info_ValueForKey( protinfo, "uuid" ), 32 );
 	newcl->hashedcdkey[32] = '\0';
 
+	// reset any remaining events
+	memset( &newcl->events, 0, sizeof( newcl->events ));
+
 	// parse some info from the info strings (this can override cl_updaterate)
 	Q_strncpy( newcl->userinfo, userinfo, sizeof( newcl->userinfo ));
-	SV_UserinfoChanged( newcl, newcl->userinfo );
+	SV_UserinfoChanged( newcl );
 	SV_ClearResourceLists( newcl );
-
+#if 0
+	memset( &newcl->resourcesneeded, 0, sizeof( resource_t ));
+	memset( &newcl->resourcesonhand, 0, sizeof( resource_t ));
+	newcl->resourcesneeded.pNext = newcl->resourcesneeded.pPrev = &newcl->resourcesneeded;
+	newcl->resourcesonhand.pNext = newcl->resourcesonhand.pPrev = &newcl->resourcesonhand;
+#endif
 	newcl->next_messagetime = host.realtime + newcl->cl_updaterate;
 	newcl->next_sendinfotime = 0.0;
+	newcl->lastservertime = -1.0;
+	newcl->ignored_ents = 0;
+	newcl->chokecount = 0;
+
+	// reset stats
+	newcl->next_checkpingtime = -1.0;
+	newcl->packet_loss = 0.0f;
 
 	// if this was the first client on the server, or the last client
 	// the server can hold, send a heartbeat to the master.
@@ -407,28 +401,6 @@ void SV_ConnectClient( netadr_t from )
 
 /*
 ==================
-SV_DisconnectClient
-
-Disconnect client callback
-==================
-*/
-void SV_DisconnectClient( edict_t *pClient )
-{
-	if( !pClient ) return;
-
-	svgame.dllFuncs.pfnClientDisconnect( pClient );
-
-	// don't send to other clients
-	pClient->v.modelindex = 0;
-
-	SV_FreePrivateData( pClient );
-
-	// invalidate serial number
-	pClient->serialnumber++;
-}
-
-/*
-==================
 SV_FakeConnect
 
 A connection request that came from the game module
@@ -437,102 +409,63 @@ A connection request that came from the game module
 edict_t *SV_FakeConnect( const char *netname )
 {
 	char		userinfo[MAX_INFO_STRING];
-	sv_client_t	temp, *cl, *newcl;
-	int		i;
+	int		i, count = 0;
+	sv_client_t	*cl;
 
-	if( !netname ) netname = "";
+	if( !COM_CheckString( netname ))
+		netname = "Bot";
+
+	// find a client slot
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+	{
+		if( cl->state == cs_free )
+			break;
+	}
+
+	if( i == svs.maxclients )
+		return NULL; // server is full
+
 	userinfo[0] = '\0';
 
 	// setup fake client params
 	Info_SetValueForKey( userinfo, "name", netname, MAX_INFO_STRING );
 	Info_SetValueForKey( userinfo, "model", "gordon", MAX_INFO_STRING );
-	Info_SetValueForKey( userinfo, "topcolor", "0", MAX_INFO_STRING );
-	Info_SetValueForKey( userinfo, "bottomcolor", "0", MAX_INFO_STRING );
-
-	// force the IP key/value pair so the game can filter based on ip
-	Info_SetValueForKey( userinfo, "ip", "127.0.0.1", MAX_INFO_STRING );
-
-	// find a client slot
-	newcl = &temp;
-	memset( newcl, 0, sizeof( sv_client_t ));
-
-	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
-	{
-		if( cl->state == cs_free )
-		{
-			newcl = cl;
-			break;
-		}
-	}
-
-	if( i == svs.maxclients )
-	{
-		MsgDev( D_INFO, "SV_ConnectClient: rejected a connection.\n");
-		return NULL;
-	}
+	Info_SetValueForKey( userinfo, "topcolor", "1", MAX_INFO_STRING );
+	Info_SetValueForKey( userinfo, "bottomcolor", "1", MAX_INFO_STRING );
 
 	// build a new connection
 	// accept the new client
-	// this is the only place a sv_client_t is ever initialized
-	*newcl = temp;
-	sv.current_client = newcl;
+	sv.current_client = cl;
 
-	if( newcl->frames )
-		Mem_Free( newcl->frames );	// fakeclients doesn't have frames
-	newcl->frames = NULL;
+	if( cl->frames ) Mem_Free( cl->frames );	// fakeclients doesn't have frames
+	memset( cl, 0, sizeof( sv_client_t ));
 
-	newcl->edict = EDICT_NUM( (newcl - svs.clients) + 1 );
-	newcl->challenge = -1;		// fake challenge
-	newcl->delta_sequence = -1;
-	newcl->userid = g_userid++;		// create unique userid
-	SetBits( newcl->flags, FCL_FAKECLIENT );
-
-	// get the game a chance to reject this connection or modify the userinfo
-	if( !SV_ClientConnect( newcl->edict, userinfo ))
-	{
-		MsgDev( D_ERROR, "SV_ConnectClient: game rejected a connection.\n" );
-		return NULL;
-	}
+	cl->edict = EDICT_NUM( (cl - svs.clients) + 1 );
+	cl->userid = g_userid++;		// create unique userid
+	SetBits( cl->flags, FCL_FAKECLIENT );
 
 	// parse some info from the info strings
-	Q_strncpy( newcl->userinfo, userinfo, sizeof( newcl->userinfo ));
-	Q_strncpy( newcl->name, netname, sizeof( newcl->name ));
-	SV_UserinfoChanged( newcl, newcl->userinfo );
+	Q_strncpy( cl->userinfo, userinfo, sizeof( cl->userinfo ));
+	SV_UserinfoChanged( cl );
 	SetBits( cl->flags, FCL_RESEND_USERINFO );
 	cl->next_sendinfotime = 0.0;
 
-	MsgDev( D_NOTE, "Bot %i connecting with challenge %p\n", i, -1 );
+	// if this was the first client on the server, or the last client
+	// the server can hold, send a heartbeat to the master.
+	for( i = 0, cl = svs.clients; i < svs.maxclients; i++, cl++ )
+		if( cl->state >= cs_connected ) count++;
+	cl = sv.current_client;
 
-	SetBits( newcl->edict->v.flags, FL_CLIENT|FL_FAKECLIENT );	// mark it as fakeclient
-	newcl->state = cs_spawned;
-	newcl->connection_started = host.realtime;
+	Log_Printf( "\"%s<%i><%i><>\" connected, address \"local\"\n", cl->name, cl->userid, i );
+
+	SetBits( cl->edict->v.flags, FL_CLIENT|FL_FAKECLIENT );	// mark it as fakeclient
+	cl->connection_started = host.realtime;
+	cl->state = cs_spawned;
+
+	if( count == 1 || count == svs.maxclients )
+		svs.last_heartbeat = MAX_HEARTBEAT;
 	
-	return newcl->edict;
-}
-
-/*
-=====================
-SV_ClientCconnect
-
-QC code can rejected a connection for some reasons
-e.g. ipban
-=====================
-*/
-qboolean SV_ClientConnect( edict_t *ent, char *userinfo )
-{
-	qboolean	result = true;
-	char	*pszName, *pszAddress;
-	char	szRejectReason[MAX_INFO_STRING];
-
-	szRejectReason[0] = '\0';
-	pszName = Info_ValueForKey( userinfo, "name" );
-	pszAddress = Info_ValueForKey( userinfo, "ip" );
-
-	MsgDev( D_NOTE, "SV_ClientConnect()\n" );
-	result = svgame.dllFuncs.pfnClientConnect( ent, pszName, pszAddress, szRejectReason );
-	if( szRejectReason[0] ) Info_SetValueForKey( userinfo, "rejmsg", szRejectReason, MAX_INFO_STRING );
-
-	return result;
+	return cl->edict;
 }
 
 /*
@@ -544,42 +477,49 @@ or unwillingly.  This is NOT called if the entire server is quiting
 or crashing.
 =====================
 */
-void SV_DropClient( sv_client_t *drop )
+void SV_DropClient( sv_client_t *cl, qboolean crash )
 {
 	int	i;
 	
-	if( drop->state == cs_zombie )
+	if( cl->state == cs_zombie )
 		return;	// already dropped
 
-	// add the disconnect
-	if( !FBitSet( drop->flags, FCL_FAKECLIENT ))
-		MSG_BeginServerCmd( &drop->netchan.message, svc_disconnect );
+	if( !crash )
+	{
+		// add the disconnect
+		if( !FBitSet( cl->flags, FCL_FAKECLIENT ))
+			MSG_BeginServerCmd( &cl->netchan.message, svc_disconnect );
 
-	// let the game known about client state
-	SV_DisconnectClient( drop->edict );
+		if( cl->edict && cl->state == cs_spawned )
+			svgame.dllFuncs.pfnClientDisconnect( cl->edict );
+		Netchan_TransmitBits( &cl->netchan, 0, NULL );
+	}
 
-	ClearBits( drop->flags, FCL_FAKECLIENT );
-	ClearBits( drop->flags, FCL_HLTV_PROXY );
-	drop->state = cs_zombie; // become free in a few seconds
-	drop->name[0] = 0;
+	ClearBits( cl->flags, FCL_FAKECLIENT );
+	ClearBits( cl->flags, FCL_HLTV_PROXY );
+	cl->state = cs_zombie; // become free in a few seconds
+	cl->name[0] = 0;
 
-	if( drop->frames )
-		Mem_Free( drop->frames ); // release delta
-	drop->frames = NULL;
+	if( cl->frames )
+		Mem_Free( cl->frames ); // release delta
+	cl->frames = NULL;
 
-	if( NET_CompareBaseAdr( drop->netchan.remote_address, host.rd.address ))
+	if( NET_CompareBaseAdr( cl->netchan.remote_address, host.rd.address ))
 		SV_EndRedirect();
 
 	// throw away any residual garbage in the channel.
-	Netchan_Clear( &drop->netchan );
+	Netchan_Clear( &cl->netchan );
 
 	// clean client data on disconnect
-	memset( drop->userinfo, 0, MAX_INFO_STRING );
-	memset( drop->physinfo, 0, MAX_INFO_STRING );
-	drop->edict->v.frags = 0;
+	memset( cl->userinfo, 0, MAX_INFO_STRING );
+	memset( cl->physinfo, 0, MAX_INFO_STRING );
+	COM_ClearCustomizationList( &cl->customdata, false );
+
+	// don't send to other clients
+	cl->edict = NULL;
 
 	// send notification to all other clients
-	SV_FullClientUpdate( drop, &sv.reliable_datagram );
+	SV_FullClientUpdate( cl, &sv.reliable_datagram );
 
 	// if this was the last client on the server, send a heartbeat
 	// to the master so it is known the server is empty
@@ -662,7 +602,7 @@ const char *SV_GetClientIDString( sv_client_t *cl )
 
 	if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 	{
-		Q_strncpy( result, "BOT", sizeof( result ));
+		Q_strncpy( result, "ID_BOT", sizeof( result ));
 	}
 	else if( NET_IsLocalAddress( cl->netchan.remote_address ))
 	{
@@ -1089,7 +1029,7 @@ void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg )
 	int		i;	
 
 	// process userinfo before updating
-	SV_UserinfoChanged( cl, cl->userinfo );
+	SV_UserinfoChanged( cl );
 
 	i = cl - svs.clients;
 
@@ -1267,11 +1207,6 @@ void SV_PutClientInServer( sv_client_t *cl )
 		MSG_WriteByte( &msg, 0 );
 		MSG_WriteByte( &msg, 0 );
 
-		// trigger_camera restored here
-		if( sv.viewentity > 0 && sv.viewentity < GI->max_edicts )
-			cl->pViewEntity = EDICT_NUM( sv.viewentity );
-		else cl->pViewEntity = NULL;
-
 		sv.loadgame = false;
 		sv.paused = false;
 	}
@@ -1327,7 +1262,7 @@ void SV_PutClientInServer( sv_client_t *cl )
 		if( cl->pViewEntity )
 			viewEnt = NUM_FOR_EDICT( cl->pViewEntity );
 		else viewEnt = NUM_FOR_EDICT( cl->edict );
-	
+
 		MSG_BeginServerCmd( &msg, svc_setview );
 		MSG_WriteWord( &msg, viewEnt );
 
@@ -1498,6 +1433,9 @@ This will be sent on the initial connection and upon each server load.
 static qboolean SV_New_f( sv_client_t *cl )
 {
 	byte		msg_buf[MAX_INIT_MSG];
+	char		szRejectReason[128];
+	char		szAddress[128];
+	char		szName[32];
 	sv_client_t	*cur;
 	sizebuf_t		msg;
 	int		i;
@@ -1509,6 +1447,23 @@ static qboolean SV_New_f( sv_client_t *cl )
 
 	// send the serverdata
 	SV_SendServerdata( &msg, cl );
+
+	// if the client was connected, tell the game .dll to disconnect him/her.
+	if(( cl->state == cs_spawned ) && cl->edict )
+		svgame.dllFuncs.pfnClientDisconnect( cl->edict );
+
+	Q_snprintf( szName, sizeof( szName ), "%s", cl->name );
+	Q_snprintf( szAddress, sizeof( szAddress ), "%s", NET_AdrToString( cl->netchan.remote_address ));
+	Q_snprintf( szRejectReason, sizeof( szRejectReason ), "Connection rejected by game\n");
+
+	// Allow the game dll to reject this client.
+	if( !svgame.dllFuncs.pfnClientConnect( cl->edict, szName, szAddress, szRejectReason ))
+	{
+		// reject the connection and drop the client.
+		SV_RejectConnection( cl->netchan.remote_address, "%s\n", szRejectReason );
+		SV_DropClient( cl, false );
+		return true;
+	}
 
 	// server info string
 	MSG_BeginServerCmd( &msg, svc_stufftext );
@@ -1540,7 +1495,7 @@ The client is going to disconnect, so remove the connection immediately
 */
 static qboolean SV_Disconnect_f( sv_client_t *cl )
 {
-	SV_DropClient( cl );	
+	SV_DropClient( cl, false );	
 	return true;
 }
 
@@ -1597,7 +1552,7 @@ Pull specific info from a newly changed userinfo string
 into a more C freindly form.
 =================
 */
-void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
+void SV_UserinfoChanged( sv_client_t *cl )
 {
 	int		i, dupc = 1;
 	edict_t		*ent = cl->edict;
@@ -1605,7 +1560,7 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	sv_client_t	*current;
 	char		*val;
 
-	if( !COM_CheckString( userinfo ))
+	if( !COM_CheckString( cl->userinfo ))
 		return;
 
 	val = Info_ValueForKey( cl->userinfo, "name" );
@@ -1695,7 +1650,7 @@ void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo )
 	// call prog code to allow overrides
 	svgame.dllFuncs.pfnClientUserInfoChanged( cl->edict, cl->userinfo );
 
-	val = Info_ValueForKey( userinfo, "name" );
+	val = Info_ValueForKey( cl->userinfo, "name" );
 	Q_strncpy( cl->name, val, sizeof( cl->name ));
 	ent->v.netname = MAKE_STRING( cl->name );
 }
@@ -1846,37 +1801,27 @@ static qboolean SV_DownloadFile_f( sv_client_t *cl )
 		return true;
 	}
 
-	if( cl->state == cs_spawned )
+	// g-cont. now we supports hot precache
+	if( name[0] != '!' )
 	{
-		if( name[0] != '!' )
+		if( sv_send_resources.value )
 		{
-			SV_FailDownload( cl, name );
-			return true;
-		}
-	}
-	else
-	{
-		if( name[0] != '!' )
-		{
-			if( sv_send_resources.value )
+			// also check the model textures
+			if( !Q_stricmp( COM_FileExtension( name ), "mdl" ))
 			{
-				// also check the model textures
-				if( !Q_stricmp( COM_FileExtension( name ), "mdl" ))
-				{
-					if( FS_FileExists( Mod_StudioTexName( name ), false ) > 0 )
-						Netchan_CreateFileFragments( &cl->netchan, Mod_StudioTexName( name ));
-				}
-
-				if( Netchan_CreateFileFragments( &cl->netchan, name ))
-				{
-					Netchan_FragSend( &cl->netchan );
-					return true;
-				}
+				if( FS_FileExists( Mod_StudioTexName( name ), false ) > 0 )
+					Netchan_CreateFileFragments( &cl->netchan, Mod_StudioTexName( name ));
 			}
 
-			SV_FailDownload( cl, name );
-			return true;
+			if( Netchan_CreateFileFragments( &cl->netchan, name ))
+			{
+				Netchan_FragSend( &cl->netchan );
+				return true;
+			}
 		}
+
+		SV_FailDownload( cl, name );
+		return true;
 	}
 
 	if( Q_strlen( name ) == 36 && !Q_strnicmp( name, "!MD5", 4 ) && sv_send_logos.value )
@@ -2003,9 +1948,9 @@ void SV_ExecuteClientCommand( sv_client_t *cl, char *s )
 		if( !Q_strcmp( Cmd_Argv( 0 ), "fullupdate" ))
 		{
 			// resend the ambient sounds for demo recording
-			Host_RestartAmbientSounds();
+			SV_RestartAmbientSounds();
 			// resend all the decals for demo recording
-			Host_RestartDecals();
+			SV_RestartDecals();
 			// resend all the static ents for demo recording
 			SV_RestartStaticEnts();
 			// resend the viewentity
@@ -2165,7 +2110,7 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 	if( totalcmds < 0 || totalcmds >= CMD_MASK )
 	{
 		MsgDev( D_ERROR, "SV_ParseClientMove: %s sending too many commands %i\n", cl->name, totalcmds );
-		SV_DropClient( cl );
+		SV_DropClient( cl, false );
 		return;
 	}
 
@@ -2420,7 +2365,7 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 		if( MSG_CheckOverflow( msg ))
 		{
 			MsgDev( D_ERROR, "SV_ReadClientMessage: clc_bad\n" );
-			SV_DropClient( cl );
+			SV_DropClient( cl, false );
 			return;
 		}
 
@@ -2462,7 +2407,7 @@ void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg )
 			break;
 		default:
 			MsgDev( D_ERROR, "clc_bad\n" );
-			SV_DropClient( cl );
+			SV_DropClient( cl, false );
 			return;
 		}
 	}

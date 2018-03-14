@@ -45,7 +45,7 @@ const char *svc_strings[svc_lastmsg+1] =
 	"svc_updateuserinfo",
 	"svc_deltatable",
 	"svc_clientdata",
-	"svc_fileindex",
+	"svc_resource",
 	"svc_pings",
 	"svc_particle",
 	"svc_restoresound",
@@ -56,9 +56,9 @@ const char *svc_strings[svc_lastmsg+1] =
 	"svc_setpause",
 	"svc_signonnum",
 	"svc_centerprint",
-	"svc_modelindex",
-	"svc_soundindex",
-	"svc_eventindex",
+	"svc_unused27",
+	"svc_unused28",
+	"svc_unused29",
 	"svc_intermission",
 	"svc_finale",
 	"svc_cdtrack",
@@ -666,7 +666,7 @@ qboolean CL_RequestMissingResources( void )
 	return false;
 }
 
-void CL_BatchResourceRequest( void )
+void CL_BatchResourceRequest( qboolean initialize )
 {
 	byte		data[MAX_INIT_MSG];
 	resource_t	*p, *n;
@@ -675,7 +675,7 @@ void CL_BatchResourceRequest( void )
 	MSG_Init( &msg, "Resource Batch", data, sizeof( data ));
 
 	// client resources is not precached by server
-	CL_AddClientResources();
+	if( initialize ) CL_AddClientResources();
 
 	for( p = cl.resourcesneeded.pNext; p && p != &cl.resourcesneeded; p = n )
 	{
@@ -768,7 +768,7 @@ int CL_EstimateNeededResources( void )
 		switch( p->type )
 		{
 		case t_sound:
-			nSize = FS_FileSize( va( "sound/%s", p->szFileName ), false );
+			nSize = FS_FileSize( va( "%s%s", DEFAULT_SOUNDPATH, p->szFileName ), false );
 			if( p->szFileName[0] != '*' && nSize == -1 )
 			{
 				SetBits( p->ucFlags, RES_WASMISSING );
@@ -832,7 +832,7 @@ void CL_StartResourceDownloading( const char *pszMessage, qboolean bCustom )
 	memset( cls.dl.rgStats, 0, sizeof( cls.dl.rgStats ));
 	cls.dl.nCurStat = 0;
 
-	CL_BatchResourceRequest();
+	CL_BatchResourceRequest( !bCustom );
 }
 
 customization_t *CL_PlayerHasCustomization( int nPlayerNum, resourcetype_t type )
@@ -1516,11 +1516,11 @@ void CL_RegisterUserMessage( sizebuf_t *msg )
 	int	svc_num, size;
 	
 	svc_num = MSG_ReadByte( msg );
-	size = MSG_ReadByte( msg );
+	size = MSG_ReadWord( msg );
 	pszName = MSG_ReadString( msg );
 
 	// important stuff
-	if( size == 0xFF ) size = -1;
+	if( size == 0xFFFF ) size = -1;
 	svc_num = bound( 0, svc_num, 255 );
 
 	CL_LinkUserMessage( pszName, svc_num, size );
@@ -1564,93 +1564,31 @@ void CL_UpdateUserinfo( sizebuf_t *msg )
 }
 
 /*
-================
-CL_PrecacheModel
+==============
+CL_ParseResource
 
-prceache model from server
-================
+downloading and precache resource in-game
+==============
 */
-void CL_PrecacheModel( sizebuf_t *msg )
+void CL_ParseResource( sizebuf_t *msg )
 {
-	int	modelIndex;
+	resource_t	*pResource;
 
-	modelIndex = MSG_ReadUBitLong( msg, MAX_MODEL_BITS );
+	pResource = Mem_Alloc( cls.mempool, sizeof( resource_t ));
+	pResource->type = MSG_ReadUBitLong( msg, 4 );
 
-	if( modelIndex < 0 || modelIndex >= MAX_MODELS )
-		Host_Error( "CL_PrecacheModel: bad modelindex %i\n", modelIndex );
+	Q_strncpy( pResource->szFileName, MSG_ReadString( msg ), sizeof( pResource->szFileName ));
+	pResource->nIndex = MSG_ReadUBitLong( msg, MAX_MODEL_BITS );
+	pResource->nDownloadSize = MSG_ReadSBitLong( msg, 24 );
+	pResource->ucFlags = MSG_ReadUBitLong( msg, 3 ) & ~RES_WASMISSING;
 
-	cl.models[modelIndex] = Mod_ForName( MSG_ReadString( msg ), false, false );
+	if( FBitSet( pResource->ucFlags, RES_CUSTOM ))
+		MSG_ReadBytes( msg, pResource->rgucMD5_hash, sizeof( pResource->rgucMD5_hash ));
 
-	cl.nummodels = Q_max( cl.nummodels, modelIndex + 1 );
-	cl.nummodels = bound( 0, cl.nummodels, MAX_MODELS );
-}
+	if( MSG_ReadOneBit( msg ))
+		MSG_ReadBytes( msg, pResource->rguc_reserved, sizeof( pResource->rguc_reserved ));
 
-/*
-================
-CL_PrecacheSound
-
-prceache sound from server
-================
-*/
-void CL_PrecacheSound( sizebuf_t *msg )
-{
-	int	soundIndex;
-
-	soundIndex = MSG_ReadUBitLong( msg, MAX_SOUND_BITS );
-
-	if( soundIndex < 0 || soundIndex >= MAX_SOUNDS )
-		Host_Error( "CL_PrecacheSound: bad soundindex %i\n", soundIndex );
-
-	Q_strncpy( cl.sound_precache[soundIndex], MSG_ReadString( msg ), sizeof( cl.sound_precache[0] ));
-
-	// when we loading map all resources is precached sequentially
-	if( !cl.audio_prepped ) return;
-
-	cl.sound_index[soundIndex] = S_RegisterSound( cl.sound_precache[soundIndex] );
-}
-
-/*
-================
-CL_PrecacheEvent
-
-prceache event from server
-================
-*/
-void CL_PrecacheEvent( sizebuf_t *msg )
-{
-	int	eventIndex;
-
-	eventIndex = MSG_ReadUBitLong( msg, MAX_EVENT_BITS );
-
-	if( eventIndex < 0 || eventIndex >= MAX_EVENTS )
-		Host_Error( "CL_PrecacheEvent: bad eventindex %i\n", eventIndex );
-
-	Q_strncpy( cl.event_precache[eventIndex], MSG_ReadString( msg ), sizeof( cl.event_precache[0] ));
-
-	// can be set now
-	CL_SetEventIndex( cl.event_precache[eventIndex], eventIndex );
-}
-
-/*
-================
-CL_PrecacheFile
-
-prceache generic resource from server
-================
-*/
-void CL_PrecacheFile( sizebuf_t *msg )
-{
-	int	fileIndex;
-
-	fileIndex = MSG_ReadUBitLong( msg, MAX_CUSTOM_BITS );
-
-	if( fileIndex < 0 || fileIndex >= MAX_CUSTOM )
-		Host_Error( "CL_PrecacheFile: bad fileindex %i\n", fileIndex );
-
-	Q_strncpy( cl.files_precache[fileIndex], MSG_ReadString( msg ), sizeof( cl.files_precache[0] ));
-
-	cl.numfiles = Q_max( cl.numfiles, fileIndex + 1 );
-	cl.numfiles = bound( 0, cl.numfiles, MAX_CUSTOM );
+	CL_AddToResourceList( pResource, &cl.resourcesneeded );
 }
 
 /*
@@ -1705,7 +1643,7 @@ void CL_SendConsistencyInfo( sizebuf_t *msg )
 		MSG_WriteUBitLong( msg, pc->orig_index, MAX_MODEL_BITS );
 
 		if( pc->issound )
-			Q_snprintf( filename, sizeof( filename ), "sound/%s", pc->filename );
+			Q_snprintf( filename, sizeof( filename ), "%s%s", DEFAULT_SOUNDPATH, pc->filename );
 		else Q_strncpy( filename, pc->filename, sizeof( filename ));
 
 		if( Q_strstr( filename, "models/" ))
@@ -2401,8 +2339,8 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			CL_ParseClientData( msg );
 			cl.frames[cl.parsecountmod].graphdata.client += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
-		case svc_fileindex:
-			CL_PrecacheFile( msg );
+		case svc_resource:
+			CL_ParseResource( msg );
 			break;
 		case svc_pings:
 			CL_UpdateUserPings( msg );
@@ -2436,15 +2374,6 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			break;
 		case svc_centerprint:
 			CL_CenterPrint( MSG_ReadString( msg ), 0.25f );
-			break;
-		case svc_modelindex:
-			CL_PrecacheModel( msg );
-			break;
-		case svc_soundindex:
-			CL_PrecacheSound( msg );
-			break;
-		case svc_eventindex:
-			CL_PrecacheEvent( msg );
 			break;
 		case svc_intermission:
 			cl.intermission = 1;

@@ -479,7 +479,7 @@ void SV_CheckTimeouts( void )
 			if( !NET_IsLocalAddress( cl->netchan.remote_address ))
 			{
 				SV_BroadcastPrintf( NULL, "%s timed out\n", cl->name );
-				SV_DropClient( cl ); 
+				SV_DropClient( cl, false ); 
 				cl->state = cs_free; // don't bother with zombie state
 			}
 		}

@@ -906,7 +906,7 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	if( !target_chan )
 	{
 		if( !bIgnore )
-			MsgDev( D_NOTE, "^1Error: ^7dropped sound \"sound/%s\"\n", sfx->name );
+			Con_DPrintf( S_ERROR "dropped sound \"%s%s\"\n", DEFAULT_SOUNDPATH, sfx->name );
 		return;
 	}
 
@@ -1033,7 +1033,7 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 	if( !target_chan )
 	{
 		if( !bIgnore )
-			MsgDev( D_ERROR, "S_RestoreSound: dropped sound \"sound/%s\"\n", sfx->name );
+			Con_DPrintf( S_ERROR "S_RestoreSound: dropped sound \"%s%s\"\n", DEFAULT_SOUNDPATH, sfx->name );
 		return;
 	}
 

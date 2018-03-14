@@ -556,6 +556,91 @@ void SV_RestartStaticEnts( void )
 }
 
 /*
+=================
+SV_RestartAmbientSounds
+
+Write ambient sounds into demo
+=================
+*/
+void SV_RestartAmbientSounds( void )
+{
+	soundlist_t	soundInfo[256];
+	string		curtrack, looptrack;
+	int		i, nSounds;
+	long		position;
+
+	if( !SV_Active( )) return;
+
+	nSounds = S_GetCurrentStaticSounds( soundInfo, 256 );
+	
+	for( i = 0; i < nSounds; i++ )
+	{
+		soundlist_t *si = &soundInfo[i];
+
+		if( !si->looping || si->entnum == -1 )
+			continue;
+
+		S_StopSound( si->entnum, si->channel, si->name );
+		SV_StartSound( pfnPEntityOfEntIndex( si->entnum ), CHAN_STATIC, si->name, si->volume, si->attenuation, 0, si->pitch );
+	}
+
+	// restart soundtrack
+	if( S_StreamGetCurrentState( curtrack, looptrack, &position ))
+	{
+		SV_StartMusic( curtrack, looptrack, position );
+	}
+}
+
+/*
+=================
+SV_RestartDecals
+
+Write all the decals into demo
+=================
+*/
+void SV_RestartDecals( void )
+{
+	decallist_t	*entry;
+	int		decalIndex;
+	int		modelIndex;
+	sizebuf_t		*msg;
+	int		i;
+
+	if( !SV_Active( )) return;
+
+	// g-cont. add space for studiodecals if present
+	host.decalList = (decallist_t *)Z_Malloc( sizeof( decallist_t ) * MAX_RENDER_DECALS * 2 );
+	host.numdecals = R_CreateDecalList( host.decalList );
+
+	// remove decals from map
+	R_ClearAllDecals();
+
+	// write decals into reliable datagram
+	msg = SV_GetReliableDatagram();
+
+	// restore decals and write them into network message
+	for( i = 0; i < host.numdecals; i++ )
+	{
+		entry = &host.decalList[i];
+		modelIndex = pfnPEntityOfEntIndex( entry->entityIndex )->v.modelindex;
+
+		// game override
+		if( SV_RestoreCustomDecal( entry, pfnPEntityOfEntIndex( entry->entityIndex ), false ))
+			continue;
+
+		decalIndex = pfnDecalIndex( entry->name );
+
+		// studiodecals will be restored at game-side
+		if( !FBitSet( entry->flags, FDECAL_STUDIO ))
+			SV_CreateDecal( msg, entry->position, decalIndex, entry->entityIndex, modelIndex, entry->flags, entry->scale );
+	}
+
+	Z_Free( host.decalList );
+	host.decalList = NULL;
+	host.numdecals = 0;
+}
+
+/*
 ==============
 SV_BoxInPVS
 
@@ -1633,7 +1718,7 @@ pfnEntitiesInPVS
 */
 edict_t *pfnEntitiesInPVS( edict_t *pview )
 {
-	edict_t	*pchain, *pstart;
+	edict_t	*pchain, *ptest;
 	vec3_t	viewpoint;
 	edict_t	*pent;
 	int	i;
@@ -1642,7 +1727,7 @@ edict_t *pfnEntitiesInPVS( edict_t *pview )
 		return NULL;
 
 	VectorAdd( pview->v.origin, pview->v.view_ofs, viewpoint );
-	pstart = EDICT_NUM( 0 ); 
+	pchain = EDICT_NUM( 0 ); 
 
 	for( i = 1; i < svgame.numEntities; i++ )
 	{
@@ -1652,17 +1737,17 @@ edict_t *pfnEntitiesInPVS( edict_t *pview )
 			continue;
 
 		if( pent->v.movetype == MOVETYPE_FOLLOW && SV_IsValidEdict( pent->v.aiment ))
-			pchain = pent->v.aiment;
-		else pchain = pent;
+			ptest = pent->v.aiment;
+		else ptest = pent;
 
-		if( SV_BoxInPVS( viewpoint, pchain->v.absmin, pchain->v.absmax ))
+		if( SV_BoxInPVS( viewpoint, ptest->v.absmin, ptest->v.absmax ))
 		{
-			pent->v.chain = pstart;
-			pstart = pchain;
+			pent->v.chain = pchain;
+			pchain = pent;
 		}
 	}
 
-	return pstart;
+	return pchain;
 }
 
 /*
@@ -2645,12 +2730,8 @@ void pfnWriteString( const char *src )
 {
 	static char	string[2048];
 	int		len = Q_strlen( src ) + 1;
-	int		rem = (254 - svgame.msg_realsize);
+	int		rem = rem = sizeof( string ) - 1;
 	char		*dst;
-
-	// user-message strings can't exceeds 255 symbols,
-	// but system message allow up to 2048 characters
-	if( svgame.msg_index < 0 ) rem = sizeof( string ) - 1;
 
 	if( len == 1 )
 	{
@@ -3026,7 +3107,7 @@ void SV_SendUserReg( sizebuf_t *msg, sv_user_message_t *user )
 {
 	MSG_BeginServerCmd( msg, svc_usermessage );
 	MSG_WriteByte( msg, user->number );
-	MSG_WriteByte( msg, (byte)user->size );
+	MSG_WriteWord( msg, (word)user->size );
 	MSG_WriteString( msg, user->name );
 }
 
@@ -3049,14 +3130,14 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 		return svc_bad; // force error
 	}
 
-	if( iSize > 255 )
+	if( iSize > 2048 )
 	{
 		Con_Printf( S_ERROR "REG_USER_MSG: %s has too big size %i\n", pszName, iSize );
 		return svc_bad; // force error
 	}
 
 	// make sure what size inrange
-	iSize = bound( -1, iSize, 255 );
+	iSize = bound( -1, iSize, 2048 );
 
 	// message 0 is reserved for svc_bad
 	for( i = 1; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
@@ -4434,8 +4515,6 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 	// chemical existence have broked changelevels
 	if( !Q_stricmp( GI->gamedir, "ce" ))
 	{
-	 	if( !Q_stricmp( sv.name, "ce08_01" ) && !Q_stricmp( classname, "info_player_start" ))
-			adjust_origin = true;
 	 	if( !Q_stricmp( sv.name, "ce08_02" ) && !Q_stricmp( classname, "info_player_start_force" ))
 			adjust_origin = true;
 	}

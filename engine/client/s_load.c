@@ -166,7 +166,7 @@ sfx_t *S_FindName( const char *pname, int *pfInCache )
 	uint	i, hash;
 	string	name;
 
-	if( !pname || !pname[0] || !dma.initialized )
+	if( !COM_CheckString( pname ) || !dma.initialized )
 		return NULL;
 
 	if( Q_strlen( pname ) >= MAX_STRING )
@@ -297,7 +297,8 @@ void S_EndRegistration( void )
 	sfx_t	*sfx;
 	int	i;
 
-	if( !dma.initialized ) return;
+	if( !s_registering || !dma.initialized )
+		return;
 	
 	// free any sounds not from this registration sequence
 	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++ )
@@ -326,7 +327,8 @@ sound_t S_RegisterSound( const char *name )
 {
 	sfx_t	*sfx;
 
-	if( !dma.initialized ) return 0;
+	if( !COM_CheckString( name ) || !dma.initialized )
+		return -1;
 
 	if( S_TestSoundChar( name, '!' ))
 	{
@@ -349,7 +351,7 @@ sound_t S_RegisterSound( const char *name )
 
 sfx_t *S_GetSfxByHandle( sound_t handle )
 {
-	if( !dma.initialized )
+	if( handle == -1 || !dma.initialized )
 		return NULL;
 
 	if( handle == SENTENCE_INDEX )

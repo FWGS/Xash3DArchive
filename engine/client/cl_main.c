@@ -2052,6 +2052,19 @@ void CL_ReadPackets( void )
 	if( NET_IsLocalAddress( cls.netchan.remote_address ))
 		return;
 
+	// hot precache and downloading resources
+	if( cls.signon == SIGNONS && cl.lastresourcecheck < host.realtime )
+	{
+		if( !cls.dl.custom && cl.resourcesneeded.pNext != &cl.resourcesneeded )
+		{
+			// check resource for downloading and precache
+			CL_EstimateNeededResources();
+			CL_BatchResourceRequest( false );
+			cls.dl.custom = true;
+		}
+		cl.lastresourcecheck = host.realtime + 5.0f; // don't checking too often
+	}
+
 	// if in the debugger last frame, don't timeout
 	if( host.frametime > 5.0f ) cls.netchan.last_received = Sys_DoubleTime();
           
@@ -2333,6 +2346,9 @@ qboolean CL_PrecacheResources( void )
 	// NOTE: world need to be loaded as first model
 	for( pRes = cl.resourcesonhand.pNext; pRes && pRes != &cl.resourcesonhand; pRes = pRes->pNext )
 	{
+		if( FBitSet( pRes->ucFlags, RES_PRECACHED ))
+			continue;
+
 		if( pRes->type != t_model || pRes->nIndex != WORLD_INDEX )
 			continue;
 
@@ -2345,6 +2361,9 @@ qboolean CL_PrecacheResources( void )
 	// then we set up all the world submodels
 	for( pRes = cl.resourcesonhand.pNext; pRes && pRes != &cl.resourcesonhand; pRes = pRes->pNext )
 	{
+		if( FBitSet( pRes->ucFlags, RES_PRECACHED ))
+			continue;
+
 		if( pRes->type == t_model && pRes->szFileName[0] == '*' )
 		{
 			cl.models[pRes->nIndex] = Mod_ForName( pRes->szFileName, false, false );
@@ -2364,7 +2383,8 @@ qboolean CL_PrecacheResources( void )
 		}
 	}
 
-	S_BeginRegistration();
+	if( cls.state != ca_active )
+		S_BeginRegistration();
 
 	// precache all the remaining resources where order is doesn't matter
 	for( pRes = cl.resourcesonhand.pNext; pRes && pRes != &cl.resourcesonhand; pRes = pRes->pNext )
@@ -2453,7 +2473,9 @@ qboolean CL_PrecacheResources( void )
 	// make sure modelcount is in-range
 	cl.nummodels = bound( 0, cl.nummodels, MAX_MODELS );
 	cl.numfiles = bound( 0, cl.numfiles, MAX_CUSTOM );
-	S_EndRegistration();
+
+	if( cls.state != ca_active )
+		S_EndRegistration();
 
 	return true;
 }

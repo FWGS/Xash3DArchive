@@ -138,9 +138,6 @@ typedef struct server_s
 
 	qboolean		background;	// this is background map
 	qboolean		loadgame;		// client begins should reuse existing entity
-	int		viewentity;	// applied on client restore. this is temporare place
-					// until client connected
-
 	double		time;		// sv.time += sv.frametime
 	double		time_residual;	// unclamped
 	float		frametime;	// 1.0 / sv_fps->value
@@ -456,7 +453,7 @@ extern	convar_t		*public_server;
 // sv_main.c
 //
 void SV_FinalMessage( const char *message, qboolean reconnect );
-void SV_DropClient( sv_client_t *drop );
+void SV_DropClient( sv_client_t *cl, qboolean crash );
 void SV_UpdateMovevars( qboolean initialize );
 int SV_ModelIndex( const char *name );
 int SV_SoundIndex( const char *name );
@@ -466,10 +463,11 @@ int SV_CalcPacketLoss( sv_client_t *cl );
 void SV_ExecuteUserCommand (char *s);
 void SV_InitOperatorCommands( void );
 void SV_KillOperatorCommands( void );
-void SV_UserinfoChanged( sv_client_t *cl, const char *userinfo );
+void SV_UserinfoChanged( sv_client_t *cl );
 void SV_RemoteCommand( netadr_t from, sizebuf_t *msg );
 void SV_PrepWorldFrame( void );
 void SV_ProcessFile( sv_client_t *cl, const char *filename );
+void SV_SendResource( resource_t *pResource, sizebuf_t *msg );
 void SV_SendResourceList( sv_client_t *cl );
 void SV_AddToMaster( netadr_t from, sizebuf_t *msg );
 qboolean SV_IsSimulating( void );
@@ -534,7 +532,6 @@ void SV_FullClientUpdate( sv_client_t *cl, sizebuf_t *msg );
 void SV_FullUpdateMovevars( sv_client_t *cl, sizebuf_t *msg );
 void SV_GetPlayerStats( sv_client_t *cl, int *ping, int *packet_loss );
 void SV_SendServerdata( sizebuf_t *msg, sv_client_t *cl );
-qboolean SV_ClientConnect( edict_t *ent, char *userinfo );
 void SV_ClientThink( sv_client_t *cl, usercmd_t *cmd );
 void SV_ExecuteClientMessage( sv_client_t *cl, sizebuf_t *msg );
 void SV_ConnectionlessPacket( netadr_t from, sizebuf_t *msg );
@@ -619,6 +616,8 @@ byte *pfnSetFatPVS( const float *org );
 byte *pfnSetFatPAS( const float *org );
 int pfnPrecacheModel( const char *s );
 void pfnRemoveEntity( edict_t* e );
+void SV_RestartAmbientSounds( void );
+void SV_RestartDecals( void );
 void SV_RestartStaticEnts( void );
 int pfnGetCurrentPlayer( void );
 edict_t *SV_EdictNum( int n );

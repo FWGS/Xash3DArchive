@@ -35,7 +35,7 @@ GNU General Public License for more details.
 #define svc_updateuserinfo		13	// [byte] playernum, [string] userinfo
 #define svc_deltatable		14	// [table header][...]
 #define svc_clientdata		15	// [...]
-#define svc_fileindex		16	// [index][filepath]
+#define svc_resource		16	// [...] late-precached resource will be download in-game
 #define svc_pings			17	// [bit][idx][ping][packet_loss]
 #define svc_particle		18	// [float*3][char*3][byte][byte]
 #define svc_restoresound		19	// <see code>
@@ -46,9 +46,9 @@ GNU General Public License for more details.
 #define svc_setpause		24	// [byte] 0 = unpaused, 1 = paused
 #define svc_signonnum		25	// [byte] used for the signon sequence
 #define svc_centerprint		26	// [string] to put in center of the screen
-#define svc_modelindex		27	// [index][modelpath]
-#define svc_soundindex		28	// [index][soundpath]
-#define svc_eventindex		29	// [index][eventname]
+// reserved
+// reserved
+// reserved
 #define svc_intermission		30	// empty message (event)
 #define svc_finale			31	// empty message (event)
 #define svc_cdtrack			32	// [string] trackname

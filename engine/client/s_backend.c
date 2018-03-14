@@ -208,6 +208,28 @@ static void DS_DestroyBuffers( void )
 
 /*
 ==================
+SNDDMA_LockSound
+==================
+*/
+void SNDDMA_LockSound( void )
+{
+	if( pDSBuf != NULL )
+		pDSBuf->lpVtbl->Stop( pDSBuf );
+}
+
+/*
+==================
+SNDDMA_LockSound
+==================
+*/
+void SNDDMA_UnlockSound( void )
+{
+	if( pDSBuf != NULL )
+		pDSBuf->lpVtbl->Play( pDSBuf, 0, 0, DSBPLAY_LOOPING );
+}
+
+/*
+==================
 SNDDMA_FreeSound
 ==================
 */

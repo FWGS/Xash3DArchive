@@ -425,12 +425,11 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 	search_t		*t;
 	string		matchbuf;
 	int		i, numsounds;
-	const char	*snddir = "sound/"; // constant
 
-	t = FS_Search( va( "%s%s*.*", snddir, s ), true, false );
+	t = FS_Search( va( "%s%s*.*", DEFAULT_SOUNDPATH, s ), true, false );
 	if( !t ) return false;
 
-	Q_strncpy( matchbuf, t->filenames[0] + Q_strlen( snddir ), MAX_STRING ); 
+	Q_strncpy( matchbuf, t->filenames[0] + Q_strlen( DEFAULT_SOUNDPATH ), MAX_STRING ); 
 	COM_StripExtension( matchbuf ); 
 	if( completedname && length )
 		Q_strncpy( completedname, matchbuf, length );
@@ -443,7 +442,7 @@ qboolean Cmd_GetSoundList( const char *s, char *completedname, int length )
 		if( Q_stricmp( ext, "wav" ) && Q_stricmp( ext, "mp3" ))
 			continue;
 
-		Q_strncpy( matchbuf, t->filenames[i] + Q_strlen(snddir), MAX_STRING ); 
+		Q_strncpy( matchbuf, t->filenames[i] + Q_strlen( DEFAULT_SOUNDPATH ), MAX_STRING ); 
 		COM_StripExtension( matchbuf );
 		Con_Printf( "%16s\n", matchbuf );
 		numsounds++;

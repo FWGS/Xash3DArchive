@@ -465,7 +465,7 @@ void SV_Kick_f( void )
 	Log_Printf( "Kick: \"%s<%i>\" was kicked\n", cl->name, cl->userid );
 	SV_BroadcastPrintf( cl, "%s was kicked\n", cl->name );
 	SV_ClientPrintf( cl, "You were kicked from the game\n" );
-	SV_DropClient( cl );
+	SV_DropClient( cl, false );
 }
 
 /*

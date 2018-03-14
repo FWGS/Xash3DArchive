@@ -536,11 +536,9 @@ void RestoreSound( soundlist_t *entry )
 
 	if( !SV_IsValidEdict( ent ))
 	{
+		// died entity make a sound. Ignore
 		if( entry->channel != CHAN_STATIC )
-		{
-			MsgDev( D_ERROR, "SV_RestoreSound: edict == NULL\n" );
 			return;
-		}
 
 		// just get world for static channel
 		ent = EDICT_NUM( 0 );
@@ -1530,9 +1528,10 @@ SAVERESTOREDATA *SV_SaveGameState( int changelevel )
 
 int SV_LoadGameState( char const *level, qboolean changelevel )
 {
-	SAVE_HEADER	header;
+	sv_client_t	*cl = svs.clients;
 	SAVERESTOREDATA	*pSaveData;
 	ENTITYTABLE	*pEntInfo;
+	SAVE_HEADER	header;
 	edict_t		*pent;
 	int		i;
 
@@ -1648,12 +1647,9 @@ int SV_LoadGameState( char const *level, qboolean changelevel )
 	pent = pSaveData->pTable[bound( 0, (word)header.viewentity, pSaveData->tableCount )].pent;
 
 	// don't go camera across the levels
-	if( SV_IsValidEdict( pent ) && !changelevel )
-		sv.viewentity = NUM_FOR_EDICT( pent );
-	else sv.viewentity = 0;
-
-	// just use normal client view
-	if( sv.viewentity == 1 ) sv.viewentity = 0;
+	if( SV_IsValidEdict( pent ) && ( cl->edict != pent ) && !changelevel )
+		cl->pViewEntity = pent;
+	else cl->pViewEntity = NULL;
 
 	SV_LoadClientState( pSaveData, level, false );
 

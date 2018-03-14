@@ -288,7 +288,7 @@ model_t *Mod_LoadModel( model_t *mod, qboolean crash )
 		return NULL;
 	}
 
-	Con_DPrintf( "loading %s\n", mod->name );
+	Con_Reportf( "loading %s\n", mod->name );
 	mod->needload = NL_PRESENT;
 	mod->type = mod_bad;
 	loadmodel = mod;

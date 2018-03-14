@@ -561,7 +561,17 @@ int Q_vsnprintf( char *buffer, size_t buffersize, const char *format, va_list ar
 {
 	size_t	result;
 
-	result = _vsnprintf( buffer, buffersize, format, args );
+	__try
+	{
+		result = _vsnprintf( buffer, buffersize, format, args );
+	}
+
+	// to prevent crash while output
+	__except( EXCEPTION_EXECUTE_HANDLER )
+	{
+		memset( buffer, 0, buffersize );
+		result = -1;
+	}
 
 	if( result < 0 || result >= buffersize )
 	{

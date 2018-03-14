@@ -30,9 +30,9 @@ static const loadwavfmt_t load_null[] =
 
 static const loadwavfmt_t load_game[] =
 {
-{ "sound/%s%s.%s", "wav", Sound_LoadWAV },
+{ DEFAULT_SOUNDPATH "%s%s.%s", "wav", Sound_LoadWAV },
 { "%s%s.%s", "wav", Sound_LoadWAV },
-{ "sound/%s%s.%s", "mp3", Sound_LoadMPG },
+{ DEFAULT_SOUNDPATH "%s%s.%s", "mp3", Sound_LoadMPG },
 { "%s%s.%s", "mp3", Sound_LoadMPG },
 { NULL, NULL, NULL }
 };

@@ -844,7 +844,7 @@ void SV_SendClientMessages( void )
 			MSG_Clear( &cl->datagram );
 			SV_BroadcastPrintf( NULL, "%s overflowed\n", cl->name );
 			MsgDev( D_WARN, "reliable overflow for %s\n", cl->name );
-			SV_DropClient( cl );
+			SV_DropClient( cl, false );
 			SetBits( cl->flags, FCL_SEND_NET_MESSAGE );
 			cl->netchan.cleartime = 0.0;	// don't choke this message
 		}
@@ -955,12 +955,12 @@ void SV_InactivateClients( void )
 		if( !cl->edict || FBitSet( cl->edict->v.flags, FL_FAKECLIENT ))
 			continue;
 
-		if( svs.clients[i].state > cs_connected )
-			svs.clients[i].state = cs_connected;
+		if( cl->state > cs_connected )
+			cl->state = cs_connected;
 
-		// clear netchan message (but keep other buffers)
+		COM_ClearCustomizationList( &cl->customdata, false );
+		memset( cl->physinfo, 0, MAX_PHYSINFO_STRING );
 		MSG_Clear( &cl->netchan.message );
 		MSG_Clear( &cl->datagram );
-		COM_ClearCustomizationList( &cl->customdata, false );
 	}
 }

@@ -231,6 +231,7 @@ typedef struct
 	char		serverinfo[MAX_SERVERINFO_STRING];
 	player_model_t	player_models[MAX_CLIENTS];	// cache of player models
 	player_info_t	players[MAX_CLIENTS];	// collected info about all other players include himself
+	double		lastresourcecheck;
 	string		downloadUrl;
 	event_state_t	events;
 
@@ -779,6 +780,8 @@ void CL_QueueEvent( int flags, int index, float delay, event_args_t *args );
 void CL_PlaybackEvent( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 void CL_RegisterEvent( int lastnum, const char *szEvName, pfnEventHook func );
+void CL_BatchResourceRequest( qboolean initialize );
+int CL_EstimateNeededResources( void );
 void CL_ResetEvent( event_info_t *ei );
 word CL_EventIndex( const char *name );
 void CL_FireEvents( void );

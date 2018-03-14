@@ -1101,7 +1101,7 @@ void Con_DPrintf( char *szFmt, ... )
 	static char	buffer[MAX_PRINT_MSG];
 	va_list		args;
 
-	if( host_developer.value < DEV_EXTENDED )
+	if( host_developer.value < DEV_NORMAL )
 		return;
 
 	va_start( args, szFmt );
@@ -1110,6 +1110,27 @@ void Con_DPrintf( char *szFmt, ... )
 
 	if( buffer[0] == '0' && buffer[1] == '\n' && buffer[2] == '\0' )
 		return; // hlrally spam
+
+	Sys_Print( buffer );
+}
+
+/*
+=============
+Con_Reportf
+
+=============
+*/
+void Con_Reportf( char *szFmt, ... )
+{
+	static char	buffer[MAX_PRINT_MSG];
+	va_list		args;
+
+	if( host_developer.value < DEV_EXTENDED )
+		return;
+
+	va_start( args, szFmt );
+	Q_vsnprintf( buffer, sizeof( buffer ), szFmt, args );
+	va_end( args );
 
 	Sys_Print( buffer );
 }

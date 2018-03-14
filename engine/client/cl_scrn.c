@@ -327,6 +327,7 @@ void SCR_BeginLoadingPlaque( qboolean is_background )
 	cls.disable_screen = host.realtime;
 	cls.disable_servercount = cl.servercount;
 	cl.background = is_background;		// set right state before svc_serverdata is came
+//	SNDDMA_LockSound();
 }
 
 /*
@@ -338,6 +339,7 @@ void SCR_EndLoadingPlaque( void )
 {
 	cls.disable_screen = 0.0f;
 	Con_ClearNotify();
+//	SNDDMA_UnlockSound();
 }
 
 /*
