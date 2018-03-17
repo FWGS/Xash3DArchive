@@ -60,6 +60,8 @@ XASH SPECIFIC			- sort of hack that works only in Xash3D not in GoldSrc
 #define MAX_PRINT_MSG	8192	// how many symbols can handle single call of Msg or MsgDev
 #define MAX_TOKEN		2048	// parse token length
 #define MAX_MODS		512	// environment games that engine can keep visible
+#define MAX_USERMSG_LENGTH	2048	// don't modify it's relies on a client-side definitions
+
 #define EXPORT		__declspec( dllexport )
 #define BIT( n )		(1<<( n ))
 #define GAMMA		( 2.2 )		// Valve Software gamma

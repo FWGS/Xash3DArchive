@@ -782,15 +782,15 @@ Does a water warp on the pre-fragmented glpoly_t chain
 */
 void EmitWaterPolys( msurface_t *warp, qboolean reverse )
 {
-	glpoly_t	*p = warp->polys;
 	float	*v, nv, waveHeight;
 	float	s, t, os, ot;
+	glpoly_t	*p;
 	int	i;
 
 	if( !warp->polys ) return;
 
 	// set the current waveheight
-	if( p->verts[0][2] >= RI.vieworg[2] )
+	if( warp->polys->verts[0][2] >= RI.vieworg[2] )
 		waveHeight = -RI.currententity->curstate.scale;
 	else waveHeight = RI.currententity->curstate.scale;
 

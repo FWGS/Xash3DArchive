@@ -688,7 +688,7 @@ void SV_SendClientDatagram( sv_client_t *cl )
 	if( MSG_CheckOverflow( &msg ))
 	{	
 		// must have room left for the packet header
-		Con_Printf( S_ERROR, "%s overflowed for %s\n", MSG_GetName( &msg ), cl->name );
+		Con_Printf( S_ERROR "%s overflowed for %s\n", MSG_GetName( &msg ), cl->name );
 		MSG_Clear( &msg );
 	}
 

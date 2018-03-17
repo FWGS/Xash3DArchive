@@ -2102,7 +2102,7 @@ qboolean CL_DispatchUserMessage( const char *pszName, int iSize, void *pbuf )
 	}
 	else
 	{
-		Con_DPrintf( S_ERROR, "UserMsg: No pfn %s %d\n", clgame.msg[i].name, clgame.msg[i].number );
+		Con_DPrintf( S_ERROR "UserMsg: No pfn %s %d\n", clgame.msg[i].name, clgame.msg[i].number );
 		clgame.msg[i].func = CL_UserMsgStub; // throw warning only once
 	}
 	return true;
@@ -2117,8 +2117,8 @@ handles all user messages
 */
 void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 {
+	byte	pbuf[MAX_USERMSG_LENGTH];
 	int	i, iSize;
-	byte	pbuf[256]; // message can't be larger than 255 bytes
 
 	// NOTE: any user message is really parse at engine, not in client.dll
 	if( svc_num <= svc_lastmsg || svc_num > ( MAX_USER_MESSAGES + svc_lastmsg ))
@@ -2153,7 +2153,7 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 	iSize = clgame.msg[i].size;
 
 	// message with variable sizes receive an actual size as first byte
-	if( iSize == -1 ) iSize = MSG_ReadByte( msg );
+	if( iSize == -1 ) iSize = MSG_ReadWord( msg );
 
 	// parse user message into buffer
 	MSG_ReadBytes( msg, pbuf, iSize );
@@ -2174,7 +2174,7 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num )
 	}
 	else
 	{
-		Con_DPrintf( S_ERROR, "UserMsg: No pfn %s %d\n", clgame.msg[i].name, clgame.msg[i].number );
+		Con_DPrintf( S_ERROR "UserMsg: No pfn %s %d\n", clgame.msg[i].name, clgame.msg[i].number );
 		clgame.msg[i].func = CL_UserMsgStub; // throw warning only once
 	}
 }

@@ -2523,9 +2523,9 @@ void pfnMessageBegin( int msg_dest, int msg_num, const float *pOrigin, edict_t *
 
 	if( iSize == -1 )
 	{
-		// variable sized messages sent size as first byte
+		// variable sized messages sent size as first short
 		svgame.msg_size_index = MSG_GetNumBytesWritten( &sv.multicast );
-		MSG_WriteByte( &sv.multicast, 0 ); // reserve space for now
+		MSG_WriteWord( &sv.multicast, 0 ); // reserve space for now
 	}
 	else svgame.msg_size_index = -1; // message has constant size
 
@@ -2562,9 +2562,9 @@ void pfnMessageEnd( void )
 		if( svgame.msg_size_index != -1 )
 		{
 			// variable sized message
-			if( svgame.msg_realsize > 255 )
+			if( svgame.msg_realsize > MAX_USERMSG_LENGTH )
 			{
-				Con_Printf( S_ERROR "SV_Multicast: %s too long (more than 255 bytes)\n", name );
+				Con_Printf( S_ERROR "SV_Multicast: %s too long (more than %d bytes)\n", name, MAX_USERMSG_LENGTH );
 				MSG_Clear( &sv.multicast );
 				return;
 			}
@@ -2594,9 +2594,9 @@ void pfnMessageEnd( void )
 	else if( svgame.msg_size_index != -1 )
 	{
 		// variable sized message
-		if( svgame.msg_realsize > 255 )
+		if( svgame.msg_realsize > MAX_USERMSG_LENGTH )
 		{
-			Con_Printf( S_ERROR "SV_Multicast: %s too long (more than 255 bytes)\n", name );
+			Con_Printf( S_ERROR "SV_Multicast: %s too long (more than %d bytes)\n", name, MAX_USERMSG_LENGTH );
 			MSG_Clear( &sv.multicast );
 			return;
 		}
@@ -2607,7 +2607,7 @@ void pfnMessageEnd( void )
 			return;
 		}
 
-		sv.multicast.pData[svgame.msg_size_index] = svgame.msg_realsize;
+		*(word *)&sv.multicast.pData[svgame.msg_size_index] = svgame.msg_realsize;
 	}
 	else
 	{
@@ -2728,7 +2728,7 @@ pfnWriteString
 */
 void pfnWriteString( const char *src )
 {
-	static char	string[2048];
+	static char	string[MAX_USERMSG_LENGTH];
 	int		len = Q_strlen( src ) + 1;
 	int		rem = rem = sizeof( string ) - 1;
 	char		*dst;
@@ -3130,14 +3130,14 @@ int pfnRegUserMsg( const char *pszName, int iSize )
 		return svc_bad; // force error
 	}
 
-	if( iSize > 2048 )
+	if( iSize > MAX_USERMSG_LENGTH )
 	{
 		Con_Printf( S_ERROR "REG_USER_MSG: %s has too big size %i\n", pszName, iSize );
 		return svc_bad; // force error
 	}
 
 	// make sure what size inrange
-	iSize = bound( -1, iSize, 2048 );
+	iSize = bound( -1, iSize, MAX_USERMSG_LENGTH );
 
 	// message 0 is reserved for svc_bad
 	for( i = 1; i < MAX_USER_MESSAGES && svgame.msg[i].name[0]; i++ )
@@ -3315,7 +3315,7 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 
 	if(( client = SV_ClientFromEdict( pClient, false )) == NULL )
 	{
-		Con_Printf( S_ERROR, "PF_SetView_I: not a client!\n" );
+		Con_Printf( S_ERROR "PF_SetView_I: not a client!\n" );
 		return;
 	}
 

@@ -793,10 +793,7 @@ COM_AddAppDirectoryToSearchPath
 */
 void COM_AddAppDirectoryToSearchPath( const char *pszBaseDir, const char *appName )
 {
-	if( !COM_CheckString( pszBaseDir ))
-		return;
-
-	FS_AddGameDirectory( pszBaseDir, FS_GAMEDIR_PATH );
+	FS_AddGameHierarchy( pszBaseDir, FS_NOWRITE_PATH );
 }
 
 /*

@@ -124,7 +124,7 @@ qboolean Cmd_GetMapList( const char *s, char *completedname, int length )
 						// get the message contents
 						pfile = COM_ParseFile( pfile, message );
 					}
-					else if( !Q_strcmp( token, "generator" ) || !Q_strcmp( token, "_compiler" ))
+					else if( !Q_strcmp( token, "compiler" ) || !Q_strcmp( token, "_compiler" ))
 					{
 						// get the message contents
 						pfile = COM_ParseFile( pfile, compiler );

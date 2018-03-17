@@ -1196,7 +1196,7 @@ void CL_Record_f( void )
 
 		if( n == 10000 )
 		{
-			Con_Printf( S_ERROR, "no free slots for demo recording\n" );
+			Con_Printf( S_ERROR "no free slots for demo recording\n" );
 			return;
 		}
 	}
