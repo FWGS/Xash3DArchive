@@ -521,6 +521,10 @@ static void GL_SetDefaultState( void )
 {
 	memset( &glState, 0, sizeof( glState ));
 	GL_SetDefaultTexState ();
+
+	// init draw stack
+	tr.draw_list = &tr.draw_stack[0];
+	tr.draw_stack_pos = 0;
 }
 
 /*

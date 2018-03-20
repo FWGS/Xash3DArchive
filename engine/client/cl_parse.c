@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include "cl_tent.h"
 #include "shake.h"
 #include "hltv.h"
+#include "input.h"
 
 #define MSG_COUNT		32		// last 32 messages parsed
 #define MSG_MASK		(MSG_COUNT - 1)
@@ -1160,6 +1161,10 @@ void CL_ParseServerData( sizebuf_t *msg )
 		UI_SetActiveMenu( cl.background );
 	else if( !cls.demoplayback )
 		Key_SetKeyDest( key_menu );
+
+	// don't reset cursor in background mode
+	if( cl.background )
+		IN_MouseRestorePos();
 
 	// will be changed later
 	cl.viewentity = cl.playernum + 1;

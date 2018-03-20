@@ -149,39 +149,6 @@ void R_StudioInit( void )
 
 /*
 ================
-R_GetEntityRenderMode
-
-check for texture flags
-================
-*/
-int R_GetEntityRenderMode( cl_entity_t *ent )
-{
-	studiohdr_t	*phdr;
-	mstudiotexture_t	*ptexture;
-	int		i;
-
-	if(( phdr = Mod_StudioExtradata( ent->model )) == NULL )
-	{
-		// forcing to choose right sorting type
-		if(( ent->model && ent->model->type == mod_brush ) && FBitSet( ent->model->flags, MODEL_TRANSPARENT ))
-			return kRenderTransAlpha;
-		return ent->curstate.rendermode;
-	}
-	ptexture = (mstudiotexture_t *)((byte *)phdr + phdr->textureindex);
-
-	for( i = 0; i < phdr->numtextures; i++, ptexture++ )
-	{
-		// g-cont. this is not fully proper but better than was
-		if( FBitSet( ptexture->flags, STUDIO_NF_ADDITIVE ))
-			return kRenderTransAdd;
-//		if( FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
-//			return kRenderTransAlpha;
-	}
-	return ent->curstate.rendermode;
-}
-
-/*
-================
 R_StudioSetupTimings
 
 init current time for a given model
@@ -2744,6 +2711,50 @@ static model_t *R_StudioSetupPlayerModel( int index )
 	}
 
 	return state->model;
+}
+
+/*
+================
+R_GetEntityRenderMode
+
+check for texture flags
+================
+*/
+int R_GetEntityRenderMode( cl_entity_t *ent )
+{
+	studiohdr_t	*phdr;
+	mstudiotexture_t	*ptexture;
+	cl_entity_t	*oldent;
+	model_t		*model;
+	int		i;
+
+	oldent = RI.currententity;
+	RI.currententity = ent;
+
+	if( ent->player ) // check it for real playermodel
+		model = R_StudioSetupPlayerModel( ent->curstate.number - 1 );
+	else model = ent->model;
+
+	RI.currententity = oldent;
+
+	if(( phdr = Mod_StudioExtradata( model )) == NULL )
+	{
+		// forcing to choose right sorting type
+		if(( model && model->type == mod_brush ) && FBitSet( model->flags, MODEL_TRANSPARENT ))
+			return kRenderTransAlpha;
+		return ent->curstate.rendermode;
+	}
+	ptexture = (mstudiotexture_t *)((byte *)phdr + phdr->textureindex);
+
+	for( i = 0; i < phdr->numtextures; i++, ptexture++ )
+	{
+		// g-cont. this is not fully proper but better than was
+		if( FBitSet( ptexture->flags, STUDIO_NF_ADDITIVE ))
+			return kRenderTransAdd;
+//		if( FBitSet( ptexture->flags, STUDIO_NF_MASKED ))
+//			return kRenderTransAlpha;
+	}
+	return ent->curstate.rendermode;
 }
 
 /*

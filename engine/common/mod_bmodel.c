@@ -289,8 +289,10 @@ static void Mod_LoadLump( const byte *in, mlumpinfo_t *info, mlumpstat_t *stat, 
 			if( real_entrysize == sizeof( byte ))
 			{
 				if( !FBitSet( flags, LUMP_SILENT ))
+				{
 					MsgDev( D_WARN, "map ^2%s^7 has no %s\n", loadstat.name, msg1 );
-				loadstat.numwarnings++;
+					loadstat.numwarnings++;
+				}
 			}
 			else if( info->mincount > 0 )
 			{
@@ -1271,6 +1273,13 @@ static qboolean Mod_LoadColoredLighting( dbspmodel_t *bmod )
 
 	// skip header bytes
 	litdatasize -= 8;
+
+	if( litdatasize != ( bmod->lightdatasize * 3 ))
+	{
+		Con_Printf( S_ERROR "%s has mismatched size (%i should be %i)\n", path, litdatasize, bmod->lightdatasize * 3 );
+		Mem_Free( in );
+		return false;
+	}
 
 	loadmodel->lightdata = Mem_Alloc( loadmodel->mempool, litdatasize );
 	memcpy( loadmodel->lightdata, in + 8, litdatasize );

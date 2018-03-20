@@ -28,8 +28,10 @@ qboolean	in_restore_spi;
 qboolean	in_mouseinitialized;
 int	in_mouse_oldbuttonstate;
 qboolean	in_mouse_suspended;
+qboolean	in_mouse_savedpos;
 int	in_mouse_buttons;
 RECT	window_rect, real_rect;
+POINT	in_lastvalidpos;
 uint	in_mouse_wheel;
 int	wnd_caption;
 
@@ -159,6 +161,38 @@ void IN_SetCursor( HICON hCursor )
 	in_mousecursor = hCursor;
 
 	IN_ActivateCursor();
+}
+
+/*
+===========
+IN_MouseSavePos
+
+Save mouse pos before state change e.g. changelevel
+===========
+*/
+void IN_MouseSavePos( void )
+{
+	if( !in_mouseactive )
+		return;
+
+	GetCursorPos( &in_lastvalidpos );
+	in_mouse_savedpos = true;
+}
+
+/*
+===========
+IN_MouseRestorePos
+
+Restore right position for background
+===========
+*/
+void IN_MouseRestorePos( void )
+{
+	if( !in_mouse_savedpos )
+		return;
+
+	SetCursorPos( in_lastvalidpos.x, in_lastvalidpos.y );
+	in_mouse_savedpos = false;
 }
 
 /*

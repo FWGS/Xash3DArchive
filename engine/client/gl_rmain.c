@@ -194,14 +194,39 @@ void R_ScreenToWorld( const vec3_t screen, vec3_t point )
 
 /*
 ===============
+R_PushScene
+===============
+*/
+void R_PushScene( void )
+{
+	if( ++tr.draw_stack_pos >= MAX_DRAW_STACK )
+		Host_Error( "draw stack overflow\n" );
+
+	tr.draw_list = &tr.draw_stack[tr.draw_stack_pos];
+}
+
+/*
+===============
+R_PushScene
+===============
+*/
+void R_PopScene( void )
+{
+	if( --tr.draw_stack_pos < 0 )
+		Host_Error( "draw stack underflow\n" );
+	tr.draw_list = &tr.draw_stack[tr.draw_stack_pos];
+}
+
+/*
+===============
 R_ClearScene
 ===============
 */
 void R_ClearScene( void )
 {
-	tr.num_solid_entities = 0;
-	tr.num_trans_entities = 0;
-	cl.num_custombeams = 0;
+	tr.draw_list->num_solid_entities = 0;
+	tr.draw_list->num_trans_entities = 0;
+	tr.draw_list->num_beam_entities = 0;
 }
 
 /*
@@ -229,20 +254,20 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int type )
 	if( R_OpaqueEntity( clent ))
 	{
 		// opaque
-		if( tr.num_solid_entities >= MAX_VISIBLE_PACKET )
+		if( tr.draw_list->num_solid_entities >= MAX_VISIBLE_PACKET )
 			return false;
 
-		tr.solid_entities[tr.num_solid_entities] = clent;
-		tr.num_solid_entities++;
+		tr.draw_list->solid_entities[tr.draw_list->num_solid_entities] = clent;
+		tr.draw_list->num_solid_entities++;
 	}
 	else
 	{
 		// translucent
-		if( tr.num_trans_entities >= MAX_VISIBLE_PACKET )
+		if( tr.draw_list->num_trans_entities >= MAX_VISIBLE_PACKET )
 			return false;
 
-		tr.trans_entities[tr.num_trans_entities] = clent;
-		tr.num_trans_entities++;
+		tr.draw_list->trans_entities[tr.draw_list->num_trans_entities] = clent;
+		tr.draw_list->num_trans_entities++;
 	}
 
 	return true;
@@ -467,7 +492,7 @@ static void R_SetupFrame( void )
 	if( !gl_nosort->value )
 	{
 		// sort translucents entities by rendermode and distance
-		qsort( tr.trans_entities, tr.num_trans_entities, sizeof( cl_entity_t* ), R_TransEntityCompare );
+		qsort( tr.draw_list->trans_entities, tr.draw_list->num_trans_entities, sizeof( cl_entity_t* ), R_TransEntityCompare );
 	}
 
 	// current viewleaf
@@ -758,9 +783,9 @@ void R_DrawEntitiesOnList( void )
 	GL_CheckForErrors();
 
 	// first draw solid entities
-	for( i = 0; i < tr.num_solid_entities && !RI.onlyClientDraw; i++ )
+	for( i = 0; i < tr.draw_list->num_solid_entities && !RI.onlyClientDraw; i++ )
 	{
-		RI.currententity = tr.solid_entities[i];
+		RI.currententity = tr.draw_list->solid_entities[i];
 		RI.currentmodel = RI.currententity->model;
 
 		Assert( RI.currententity != NULL );
@@ -790,9 +815,9 @@ void R_DrawEntitiesOnList( void )
 	GL_CheckForErrors();
 
 	// draw sprites seperately, because of alpha blending
-	for( i = 0; i < tr.num_solid_entities && !RI.onlyClientDraw; i++ )
+	for( i = 0; i < tr.draw_list->num_solid_entities && !RI.onlyClientDraw; i++ )
 	{
-		RI.currententity = tr.solid_entities[i];
+		RI.currententity = tr.draw_list->solid_entities[i];
 		RI.currentmodel = RI.currententity->model;
 
 		Assert( RI.currententity != NULL );
@@ -821,9 +846,9 @@ void R_DrawEntitiesOnList( void )
 	GL_CheckForErrors();
 
 	// then draw translucent entities
-	for( i = 0; i < tr.num_trans_entities && !RI.onlyClientDraw; i++ )
+	for( i = 0; i < tr.draw_list->num_trans_entities && !RI.onlyClientDraw; i++ )
 	{
-		RI.currententity = tr.trans_entities[i];
+		RI.currententity = tr.draw_list->trans_entities[i];
 		RI.currentmodel = RI.currententity->model;
 
 		// handle studiomodels with custom rendermodes on texture
@@ -1400,9 +1425,7 @@ static uint pfnFileBufferCRC32( const void *buffer, const int length )
 
 	CRC32_Init( &modelCRC );
 	CRC32_ProcessBuffer( &modelCRC, buffer, length );
-	modelCRC = CRC32_Final( modelCRC );
-
-	return modelCRC;
+	return CRC32_Final( modelCRC );
 }
 
 /*

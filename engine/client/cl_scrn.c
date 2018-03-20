@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "gl_local.h"
 #include "vgui_draw.h"
 #include "qfont.h"
+#include "input.h"
 
 convar_t *scr_centertime;
 convar_t *scr_loading;
@@ -322,6 +323,7 @@ void SCR_BeginLoadingPlaque( qboolean is_background )
 	if( cls.key_dest == key_console )
 		return;
 
+	if( is_background ) IN_MouseSavePos( );
 	cls.draw_changelevel = !is_background;
 	SCR_UpdateScreen();
 	cls.disable_screen = host.realtime;

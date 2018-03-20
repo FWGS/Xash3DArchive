@@ -553,7 +553,7 @@ pfnPlaySound
 */
 static void pfnPlaySound( const char *szSound )
 {
-	if( !szSound || !*szSound ) return;
+	if( !COM_CheckString( szSound )) return;
 	S_StartLocalSound( szSound, VOL_NORM, false );
 }
 
@@ -663,6 +663,19 @@ static void pfnSetPlayerModel( cl_entity_t *ent, const char *path )
 
 /*
 ====================
+pfnClearScene
+
+for drawing playermodel previews
+====================
+*/
+static void pfnClearScene( void )
+{
+	R_PushScene();
+	R_ClearScene();
+}
+
+/*
+====================
 pfnRenderScene
 
 for drawing playermodel previews
@@ -680,6 +693,7 @@ static void pfnRenderScene( const ref_viewpass_t *rvp )
 	R_Set2DMode( false );
 	R_RenderFrame( rvp );
 	R_Set2DMode( true );
+	R_PopScene();
 }
 
 /*
@@ -929,7 +943,7 @@ static ui_enginefuncs_t gEngfuncs =
 	Con_DefaultColor,
 	pfnGetPlayerModel,
 	pfnSetPlayerModel,
-	R_ClearScene,	
+	pfnClearScene,	
 	pfnRenderScene,
 	pfnAddEntity,
 	Host_Error,

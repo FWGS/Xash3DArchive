@@ -1325,7 +1325,6 @@ BEAM		*cl_active_beams;
 BEAM		*cl_free_beams;
 BEAM		*cl_viewbeams = NULL;		// beams pool
 
-cl_entity_t	*cl_custombeams[MAX_VISIBLE_PACKET];	// to avoid check of all the ents
 /*
 ================
 CL_InitViewBeams
@@ -1381,16 +1380,16 @@ Add the beam that encoded as custom entity
 */
 void CL_AddCustomBeam( cl_entity_t *pEnvBeam )
 {
-	if( cl.num_custombeams >= MAX_VISIBLE_PACKET )
+	if( tr.draw_list->num_beam_entities >= MAX_VISIBLE_PACKET )
 	{
-		MsgDev( D_ERROR, "Too many custom beams %d!\n", cl.num_custombeams );
+		MsgDev( D_ERROR, "Too many custom beams %d!\n", tr.draw_list->num_beam_entities );
 		return;
 	}
 
 	if( pEnvBeam )
 	{
-		cl_custombeams[cl.num_custombeams] = pEnvBeam;
-		cl.num_custombeams++;
+		tr.draw_list->beam_entities[tr.draw_list->num_beam_entities] = pEnvBeam;
+		tr.draw_list->num_beam_entities++;
 	}
 }
 
@@ -1506,9 +1505,9 @@ void CL_DrawBeams( int fTrans )
 	
 	// server beams don't allocate beam chains
 	// all params are stored in cl_entity_t
-	for( i = 0; i < cl.num_custombeams; i++ )
+	for( i = 0; i < tr.draw_list->num_beam_entities; i++ )
 	{
-		RI.currentbeam = cl_custombeams[i];
+		RI.currentbeam = tr.draw_list->beam_entities[i];
 		flags = RI.currentbeam->curstate.rendermode & 0xF0;
 
 		if( fTrans && FBitSet( flags, FBEAM_SOLID ))

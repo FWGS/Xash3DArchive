@@ -809,7 +809,7 @@ int COM_ExpandFilename( const char *fileName, char *nameOutBuffer, int nameOutBu
 	const char	*path;
 	char		result[MAX_SYSPATH];
 
-	if( !fileName || !*fileName || !nameOutBuffer || nameOutBufferSize <= 0 )
+	if( !COM_CheckString( fileName ) || !nameOutBuffer || nameOutBufferSize <= 0 )
 		return 0;
 
 	// filename examples:
@@ -1011,7 +1011,7 @@ byte* COM_LoadFileForMe( const char *filename, int *pLength )
 	byte	*file, *pfile;
 	int	iLength;
 
-	if( !filename || !*filename )
+	if( !COM_CheckString( filename ))
 	{
 		if( pLength )
 			*pLength = 0;
@@ -1059,7 +1059,7 @@ COM_LoadFile
 int COM_SaveFile( const char *filename, const void *data, long len )
 {
 	// check for empty filename
-	if( !filename || !*filename )
+	if( !COM_CheckString( filename ))
 		return false;
 
 	// check for null data

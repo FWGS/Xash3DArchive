@@ -34,8 +34,9 @@ extern byte	*r_temppool;
 #define MAX_LIGHTMAPS	256
 #define SUBDIVIDE_SIZE	64
 #define MAX_DECAL_SURFS	4096
+#define MAX_DRAW_STACK	2		// normal view and menu view
 
-#define SHADEDOT_QUANT 	16	// precalculated dot products for quantized angles
+#define SHADEDOT_QUANT 	16		// precalculated dot products for quantized angles
 #define SHADE_LAMBERT	1.495f
 
 // refparams
@@ -154,6 +155,16 @@ typedef struct
 
 typedef struct
 {
+	cl_entity_t	*solid_entities[MAX_VISIBLE_PACKET];	// opaque moving or alpha brushes
+	cl_entity_t	*trans_entities[MAX_VISIBLE_PACKET];	// translucent brushes
+	cl_entity_t	*beam_entities[MAX_VISIBLE_PACKET];
+	uint		num_solid_entities;
+	uint		num_trans_entities;
+	uint		num_beam_entities;
+} draw_list_t;
+
+typedef struct
+{
 	int		cinTexture;      	// cinematic texture
 	int		skyTexture;	// default sky texture
 	int		whiteTexture;
@@ -184,10 +195,9 @@ typedef struct
 	int		skyboxbasenum;	// start with 5800
 
 	// entity lists
-	cl_entity_t	*solid_entities[MAX_VISIBLE_PACKET];	// opaque moving or alpha brushes
-	cl_entity_t	*trans_entities[MAX_VISIBLE_PACKET];	// translucent brushes
-	uint		num_solid_entities;
-	uint		num_trans_entities;
+	draw_list_t	draw_stack[MAX_DRAW_STACK];
+	int		draw_stack_pos;
+	draw_list_t	*draw_list;
 
 	msurface_t	*draw_decals[MAX_DECAL_SURFS];
 	int		num_draw_decals;
@@ -243,7 +253,7 @@ extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern mleaf_t		*r_viewleaf2, *r_oldviewleaf2;
 extern dlight_t		cl_dlights[MAX_DLIGHTS];
 extern dlight_t		cl_elights[MAX_ELIGHTS];
-#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities)
+#define r_numEntities	(tr.draw_list->num_solid_entities + tr.draw_list->num_trans_entities)
 #define r_numStatics	(r_stats.c_client_ents)
 
 extern struct beam_s	*cl_active_beams;
@@ -352,6 +362,8 @@ qboolean R_InitRenderAPI( void );
 void R_AllowFog( int allowed );
 void R_SetupFrustum( void );
 void R_FindViewLeaf( void );
+void R_PushScene( void );
+void R_PopScene( void );
 void R_DrawFog( void );
 
 //

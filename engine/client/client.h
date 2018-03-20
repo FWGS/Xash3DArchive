@@ -260,7 +260,6 @@ typedef struct
 	// server state information
 	int		playernum;
 	int		maxclients;
-	int		num_custombeams;			// server beams count
 
 	entity_state_t	instanced_baseline[MAX_CUSTOM_BASELINES];
 	int		instanced_baseline_count;

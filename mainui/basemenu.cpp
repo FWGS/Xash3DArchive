@@ -1229,6 +1229,9 @@ void UI_SetActiveMenu( int fActive )
 	KEY_ClearStates();
 	uiStatic.framecount = 0;
 
+	if( fActive && uiStatic.visible )
+		return; // don't reset the menu
+
 	if( fActive )
 	{
 		KEY_SetDest( KEY_MENU );
