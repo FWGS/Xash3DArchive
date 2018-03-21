@@ -782,6 +782,9 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 	MSG_Init( &sv.reliable_datagram, "Reliable Datagram", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
 	MSG_Init( &sv.spec_datagram, "Spectator Datagram", sv.spectator_buf, sizeof( sv.spectator_buf ));
 
+	// clearing all the baselines
+	memset( svs.baselines, 0, sizeof( entity_state_t ) * GI->max_edicts );
+
 	// make cvars consistant
 	if( coop.value ) Cvar_SetValue( "deathmatch", 0 );
 	current_skill = Q_rint( skill.value );

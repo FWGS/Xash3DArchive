@@ -3309,6 +3309,7 @@ pfnSetView
 void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 {
 	sv_client_t	*client;
+	int		viewEnt;
 
 	if( !SV_IsValidEdict( pClient ))
 		return;
@@ -3327,8 +3328,12 @@ void pfnSetView( const edict_t *pClient, const edict_t *pViewent )
 	if( FBitSet( client->flags, FCL_FAKECLIENT ))
 		return;
 
+	if( client->pViewEntity )
+		viewEnt = NUM_FOR_EDICT( client->pViewEntity );
+	else viewEnt = NUM_FOR_EDICT( client->edict );
+
 	MSG_BeginServerCmd( &client->netchan.message, svc_setview );
-	MSG_WriteWord( &client->netchan.message, NUM_FOR_EDICT( pViewent ));
+	MSG_WriteWord( &client->netchan.message, viewEnt );
 }
 
 /*
