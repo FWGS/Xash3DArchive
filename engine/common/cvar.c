@@ -866,7 +866,7 @@ void Cvar_Unlink( int group )
 		return;
 
 	count = Cvar_UnlinkVar( NULL, group );
-	Con_DPrintf( "unlink %i cvars\n", count );
+	Con_Reportf( "unlink %i cvars\n", count );
 }
 
 /*

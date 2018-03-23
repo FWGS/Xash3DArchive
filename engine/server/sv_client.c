@@ -1191,7 +1191,7 @@ void SV_PutClientInServer( sv_client_t *cl )
 			svgame.dllFuncs.pfnParmsChangeLevel();
 
 			MSG_BeginServerCmd( &msg, svc_restore );
-			Q_snprintf( name, sizeof( name ), "save/%s.HL2", sv.name );
+			Q_snprintf( name, sizeof( name ), "%s%s.HL2", DEFAULT_SAVE_DIRECTORY, sv.name );
 			COM_FixSlashes( name );
 			MSG_WriteString( &msg, name );
 			MSG_WriteByte( &msg, levelData.connectionCount );

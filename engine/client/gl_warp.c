@@ -311,16 +311,6 @@ void R_AddSkyBoxSurface( msurface_t *fa )
 	float	*v;
 	int	i;
 
-	if( clgame.movevars.skyangle )
-	{
-		// force full sky to draw when it has angle
-		for( i = 0; i < 6; i++ )
-		{
-			RI.skyMins[0][i] = RI.skyMins[1][i] = -1.0f;
-			RI.skyMaxs[0][i] = RI.skyMaxs[1][i] = 1.0f;
-		}
-	}
-
 	if( FBitSet( world.flags, FWORLD_SKYSPHERE ) && fa->polys && !FBitSet( world.flags, FWORLD_CUSTOM_SKYBOX ))
 	{
 		glpoly_t	*p = fa->polys;
@@ -377,18 +367,6 @@ void R_DrawSkyBox( void )
 {
 	int	i;
 
-	if( clgame.movevars.skyangle )
-	{	
-		// check for no sky at all
-		for( i = 0; i < 6; i++ )
-		{
-			if( RI.skyMins[0][i] < RI.skyMaxs[0][i] && RI.skyMins[1][i] < RI.skyMaxs[1][i] )
-				break;
-		}
-
-		if( i == 6 ) return; // nothing visible
-	}
-
 	RI.isSkyVisible = true;
 
 	// don't fogging skybox (this fix old Half-Life bug)
@@ -397,16 +375,6 @@ void R_DrawSkyBox( void )
 	pglDisable( GL_BLEND );
 	pglDisable( GL_ALPHA_TEST );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-
-	if( clgame.movevars.skyangle && !VectorIsNull( (float *)&clgame.movevars.skydir_x ))
-	{
-		matrix4x4	m;
-		Matrix4x4_CreateRotate( m, clgame.movevars.skyangle, clgame.movevars.skydir_x, clgame.movevars.skydir_y, clgame.movevars.skydir_z );
-		Matrix4x4_ConcatTranslate( m, -RI.vieworg[0], -RI.vieworg[1], -RI.vieworg[2] );
-		Matrix4x4_ConcatTransforms( RI.modelviewMatrix, RI.worldviewMatrix, m );
-		GL_LoadMatrix( RI.modelviewMatrix );
-		tr.modelviewIdentity = false;
-	}
 
 	for( i = 0; i < 6; i++ )
 	{
@@ -437,11 +405,11 @@ R_SetupSky
 */
 void R_SetupSky( const char *skyboxname )
 {
-	string	loadname;
-	string	sidename;
-	int	i = 0, result;
+	char	loadname[MAX_QPATH];
+	char	sidename[MAX_QPATH];
+	int	i, result;
 
-	if( !skyboxname || !*skyboxname )
+	if( !COM_CheckString( skyboxname ))
 	{
 		R_UnloadSkybox();
 		return; // clear old skybox
@@ -456,9 +424,9 @@ void R_SetupSky( const char *skyboxname )
 	result = CheckSkybox( loadname );
 
 	// to prevent infinite recursion if default skybox was missed
-	if( result == SKYBOX_MISSED && Q_stricmp( loadname, "gfx/env/desert" ))
+	if( result == SKYBOX_MISSED && Q_stricmp( loadname, DEFAULT_SKYBOX_PATH ))
 	{
-		MsgDev( D_ERROR, "missed or incomplete skybox '%s'\n", skyboxname );
+		Con_Reportf( S_WARN "missed or incomplete skybox '%s'\n", skyboxname );
 		R_SetupSky( "desert" ); // force to default
 		return; 
 	}
@@ -485,7 +453,7 @@ void R_SetupSky( const char *skyboxname )
 		return; // loaded
 	}
 
-	MsgDev( D_ERROR, "couldn't load skybox '%s'\n", skyboxname );
+	Con_DPrintf( "^2failed\n" );
 	R_UnloadSkybox();
 }
 

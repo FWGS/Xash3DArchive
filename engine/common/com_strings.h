@@ -44,6 +44,12 @@ GNU General Public License for more details.
 // path to folders where placed all sounds
 #define DEFAULT_SOUNDPATH		"sound/"
 
+// path store saved games
+#define DEFAULT_SAVE_DIRECTORY	"save/"
+
+// fallback to this skybox
+#define DEFAULT_SKYBOX_PATH		"gfx/env/desert"
+
 // playlist for startup videos
 #define DEFAULT_VIDEOLIST_PATH	"media/StartupVids.txt"
 

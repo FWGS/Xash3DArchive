@@ -36,8 +36,7 @@ extern int SV_UPDATE_BACKUP;
 
 // hostflags
 #define SVF_SKIPLOCALHOST	BIT( 0 )
-#define SVF_PLAYERSONLY	BIT( 1 )
-#define SVF_MERGE_VISIBILITY	BIT( 2 )	// we are do portal pass
+#define SVF_MERGE_VISIBILITY	BIT( 1 )	// we are do portal pass
 
 // mapvalid flags
 #define MAP_IS_EXIST	BIT( 0 )
@@ -120,8 +119,8 @@ typedef struct
 	char		model[MAX_QPATH];	// name of static-entity model for right precache
 	vec3_t		origin;
 	vec3_t		angles;
-	byte		sequence;
-	byte		frame;
+	short		sequence;
+	short		frame;
 	short		colormap;
 	byte		skin;		// can't set contents! only real skin!
 	byte		body;
@@ -197,6 +196,7 @@ typedef struct server_s
 	model_t		*worldmodel;	// pointer to world
 
 	qboolean		simulating;
+	qboolean		playersonly;
 	qboolean		paused;
 
 	// statistics
@@ -424,13 +424,19 @@ extern convar_t		sv_edgefriction;
 extern convar_t		sv_gravity;
 extern convar_t		sv_stopspeed;
 extern convar_t		sv_maxspeed;
+extern convar_t		sv_wateralpha;
+extern convar_t		sv_wateramp;
 extern convar_t		sv_stepsize;
 extern convar_t		sv_maxvelocity;
 extern convar_t		sv_rollangle;
 extern convar_t		sv_rollspeed;
 extern convar_t		sv_skyname;
-extern convar_t		sv_skyspeed;
-extern convar_t		sv_skyangle;
+extern convar_t		sv_skycolor_r;
+extern convar_t		sv_skycolor_g;
+extern convar_t		sv_skycolor_b;
+extern convar_t		sv_skyvec_x;
+extern convar_t		sv_skyvec_y;
+extern convar_t		sv_skyvec_z;
 extern convar_t		sv_consistency;
 extern convar_t		sv_password;
 extern convar_t		sv_uploadmax;
@@ -494,7 +500,7 @@ void SV_CheckVelocity( edict_t *ent );
 qboolean SV_CheckWater( edict_t *ent );
 qboolean SV_RunThink( edict_t *ent );
 qboolean SV_PlayerRunThink( edict_t *ent, float frametime, double time );
-qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker );	// for EntityInSolid checks
+qboolean SV_TestEntityPosition( edict_t *ent, edict_t *blocker );
 void SV_Impact( edict_t *e1, edict_t *e2, trace_t *trace );
 qboolean SV_CanPushed( edict_t *ent );
 void SV_FreeOldEntities( void );
@@ -594,6 +600,7 @@ edict_t* SV_FindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 void SV_PlaybackEventFull( int flags, const edict_t *pInvoker, word eventindex, float delay, float *origin,
 	float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
 void SV_PlaybackReliableEvent( sizebuf_t *msg, word eventindex, float delay, event_args_t *args );
+int SV_BuildSoundMsg( sizebuf_t *msg, edict_t *ent, int chan, const char *sample, int vol, float attn, int flags, int pitch, const vec3_t pos );
 qboolean SV_BoxInPVS( const vec3_t org, const vec3_t absmin, const vec3_t absmax );
 void SV_WriteEntityPatch( const char *filename );
 float SV_AngleMod( float ideal, float current, float speed );
@@ -607,6 +614,7 @@ sv_client_t *SV_ClientFromEdict( const edict_t *pEdict, qboolean spawned_only );
 int SV_MapIsValid( const char *filename, const char *spawn_entity, const char *landmark_name );
 void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float attn, int flags, int pitch );
 void SV_CreateStaticEntity( struct sizebuf_s *msg, sv_static_entity_t *ent );
+edict_t *SV_FindGlobalEntity( string_t classname, string_t globalname );
 void SV_SendUserReg( sizebuf_t *msg, sv_user_message_t *user );
 edict_t* pfnPEntityOfEntIndex( int iEntIndex );
 int pfnIndexOfEdict( const edict_t *pEdict );
@@ -634,12 +642,10 @@ qboolean SV_ServerLog_f( sv_client_t *cl );
 //
 // sv_save.c
 //
-void SV_ClearSaveDir( void );
 void SV_SaveGame( const char *pName );
 qboolean SV_LoadGame( const char *pName );
-int SV_LoadGameState( char const *level, qboolean changelevel );
+int SV_LoadGameState( char const *level );
 void SV_ChangeLevel( qboolean loadfromsavedgame, const char *mapname, const char *start, qboolean background );
-void SV_LoadAdjacentEnts( const char *pOldLevel, const char *pLandmarkName );
 const char *SV_GetLatestSave( void );
 void SV_InitSaveRestore( void );
 void SV_ClearGameState( void );

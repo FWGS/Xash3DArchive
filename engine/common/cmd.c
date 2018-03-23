@@ -1107,7 +1107,7 @@ void Cmd_Unlink( int group )
 		count++;
 	}
 
-	Con_DPrintf( "unlink %i commands\n", count );
+	Con_Reportf( "unlink %i commands\n", count );
 }
 
 /*

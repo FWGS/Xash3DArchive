@@ -92,12 +92,6 @@ CVAR_DEFINE_AUTO( sv_skyvec_x, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skylight dir
 CVAR_DEFINE_AUTO( sv_skyvec_y, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skylight direction by y-axis" );
 CVAR_DEFINE_AUTO( sv_skyvec_z, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skylight direction by z-axis" );
 CVAR_DEFINE_AUTO( sv_wateralpha, "1", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "world surfaces water transparency factor. 1.0 - solid, 0.0 - fully transparent" );
-CVAR_DEFINE_AUTO( sv_skydir_x, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "sky rotation factor around x-axis" );
-CVAR_DEFINE_AUTO( sv_skydir_y, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "sky rotation factor around y-axis" );
-CVAR_DEFINE_AUTO( sv_skydir_z, "1", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "sky rotation factor around z-axis" ); // g-cont. add default sky rotate direction
-CVAR_DEFINE_AUTO( sv_skyangle, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skybox rotational angle (in degrees)" );
-CVAR_DEFINE_AUTO( sv_skyspeed, "0", 0, "skybox rotational speed" );
-
 CVAR_DEFINE_AUTO( showtriggers, "0", FCVAR_LATCH, "debug cvar shows triggers" );
 CVAR_DEFINE_AUTO( sv_airmove, "1", FCVAR_SERVER, "obsolete, compatibility issues" );
 CVAR_DEFINE_AUTO( sv_version, "", FCVAR_READ_ONLY, "engine version string" );
@@ -199,10 +193,6 @@ void SV_UpdateMovevars( qboolean initialize )
 	svgame.movevars.skyvec_x = sv_skyvec_x.value;
 	svgame.movevars.skyvec_y = sv_skyvec_y.value;
 	svgame.movevars.skyvec_z = sv_skyvec_z.value;
-	svgame.movevars.skydir_x = sv_skydir_x.value;
-	svgame.movevars.skydir_y = sv_skydir_y.value;
-	svgame.movevars.skydir_z = sv_skydir_z.value;
-	svgame.movevars.skyangle = sv_skyangle.value;
 	svgame.movevars.wateralpha = sv_wateralpha.value;
 	svgame.movevars.features = host.features; // just in case. not really need
 	svgame.movevars.entgravity = 1.0f;
@@ -528,10 +518,14 @@ qboolean SV_IsSimulating( void )
 		return true; // force simulating for background map
 	}
 
-	if( FBitSet( sv.hostflags, SVF_PLAYERSONLY ))
+	if( !SV_HasActivePlayers( ))
 		return false;
 
-	if( !SV_HasActivePlayers())
+	if( host.type == HOST_DEDICATED )
+		return true; // always active for dedicated servers
+
+	// allow to freeze everything in singleplayer
+	if( svs.maxclients <= 1 && sv.playersonly )
 		return false;
 
 	if( !sv.paused && CL_IsInGame( ))
@@ -772,11 +766,6 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&sv_skyvec_y);
 	Cvar_RegisterVariable (&sv_skyvec_z);
 	Cvar_RegisterVariable (&sv_skyname);
-	Cvar_RegisterVariable (&sv_skydir_x);
-	Cvar_RegisterVariable (&sv_skydir_y);
-	Cvar_RegisterVariable (&sv_skydir_z);
-	Cvar_RegisterVariable (&sv_skyangle);
-	Cvar_RegisterVariable (&sv_skyspeed);
 	Cvar_RegisterVariable (&sv_footsteps);
 	Cvar_RegisterVariable (&sv_wateralpha);
 	Cvar_RegisterVariable (&sv_cheats);
@@ -846,11 +835,12 @@ void SV_Init( void )
 	// when we in developer-mode automatically turn cheats on
 	if( host_developer.value ) Cvar_SetValue( "sv_cheats", 1.0f );
 
-	SV_ClearSaveDir ();	// delete all temporary *.hl files
 	MSG_Init( &net_message, "NetMessage", net_message_buffer, sizeof( net_message_buffer ));
 
 	Q_snprintf( versionString, sizeof( versionString ), "%s: %.2f,%i,%i", "Xash3D", XASH_VERSION, PROTOCOL_VERSION, Q_buildnum() );
 	Cvar_FullSet( "sv_version", versionString, FCVAR_READ_ONLY );
+
+	SV_ClearGameState ();	// delete all temporary *.hl files
 }
 
 /*

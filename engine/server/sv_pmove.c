@@ -1083,7 +1083,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 	// copy results back to client
 	SV_FinishPMove( svgame.pmove, cl );
 
-	if( clent->v.solid != SOLID_NOT && !FBitSet( sv.hostflags, SVF_PLAYERSONLY ))
+	if( clent->v.solid != SOLID_NOT && !sv.playersonly )
 	{
 		if( svgame.physFuncs.PM_PlayerTouch != NULL )
 		{

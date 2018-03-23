@@ -1272,7 +1272,11 @@ qboolean CL_GetEntitySpatialization( channel_t *ch )
 	cl_entity_t	*ent;
 	qboolean		valid_origin;
 
-	if( ch->entnum == 0 ) return true; // static sound
+	if( ch->entnum == 0 )
+	{
+		ch->staticsound = true;
+		return true; // static sound
+	}
 
 	if(( ch->entnum - 1 ) == cl.playernum )
 	{
@@ -1284,15 +1288,9 @@ qboolean CL_GetEntitySpatialization( channel_t *ch )
 	ent = CL_GetEntityByIndex( ch->entnum );
 
 	// entity is not present on the client but has valid origin
-	if( !ent || !ent->index ) return valid_origin;
-
-	if( ent->curstate.messagenum == 0 )
-	{
-		// entity is never has updates on the client
-		// so we should use static origin instead
-		ch->staticsound = true;
+	if( !ent || !ent->index || ent->curstate.messagenum == 0 )
 		return valid_origin;
-	}
+
 #if 0
 	// uncomment this if you want enable additional check by PVS
 	if( ent->curstate.messagenum != cl.parsecount )

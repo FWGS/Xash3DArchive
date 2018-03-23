@@ -139,10 +139,10 @@ typedef struct physics_interface_s
 	void		( *ClipPMoveToEntity)( struct physent_s *pe, const float *start, float *mins, float *maxs, const float *end, struct pmtrace_s *tr );
 	// called at end the frame of SV_Physics call
 	void		( *SV_EndFrame )( void );
+	// obsolete
+	void		(*pfnReserved)( void );
 	// called through save\restore process
-	void		(*pfnCreateEntitiesInTransitionList)( SAVERESTOREDATA*, int levelMask );
-	// called through save\restore process
-	void		(*pfnCreateEntitiesInRestoreList)( SAVERESTOREDATA* );
+	void		(*pfnCreateEntitiesInRestoreList)( SAVERESTOREDATA *pSaveData, int levelMask, qboolean create_world );
 	// allocate custom string (e.g. using user implementation of stringtable, not engine strings)
 	string_t		(*pfnAllocString)( const char *szValue );
 	// make custom string (e.g. using user implementation of stringtable, not engine strings)

@@ -1806,13 +1806,6 @@ void SV_Physics( void )
 	// increase framecount
 	sv.framecount++;
 
-	if( sv_skyspeed.value )
-	{
-		// evaluate sky rotation.
-		float skyAngle = sv_skyangle.value + sv_skyspeed.value * sv.frametime;
-		Cvar_SetValue( "sv_skyangle", anglemod( skyAngle ));
-	}
-
 	// decrement svgame.numEntities if the highest number entities died
 	for( ; EDICT_NUM( svgame.numEntities - 1 )->free; svgame.numEntities-- );
 }

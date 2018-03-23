@@ -136,7 +136,7 @@ typedef struct
 
 typedef struct dll_user_s
 {
-	void	*hInstance;		// to avoid possible hacks
+	void	*hInstance;		// instance handle
 	qboolean	custom_loader;		// a bit who indicated loader type
 	qboolean	encrypted;		// dll is crypted (some client.dll in HL, CS etc)
 	char	dllName[32];		// for debug messages

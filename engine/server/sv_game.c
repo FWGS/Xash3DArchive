@@ -502,7 +502,7 @@ void SV_CreateStaticEntity( sizebuf_t *msg, sv_static_entity_t *ent )
 	int	index;
 
 	// this can happens if serialized map contain too many static entities...
-	if( MSG_GetNumBytesLeft( msg ) < 64 )
+	if( MSG_GetNumBytesLeft( msg ) < 35 )
 	{
 		sv.ignored_static_ents++;
 		return;
@@ -512,8 +512,8 @@ void SV_CreateStaticEntity( sizebuf_t *msg, sv_static_entity_t *ent )
 
 	MSG_BeginServerCmd( msg, svc_spawnstatic );
 	MSG_WriteShort( msg, index );
-	MSG_WriteByte( msg, ent->sequence );
-	MSG_WriteByte( msg, ent->frame );
+	MSG_WriteWord( msg, ent->sequence );
+	MSG_WriteWord( msg, ent->frame );
 	MSG_WriteWord( msg, ent->colormap );
 	MSG_WriteByte( msg, ent->skin );
 	MSG_WriteByte( msg, ent->body );
@@ -1521,6 +1521,27 @@ edict_t *SV_FindEntityByString( edict_t *pStartEdict, const char *pszField, cons
 }
 
 /*
+=========
+SV_FindGlobalEntity
+
+ripped out from the hl.dll
+=========
+*/
+edict_t *SV_FindGlobalEntity( string_t classname, string_t globalname )
+{
+	edict_t *pent = SV_FindEntityByString( NULL,  "globalname", STRING( globalname ));
+
+	if( SV_IsValidEdict( pent ))
+	{
+		// don't spam about error - game code already tell us
+		if( Q_strcmp( SV_ClassName( pent ), STRING( classname )))
+			pent = NULL;
+	}
+
+	return pent;
+}
+
+/*
 ==============
 pfnGetEntityIllum
 
@@ -1826,7 +1847,7 @@ static void pfnMakeStatic( edict_t *ent )
 	VectorCopy( ent->v.angles, clent->angles );
 
 	clent->sequence = ent->v.sequence;
-	clent->frame = ent->v.frame;
+	clent->frame = ent->v.frame * 128;
 	clent->colormap = ent->v.colormap;
 	clent->skin = ent->v.skin;
 	clent->body = ent->v.body;
@@ -1946,10 +1967,11 @@ SV_BuildSoundMsg
 
 =================
 */
-static int SV_BuildSoundMsg( sizebuf_t *msg, edict_t *ent, int chan, const char *sample, int vol, float attn, int flags, int pitch, const vec3_t pos )
+int SV_BuildSoundMsg( sizebuf_t *msg, edict_t *ent, int chan, const char *sample, int vol, float attn, int flags, int pitch, const vec3_t pos )
 {
 	int	entityIndex;
 	int	sound_idx;
+	qboolean	spawn;
 
 	if( vol < 0 || vol > 255 )
 	{
@@ -2004,21 +2026,25 @@ static int SV_BuildSoundMsg( sizebuf_t *msg, edict_t *ent, int chan, const char 
 		return 0;
 	}
 
+	spawn = FBitSet( flags, SND_RESTORE_POSITION ) ? false : true;
+
 	if( SV_IsValidEdict( ent ) && SV_IsValidEdict( ent->v.aiment ))
 		entityIndex = NUM_FOR_EDICT( ent->v.aiment );
 	else if( SV_IsValidEdict( ent ))
 		entityIndex = NUM_FOR_EDICT( ent );
-	else entityIndex = 0; // assime world
+	else entityIndex = 0; // assume world
 
 	if( vol != 255 ) SetBits( flags, SND_VOLUME );
 	if( attn != ATTN_NONE ) SetBits( flags, SND_ATTENUATION );
 	if( pitch != PITCH_NORM ) SetBits( flags, SND_PITCH );
 
 	// not sending (because this is out of range)
+	ClearBits( flags, SND_RESTORE_POSITION );
 	ClearBits( flags, SND_FILTER_CLIENT );
 	ClearBits( flags, SND_SPAWNING );
 
-	MSG_BeginServerCmd( msg, svc_sound );
+	if( spawn ) MSG_BeginServerCmd( msg, svc_sound );
+	else MSG_BeginServerCmd( msg, svc_restoresound );
 	MSG_WriteUBitLong( msg, flags, MAX_SND_FLAGS_BITS );
 	MSG_WriteUBitLong( msg, sound_idx, MAX_SOUND_BITS );
 	MSG_WriteUBitLong( msg, chan, MAX_SND_CHAN_BITS );
@@ -2442,6 +2468,7 @@ void pfnLightStyle( int style, const char* val )
 	if( style < 0 ) style = 0;
 	if( style >= MAX_LIGHTSTYLES )
 		Host_Error( "SV_LightStyle: style: %i >= %d", style, MAX_LIGHTSTYLES );
+	if( sv.loadgame ) return; // don't let the world overwrite our restored styles
 
 	SV_SetLightStyle( style, val, 0.0f ); // set correct style
 }
@@ -4663,11 +4690,6 @@ void SV_SpawnEntities( const char *mapname )
 	Cvar_Reset( "sv_skyvec_y" );
 	Cvar_Reset( "sv_skyvec_z" );
 	Cvar_Reset( "sv_skyname" );
-	Cvar_Reset( "sv_skydir_x" );
-	Cvar_Reset( "sv_skydir_y" );
-	Cvar_Reset( "sv_skydir_z" );
-	Cvar_Reset( "sv_skyangle" );
-	Cvar_Reset( "sv_skyspeed" );
 
 	ent = EDICT_NUM( 0 );
 	if( ent->free ) SV_InitEdict( ent );

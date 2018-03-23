@@ -381,7 +381,7 @@ void CL_SaveShot_f( void )
 		return;
 	}
 
-	Q_sprintf( cls.shotname, "save/%s.bmp", Cmd_Argv( 1 ));
+	Q_sprintf( cls.shotname, "%s%s.bmp", DEFAULT_SAVE_DIRECTORY, Cmd_Argv( 1 ));
 	cls.scrshot_action = scrshot_savegame;	// build new frame for saveshot
 }
 

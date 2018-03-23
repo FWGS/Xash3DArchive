@@ -1025,7 +1025,6 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 	// Don't send entity to local client if the client says it's predicting the entity itself.
 	if ( ent->v.flags & FL_SKIPLOCALHOST )
 	{
-		if ( hostflags & 4 ) return 0; // it's a portal pass
 		if ( ( hostflags & 1 ) && ( ent->v.owner == host ) )
 			return 0;
 	}

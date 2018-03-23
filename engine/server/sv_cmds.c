@@ -320,7 +320,7 @@ void SV_Load_f( void )
 		return;
 	}
 
-	Q_snprintf( path, sizeof( path ), "save/%s.sav", Cmd_Argv( 1 ));
+	Q_snprintf( path, sizeof( path ), "%s%s.sav", DEFAULT_SAVE_DIRECTORY, Cmd_Argv( 1 ));
 	SV_LoadGame( path );
 }
 
@@ -343,18 +343,18 @@ SV_Save_f
 */
 void SV_Save_f( void )
 {
-	const char *name;
-
-	switch( Cmd_Argc() )
+	switch( Cmd_Argc( ))
 	{
-	case 1: name = "new"; break;
-	case 2: name = Cmd_Argv( 1 ); break;
+	case 1:
+		SV_SaveGame( "new" );
+		break;
+	case 2:
+		SV_SaveGame( Cmd_Argv( 1 ));
+		break;
 	default:
 		Con_Printf( S_USAGE "save <savename>\n" );
-		return;
+		break;
 	}
-
-	SV_SaveGame( name );
 }
 
 /*
@@ -383,8 +383,8 @@ void SV_DeleteSave_f( void )
 	}
 
 	// delete save and saveshot
-	FS_Delete( va( "save/%s.sav", Cmd_Argv( 1 )));
-	FS_Delete( va( "save/%s.bmp", Cmd_Argv( 1 )));
+	FS_Delete( va( "%s%s.sav", DEFAULT_SAVE_DIRECTORY, Cmd_Argv( 1 )));
+	FS_Delete( va( "%s%s.bmp", DEFAULT_SAVE_DIRECTORY, Cmd_Argv( 1 )));
 }
 
 /*
@@ -732,11 +732,10 @@ disable plhysics but players
 void SV_PlayersOnly_f( void )
 {
 	if( !Cvar_VariableInteger( "sv_cheats" )) return;
-	sv.hostflags = sv.hostflags ^ SVF_PLAYERSONLY;
 
-	if( !FBitSet( sv.hostflags, SVF_PLAYERSONLY ))
-		SV_BroadcastPrintf( NULL, "Resume game physic\n" );
-	else SV_BroadcastPrintf( NULL, "Freeze game physic\n" );
+	sv.playersonly ^= 1;
+
+	SV_BroadcastPrintf( NULL, "%s game physic\n", sv.playersonly ? "Freeze" : "Resume" );
 }
 
 /*

@@ -1026,14 +1026,13 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 	}
 
 	// pick a channel to play on
-	if( chan == CHAN_STATIC )
-		target_chan = SND_PickStaticChannel( pos, sfx );
+	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( pos, sfx );
 	else target_chan = SND_PickDynamicChannel( ent, chan, sfx, &bIgnore );
 
 	if( !target_chan )
 	{
 		if( !bIgnore )
-			Con_DPrintf( S_ERROR "S_RestoreSound: dropped sound \"%s%s\"\n", DEFAULT_SOUNDPATH, sfx->name );
+			Con_DPrintf( S_ERROR "dropped sound \"%s%s\"\n", DEFAULT_SOUNDPATH, sfx->name );
 		return;
 	}
 
@@ -1070,8 +1069,6 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 		// prepended with a '!'.  Sentence names stored in the
 		// sentence file do not have a leading '!'. 
 		VOX_LoadSound( target_chan, S_SkipSoundChar( sfx->name ));
-
-		// save the sentencename for future save\restores
 		Q_strncpy( target_chan->name, sfx->name, sizeof( target_chan->name ));
 
 		// not a first word in sentence!

@@ -268,11 +268,11 @@ qboolean Image_LoadLMP( const char *name, const byte *buffer, size_t filesize )
 		return false;
 	}
 
-	// greatest hack from valve software (particle palette)
+	// valve software trick (particle palette)
 	if( Q_stristr( name, "palette.lmp" ))
 		return Image_LoadPAL( name, buffer, filesize );
 
-	// greatest hack from id software (image without header)
+	// id software trick (image without header)
 	if( image.hint != IL_HINT_HL && Q_stristr( name, "conchars" ))
 	{
 		image.width = image.height = 128;

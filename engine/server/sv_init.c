@@ -928,9 +928,8 @@ void SV_ExecLoadGame( void )
 {
 	if( SV_SpawnServer( GameState->levelName, NULL, false ))
 	{
-		if( !SV_LoadGameState( GameState->levelName, false ))
+		if( !SV_LoadGameState( GameState->levelName ))
 			SV_SpawnEntities( GameState->levelName );
-		sv.loadgame = sv.paused = true; // pause until all clients connect
 		SV_ActivateServer( false );
 	}
 }

@@ -624,7 +624,7 @@ void R_DecalSurface( msurface_t *surf, decalinfo_t *decalinfo )
 	float		s, t, w, h;
 
 	// we in restore mode
-	if( cls.state == ca_connected )
+	if( cls.state == ca_connected || cls.state == ca_validate )
 	{
 		// NOTE: we may have the decal on this surface that come from another level.
 		// check duplicate with same position and texture
@@ -790,7 +790,9 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 	decalInfo.m_pModel = model;
 	hull = &model->hulls[0];	// always use #0 hull
 
-	if( ent && !( flags & FDECAL_LOCAL_SPACE ))
+	// NOTE: all the decals at 'first shoot' placed into local space of parent entity
+	// and won't transform again on a next restore, levelchange etc
+	if( ent && !FBitSet( flags, FDECAL_LOCAL_SPACE ))
 	{
 		vec3_t	pos_l;
 
@@ -808,19 +810,19 @@ void R_DecalShoot( int textureIndex, int entityIndex, int modelIndex, vec3_t pos
 		}
 
 		VectorCopy( pos_l, decalInfo.m_Position );
-		flags |= FDECAL_LOCAL_SPACE; // decal position moved into local space
+		// decal position moved into local space
+		SetBits( flags, FDECAL_LOCAL_SPACE );
 	}
 	else
 	{
-		// pass position in global
+		// already in local space
 		VectorCopy( pos, decalInfo.m_Position );
 	}
 
 	// this decal must use landmark for correct transition
-	if(!( model->flags & MODEL_HAS_ORIGIN ))
-	{
-		flags |= FDECAL_USE_LANDMARK;
-	}
+	// because their model exist only in world-space
+	if( !FBitSet( model->flags, MODEL_HAS_ORIGIN ))
+		SetBits( flags, FDECAL_USE_LANDMARK );
 
 	// more state used by R_DecalNode()
 	decalInfo.m_iTexture = textureIndex;
@@ -1173,7 +1175,7 @@ int R_CreateDecalList( decallist_t *pList )
 			decal_t	*pdecals;
 			
 			// decal is in use and is not a custom decal
-			if( decal->psurface == NULL || ( decal->flags & FDECAL_DONTSAVE ))
+			if( decal->psurface == NULL || FBitSet( decal->flags, FDECAL_DONTSAVE ))
 				 continue;
 
 			// compute depth

@@ -564,7 +564,7 @@ void SV_TouchLinks( edict_t *ent, areanode_t *node )
 		}
 
 		// never touch the triggers when "playersonly" is active
-		if( !FBitSet( sv.hostflags, SVF_PLAYERSONLY ))
+		if( !sv.playersonly )
 		{
 			svgame.globals->time = sv.time;
 			svgame.dllFuncs.pfnTouch( touch, ent );

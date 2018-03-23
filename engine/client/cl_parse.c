@@ -509,8 +509,8 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 	memset( &state, 0, sizeof( state ));
 
 	state.modelindex = MSG_ReadShort( msg );
-	state.sequence = MSG_ReadByte( msg );
-	state.frame = MSG_ReadByte( msg );
+	state.sequence = MSG_ReadWord( msg );
+	state.frame = MSG_ReadWord( msg ) * (1.0f / 128.0f);
 	state.colormap = MSG_ReadWord( msg );
 	state.skin = MSG_ReadByte( msg );
 	state.body = MSG_ReadByte( msg );

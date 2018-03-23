@@ -1011,10 +1011,10 @@ void CL_StopPlayback( void )
 
 /* 
 ================== 
-CL_GetComment
+CL_GetDemoComment
 ================== 
 */  
-qboolean CL_GetComment( const char *demoname, char *comment )
+qboolean CL_GetDemoComment( const char *demoname, char *comment )
 {
 	file_t		*demfile;
 	demoheader_t	demohdr;
