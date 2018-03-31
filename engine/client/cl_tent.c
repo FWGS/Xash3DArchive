@@ -744,7 +744,7 @@ void R_FizzEffect( cl_entity_t *pent, int modelIndex, int density )
 		origin[0] = mod->mins[0] + COM_RandomLong( 0, width - 1 );
 		origin[1] = mod->mins[1] + COM_RandomLong( 0, depth - 1 );
 		origin[2] = mod->mins[2];
-		pTemp = CL_TempEntAlloc( origin, mod );
+		pTemp = CL_TempEntAlloc( origin, CL_ModelHandle( modelIndex ));
 
 		if ( !pTemp ) return;
 
