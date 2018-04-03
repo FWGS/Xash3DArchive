@@ -2843,6 +2843,23 @@ void CL_AddEntityEffects( cl_entity_t *ent )
 		dl->die = cl.time + 0.001;
 		dl->radius = 200;
 	}
+
+	// studio models are handle muzzleflashes difference
+	if( FBitSet( ent->curstate.effects, EF_MUZZLEFLASH ) && ent->model->type == mod_alias )
+	{
+		dlight_t	*dl = CL_AllocDlight( ent->index );
+		vec3_t	fv;
+
+		ClearBits( ent->curstate.effects, EF_MUZZLEFLASH );
+		dl->color.r = dl->color.g = dl->color.b = 100;
+		VectorCopy( ent->origin, dl->origin );
+		AngleVectors( ent->angles, fv, NULL, NULL );
+		dl->origin[2] += 16.0f;
+		VectorMA( dl->origin, 18, fv, dl->origin );
+		dl->radius = COM_RandomFloat( 200, 231 );
+		dl->die = cl.time + 0.1;
+		dl->minlight = 32;
+	}
 }
 
 /*
