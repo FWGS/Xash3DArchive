@@ -3922,15 +3922,8 @@ void CL_InitStudioAPI( void )
 	if( !clgame.dllFuncs.pfnGetStudioModelInterface )
 		return;
 
-	Con_DPrintf( "InitStudioAPI " );
-
 	if( clgame.dllFuncs.pfnGetStudioModelInterface( STUDIO_INTERFACE_VERSION, &pStudioDraw, &gStudioAPI ))
-	{
-		Con_DPrintf( "- ok\n" );
 		return;
-	}
-
-	Con_DPrintf( "- failed\n" );
 
 	// NOTE: we always return true even if game interface was not correct
 	// because we need Draw our StudioModels

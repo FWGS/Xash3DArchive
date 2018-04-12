@@ -3626,6 +3626,7 @@ static event_api_t gEventApi =
 	pfnGetMoveVars,
 	CL_VisTraceLine,
 	pfnGetVisent,
+	CL_TestLine,
 };
 
 static demo_api_t gDemoApi =
@@ -3894,7 +3895,7 @@ qboolean CL_LoadProgs( const char *name )
 	CL_InitTempEnts ();
 
 	if( !R_InitRenderAPI())	// Xash3D extension
-		MsgDev( D_WARN, "CL_LoadProgs: couldn't get render API\n" );
+		Con_Reportf( S_WARN "CL_LoadProgs: couldn't get render API\n" );
 
 	CL_InitEdicts ();		// initailize local player and world
 	CL_InitClientMove();	// initialize pm_shared

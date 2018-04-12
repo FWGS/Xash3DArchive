@@ -348,7 +348,7 @@ void CL_ClearTempEnts( void )
 	{
 		cl_tempents[i].next = &cl_tempents[i+1];
 		cl_tempents[i].entity.trivial_accept = INVALID_HANDLE;
-          }
+	}
 
 	cl_tempents[GI->max_tents-1].next = NULL;
 	cl_free_tents = cl_tempents;
