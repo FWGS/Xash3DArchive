@@ -1758,7 +1758,7 @@ void CL_RegisterResources( sizebuf_t *msg )
 	}
 	else
 	{
-		MsgDev( D_ERROR, "client world model is NULL\n" );
+		Con_Printf( S_ERROR "client world model is NULL\n" );
 		CL_Disconnect();
 	}
 }

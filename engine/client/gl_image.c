@@ -400,7 +400,13 @@ static size_t GL_CalcTextureSize( GLenum format, int width, int height, int dept
 		break;
 	case GL_RGB8:
 	case GL_RGB:
-		size = width * height * depth * 4;
+		size = width * height * depth * 3;
+		break;
+	case GL_RGB5:
+		size = (width * height * depth * 3) / 2;
+		break;
+	case GL_RGBA4:
+		size = (width * height * depth * 4) / 2;
 		break;
 	case GL_INTENSITY:
 	case GL_LUMINANCE:
@@ -531,10 +537,27 @@ static void GL_SetTextureDimensions( gltexture_t *tex, int width, int height, in
 
 	if( !GL_Support( GL_ARB_TEXTURE_NPOT_EXT ))
 	{
-		width = (width + 3) & ~3;
-		height = (height + 3) & ~3;
+		int	step = (int)gl_round_down->value;
+		int	scaled_width, scaled_height;
+
+		for( scaled_width = 1; scaled_width < width; scaled_width <<= 1 );
+
+		if( step > 0 && width < scaled_width && ( step == 1 || ( scaled_width - width ) > ( scaled_width >> step )))
+			scaled_width >>= 1;
+
+		for( scaled_height = 1; scaled_height < height; scaled_height <<= 1 );
+
+		if( step > 0 && height < scaled_height && ( step == 1 || ( scaled_height - height ) > ( scaled_height >> step )))
+			scaled_height >>= 1;
+
+		width = scaled_width;
+		height = scaled_height;
 	}
 
+#if 1	// TESTTEST
+	width = (width + 3) & ~3;
+	height = (height + 3) & ~3;
+#endif
 	if( width > maxTextureSize || height > maxTextureSize || depth > maxDepthSize )
 	{
 		if( tex->target == GL_TEXTURE_1D )
@@ -684,7 +707,7 @@ static void GL_SetTextureFormat( gltexture_t *tex, pixformat_t format, int chann
 		// NOTE: not all the types will be compressed
 		int	bits = glw_state.desktopBitsPixel;
 
-		switch( GL_CalcTextureSamples( channelMask ) )
+		switch( GL_CalcTextureSamples( channelMask ))
 		{
 		case 1: tex->format = GL_LUMINANCE8; break;
 		case 2: tex->format = GL_LUMINANCE8_ALPHA8; break;
@@ -1134,7 +1157,7 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 	if(( pic->width * pic->height ) & 3 )
 	{
 		// will be resampled, just tell me for debug targets
-		MsgDev( D_NOTE, "GL_UploadTexture: %s s&3 [%d x %d]\n", tex->name, pic->width, pic->height );
+		Con_Reportf( "GL_UploadTexture: %s s&3 [%d x %d]\n", tex->name, pic->width, pic->height );
 	}
 
 	buf = pic->buffer;
