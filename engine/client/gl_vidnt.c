@@ -675,7 +675,6 @@ static int VID_ChoosePFD( PIXELFORMATDESCRIPTOR *pfd, int colorBits, int alphaBi
 		UINT	numPixelFormats;
 		int	pixelFormat = 0;
 		int	attribs[24];
-		int	samples = 0;
 
 		attribs[0] = WGL_ACCELERATION_ARB;
 		attribs[1] = WGL_FULL_ACCELERATION_ARB;
@@ -707,8 +706,8 @@ static int VID_ChoosePFD( PIXELFORMATDESCRIPTOR *pfd, int colorBits, int alphaBi
 		if( pixelFormat )
 		{
 			attribs[0] = WGL_SAMPLES_ARB;
-			pwglGetPixelFormatAttribiv( glw_state.hDC, pixelFormat, 0, 1, attribs, &samples );
-			if( samples <= 1 ) Con_DPrintf( S_WARN "MSAA is not allowed\n" );
+			pwglGetPixelFormatAttribiv( glw_state.hDC, pixelFormat, 0, 1, attribs, &glConfig.max_multisamples );
+			if( glConfig.max_multisamples <= 1 ) Con_DPrintf( S_WARN "MSAA is not allowed\n" );
 
 			return pixelFormat;
 		}
@@ -1480,6 +1479,9 @@ static void GL_SetDefaults( void )
 	pglDisable( GL_SCISSOR_TEST );
 	pglDepthFunc( GL_LEQUAL );
 	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+
+	if( glConfig.max_multisamples > 1 )
+		pglEnable( GL_MULTISAMPLE_ARB );
 
 	if( glState.stencilEnabled )
 	{

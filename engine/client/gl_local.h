@@ -570,6 +570,8 @@ typedef struct
 	GLint		max_vertex_uniforms;
 	GLint		max_vertex_attribs;
 
+	GLint		max_multisamples;
+
 	int		color_bits;
 	int		alpha_bits;
 	int		depth_bits;

@@ -1625,7 +1625,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 	uint		lnum;
 	dlight_t		*dl;
 
-	if( !plight || !ent )
+	if( !plight || !ent || !ent->model )
 		return;
 
 	if( !RI.drawWorld || r_fullbright->value || FBitSet( ent->curstate.effects, EF_FULLBRIGHT ))
@@ -1643,16 +1643,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		VectorSet( lightDir, 0.0f, 0.0f, 1.0f );
 	else VectorSet( lightDir, 0.0f, 0.0f, -1.0f );
 
-	if( ent == RI.currententity )
-	{
-		int sequence = bound( 0, ent->curstate.sequence, m_pStudioHeader->numseq - 1 );
-		mstudioseqdesc_t *pseqdesc = (mstudioseqdesc_t *)((byte *)m_pStudioHeader + m_pStudioHeader->seqindex) + sequence;
-
-		if( FBitSet( pseqdesc->flags, STUDIO_LIGHT_FROM_ROOT ))
-			Matrix3x4_OriginFromMatrix( g_studio.lighttransform[0], origin );
-		else VectorCopy( ent->origin, origin );
-	}
-	else VectorCopy( ent->origin, origin );
+	VectorCopy( ent->origin, origin );
 
 	VectorSet( vecSrc, origin[0], origin[1], origin[2] - lightDir[2] * 8.0f );
 	light.r = light.g = light.b = light.a = 0;
