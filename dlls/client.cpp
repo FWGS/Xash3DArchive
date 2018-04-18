@@ -264,9 +264,9 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	}
 
 // make sure the text has content
-	for ( char *pc = p; pc != NULL && *pc != 0; pc++ )
+	for ( byte *pc = (byte *)p; pc != NULL && *pc != 0; pc++ )
 	{
-		if ( !isspace( *pc ) )
+		if ( !Q_isspace( *pc ) )
 		{
 			pc = NULL;	// we've found an alphanumeric character,  so text is valid
 			break;
