@@ -14,9 +14,6 @@ if errorlevel 1 set BUILD_ERROR=1
 %MSDEV% mainui/mainui.dsp %CONFIG%"mainui - Win32 Debug" %build_target%
 if errorlevel 1 set BUILD_ERROR=1
 
-%MSDEV% utils/vgui/lib/vgui.dsp %CONFIG%"vgui - Win32 Debug" %build_target%
-if errorlevel 1 set BUILD_ERROR=1
-
 if "%BUILD_ERROR%"=="" goto build_ok
 
 echo *********************
@@ -38,7 +35,6 @@ goto done
 rem //delete log files
 if exist engine\engine.plg del /f /q engine\engine.plg
 if exist mainui\mainui.plg del /f /q mainui\mainui.plg
-if exist utils/vgui/lib/vgui.plg del /f /q utils/vgui/lib/vgui.plg
 
 echo
 echo 	     Build succeeded!
