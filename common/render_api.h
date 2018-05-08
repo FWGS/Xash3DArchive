@@ -96,7 +96,7 @@ typedef enum
 	TF_BORDER		= (1<<19),	// zero clamp for projected textures
 	TF_TEXTURE_3D	= (1<<20),	// this is GL_TEXTURE_3D
 	TF_ATLAS_PAGE	= (1<<21),	// bit who indicate lightmap page or deluxemap page
-// reserved
+	TF_ALPHACONTRAST	= (1<<22),	// special texture mode for A2C
 // reserved
 // reserved
 	TF_IMG_UPLOADED	= (1<<25),	// this is set for first time when called glTexImage, otherwise it will be call glTexSubImage

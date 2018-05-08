@@ -49,7 +49,7 @@ void CL_RunLightStyles( void )
 	// 'm' is normal light, 'a' is no light, 'z' is double bright
 	for( i = 0, ls = cl.lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
 	{
-		if( r_fullbright->value || !cl.worldmodel->lightdata )
+		if( !cl.worldmodel->lightdata )
 		{
 			tr.lightstylevalue[i] = 256 * 256;
 			continue;

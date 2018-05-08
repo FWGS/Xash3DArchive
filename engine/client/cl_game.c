@@ -3715,6 +3715,8 @@ static event_api_t gEventApi =
 	CL_VisTraceLine,
 	pfnGetVisent,
 	CL_TestLine,
+	CL_PushTraceBounds,
+	CL_PopTraceBounds,
 };
 
 static demo_api_t gDemoApi =

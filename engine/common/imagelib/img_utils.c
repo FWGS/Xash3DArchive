@@ -284,9 +284,9 @@ int Image_ComparePalette( const byte *pal )
 
 void Image_SetPalette( const byte *pal, uint *d_table )
 {
-	int	i;
 	byte	rgba[4];
-	
+	int	i;	
+
 	// setup palette
 	switch( image.d_rendermode )
 	{
@@ -309,6 +309,7 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 			rgba[3] = i;
 			d_table[i] = *(uint *)rgba;
 		}
+//		d_table[0] = 0x00808080;
 		break;
 	case LUMP_MASKED:
 		for( i = 0; i < 255; i++ )

@@ -38,6 +38,7 @@ extern byte	*r_temppool;
 
 #define SHADEDOT_QUANT 	16		// precalculated dot products for quantized angles
 #define SHADE_LAMBERT	1.495f
+#define DEFAULT_ALPHATEST	0.0f
 
 // refparams
 #define RP_NONE		0
@@ -417,6 +418,7 @@ float CL_GetStudioEstimatedFrame( cl_entity_t *ent );
 int R_GetEntityRenderMode( cl_entity_t *ent );
 void R_DrawStudioModel( cl_entity_t *e );
 player_info_t *pfnPlayerInfo( int index );
+void R_GatherPlayerLight( void );
 
 //
 // gl_alias.c
@@ -520,7 +522,6 @@ enum
 	GL_ARB_DEPTH_FLOAT_EXT,
 	GL_ARB_SEAMLESS_CUBEMAP,
 	GL_EXT_GPU_SHADER4,		// shaders only
-	GL_ARB_TEXTURE_RG,
 	GL_DEPTH_TEXTURE,
 	GL_DEBUG_OUTPUT,
 	GL_EXTCOUNT,		// must be last
@@ -638,6 +639,7 @@ extern convar_t	*gl_finish;
 extern convar_t	*gl_nosort;
 extern convar_t	*gl_clear;
 extern convar_t	*gl_test;		// cvar to testify new effects
+extern convar_t	*gl_msaa;	
 
 extern convar_t	*r_speeds;
 extern convar_t	*r_fullbright;

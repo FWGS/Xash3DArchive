@@ -979,7 +979,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		color2[1] = (float)lightColor.g * ( 1.0f / 255.0f );
 		color2[2] = (float)lightColor.b * ( 1.0f / 255.0f );
 		// NOTE: sprites with 'lightmap' looks ugly when alpha func is GL_GREATER 0.0
-		pglAlphaFunc( GL_GREATER, 0.25f );
+		pglAlphaFunc( GL_GREATER, 0.5f );
 	}
 
 	if( R_SpriteAllowLerping( e, psprite ))
@@ -1073,7 +1073,7 @@ void R_DrawSpriteModel( cl_entity_t *e )
 		pglColor4f( color2[0], color2[1], color2[2], tr.blend );
 		GL_Bind( GL_TEXTURE0, tr.whiteTexture );
 		R_DrawSpriteQuad( frame, origin, v_right, v_up, scale );
-		pglAlphaFunc( GL_GREATER, 0.0f );
+		pglAlphaFunc( GL_GREATER, DEFAULT_ALPHATEST );
 		pglDepthFunc( GL_LEQUAL );
 	}
 

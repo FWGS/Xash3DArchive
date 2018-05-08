@@ -139,7 +139,7 @@ void R_StudioInit( void )
 	Matrix3x4_LoadIdentity( g_studio.rotationmatrix );
 	Cvar_RegisterVariable( &r_glowshellfreq );
 
-// g-cont. especially not registered
+	// g-cont. cvar disabled by Valve
 //	Cvar_RegisterVariable( &r_shadows );
 
 	g_studio.interpolate = true;
@@ -2427,7 +2427,7 @@ static void R_StudioDrawPoints( void )
 
 		if( FBitSet( g_nFaceFlags, STUDIO_NF_MASKED ))
 		{
-			pglAlphaFunc( GL_GREATER, 0.0f );
+			pglAlphaFunc( GL_GREATER, DEFAULT_ALPHATEST );
 			pglDisable( GL_ALPHA_TEST );
 		}
 		else if( FBitSet( g_nFaceFlags, STUDIO_NF_ADDITIVE ) && R_ModelOpaque( RI.currententity->curstate.rendermode ))
@@ -3631,10 +3631,10 @@ void R_RunViewmodelEvents( void )
 
 /*
 =================
-R_DrawViewModel
+R_GatherPlayerLight
 =================
 */
-void R_DrawViewModel( void )
+void R_GatherPlayerLight( void )
 {
 	cl_entity_t	*view = &clgame.viewent;
 	colorVec		c;
@@ -3643,6 +3643,18 @@ void R_DrawViewModel( void )
 	c = R_LightPoint( view->origin );
 	tr.ignore_lightgamma = false;
 	cl.local.light_level = (c.r + c.g + c.b) / 3;
+}
+
+/*
+=================
+R_DrawViewModel
+=================
+*/
+void R_DrawViewModel( void )
+{
+	cl_entity_t	*view = &clgame.viewent;
+
+	R_GatherPlayerLight();
 
 	if( r_drawviewmodel->value == 0 )
 		return;
@@ -3674,6 +3686,10 @@ void R_DrawViewModel( void )
 		pglFrontFace( GL_CW );
 	}
 
+	// FIXME: viewmodel is invisible when alpha to coverage is enabled
+	if( glConfig.max_multisamples > 1 && gl_msaa->value > 1.0f )
+		pglDisable( GL_SAMPLE_ALPHA_TO_COVERAGE_ARB );
+
 	switch( RI.currententity->model->type )
 	{
 	case mod_alias:
@@ -3684,6 +3700,9 @@ void R_DrawViewModel( void )
 		R_StudioDrawModelInternal( RI.currententity, STUDIO_RENDER );
 		break;
 	}
+
+	if( glConfig.max_multisamples > 1 && gl_msaa->value > 1.0f )
+		pglEnable( GL_SAMPLE_ALPHA_TO_COVERAGE_ARB );
 
 	// restore depth range
 	pglDepthRange( gldepthmin, gldepthmax );

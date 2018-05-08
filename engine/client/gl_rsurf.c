@@ -1294,7 +1294,7 @@ void R_DrawAlphaTextureChains( void )
 	GL_ResetFogColor();
 	R_BlendLightmaps();
 	RI.currententity->curstate.rendermode = kRenderNormal; // restore world rendermode
-	pglAlphaFunc( GL_GREATER, 0.0f );
+	pglAlphaFunc( GL_GREATER, DEFAULT_ALPHATEST );
 }
 
 /*
@@ -1564,7 +1564,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 
 	e->curstate.rendermode = old_rendermode;
 	pglDisable( GL_ALPHA_TEST );
-	pglAlphaFunc( GL_GREATER, 0.0f );
+	pglAlphaFunc( GL_GREATER, DEFAULT_ALPHATEST );
 	pglDisable( GL_BLEND );
 	pglDepthMask( GL_TRUE );
 	R_LoadIdentity();	// restore worldmatrix
