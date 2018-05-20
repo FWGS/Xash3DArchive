@@ -202,6 +202,9 @@ void SCR_RSpeeds( void )
 			Con_DrawString( x, y, p, color );
 			y += height;
 
+			// handle '\n\n'
+			if( *p == '\n' ) 
+				y += height;
 			if( end ) p = end + 1;
 			else break;
 		} while( 1 );

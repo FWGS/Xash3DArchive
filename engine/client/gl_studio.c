@@ -1688,40 +1688,44 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		VectorScale( lightDir, 2048.0f, vecEnd );
 		VectorAdd( vecEnd, vecSrc, vecEnd );
 
-		light = R_LightVec( vecSrc, vecEnd, g_studio.lightspot );
+		light = R_LightVec( vecSrc, vecEnd, g_studio.lightspot, g_studio.lightvec );
 
-		VectorScale( lightDir, 2048.0f, vecEnd );
-		VectorAdd( vecEnd, vecSrc, vecEnd );
+		if( VectorIsNull( g_studio.lightvec ))
+		{
+			vecSrc[0] -= 16.0f;
+			vecSrc[1] -= 16.0f;
+			vecEnd[0] -= 16.0f;
+			vecEnd[1] -= 16.0f;
 
-		vecSrc[0] -= 16.0f;
-		vecSrc[1] -= 16.0f;
-		vecEnd[0] -= 16.0f;
-		vecEnd[1] -= 16.0f;
+			gcolor = R_LightVec( vecSrc, vecEnd, NULL, NULL );
+			grad[0] = ( gcolor.r + gcolor.g + gcolor.b ) / 768.0f;
 
-		gcolor = R_LightVec( vecSrc, vecEnd, NULL );
-		grad[0] = ( gcolor.r + gcolor.g + gcolor.b ) / 768.0f;
+			vecSrc[0] += 32.0f;
+			vecEnd[0] += 32.0f;
 
-		vecSrc[0] += 32.0f;
-		vecEnd[0] += 32.0f;
+			gcolor = R_LightVec( vecSrc, vecEnd, NULL, NULL );
+			grad[1] = ( gcolor.r + gcolor.g + gcolor.b ) / 768.0f;
 
-		gcolor = R_LightVec( vecSrc, vecEnd, NULL );
-		grad[1] = ( gcolor.r + gcolor.g + gcolor.b ) / 768.0f;
+			vecSrc[1] += 32.0f;
+			vecEnd[1] += 32.0f;
 
-		vecSrc[1] += 32.0f;
-		vecEnd[1] += 32.0f;
+			gcolor = R_LightVec( vecSrc, vecEnd, NULL, NULL );
+			grad[2] = ( gcolor.r + gcolor.g + gcolor.b ) / 768.0f;
 
-		gcolor = R_LightVec( vecSrc, vecEnd, NULL );
-		grad[2] = ( gcolor.r + gcolor.g + gcolor.b ) / 768.0f;
+			vecSrc[0] -= 32.0f;
+			vecEnd[0] -= 32.0f;
 
-		vecSrc[0] -= 32.0f;
-		vecEnd[0] -= 32.0f;
+			gcolor = R_LightVec( vecSrc, vecEnd, NULL, NULL );
+			grad[3] = ( gcolor.r + gcolor.g + gcolor.b ) / 768.0f;
 
-		gcolor = R_LightVec( vecSrc, vecEnd, NULL );
-		grad[3] = ( gcolor.r + gcolor.g + gcolor.b ) / 768.0f;
-
-		lightDir[0] = grad[0] - grad[1] - grad[2] + grad[3];
-		lightDir[1] = grad[1] + grad[0] - grad[2] - grad[3];
-		VectorNormalize( lightDir );
+			lightDir[0] = grad[0] - grad[1] - grad[2] + grad[3];
+			lightDir[1] = grad[1] + grad[0] - grad[2] - grad[3];
+			VectorNormalize( lightDir );
+		}
+		else
+		{
+			VectorCopy( g_studio.lightvec, lightDir );
+		}
 	}
 
 	VectorSet( finalLight, light.r, light.g, light.b );
@@ -2531,6 +2535,7 @@ static void R_StudioDrawAbsBBox( void )
 		TriVertex3fv( p[boxpnt[i][3]] );
 	}
 	TriEnd();
+	TriRenderMode( kRenderNormal );
 }
 
 /*
@@ -3124,6 +3129,13 @@ void R_StudioRenderFinal( void )
 		pglColor3f( 1, 0.5, 0 );
 		pglVertex3fv( origin );
 		pglVertex3fv( g_studio.lightspot );
+		pglEnd();
+
+		pglBegin( GL_LINES );
+		pglColor3f( 0, 0.5, 1 );
+		VectorMA( g_studio.lightspot, -64.0f, g_studio.lightvec, origin );
+		pglVertex3fv( g_studio.lightspot );
+		pglVertex3fv( origin );
 		pglEnd();
 
 		pglPointSize( 5.0f );

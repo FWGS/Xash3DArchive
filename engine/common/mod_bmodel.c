@@ -362,7 +362,7 @@ static int Mod_ArrayUsage( const char *szItem, int items, int maxitems, int item
 
 	Con_Printf( "%-12s  %7i/%-7i  %8i/%-8i  (%4.1f%%) ", szItem, items, maxitems, items * itemsize, maxitems * itemsize, percentage );
 
-	if( percentage > 99.9f )
+	if( percentage > 99.99f )
 		Con_Printf( "^1SIZE OVERFLOW!!!^7\n" );
 	else if( percentage > 95.0f )
 		Con_Printf( "^3SIZE DANGER!^7\n" );
@@ -384,7 +384,7 @@ static int Mod_GlobUsage( const char *szItem, int itemstorage, int maxstorage )
 
 	Con_Printf( "%-15s  %-12s  %8i/%-8i  (%4.1f%%) ", szItem, "[variable]", itemstorage, maxstorage, percentage );
 
-	if( percentage > 99.9f )
+	if( percentage > 99.99f )
 		Con_Printf( "^1SIZE OVERFLOW!!!^7\n" );
 	else if( percentage > 95.0f )
 		Con_Printf( "^3SIZE DANGER!^7\n" );

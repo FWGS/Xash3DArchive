@@ -280,13 +280,10 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 	float		s, t;
 	glpoly_t		*poly;
 
-	// already created
-	if( !mod || fa->polys ) return;
-
-	if( !fa->texinfo || !fa->texinfo->texture )
+	if( !mod || !fa->texinfo || !fa->texinfo->texture )
 		return; // bad polygon ?
 
-	if( fa->flags & SURF_CONVEYOR && fa->texinfo->texture->gl_texturenum != 0 )
+	if( FBitSet( fa->flags, SURF_CONVEYOR ) && fa->texinfo->texture->gl_texturenum != 0 )
 	{
 		glt = R_GetTexture( fa->texinfo->texture->gl_texturenum );
 		tex = fa->texinfo->texture;
@@ -304,8 +301,12 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 	lnumverts = fa->numedges;
 	vertpage = 0;
 
-	// draw texture
-	poly = Mem_Alloc( mod->mempool, sizeof( glpoly_t ) + ( lnumverts - 4 ) * VERTEXSIZE * sizeof( float ));
+	// detach if already created, reconstruct again
+	poly = fa->polys;
+	fa->polys = NULL;
+
+	// quake simple models (healthkits etc) need to be reconstructed their polys because LM coords has changed after the map change
+	poly = Mem_Realloc( mod->mempool, poly, sizeof( glpoly_t ) + ( lnumverts - 4 ) * VERTEXSIZE * sizeof( float ));
 	poly->next = fa->polys;
 	poly->flags = fa->flags;
 	fa->polys = poly;
@@ -1996,8 +1997,10 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 	mextrasurf_t	*info = surf->info;
 	byte		*base;
 
-	if( !cl.worldmodel->lightdata ) return;
-	if( surf->flags & SURF_DRAWTILED )
+	if( !loadmodel->lightdata )
+		return;
+
+	if( FBitSet( surf->flags, SURF_DRAWTILED ))
 		return;
 
 	sample_size = Mod_SampleSizeForFace( surf );
