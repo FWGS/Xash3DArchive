@@ -554,10 +554,6 @@ static void GL_SetTextureDimensions( gltexture_t *tex, int width, int height, in
 		height = scaled_height;
 	}
 
-#if 1	// TESTTEST
-	width = (width + 3) & ~3;
-	height = (height + 3) & ~3;
-#endif
 	if( width > maxTextureSize || height > maxTextureSize || depth > maxDepthSize )
 	{
 		if( tex->target == GL_TEXTURE_1D )
@@ -1228,10 +1224,10 @@ static qboolean GL_UploadTexture( gltexture_t *tex, rgbdata_t *pic )
 			if(( tex->depth == 1 ) && ( pic->width != tex->width ) || ( pic->height != tex->height ))
 				data = GL_ResampleTexture( buf, pic->width, pic->height, tex->width, tex->height, normalMap );
 			else data = buf;
-
+#if 0			// g-cont. we can't apply gamma to each texture so we shouldn't do it at all
 			if( !ImageDXT( pic->type ) && !FBitSet( tex->flags, TF_NOMIPMAP|TF_SKYSIDE ))
 				data = GL_ApplyGamma( data, tex->width * tex->height * tex->depth, FBitSet( tex->flags, TF_NORMALMAP ));
-
+#endif
 			if( !ImageDXT( pic->type ) && !FBitSet( tex->flags, TF_NOMIPMAP ) && FBitSet( pic->flags, IMAGE_ONEBIT_ALPHA ))
 				data = GL_ApplyFilter( data, tex->width, tex->height );
 
