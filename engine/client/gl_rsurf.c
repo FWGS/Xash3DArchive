@@ -151,7 +151,7 @@ static void SubdividePolygon_r( msurface_t *warpface, int numverts, float *verts
 		ClearBits( warpface->flags, SURF_DRAWTURB_QUADS ); 
 
 	// add a point in the center to help keep warp valid
-	poly = Mem_Alloc( loadmodel->mempool, sizeof( glpoly_t ) + (numverts - 4) * VERTEXSIZE * sizeof( float ));
+	poly = Mem_Calloc( loadmodel->mempool, sizeof( glpoly_t ) + (numverts - 4) * VERTEXSIZE * sizeof( float ));
 	poly->next = warpface->polys;
 	poly->flags = warpface->flags;
 	warpface->polys = poly;
@@ -1568,6 +1568,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	pglAlphaFunc( GL_GREATER, DEFAULT_ALPHATEST );
 	pglDisable( GL_BLEND );
 	pglDepthMask( GL_TRUE );
+	R_DrawModelHull();	// draw before restore
 	R_LoadIdentity();	// restore worldmatrix
 }
 
@@ -1905,6 +1906,8 @@ void R_DrawWorld( void )
 	skychain = NULL;
 
 	R_DrawTriangleOutlines ();
+
+	R_DrawWorldHull();
 }
 
 /*

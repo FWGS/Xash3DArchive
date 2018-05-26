@@ -1396,7 +1396,7 @@ static const ref_overview_t *GL_GetOverviewParms( void )
 
 static void *R_Mem_Alloc( size_t cb, const char *filename, const int fileline )
 {
-	return _Mem_Alloc( cls.mempool, cb, filename, fileline );
+	return _Mem_Alloc( cls.mempool, cb, true, filename, fileline );
 }
 
 static void R_Mem_Free( void *mem, const char *filename, const int fileline )

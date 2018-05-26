@@ -739,7 +739,7 @@ void *R_StudioGetAnim( studiohdr_t *m_pStudioHeader, model_t *m_pSubModel, mstud
 
 	if( paSequences == NULL )
 	{
-		paSequences = (cache_user_t *)Mem_Alloc( com_studiocache, MAXSTUDIOGROUPS * sizeof( cache_user_t ));
+		paSequences = (cache_user_t *)Mem_Calloc( com_studiocache, MAXSTUDIOGROUPS * sizeof( cache_user_t ));
 		m_pSubModel->submodels = (void *)paSequences;
 	}
 
@@ -760,7 +760,7 @@ void *R_StudioGetAnim( studiohdr_t *m_pStudioHeader, model_t *m_pSubModel, mstud
 
 		Con_Printf( "loading: %s\n", filepath );
 			
-		paSequences[pseqdesc->seqgroup].data = Mem_Alloc( com_studiocache, filesize );
+		paSequences[pseqdesc->seqgroup].data = Mem_Calloc( com_studiocache, filesize );
 		memcpy( paSequences[pseqdesc->seqgroup].data, buf, filesize );
 		Mem_Free( buf );
 	}
@@ -3755,7 +3755,7 @@ static void R_StudioLoadTexture( model_t *mod, studiohdr_t *phdr, mstudiotexture
 		i = mod->numtextures;
 		mod->textures = (texture_t **)Mem_Realloc( mod->mempool, mod->textures, ( i + 1 ) * sizeof( texture_t* ));
 		size = ptexture->width * ptexture->height + 768;
-		tx = Mem_Alloc( mod->mempool, sizeof( *tx ) + size );
+		tx = Mem_Calloc( mod->mempool, sizeof( *tx ) + size );
 		mod->textures[i] = tx;
 
 		// store ranges into anim_min, anim_max etc

@@ -194,7 +194,7 @@ byte *Image_Copy( size_t size )
 {
 	byte	*out;
 
-	out = Mem_Alloc( host.imagepool, size );
+	out = Mem_Malloc( host.imagepool, size );
 	memcpy( out, image.tempbuffer, size );
 
 	return out; 
@@ -409,7 +409,7 @@ static void Image_ConvertPalTo24bit( rgbdata_t *pic )
 	if( pic->type == PF_INDEXED_24 )
 		return; // does nothing
 
-	pal24 = converted = Mem_Alloc( host.imagepool, 768 );
+	pal24 = converted = Mem_Malloc( host.imagepool, 768 );
 	pal32 = pic->palette;
 
 	for( i = 0; i < 256; i++, pal24 += 3, pal32 += 4 )
@@ -427,7 +427,7 @@ static void Image_ConvertPalTo24bit( rgbdata_t *pic )
 void Image_CopyPalette32bit( void )
 {
 	if( image.palette ) return; // already created ?
-	image.palette = Mem_Alloc( host.imagepool, 1024 );
+	image.palette = Mem_Malloc( host.imagepool, 1024 );
 	memcpy( image.palette, image.d_currentpal, 1024 );
 }
 
@@ -723,7 +723,7 @@ void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *
 
 	fstep = (int)(inheight * 65536.0f / outheight);
 
-	resamplerow1 = (byte *)Mem_Alloc( host.imagepool, outwidth * 4 * 2);
+	resamplerow1 = (byte *)Mem_Malloc( host.imagepool, outwidth * 4 * 2);
 	resamplerow2 = resamplerow1 + outwidth * 4;
 
 	inrow = (const byte *)indata;
@@ -870,7 +870,7 @@ void Image_Resample24Lerp( const void *indata, int inwidth, int inheight, void *
 	
 	fstep = (int)(inheight * 65536.0f / outheight);
 
-	resamplerow1 = (byte *)Mem_Alloc( host.imagepool, outwidth * 3 * 2 );
+	resamplerow1 = (byte *)Mem_Malloc( host.imagepool, outwidth * 3 * 2 );
 	resamplerow2 = resamplerow1 + outwidth*3;
 
 	inrow = (const byte *)indata;
@@ -1207,7 +1207,7 @@ qboolean Image_AddIndexedImageToPack( const byte *in, int width, int height )
 	else Image_CopyPalette32bit(); 
 
 	// reallocate image buffer
-	image.rgba = Mem_Alloc( host.imagepool, image.size );	
+	image.rgba = Mem_Malloc( host.imagepool, image.size );	
 	if( !expand_to_rgba ) memcpy( image.rgba, in, image.size );
 	else if( !Image_Copy8bitRGBA( in, image.rgba, mipsize ))
 		return false; // probably pallette not installed

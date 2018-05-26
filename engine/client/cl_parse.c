@@ -897,7 +897,7 @@ void CL_ParseCustomization( sizebuf_t *msg )
 	if( i >= MAX_CLIENTS )
 		Host_Error( "Bogus player index during customization parsing.\n" );
 
-	pRes = Mem_Alloc( cls.mempool, sizeof( resource_t ));
+	pRes = Mem_Calloc( cls.mempool, sizeof( resource_t ));
 	pRes->type = MSG_ReadByte( msg );
 
 	Q_strncpy( pRes->szFileName, MSG_ReadString( msg ), sizeof( pRes->szFileName ));
@@ -1576,7 +1576,7 @@ void CL_ParseResource( sizebuf_t *msg )
 {
 	resource_t	*pResource;
 
-	pResource = Mem_Alloc( cls.mempool, sizeof( resource_t ));
+	pResource = Mem_Calloc( cls.mempool, sizeof( resource_t ));
 	pResource->type = MSG_ReadUBitLong( msg, 4 );
 
 	Q_strncpy( pResource->szFileName, MSG_ReadString( msg ), sizeof( pResource->szFileName ));
@@ -1834,7 +1834,7 @@ void CL_ParseResourceList( sizebuf_t *msg )
 
 	for( i = 0; i < total; i++ )
 	{
-		pResource = Mem_Alloc( cls.mempool, sizeof( resource_t ));
+		pResource = Mem_Calloc( cls.mempool, sizeof( resource_t ));
 		pResource->type = MSG_ReadUBitLong( msg, 4 );
 
 		Q_strncpy( pResource->szFileName, MSG_ReadString( msg ), sizeof( pResource->szFileName ));

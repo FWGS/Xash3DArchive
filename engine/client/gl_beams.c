@@ -1328,7 +1328,7 @@ CL_InitViewBeams
 */
 void CL_InitViewBeams( void )
 {
-	cl_viewbeams = Mem_Alloc( cls.mempool, sizeof( BEAM ) * GI->max_beams );
+	cl_viewbeams = Mem_Calloc( cls.mempool, sizeof( BEAM ) * GI->max_beams );
 	CL_ClearViewBeams();
 }
 

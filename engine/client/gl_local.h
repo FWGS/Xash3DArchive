@@ -295,6 +295,12 @@ void R_DrawTileClear( int x, int y, int w, int h );
 void R_UploadStretchRaw( int texture, int cols, int rows, int width, int height, const byte *data );
 
 //
+// gl_drawhulls.c
+//
+void R_DrawWorldHull( void );
+void R_DrawModelHull( void );
+
+//
 // gl_image.c
 //
 void R_SetTextureParameters( void );

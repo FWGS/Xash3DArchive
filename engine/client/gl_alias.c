@@ -318,10 +318,10 @@ void GL_MakeAliasModelDisplayLists( model_t *m )
 	// save the data out
 	m_pAliasHeader->poseverts = g_numorder;
 
-	m_pAliasHeader->commands = Mem_Alloc( m->mempool, g_numcommands * 4 );
+	m_pAliasHeader->commands = Mem_Malloc( m->mempool, g_numcommands * 4 );
 	memcpy( m_pAliasHeader->commands, g_commands, g_numcommands * 4 );
 
-	m_pAliasHeader->posedata = Mem_Alloc( m->mempool, m_pAliasHeader->numposes * m_pAliasHeader->poseverts * sizeof( trivertex_t ));
+	m_pAliasHeader->posedata = Mem_Malloc( m->mempool, m_pAliasHeader->numposes * m_pAliasHeader->poseverts * sizeof( trivertex_t ));
 	verts = m_pAliasHeader->posedata;
 
 	for( i = 0; i < m_pAliasHeader->numposes; i++ )
@@ -453,7 +453,7 @@ rgbdata_t *Mod_CreateSkinData( model_t *mod, byte *data, int width, int height )
 		i = mod->numtextures;
 		mod->textures = (texture_t **)Mem_Realloc( mod->mempool, mod->textures, ( i + 1 ) * sizeof( texture_t* ));
 		size = width * height + 768;
-		tx = Mem_Alloc( mod->mempool, sizeof( *tx ) + size );
+		tx = Mem_Calloc( mod->mempool, sizeof( *tx ) + size );
 		mod->textures[i] = tx;
 
 		Q_strncpy( tx->name, "DM_Skin", sizeof( tx->name ));
@@ -639,7 +639,7 @@ void Mod_LoadAliasModel( model_t *mod, const void *buffer, qboolean *loaded )
 	// skin and group info
 	size = sizeof( aliashdr_t ) + (pinmodel->numframes - 1) * sizeof( maliasframedesc_t );
 
-	m_pAliasHeader = Mem_Alloc( mod->mempool, size );
+	m_pAliasHeader = Mem_Calloc( mod->mempool, size );
 	mod->flags = pinmodel->flags;	// share effects flags
 
 	// endian-adjust and copy the data, starting with the alias model header
