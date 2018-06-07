@@ -176,7 +176,7 @@ SCR_RSpeeds
 */
 void SCR_RSpeeds( void )
 {
-	char	msg[MAX_SYSPATH];
+	char	msg[2048];
 
 	if( !host.allow_console )
 		return;

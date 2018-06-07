@@ -2011,8 +2011,14 @@ int SV_BuildSoundMsg( sizebuf_t *msg, edict_t *ent, int chan, const char *sample
 
 	if( sample[0] == '!' && Q_isdigit( sample + 1 ))
 	{
-		SetBits( flags, SND_SENTENCE );
 		sound_idx = Q_atoi( sample + 1 );
+
+		if( sound_idx >= MAX_SOUNDS )
+		{
+			SetBits( flags, SND_SENTENCE|SND_SEQUENCE );
+			sound_idx -= MAX_SOUNDS;
+		}
+		else SetBits( flags, SND_SENTENCE );
 	}
 	else if( sample[0] == '#' && Q_isdigit( sample + 1 ))
 	{
@@ -4094,7 +4100,7 @@ void pfnEndSection( const char *pszSection )
 {
 	if( !Q_stricmp( "oem_end_credits", pszSection ))
 		Host_Credits ();
-	else Cbuf_AddText( va( "endgame \"%s\"\n", pszSection ));
+	else Cbuf_AddText( "\ndisconnect\n" );
 }
 
 /*

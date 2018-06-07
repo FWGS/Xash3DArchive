@@ -285,7 +285,7 @@ void CL_ParseSoundPacket( sizebuf_t *msg )
 		char	sentenceName[32];
 
 		if( FBitSet( flags, SND_SEQUENCE ))
-			Q_snprintf( sentenceName, sizeof( sentenceName ), "!#%i", sound );
+			Q_snprintf( sentenceName, sizeof( sentenceName ), "!#%i", sound + MAX_SOUNDS );
 		else Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
 
 		handle = S_RegisterSound( sentenceName );
@@ -352,7 +352,7 @@ void CL_ParseRestoreSoundPacket( sizebuf_t *msg )
 		char	sentenceName[32];
 
 		if( flags & SND_SEQUENCE )
-			Q_snprintf( sentenceName, sizeof( sentenceName ), "!#%i", sound );
+			Q_snprintf( sentenceName, sizeof( sentenceName ), "!#%i", sound + MAX_SOUNDS );
 		else Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
 
 		handle = S_RegisterSound( sentenceName );
@@ -778,7 +778,7 @@ int CL_EstimateNeededResources( void )
 			break;
 		case t_model:
 			nSize = FS_FileSize( p->szFileName, false );
-			if( p->szFileName[0] != '*' && p->ucFlags && nSize == -1 )
+			if( p->szFileName[0] != '*' && nSize == -1 )
 			{
 				SetBits( p->ucFlags, RES_WASMISSING );
 				nTotalSize += p->nDownloadSize;
@@ -1982,8 +1982,8 @@ void CL_ParseScreenFade( sizebuf_t *msg )
 	screenfade_t	*sf = &clgame.fade;
 	float		flScale;
 
-	duration = (float)MSG_ReadShort( msg );
-	holdTime = (float)MSG_ReadShort( msg );
+	duration = (float)MSG_ReadWord( msg );
+	holdTime = (float)MSG_ReadWord( msg );
 	sf->fadeFlags = MSG_ReadShort( msg );
 	flScale = ( sf->fadeFlags & FFADE_LONGFADE ) ? (1.0f / 256.0f) : (1.0f / 4096.0f);
 
