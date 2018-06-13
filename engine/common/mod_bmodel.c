@@ -2188,7 +2188,7 @@ static void Mod_LoadSurfaces( dbspmodel_t *bmod )
 		if(( tex->name[0] == '*' && Q_stricmp( tex->name, "*default" )) || tex->name[0] == '!' )
 			SetBits( out->flags, SURF_DRAWTURB|SURF_DRAWTILED );
 
-		if( !FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+		if( !CL_IsQuakeCompatible( ))
 		{
 			if( !Q_strncmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
 				SetBits( out->flags, SURF_DRAWTURB|SURF_DRAWTILED );

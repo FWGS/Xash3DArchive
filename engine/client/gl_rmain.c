@@ -658,7 +658,7 @@ static void R_CheckFog( void )
 	int		i, cnt, count;
 
 	// quake global fog
-	if( clgame.movevars.fog_settings != 0 && FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+	if( clgame.movevars.fog_settings != 0 && CL_IsQuakeCompatible( ))
 	{
 		// quake-style global fog
 		RI.fogColor[0] = ((clgame.movevars.fog_settings & 0xFF000000) >> 24) / 255.0f;

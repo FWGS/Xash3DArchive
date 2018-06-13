@@ -1074,7 +1074,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 		if( ent->curstate.rendermode == kRenderNormal )
 		{
 			// auto 'solid' faces
-			if( FBitSet( ent->model->flags, MODEL_TRANSPARENT ) && FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
+			if( FBitSet( ent->model->flags, MODEL_TRANSPARENT ) && CL_IsQuakeCompatible( ))
 			{
 				ent->curstate.rendermode = kRenderTransAlpha;
 				ent->curstate.renderamt = 255;
