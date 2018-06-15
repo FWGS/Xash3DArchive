@@ -1472,6 +1472,12 @@ static void Mod_LoadSubmodels( dbspmodel_t *bmod )
 	{
 		for( j = 0; j < 3; j++ )
 		{
+			// reset empty bounds to prevent error
+			if( in->mins[j] == 999999.0f )
+				in->mins[j] = 0.0f;
+			if( in->maxs[j] == -999999.0f)
+				in->maxs[j] = 0.0f; 
+
 			// spread the mins / maxs by a unit
 			out->mins[j] = in->mins[j] - 1.0f;
 			out->maxs[j] = in->maxs[j] + 1.0f;

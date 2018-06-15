@@ -819,7 +819,7 @@ void CL_ParseQuakeMessage( sizebuf_t *msg, qboolean normal_message )
 			continue;
 		}
 
-		Msg( "%s\n", CL_MsgInfo( cmd ));
+//		Msg( "%s\n", CL_MsgInfo( cmd ));
 
 		// record command for debugging spew on parse problem
 		CL_Parse_RecordCommand( cmd, bufStart );

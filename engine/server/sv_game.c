@@ -1986,31 +1986,31 @@ int SV_BuildSoundMsg( sizebuf_t *msg, edict_t *ent, int chan, const char *sample
 
 	if( vol < 0 || vol > 255 )
 	{
-		Con_Printf( S_ERROR "SV_StartSound: volume = %i\n", vol );
+		Con_Reportf( S_ERROR "SV_StartSound: volume = %i\n", vol );
 		vol = bound( 0, vol, 255 );
 	}
 
 	if( attn < 0.0f || attn > 4.0f )
 	{
-		Con_Printf( S_ERROR "SV_StartSound: attenuation %g must be in range 0-4\n", attn );
+		Con_Reportf( S_ERROR "SV_StartSound: attenuation %g must be in range 0-4\n", attn );
 		attn = bound( 0.0f, attn, 4.0f );
 	}
 
 	if( chan < 0 || chan > 7 )
 	{
-		Con_Printf( S_ERROR "SV_StartSound: channel must be in range 0-7\n" );
+		Con_Reportf( S_ERROR "SV_StartSound: channel must be in range 0-7\n" );
 		chan = bound( 0, chan, 7 );
 	}
 
 	if( pitch < 0 || pitch > 255 )
 	{
-		Con_Printf( S_ERROR "SV_StartSound: pitch = %i\n", pitch );
+		Con_Reportf( S_ERROR "SV_StartSound: pitch = %i\n", pitch );
 		pitch = bound( 0, pitch, 255 );
 	}
 
 	if( !COM_CheckString( sample ))
 	{
-		Con_Printf( S_ERROR "SV_StartSound: passed NULL sample\n" );
+		Con_Reportf( S_ERROR "SV_StartSound: passed NULL sample\n" );
 		return 0;
 	}
 

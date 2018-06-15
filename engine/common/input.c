@@ -233,11 +233,15 @@ IN_RecalcCenter
 Recalc the center of screen
 ===========
 */
-void IN_RecalcCenter( void )
+void IN_RecalcCenter( qboolean setpos )
 {
-	int	width = GetSystemMetrics( SM_CXSCREEN );
-	int	height = GetSystemMetrics( SM_CYSCREEN );
+	int	width, height;
 
+	if( host.status != HOST_FRAME )
+		return;
+
+	width = GetSystemMetrics( SM_CXSCREEN );
+	height = GetSystemMetrics( SM_CYSCREEN );
 	GetWindowRect( host.hWnd, &window_rect );
 	if( window_rect.left < 0 ) window_rect.left = 0;
 	if( window_rect.top < 0 ) window_rect.top = 0;
@@ -246,7 +250,7 @@ void IN_RecalcCenter( void )
 
 	host.window_center_x = (window_rect.right + window_rect.left) / 2;
 	host.window_center_y = (window_rect.top + window_rect.bottom) / 2;
-	SetCursorPos( host.window_center_x, host.window_center_y );
+	if( setpos ) SetCursorPos( host.window_center_x, host.window_center_y );
 }
 
 /*
@@ -303,7 +307,7 @@ void IN_ActivateMouse( qboolean force )
 		clgame.dllFuncs.IN_ActivateMouse();
 	}
 
-	IN_RecalcCenter();
+	IN_RecalcCenter( true );
 
 	SetCapture( host.hWnd );
 	ClipCursor( &window_rect );
@@ -509,7 +513,7 @@ LONG IN_WndProc( HWND hWnd, UINT uMsg, UINT wParam, LONG lParam )
 		S_Activate( fActivate, host.hWnd );
 		IN_ActivateMouse( fActivate );
 		Key_ClearStates();
-		IN_RecalcCenter();
+		IN_RecalcCenter( false );
 
 		if( host.status == HOST_FRAME )
 		{

@@ -599,7 +599,7 @@ void Host_ServerFrame( void )
 	// if server is not active, do nothing
 	if( !svs.initialized ) return;
 
-	if( sv.simulating || sv.state != ss_active )
+	if( sv_fps.value != 0.0f && ( sv.simulating || sv.state != ss_active ))
 		sv.time_residual += host.frametime;
 
 	if( sv_fps.value == 0.0f )

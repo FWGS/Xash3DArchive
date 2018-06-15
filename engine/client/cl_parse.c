@@ -2047,6 +2047,8 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 
 		cmd = MSG_ReadServerCmd( msg );
 
+//		Msg( "%s\n", CL_MsgInfo( cmd ));
+
 		// record command for debugging spew on parse problem
 		CL_Parse_RecordCommand( cmd, bufStart );
 

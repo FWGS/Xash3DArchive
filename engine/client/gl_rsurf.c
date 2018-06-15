@@ -1591,14 +1591,14 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	mleaf_t		*pleaf;
 	int		c, side;
 	float		dot;
-
+loc0:
 	if( node->contents == CONTENTS_SOLID )
 		return; // hit a solid leaf
 
 	if( node->visframe != tr.visframecount )
 		return;
 
-	if( clipflags && !r_nocull->value )
+	if( clipflags && !CVAR_TO_BOOL( r_nocull ))
 	{
 		for( i = 0; i < 6; i++ )
 		{
@@ -1667,7 +1667,8 @@ void R_RecursiveWorldNode( mnode_t *node, uint clipflags )
 	}
 
 	// recurse down the back side
-	R_RecursiveWorldNode( node->children[!side], clipflags );
+	node = node->children[!side];
+	goto loc0;
 }
 
 /*
@@ -1864,6 +1865,8 @@ R_DrawWorld
 */
 void R_DrawWorld( void )
 {
+	double	start, end;
+
 	// paranoia issues: when gl_renderer is "0" we need have something valid for currententity
 	// to prevent crashing until HeadShield drawing.
 	RI.currententity = clgame.entities;
@@ -1884,10 +1887,15 @@ void R_DrawWorld( void )
 
 	R_ClearSkyBox ();
 
+	start = Sys_DoubleTime();
 	if( RI.drawOrtho )
 		R_DrawWorldTopView( cl.worldmodel->nodes, RI.frustum.clipFlags );
 	else R_RecursiveWorldNode( cl.worldmodel->nodes, RI.frustum.clipFlags );
+	end = Sys_DoubleTime();
 
+	r_stats.t_world_node = end - start;
+
+	start = Sys_DoubleTime();
 	R_DrawTextureChains();
 
 	if( !CL_IsDevOverviewMode( ))
@@ -1902,6 +1910,9 @@ void R_DrawWorld( void )
 			R_DrawSkyBox();
 	}
 
+	end = Sys_DoubleTime();
+
+	r_stats.t_world_draw = end - start;
 	tr.num_draw_decals = 0;
 	skychain = NULL;
 
