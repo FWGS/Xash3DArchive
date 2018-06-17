@@ -313,46 +313,27 @@ static client entity
 */
 void CL_ParseStaticEntity( sizebuf_t *msg )
 {
-	entity_state_t	state;
+	int		i, newnum;
+	entity_state_t	from, to;
 	cl_entity_t	*ent;
-	int		i;
 
-	memset( &state, 0, sizeof( state ));
-
-	state.modelindex = MSG_ReadShort( msg );
-	state.sequence = MSG_ReadWord( msg );
-	state.frame = MSG_ReadWord( msg ) * (1.0f / 128.0f);
-	state.colormap = MSG_ReadWord( msg );
-	state.skin = MSG_ReadByte( msg );
-	state.body = MSG_ReadByte( msg );
-	state.scale = MSG_ReadCoord( msg );
-	MSG_ReadVec3Coord( msg, state.origin );
-	MSG_ReadVec3Angles( msg, state.angles );
-	state.rendermode = MSG_ReadByte( msg );
-
-	if( state.rendermode != kRenderNormal )
-	{
-		state.renderamt = MSG_ReadByte( msg );
-		state.rendercolor.r = MSG_ReadByte( msg );
-		state.rendercolor.g = MSG_ReadByte( msg );
-		state.rendercolor.b = MSG_ReadByte( msg );
-		state.renderfx = MSG_ReadByte( msg );
-	}
+	memset( &from, 0, sizeof( from ));
+	newnum = MSG_ReadUBitLong( msg, MAX_ENTITY_BITS );
+	MSG_ReadDeltaEntity( msg, &from, &to, 0, DELTA_STATIC, cl.mtime[0] );
 
 	i = clgame.numStatics;
 	if( i >= MAX_STATIC_ENTITIES )
 	{
-		MsgDev( D_ERROR, "CL_ParseStaticEntity: static entities limit exceeded!\n" );
+		Con_Printf( S_ERROR, "MAX_STATIC_ENTITIES limit exceeded!\n" );
 		return;
 	}
 
 	ent = &clgame.static_entities[i];
 	clgame.numStatics++;
 
-	ent->index = 0; // ???
-	ent->baseline = state;
-	ent->curstate = state;
-	ent->prevstate = state;
+	// all states are same
+	ent->baseline = ent->curstate = ent->prevstate = to;
+	ent->index = 0; // static entities doesn't has the numbers
 
 	// statics may be respawned in game e.g. for demo recording
 	if( cls.state == ca_connected || cls.state == ca_validate )
@@ -361,7 +342,7 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 	// setup the new static entity
 	VectorCopy( ent->curstate.origin, ent->origin );
 	VectorCopy( ent->curstate.angles, ent->angles );
-	ent->model = CL_ModelHandle( state.modelindex );
+	ent->model = CL_ModelHandle( to.modelindex );
 	ent->curstate.framerate = 1.0f;
 	CL_ResetLatchedVars( ent, true );
 

@@ -1207,6 +1207,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return tr.lightmapTextures[arg];
 	case PARM_SKY_SPHERE:
 		return FBitSet( world.flags, FWORLD_SKYSPHERE ) && !FBitSet( world.flags, FWORLD_CUSTOM_SKYBOX );
+	case PARAM_GAMEPAUSED:
+		return cl.paused;
 	case PARM_WIDESCREEN:
 		return glState.wideScreen;
 	case PARM_FULLSCREEN:

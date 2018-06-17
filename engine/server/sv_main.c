@@ -158,7 +158,7 @@ void SV_UpdateMovevars( qboolean initialize )
 	if( sv_zmax.value < 256.0f ) Cvar_SetValue( "sv_zmax", 256.0f );
 
 	// clamp it right
-	if( host.features & ENGINE_WRITE_LARGE_COORD )
+	if( FBitSet( host.features, ENGINE_WRITE_LARGE_COORD ))
 	{
 		if( sv_zmax.value > 131070.0f )
 			Cvar_SetValue( "sv_zmax", 131070.0f );
