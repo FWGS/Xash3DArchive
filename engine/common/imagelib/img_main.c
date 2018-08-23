@@ -93,6 +93,7 @@ const bpc_desc_t PFDesc[] =
 {PF_DXT1,		"DXT 1",	0x83F1, 4 },
 {PF_DXT3,		"DXT 3",	0x83F2, 4 },
 {PF_DXT5,		"DXT 5",	0x83F3, 4 },
+{PF_ATI2,		"ATI 2",	0x8837, 4 },
 };
 
 void Image_Reset( void )

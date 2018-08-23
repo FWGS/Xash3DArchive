@@ -579,9 +579,9 @@ using to find source waterleaf with
 watertexture to grab fog values from it
 =============
 */
-static gltexture_t *R_RecursiveFindWaterTexture( const mnode_t *node, const mnode_t *ignore, qboolean down )
+static gl_texture_t *R_RecursiveFindWaterTexture( const mnode_t *node, const mnode_t *ignore, qboolean down )
 {
-	gltexture_t *tex = NULL;
+	gl_texture_t *tex = NULL;
 
 	// assure the initial node is not null
 	// we could check it here, but we would rather check it 
@@ -654,7 +654,7 @@ from underwater leaf (idea: XaeroX)
 static void R_CheckFog( void )
 {
 	cl_entity_t	*ent;
-	gltexture_t	*tex;
+	gl_texture_t	*tex;
 	int		i, cnt, count;
 
 	// quake global fog
@@ -1164,7 +1164,7 @@ void R_DrawCubemapView( const vec3_t origin, const vec3_t angles, int size )
 
 static int GL_RenderGetParm( int parm, int arg )
 {
-	gltexture_t *glt;
+	gl_texture_t *glt;
 
 	switch( parm )
 	{
@@ -1265,7 +1265,7 @@ static int GL_RenderGetParm( int parm, int arg )
 
 static void R_GetDetailScaleForTexture( int texture, float *xScale, float *yScale )
 {
-	gltexture_t *glt = R_GetTexture( texture );
+	gl_texture_t *glt = R_GetTexture( texture );
 
 	if( xScale ) *xScale = glt->xscale;
 	if( yScale ) *yScale = glt->yscale;
@@ -1273,7 +1273,7 @@ static void R_GetDetailScaleForTexture( int texture, float *xScale, float *yScal
 
 static void R_GetExtraParmsForTexture( int texture, byte *red, byte *green, byte *blue, byte *density )
 {
-	gltexture_t *glt = R_GetTexture( texture );
+	gl_texture_t *glt = R_GetTexture( texture );
 
 	if( red ) *red = glt->fogParams[0];
 	if( green ) *green = glt->fogParams[1];
@@ -1500,7 +1500,7 @@ static render_api_t gRenderAPI =
 	GL_TextureTarget,
 	GL_SetTexCoordArrayMode,
 	GL_GetProcAddress,
-	NULL,
+	GL_UpdateTexSize,
 	NULL,
 	NULL,
 	CL_DrawParticlesExternal,

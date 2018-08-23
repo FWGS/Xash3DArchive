@@ -96,7 +96,7 @@ void VGUI_UploadTexture( int id, const char *buffer, int width, int height )
 	r_image.flags = IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA;
 	r_image.buffer = (byte *)buffer;
 
-	g_textures[id] = GL_LoadTextureInternal( texName, &r_image, TF_IMAGE, false );
+	g_textures[id] = GL_LoadTextureInternal( texName, &r_image, TF_IMAGE );
 }
 
 /*

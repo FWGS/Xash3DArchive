@@ -275,7 +275,7 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 	float		sample_size;
 	int		vertpage;
 	texture_t		*tex;
-	gltexture_t	*glt;
+	gl_texture_t	*glt;
 	float		*vec;
 	float		s, t;
 	glpoly_t		*poly;
@@ -645,7 +645,7 @@ static void LM_UploadBlock( qboolean dynamic )
 		r_lightmap.size = r_lightmap.width * r_lightmap.height * 4;
 		r_lightmap.flags = IMAGE_HAS_COLOR;
 		r_lightmap.buffer = gl_lms.lightmap_buffer;
-		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_FONT|TF_ATLAS_PAGE, false );
+		tr.lightmapTextures[i] = GL_LoadTextureInternal( lmName, &r_lightmap, TF_FONT|TF_ATLAS_PAGE );
 
 		if( ++gl_lms.current_lightmap_texture == MAX_LIGHTMAPS )
 			Host_Error( "AllocBlock: full\n" );
@@ -734,7 +734,7 @@ void DrawGLPoly( glpoly_t *p, float xScale, float yScale )
 
 	if( p->flags & SURF_CONVEYOR )
 	{
-		gltexture_t	*texture;
+		gl_texture_t	*texture;
 		float		flConveyorSpeed;
 		float		flRate, flAngle;
 
@@ -1005,7 +1005,7 @@ R_RenderDetails
 */
 void R_RenderDetails( void )
 {
-	gltexture_t	*glt;
+	gl_texture_t	*glt;
 	mextrasurf_t	*es, *p;
 	msurface_t	*fa;
 	int		i;

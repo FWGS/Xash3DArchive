@@ -235,6 +235,7 @@ qboolean SCR_PlayCinematic( const char *arg )
 
 	UI_SetActiveMenu( false );
 	cls.state = ca_cinematic;
+	Con_FastClose();
 	cin_time = 0.0f;
 	cls.signon = 0;
 	

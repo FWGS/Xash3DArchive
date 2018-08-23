@@ -29,6 +29,15 @@ void UI_UpdateMenu( float realtime )
 {
 	if( !gameui.hInstance ) return;
 
+	// if some deferred cmds is waiting
+	if( UI_IsVisible() && COM_CheckString( host.deferred_cmd ))
+	{
+		Cbuf_AddText( host.deferred_cmd );
+		host.deferred_cmd[0] = '\0';
+		Cbuf_Execute();
+		return;
+	}
+
 	// menu time (not paused, not clamped)
 	gameui.globals->time = host.realtime;
 	gameui.globals->frametime = host.realframetime;

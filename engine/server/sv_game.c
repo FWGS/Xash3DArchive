@@ -1194,24 +1194,29 @@ pfnSetModel
 */
 void pfnSetModel( edict_t *e, const char *m )
 {
+	char	name[MAX_QPATH];
 	model_t	*mod;
 	int	i;
 
 	if( !SV_IsValidEdict( e ))
 		return;
 
-	if( COM_CheckString( m ))
+	if( *m == '\\' || *m == '/' ) m++;
+	Q_strncpy( name, m, sizeof( name ));
+	COM_FixSlashes( name );
+
+	if( COM_CheckString( name ))
 	{
 		// check to see if model was properly precached
 		for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
 		{
-			if( !Q_stricmp( sv.model_precache[i], m ))
+			if( !Q_stricmp( sv.model_precache[i], name ))
 				break;
 		}
 
 		if( i == MAX_MODELS )
 		{
-			Con_Printf( S_ERROR "no precache: %s\n", m );
+			Con_Printf( S_ERROR "no precache: %s\n", name );
 			return;
 		}
 	}
@@ -1223,7 +1228,7 @@ void pfnSetModel( edict_t *e, const char *m )
 		return;
 	}
 
-	if( COM_CheckString( m ))
+	if( COM_CheckString( name ))
 	{
 		e->v.model = MAKE_STRING( sv.model_precache[i] );
 		e->v.modelindex = i;
@@ -1250,18 +1255,23 @@ pfnModelIndex
 */
 int pfnModelIndex( const char *m )
 {
+	char	name[MAX_QPATH];
 	int	i;
 
 	if( !COM_CheckString( m ))
 		return 0;
 
+	if( *m == '\\' || *m == '/' ) m++;
+	Q_strncpy( name, m, sizeof( name ));
+	COM_FixSlashes( name );
+
 	for( i = 1; i < MAX_MODELS && sv.model_precache[i][0]; i++ )
 	{
-		if( !Q_stricmp( sv.model_precache[i], m ))
+		if( !Q_stricmp( sv.model_precache[i], name ))
 			return i;
 	}
 
-	Con_Printf( S_ERROR "no precache: %s\n", m );
+	Con_Printf( S_ERROR "no precache: %s\n", name );
 	return 0; 
 }
 

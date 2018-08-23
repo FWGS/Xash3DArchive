@@ -596,7 +596,7 @@ static void CL_ParseQuakeStaticEntity( sizebuf_t *msg )
 	i = clgame.numStatics;
 	if( i >= MAX_STATIC_ENTITIES )
 	{
-		Con_Printf( S_ERROR, "CL_ParseStaticEntity: static entities limit exceeded!\n" );
+		Con_Printf( S_ERROR "CL_ParseStaticEntity: static entities limit exceeded!\n" );
 		return;
 	}
 

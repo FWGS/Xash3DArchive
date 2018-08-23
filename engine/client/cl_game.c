@@ -1059,7 +1059,7 @@ void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize )
 	for( i = 0; i < MAX_USER_MESSAGES && clgame.msg[i].name[0]; i++ )
 	{
 		// NOTE: no check for DispatchFunc, check only name
-		if( !Q_strcmp( clgame.msg[i].name, pszName ))
+		if( !Q_stricmp( clgame.msg[i].name, pszName ))
 		{
 			clgame.msg[i].number = svc_num;
 			clgame.msg[i].size = iSize;
@@ -1685,7 +1685,7 @@ static int pfnHookUserMsg( const char *pszName, pfnUserMsgHook pfn )
 	for( i = 0; i < MAX_USER_MESSAGES && clgame.msg[i].name[0]; i++ )
 	{
 		// see if already hooked
-		if( !Q_strcmp( clgame.msg[i].name, pszName ))
+		if( !Q_stricmp( clgame.msg[i].name, pszName ))
 			return 1;
 	}
 
@@ -1712,7 +1712,7 @@ static int pfnServerCmd( const char *szCmdString )
 {
 	string	buf;
 
-	if( !szCmdString || !szCmdString[0] )
+	if( !COM_CheckString( szCmdString ))
 		return 0;
 
 	// just like the client typed "cmd xxxxx" at the console
@@ -1730,11 +1730,20 @@ pfnClientCmd
 */
 static int pfnClientCmd( const char *szCmdString )
 {
-	if( !szCmdString || !szCmdString[0] )
+	if( !COM_CheckString( szCmdString ))
 		return 0;
 
-	Cbuf_AddText( szCmdString );
-	Cbuf_AddText( "\n" );
+	if( cls.initialized )
+	{
+		Cbuf_AddText( szCmdString );
+		Cbuf_AddText( "\n" );
+	}
+	else
+	{
+		// will exec later
+		Q_strncat( host.deferred_cmd, va( "%s\n", szCmdString ), sizeof( host.deferred_cmd )); 
+	}
+
 	return 1;
 }
 

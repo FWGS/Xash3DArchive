@@ -265,7 +265,7 @@ static float CL_LerpPoint( void )
 		f = 0.1f;
 	}
 #if 1
-	frac = (cl.time - cl.mtime[1]) / f;
+	frac = (cl.time - cl.mtime[0]) / f;
 
 	if( frac < 0.0f )
 	{
@@ -288,7 +288,7 @@ static float CL_LerpPoint( void )
 	else if( f > 0.001f )
 	{
 		// automatic lerp (classic mode)
-		frac = ( cl.time - cl.mtime[1] ) / f;
+		frac = ( cl.time - cl.mtime[0] ) / f;
 	}
 #endif
 	return frac;
@@ -1488,8 +1488,10 @@ CL_InternetServers_f
 */
 void CL_InternetServers_f( void )
 {
+	char	fullquery[512] = MS_SCAN_REQUEST;
+	char	*info = fullquery + sizeof( MS_SCAN_REQUEST ) - 1;
+	int	remaining = sizeof( fullquery ) - sizeof( MS_SCAN_REQUEST );
 	netadr_t	adr;
-	char	fullquery[512] = "1\xFF" "0.0.0.0:0\0" "\\gamedir\\";
 
 	Con_Printf( "Scanning for servers on the internet area...\n" );
 	NET_Config( true ); // allow remote
@@ -1497,9 +1499,10 @@ void CL_InternetServers_f( void )
 	if( !NET_StringToAdr( MASTERSERVER_ADR, &adr ) )
 		MsgDev( D_ERROR, "Can't resolve adr: %s\n", MASTERSERVER_ADR );
 
-	Q_strcpy( &fullquery[22], GI->gamedir );
+	Info_SetValueForKey( info, "gamedir", GI->gamefolder, remaining );
+	Info_SetValueForKey( info, "clver", XASH_VERSION, remaining ); // let master know about client version
 
-	NET_SendPacket( NS_CLIENT, Q_strlen( GI->gamedir ) + 23, fullquery, adr );
+	NET_SendPacket( NS_CLIENT, sizeof( MS_SCAN_REQUEST ) + Q_strlen( info ), fullquery, adr );
 
 	// now we clearing the vgui request
 	if( clgame.master_request != NULL )

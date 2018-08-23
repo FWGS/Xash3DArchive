@@ -324,7 +324,7 @@ void CL_ParseStaticEntity( sizebuf_t *msg )
 	i = clgame.numStatics;
 	if( i >= MAX_STATIC_ENTITIES )
 	{
-		Con_Printf( S_ERROR, "MAX_STATIC_ENTITIES limit exceeded!\n" );
+		Con_Printf( S_ERROR "MAX_STATIC_ENTITIES limit exceeded!\n" );
 		return;
 	}
 
