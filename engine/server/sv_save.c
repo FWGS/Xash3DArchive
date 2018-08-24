@@ -539,9 +539,6 @@ static qboolean SaveGetName( int lastnum, char *filename )
 {
 	int	a, b, c;
 
-	if( !COM_CheckString( filename ))
-		return false;
-
 	if( lastnum < 0 || lastnum > 999 )
 		return false;
 
