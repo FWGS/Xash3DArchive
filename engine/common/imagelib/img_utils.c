@@ -309,7 +309,6 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 			rgba[3] = i;
 			d_table[i] = *(uint *)rgba;
 		}
-//		d_table[0] = 0x00808080;
 		break;
 	case LUMP_MASKED:
 		for( i = 0; i < 255; i++ )
@@ -741,7 +740,7 @@ void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *
 			if( yi != oldy )
 			{
 				inrow = (byte *)indata + inwidth4 * yi;
-				if (yi == oldy+1) memcpy( resamplerow1, resamplerow2, outwidth4 );
+				if( yi == oldy + 1 ) memcpy( resamplerow1, resamplerow2, outwidth4 );
 				else Image_Resample32LerpLine( inrow, resamplerow1, inwidth, outwidth );
 				Image_Resample32LerpLine( inrow + inwidth4, resamplerow2, inwidth, outwidth );
 				oldy = yi;
@@ -806,7 +805,7 @@ void Image_Resample32Lerp( const void *indata, int inwidth, int inheight, void *
 		{
 			if( yi != oldy )
 			{
-				inrow = (byte *)indata + inwidth4*yi;
+				inrow = (byte *)indata + inwidth4 * yi;
 				if( yi == oldy + 1 ) memcpy( resamplerow1, resamplerow2, outwidth4 );
 				else Image_Resample32LerpLine( inrow, resamplerow1, inwidth, outwidth);
 				oldy = yi;
@@ -1105,9 +1104,9 @@ byte *Image_FlipInternal( const byte *in, word *srcwidth, word *srcheight, int t
 	word	width = *srcwidth;
 	word	height = *srcheight; 
 	int	samples = PFDesc[type].bpp;
-	qboolean	flip_x = ( flags & IMAGE_FLIP_X ) ? true : false;
-	qboolean	flip_y = ( flags & IMAGE_FLIP_Y ) ? true : false;
-	qboolean	flip_i = ( flags & IMAGE_ROT_90 ) ? true : false;
+	qboolean	flip_x = FBitSet( flags, IMAGE_FLIP_X ) ? true : false;
+	qboolean	flip_y = FBitSet( flags, IMAGE_FLIP_Y ) ? true : false;
+	qboolean	flip_i = FBitSet( flags, IMAGE_ROT_90 ) ? true : false;
 	int	row_inc = ( flip_y ? -samples : samples ) * width;
 	int	col_inc = ( flip_x ? -samples : samples );
 	int	row_ofs = ( flip_y ? ( height - 1 ) * width * samples : 0 );

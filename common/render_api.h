@@ -216,8 +216,8 @@ typedef struct render_api_s
 	struct mstudiotex_s *( *StudioGetTexture )( struct cl_entity_s *e );
 	const struct ref_overview_s *( *GetOverviewParms )( void );
 	const char	*( *GetFileByIndex )( int fileindex );
-	void		(*R_Reserved1)( void );	// for potential interface expansion without broken compatibility
-	void		(*R_Reserved2)( void );
+	void		(*R_Reserved0)( void );	// for potential interface expansion without broken compatibility
+	void		(*R_Reserved1)( void );
 
 	// static allocations
 	void		*(*pfnMemAlloc)( size_t cb, const char *filename, const int fileline );

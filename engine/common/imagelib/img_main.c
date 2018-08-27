@@ -47,16 +47,6 @@ static const suffix_t skybox_qv2[6] =
 
 static const suffix_t cubemap_v1[6] =
 {
-{ "posx", 0, CB_HINT_POSX },
-{ "negx", 0, CB_HINT_NEGX },
-{ "posy", 0, CB_HINT_POSY },
-{ "negy", 0, CB_HINT_NEGY },
-{ "posz", 0, CB_HINT_POSZ },
-{ "negz", 0, CB_HINT_NEGZ },
-};
-
-static const suffix_t cubemap_v2[6] =
-{
 { "px", 0, CB_HINT_POSX },
 { "nx", 0, CB_HINT_NEGX },
 { "py", 0, CB_HINT_POSY },
@@ -75,8 +65,7 @@ static const cubepack_t load_cubemap[] =
 {
 { "3Ds Sky1", skybox_qv1 },
 { "3Ds Sky2", skybox_qv2 },
-{ "3Ds Cube", cubemap_v2 },
-{ "Tenebrae", cubemap_v1 },
+{ "3Ds Cube", cubemap_v1 },
 { NULL, NULL },
 };
 
@@ -230,8 +219,8 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 	const cubepack_t	*cmap;
 	byte		*f;
 
-	Image_Reset(); // clear old image
 	Q_strncpy( loadname, filename, sizeof( loadname ));
+	Image_Reset(); // clear old image
 
 	if( Q_stricmp( ext, "" ))
 	{
@@ -260,6 +249,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 			Q_sprintf( path, format->formatstring, loadname, "", format->ext );
 			image.hint = format->hint;
 			f = FS_LoadFile( path, &filesize, false );
+
 			if( f && filesize > 0 )
 			{
 				if( format->loadfunc( path, f, filesize ))
@@ -267,7 +257,7 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 					Mem_Free( f ); // release buffer
 					return ImagePack(); // loaded
 				}
-				else Mem_Free(f); // release buffer 
+				else Mem_Free( f ); // release buffer 
 			}
 		}
 	}
@@ -391,7 +381,7 @@ qboolean FS_SaveImage( const char *filename, rgbdata_t *pix )
 		if( pix->flags & IMAGE_SKYBOX )
 			box = skybox_qv1;
 		else if( pix->flags & IMAGE_CUBEMAP )
-			box = cubemap_v2;
+			box = cubemap_v1;
 		else
 		{
 			// clear any force flags

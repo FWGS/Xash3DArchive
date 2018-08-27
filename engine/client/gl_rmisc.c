@@ -202,7 +202,7 @@ void R_ParseTexFilters( const char *filename )
 		tf->filter = filter;
 	}
 
-	MsgDev( D_INFO, "%i texture filters parsed\n", num_texfilters );
+	Con_Reportf( "%i texture filters parsed\n", num_texfilters );
 
 	Mem_Free( afile );
 }

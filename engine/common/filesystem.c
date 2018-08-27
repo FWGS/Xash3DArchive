@@ -1005,6 +1005,11 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 			pfile = COM_ParseFile( pfile, token );
 			GameInfo->size = Q_atoi( token );
 		}
+		else if( !Q_stricmp( token, "edicts" ))
+		{
+			pfile = COM_ParseFile( pfile, token );
+			GameInfo->max_edicts = Q_atoi( token );
+		}
 		else if( !Q_stricmp( token, "mpentity" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->mp_entity );

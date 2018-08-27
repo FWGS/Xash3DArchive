@@ -1049,7 +1049,7 @@ static void Mod_CalcSurfaceExtents( msurface_t *surf )
 			info->lightextents[i] = surf->extents[i];
 		}
 
-		if( !FBitSet( tex->flags, TEX_SPECIAL ) && surf->extents[i] > 4096 )
+		if( !FBitSet( tex->flags, TEX_SPECIAL ) && surf->extents[i] > 16384 )
 			MsgDev( D_ERROR, "Bad surface extents %i\n", surf->extents[i] );
 	}
 }
@@ -2712,7 +2712,7 @@ qboolean Mod_LoadBmodelLumps( const byte *mod_base, qboolean isworld )
 	if( COM_CheckString( wadvalue ))
 	{
 		wadvalue[Q_strlen( wadvalue ) - 2] = '\0'; // kill the last semicolon
-		Con_DPrintf( "Wad files required to run the map: \"%s\"\n", wadvalue );
+		Con_Reportf( "Wad files required to run the map: \"%s\"\n", wadvalue );
 	}
 
 	return true;

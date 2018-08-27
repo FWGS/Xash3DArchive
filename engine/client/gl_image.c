@@ -456,7 +456,7 @@ static size_t GL_CalcTextureSize( GLenum format, int width, int height, int dept
 		size = width * height * depth * 2;
 		break;
 	case GL_DEPTH_COMPONENT24:
-		size = width * height * depth * 4;
+		size = width * height * depth * 3;
 		break;
 	case GL_DEPTH_COMPONENT32F:
 		size = width * height * depth * 4;
@@ -1920,7 +1920,7 @@ static void GL_CreateInternalTextures( void )
 		{
 			dy = y - 8;
 			d = 255 - 35 * sqrt( dx2 + dy * dy );
-			pic->buffer[( y*16 + x ) * 4 + 3] = bound( 0, d, 255 );
+			pic->buffer[( y * 16 + x ) * 4 + 3] = bound( 0, d, 255 );
 		}
 	}
 
@@ -1938,12 +1938,13 @@ static void GL_CreateInternalTextures( void )
 		((uint *)pic->buffer)[x] = 0xFF7F7F7F;
 	tr.grayTexture = GL_LoadTextureInternal( "*gray", pic, TF_COLORMAP );
 
+	// black texture
 	pic = GL_FakeImage( 4, 4, 1, IMAGE_HAS_COLOR );
 	for( x = 0; x < 16; x++ )
 		((uint *)pic->buffer)[x] = 0xFF000000;
 	tr.blackTexture = GL_LoadTextureInternal( "*black", pic, TF_COLORMAP );
 
-	// cinematic
+	// cinematic dummy
 	pic = GL_FakeImage( 640, 100, 1, IMAGE_HAS_COLOR );
 	tr.cinTexture = GL_LoadTextureInternal( "*cintexture", pic, TF_NOMIPMAP|TF_CLAMP );
 }
