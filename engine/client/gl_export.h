@@ -148,6 +148,7 @@ typedef float GLmatrix[16];
 #define GL_2_BYTES				0x1407
 #define GL_3_BYTES				0x1408
 #define GL_4_BYTES				0x1409
+#define GL_HALF_FLOAT_ARB			0x140B
 
 #define GL_VERTEX_ARRAY			0x8074
 #define GL_NORMAL_ARRAY			0x8075

@@ -92,6 +92,7 @@ CVAR_DEFINE_AUTO( sv_skyvec_x, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skylight dir
 CVAR_DEFINE_AUTO( sv_skyvec_y, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skylight direction by y-axis" );
 CVAR_DEFINE_AUTO( sv_skyvec_z, "0", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "skylight direction by z-axis" );
 CVAR_DEFINE_AUTO( sv_wateralpha, "1", FCVAR_MOVEVARS|FCVAR_UNLOGGED, "world surfaces water transparency factor. 1.0 - solid, 0.0 - fully transparent" );
+CVAR_DEFINE_AUTO( sv_background_freeze, "1", FCVAR_ARCHIVE, "freeze player movement on background maps (e.g. to prevent falling)" );
 CVAR_DEFINE_AUTO( showtriggers, "0", FCVAR_LATCH, "debug cvar shows triggers" );
 CVAR_DEFINE_AUTO( sv_airmove, "1", FCVAR_SERVER, "obsolete, compatibility issues" );
 CVAR_DEFINE_AUTO( sv_version, "", FCVAR_READ_ONLY, "engine version string" );
@@ -847,6 +848,7 @@ void SV_Init( void )
 	Cvar_RegisterVariable (&violence_hgibs);
 	Cvar_RegisterVariable (&mp_logecho);
 	Cvar_RegisterVariable (&mp_logfile);
+	Cvar_RegisterVariable (&sv_background_freeze);
 
 	// when we in developer-mode automatically turn cheats on
 	if( host_developer.value ) Cvar_SetValue( "sv_cheats", 1.0f );

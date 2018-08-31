@@ -610,7 +610,7 @@ static void GL_SetTextureTarget( gl_texture_t *tex, rgbdata_t *pic )
 		tex->target = GL_TEXTURE_2D_ARRAY_EXT;
 	else if( pic->width > 1 && pic->height > 1 && pic->depth > 1 )
 		tex->target = GL_TEXTURE_3D;
-	else if( FBitSet( tex->flags, TF_RECTANGLE ) && pic->width == glState.width && pic->height == glState.height )
+	else if( FBitSet( tex->flags, TF_RECTANGLE ))
 		tex->target = GL_TEXTURE_RECTANGLE_EXT;
 	else tex->target = GL_TEXTURE_2D; // default case
 
@@ -667,7 +667,7 @@ static void GL_SetTextureFormat( gl_texture_t *tex, pixformat_t format, int chan
 			tex->format = GL_DEPTH_COMPONENT32F;
 		else tex->format = GL_DEPTH_COMPONENT24;
 	}
-	else if( FBitSet( tex->flags, TF_ARB_FLOAT ) && GL_Support( GL_ARB_TEXTURE_FLOAT_EXT ))
+	else if( FBitSet( tex->flags, TF_ARB_FLOAT|TF_ARB_16BIT ) && GL_Support( GL_ARB_TEXTURE_FLOAT_EXT ))
 	{
 		if( haveColor && haveAlpha )
 		{
@@ -993,6 +993,11 @@ static void GL_TextureImageRAW( gl_texture_t *tex, GLint side, GLint level, GLin
 
 	if( FBitSet( tex->flags, TF_DEPTHMAP ))
 		inFormat = GL_DEPTH_COMPONENT;
+
+	if( FBitSet( tex->flags, TF_ARB_16BIT ))
+		dataType = GL_HALF_FLOAT_ARB;
+	else if( FBitSet( tex->flags, TF_ARB_FLOAT ))
+		dataType = GL_FLOAT;
 
 	if( tex->target == GL_TEXTURE_1D )
 	{
@@ -1650,13 +1655,19 @@ creates texture from buffer
 */
 int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags )
 {
+	int	datasize = 1;
 	rgbdata_t	r_empty;
+
+	if( FBitSet( flags, TF_ARB_16BIT ))
+		datasize = 2;
+	else if( FBitSet( flags, TF_ARB_FLOAT ))
+		datasize = 4;
 
 	memset( &r_empty, 0, sizeof( r_empty ));
 	r_empty.width = width;
 	r_empty.height = height;
 	r_empty.type = PF_RGBA_32;
-	r_empty.size = r_empty.width * r_empty.height * 4;
+	r_empty.size = r_empty.width * r_empty.height * datasize * 4;
 	r_empty.buffer = (byte *)buffer;
 
 	// clear invalid combinations

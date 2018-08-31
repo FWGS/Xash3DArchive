@@ -38,6 +38,10 @@ void UI_UpdateMenu( float realtime )
 		return;
 	}
 
+	// don't show menu while level is loaded
+	if( GameState->nextstate != STATE_RUNFRAME && !GameState->loadGame )
+		return;
+
 	// menu time (not paused, not clamped)
 	gameui.globals->time = host.realtime;
 	gameui.globals->frametime = host.realframetime;
