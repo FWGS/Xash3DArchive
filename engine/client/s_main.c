@@ -275,6 +275,28 @@ void SND_ChannelTraceReset( void )
 
 /*
 =================
+SND_FStreamIsPlaying
+
+Select a channel from the dynamic channel allocation area.  For the given entity, 
+override any other sound playing on the same channel (see code comments below for
+exceptions).
+=================
+*/
+qboolean SND_FStreamIsPlaying( sfx_t *sfx )
+{
+	int	ch_idx;
+
+	for( ch_idx = NUM_AMBIENTS; ch_idx < MAX_DYNAMIC_CHANNELS; ch_idx++ )
+	{
+		if( channels[ch_idx].sfx == sfx )
+			return true;
+	}
+
+	return false;
+}
+
+/*
+=================
 SND_PickDynamicChannel
 
 Select a channel from the dynamic channel allocation area.  For the given entity, 
@@ -293,6 +315,13 @@ channel_t *SND_PickDynamicChannel( int entnum, int channel, sfx_t *sfx, qboolean
 	first_to_die = -1;
 	life_left = 0x7fffffff;
 	if( ignore ) *ignore = false;
+
+	if( channel == CHAN_STREAM && SND_FStreamIsPlaying( sfx ))
+	{
+		if( ignore )
+			*ignore = true;
+		return NULL;
+	}
 
 	for( ch_idx = NUM_AMBIENTS; ch_idx < MAX_DYNAMIC_CHANNELS; ch_idx++ )
 	{
@@ -898,6 +927,9 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 	}
 
 	if( !pos ) pos = RI.vieworg;
+
+	if( chan == CHAN_STREAM )
+		SetBits( flags, SND_STOP_LOOPING );
 
 	// pick a channel to play on
 	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( pos, sfx );
@@ -1958,7 +1990,7 @@ void SND_UpdateSound( void )
 	S_SpatializeRawChannels();
 
 	// debugging output
-	if( s_show->value )
+	if( CVAR_TO_BOOL( s_show ))
 	{
 		info.color[0] = 1.0f;
 		info.color[1] = 0.6f;

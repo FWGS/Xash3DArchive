@@ -437,6 +437,9 @@ colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot, vec3_t 
 				light.g = Q_min(( cv.g >> 7 ), 255 );
 				light.b = Q_min(( cv.b >> 7 ), 255 );
 				last_fraction = g_trace_fraction;
+
+				if(( light.r + light.g + light.b ) != 0 )
+					break; // we get light now
 			}
 		}
 	}

@@ -2731,7 +2731,7 @@ pfnServerCmdUnreliable
 */
 int pfnServerCmdUnreliable( char *szCmdString )
 {
-	if( !szCmdString || !szCmdString[0] )
+	if( !COM_CheckString( szCmdString ))
 		return 0;
 
 	MSG_BeginClientCmd( &cls.datagram, clc_stringcmd );

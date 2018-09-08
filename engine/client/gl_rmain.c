@@ -673,15 +673,6 @@ static void R_CheckFog( void )
 		return;
 	}
 
-#ifdef HACKS_RELATED_HLMODS
-	// special condition for Spirit 1.9 that used direct calls of glFog-functions
-	if(( !RI.fogEnabled && !RI.fogCustom ) && pglIsEnabled( GL_FOG ) && VectorIsNull( RI.fogColor ))
-	{
-		// fill the fog color from GL-state machine
-		pglGetFloatv( GL_FOG_COLOR, RI.fogColor );
-		RI.fogSkybox = true;
-	}
-#endif
 	RI.fogEnabled = false;
 
 	if( RI.onlyClientDraw || cl.local.waterlevel < 3 || !RI.drawWorld || !RI.viewleaf )
@@ -749,6 +740,26 @@ static void R_CheckFog( void )
 		RI.fogEnabled = true;
 		RI.fogSkybox = true;
 	}
+}
+
+/*
+=============
+R_CheckGLFog
+
+special condition for Spirit 1.9
+that used direct calls of glFog-functions
+=============
+*/
+static void R_CheckGLFog( void )
+{
+#ifdef HACKS_RELATED_HLMODS
+	if(( !RI.fogEnabled && !RI.fogCustom ) && pglIsEnabled( GL_FOG ) && VectorIsNull( RI.fogColor ))
+	{
+		// fill the fog color from GL-state machine
+		pglGetFloatv( GL_FOG_COLOR, RI.fogColor );
+		RI.fogSkybox = true;
+	}
+#endif
 }
 
 /*
@@ -937,7 +948,8 @@ void R_RenderScene( void )
 
 	R_MarkLeaves();
 	R_DrawFog ();
-	
+
+	R_CheckGLFog();	
 	R_DrawWorld();
 	R_CheckFog();
 
@@ -1085,17 +1097,8 @@ void R_RenderFrame( const ref_viewpass_t *rvp )
 	if( glConfig.max_multisamples > 1 && FBitSet( gl_msaa->flags, FCVAR_CHANGED ))
 	{
 		if( CVAR_TO_BOOL( gl_msaa ))
-		{
 			pglEnable( GL_MULTISAMPLE_ARB );
-			if( gl_msaa->value > 1.0f )
-				pglEnable( GL_SAMPLE_ALPHA_TO_COVERAGE_ARB );
-			else pglDisable( GL_SAMPLE_ALPHA_TO_COVERAGE_ARB );
-		}
-		else
-		{
-			pglDisable( GL_SAMPLE_ALPHA_TO_COVERAGE_ARB );
-			pglDisable( GL_MULTISAMPLE_ARB );
-		}
+		else pglDisable( GL_MULTISAMPLE_ARB );
 		ClearBits( gl_msaa->flags, FCVAR_CHANGED );
 	}
 

@@ -411,10 +411,10 @@ void SCR_TileClear( void )
 	if( clear.y2 <= clear.y1 )
 		return; // nothing disturbed
 
-	top = RI.viewport[1];
-	bottom = top + RI.viewport[3] - 1;
-	left = RI.viewport[0];
-	right = left + RI.viewport[2] - 1;
+	top = clgame.viewport[1];
+	bottom = top + clgame.viewport[3] - 1;
+	left = clgame.viewport[0];
+	right = left + clgame.viewport[2] - 1;
 
 	if( clear.y1 < top )
 	{	

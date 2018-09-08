@@ -438,7 +438,7 @@ static void R_DrawSegs( vec3_t source, vec3_t delta, float width, float scale, f
 	}
 	else
 	{
-		scale *= length;
+		scale *= length * 2.0;
 	}
 
 	// Iterator to resample noise waveform (it needs to be generated in powers of 2)
@@ -467,20 +467,6 @@ static void R_DrawSegs( vec3_t source, vec3_t delta, float width, float scale, f
 		Assert( noiseIndex < ( NOISE_DIVISIONS << 16 ));
 
 		fraction = i * div;
-
-		if( FBitSet( flags, FBEAM_SHADEIN ) && FBitSet( flags, FBEAM_SHADEOUT ))
-		{
-			if( fraction < 0.5f ) brightness = 2.0f * fraction;
-			else brightness = 2.0f * ( 1.0f - fraction );
-		}
-		else if( FBitSet( flags, FBEAM_SHADEIN ))
-		{
-			brightness = fraction;
-		}
-		else if( FBitSet( flags, FBEAM_SHADEOUT ))
-		{
-			brightness = 1.0f - fraction;
-		}
 
 		VectorMA( source, fraction, delta, nextSeg.pos );
 
@@ -548,6 +534,20 @@ static void R_DrawSegs( vec3_t source, vec3_t delta, float width, float scale, f
 
 		curSeg = nextSeg;
 		segs_drawn++;
+
+		if( FBitSet( flags, FBEAM_SHADEIN ) && FBitSet( flags, FBEAM_SHADEOUT ))
+		{
+			if( fraction < 0.5f ) brightness = fraction;
+			else brightness = ( 1.0f - fraction );
+		}
+		else if( FBitSet( flags, FBEAM_SHADEIN ))
+		{
+			brightness = fraction;
+		}
+		else if( FBitSet( flags, FBEAM_SHADEOUT ))
+		{
+			brightness = 1.0f - fraction;
+		}
 
  		if( segs_drawn == total_segs )
 		{

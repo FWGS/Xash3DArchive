@@ -131,6 +131,7 @@ int PlaneTypeForNormal( const vec3_t normal );
 int NearestPOW( int value, qboolean roundDown );
 void SinCos( float radians, float *sine, float *cosine );
 float VectorNormalizeLength2( const vec3_t v, vec3_t out );
+qboolean VectorCompareEpsilon( const vec3_t vec1, const vec3_t vec2, vec_t epsilon );
 void VectorVectors( const vec3_t forward, vec3_t right, vec3_t up );
 void VectorAngles( const float *forward, float *angles );
 void AngleVectors( const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up );

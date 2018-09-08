@@ -1344,7 +1344,7 @@ void CL_PredictMovement( qboolean repredicting )
 			cl.local.onground = frame->playerstate[cl.playernum].onground;
 		else cl.local.onground = -1;
 
-		if( !repredicting || !cl_lw->value )
+		if( !repredicting || !CVAR_TO_BOOL( cl_lw ))
 			cl.local.viewmodel = to->client.viewmodel;
 		cl.local.repredicting = false;
 		cl.local.moving = false;
@@ -1374,7 +1374,7 @@ void CL_PredictMovement( qboolean repredicting )
 
 	cl.local.waterlevel = to->client.waterlevel;
 	cl.local.usehull = to->playerstate.usehull;
-	if( !repredicting || !cl_lw->value )
+	if( !repredicting || !CVAR_TO_BOOL( cl_lw ))
 		cl.local.viewmodel = to->client.viewmodel;
 
 	if( FBitSet( to->client.flags, FL_ONGROUND ))

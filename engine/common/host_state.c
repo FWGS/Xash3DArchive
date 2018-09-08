@@ -25,6 +25,14 @@ static void Host_SetState( host_state_t newState, qboolean clearNext )
 	if( clearNext )
 		GameState->nextstate = newState;
 	GameState->curstate = newState;
+
+	if( clearNext && newState == STATE_RUNFRAME )
+	{
+		// states finished here
+		GameState->backgroundMap = false;
+		GameState->loadGame = false;
+		GameState->newGame = false;
+	}
 }
 
 static void Host_SetNextState( host_state_t nextState )

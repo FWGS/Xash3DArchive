@@ -327,13 +327,14 @@ void CEngineSurface :: drawPrintText( const char *text, int textLen )
 	static bool hasColor = 0;
 	static int numColor = 7;
 
-	if( !text || !staticFont || !staticFontInfo )
+	if( !COM_CheckString( text ) || !staticFont || !staticFontInfo )
 		return;
 
 	int x = _drawTextPos[0] + _translateX;
 	int y = _drawTextPos[1] + _translateY;
 	int tall = staticFont->getTall();
 	int curTextColor[4];
+	int iTotalWidth = 0;
 
 	//  HACKHACK: allow color strings in VGUI
 	if( numColor != 7 && vgui_colorstrings->value )
@@ -379,10 +380,10 @@ void CEngineSurface :: drawPrintText( const char *text, int textLen )
 
 		drawSetTexture( staticFontInfo->bindIndex[staticFontInfo->pageForChar[curCh]] );
 		drawPrintChar( x, y, wide, tall, s0, t0, s1, t1, curTextColor );
-		x += abcA + abcB + abcC;
+		iTotalWidth += abcA + abcB + abcC;
 	}
 
-	_drawTextPos[0] += x;
+	_drawTextPos[0] += iTotalWidth;
 }
 
 void CEngineSurface :: drawSetTextureRGBA( int id, const char* rgba, int wide, int tall )
@@ -406,6 +407,7 @@ void CEngineSurface :: drawTexturedRect( int x0, int y0, int x1, int y1 )
 	vpoint_t rect[2];
 	vpoint_t clippedRect[2];
 
+	// it's not a vertex, just fill rectangle
 	InitVertex( rect[0], x0, y0, 0, 0 );
 	InitVertex( rect[1], x1, y1, 1, 1 );
 

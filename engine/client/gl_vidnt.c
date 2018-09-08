@@ -26,8 +26,7 @@ GNU General Public License for more details.
 #define WINDOW_STYLE		(WS_OVERLAPPED|WS_BORDER|WS_SYSMENU|WS_CAPTION|WS_VISIBLE)
 #define WINDOW_EX_STYLE		(0)
 #define WINDOW_NAME			"Xash3D Window" // Half-Life
-#define FCONTEXT_CORE_PROFILE		BIT( 0 )
-#define FCONTEXT_DEBUG_ARB		BIT( 1 )
+#define FCONTEXT_DEBUG_ARB		BIT( 0 )
 
 convar_t	*gl_extensions;
 convar_t	*gl_texture_anisotropy;
@@ -535,9 +534,6 @@ static void GL_SetDefaultState( void )
 	if( Sys_CheckParm( "-gldebug" ))
 		SetBits( context_flags, FCONTEXT_DEBUG_ARB );
 
-	if( Sys_CheckParm( "-glcore" ))
-		SetBits( context_flags, FCONTEXT_CORE_PROFILE );
-
 	// init draw stack
 	tr.draw_list = &tr.draw_stack[0];
 	tr.draw_stack_pos = 0;
@@ -593,9 +589,7 @@ qboolean GL_CreateContext( void )
 
 	pwglCreateContextAttribsARB = GL_GetProcAddress( "wglCreateContextAttribsARB" );
 
-	if( FBitSet( context_flags, FCONTEXT_CORE_PROFILE ))
-		profile_mask = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
-	else profile_mask = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
+	profile_mask = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
 
 	if( FBitSet( context_flags, FCONTEXT_DEBUG_ARB ))
 		arb_flags = WGL_CONTEXT_DEBUG_BIT_ARB;
@@ -1585,7 +1579,7 @@ void GL_InitCommands( void )
 	r_speeds = Cvar_Get( "r_speeds", "0", FCVAR_ARCHIVE, "shows renderer speeds" );
 	r_fullbright = Cvar_Get( "r_fullbright", "0", FCVAR_CHEAT, "disable lightmaps, get fullbright for entities" );
 	r_norefresh = Cvar_Get( "r_norefresh", "0", 0, "disable 3D rendering (use with caution)" );
-	r_lighting_extended = Cvar_Get( "r_lighting_extended", "1", FCVAR_ARCHIVE, "allow to get lighting from world and bmodels" );
+	r_lighting_extended = Cvar_Get( "r_lighting_extended", "0", FCVAR_ARCHIVE, "allow to get lighting from bmodels too" );
 	r_lighting_modulate = Cvar_Get( "r_lighting_modulate", "0.6", FCVAR_ARCHIVE, "lightstyles modulate scale" );
 	r_lighting_ambient = Cvar_Get( "r_lighting_ambient", "0.3", FCVAR_ARCHIVE, "map ambient lighting scale" );
 	r_adjust_fov = Cvar_Get( "r_adjust_fov", "1", FCVAR_ARCHIVE, "making FOV adjustment for wide-screens" );

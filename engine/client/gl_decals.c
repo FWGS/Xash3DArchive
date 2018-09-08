@@ -988,7 +988,6 @@ void DrawSurfaceDecals( msurface_t *fa, qboolean single, qboolean reverse )
 		}
 	}
 
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	pglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
 	if( reverse && e->curstate.rendermode == kRenderTransTexture )

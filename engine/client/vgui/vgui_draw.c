@@ -82,7 +82,7 @@ void VGUI_UploadTexture( int id, const char *buffer, int width, int height )
 
 	if( id <= 0 || id >= VGUI_MAX_TEXTURES )
 	{
-		MsgDev( D_ERROR, "VGUI_UploadTexture: bad texture %i. Ignored\n", id );
+		Con_DPrintf( S_ERROR "VGUI_UploadTexture: bad texture %i. Ignored\n", id );
 		return;
 	}
 

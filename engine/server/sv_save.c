@@ -661,7 +661,7 @@ static void SaveClear( SAVERESTOREDATA *pSaveData )
 
 /*
 =============
-SaveInit
+SaveFinish
 
 release global save-restore buffer
 =============

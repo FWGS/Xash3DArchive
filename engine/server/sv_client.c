@@ -2168,6 +2168,10 @@ static void SV_ParseClientMove( sv_client_t *cl, sizebuf_t *msg )
 
 	cl->packet_loss = packet_loss;
 
+	// freeze player for some reasons if loadgame was executed
+	if( GameState->loadGame )
+		return;
+
 	// check for pause or frozen
 	if( sv.paused || !CL_IsInGame() || SV_PlayerIsFrozen( player ))
 	{

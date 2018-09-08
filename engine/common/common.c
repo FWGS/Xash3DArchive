@@ -769,7 +769,7 @@ COM_CheckString
 */
 int COM_CheckString( const char *string )
 {
-	if( !string || (byte)*string <= ' ' )
+	if( !string || !*string )
 		return 0;
 	return 1;
 }

@@ -429,7 +429,7 @@ static void SV_StudioSetupBones( model_t *pModel,	float frame, int sequence, con
 	{
 		// only show warn if sequence that out of range was specified intentionally
 		if( sequence > mod_studiohdr->numseq )
-			MsgDev( D_WARN, "SV_StudioSetupBones: sequence %i/%i out of range for model %s\n", sequence, mod_studiohdr->numseq, mod_studiohdr->name );
+			Con_Reportf( S_WARN "SV_StudioSetupBones: sequence %i/%i out of range for model %s\n", sequence, mod_studiohdr->numseq, pModel->name );
 		sequence = 0;
 	}
 

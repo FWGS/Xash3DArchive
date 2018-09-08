@@ -1989,9 +1989,10 @@ dispatch messages
 */
 void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 {
-	size_t	bufStart, playerbytes;
-	int	cmd, param1, param2;
-	int	old_background;
+	size_t		bufStart, playerbytes;
+	int		cmd, param1, param2;
+	int		old_background;
+	const char	*s;
 
 	cls.starting_count = MSG_GetNumBytesRead( msg );	// updates each frame
 	CL_Parse_Debug( true );			// begin parsing
@@ -2099,7 +2100,10 @@ void CL_ParseServerMessage( sizebuf_t *msg, qboolean normal_message )
 			Con_Printf( "%s", MSG_ReadString( msg ));
 			break;
 		case svc_stufftext:
-			Cbuf_AddText( MSG_ReadString( msg ));
+			s = MSG_ReadString( msg );
+			if( !Q_strnicmp( s, "disconnect", 10 ) && cls.signon != SIGNONS )
+				break; // too early
+			Cbuf_AddText( s );
 			break;
 		case svc_setangle:
 			CL_ParseSetAngle( msg );

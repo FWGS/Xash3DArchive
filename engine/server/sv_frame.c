@@ -1006,6 +1006,12 @@ void SV_InactivateClients( void )
 
 		COM_ClearCustomizationList( &cl->customdata, false );
 		memset( cl->physinfo, 0, MAX_PHYSINFO_STRING );
+
+		// NOTE: many mods sending messages that must be applied on a next level
+		// e.g. CryOfFear sending HideHud and PlayMp3 that affected after map change
+		if( svgame.globals->changelevel )
+			continue;
+
 		MSG_Clear( &cl->netchan.message );
 		MSG_Clear( &cl->datagram );
 	}

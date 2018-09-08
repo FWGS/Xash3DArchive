@@ -106,7 +106,7 @@ void Cbuf_AddText( const char *text )
 
 	if(( cmd_text.cursize + l ) >= cmd_text.maxsize )
 	{
-		MsgDev( D_WARN, "Cbuf_AddText: overflow\n" );
+		Con_Reportf( S_WARN "Cbuf_AddText: overflow\n" );
 	}
 	else
 	{

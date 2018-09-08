@@ -94,7 +94,7 @@ void Host_EndGame( qboolean abort, const char *message, ... )
 	Q_vsnprintf( string, sizeof( string ), message, argptr );
 	va_end( argptr );
 
-	MsgDev( D_INFO, "Host_EndGame: %s\n", string );
+	Con_Printf( "Host_EndGame: %s\n", string );
 
 	SV_Shutdown( "\n" );	
 	CL_Disconnect();
@@ -823,7 +823,7 @@ int EXPORT Host_Main( const char *progname, int bChangeGame, pfnChangeGame func 
 	host_clientloaded = Cvar_Get( "host_clientloaded", "0", FCVAR_READ_ONLY, "inidcates a loaded client.dll" );
 	host_limitlocal = Cvar_Get( "host_limitlocal", "0", 0, "apply cl_cmdrate and rate to loopback connection" );
 	con_gamemaps = Cvar_Get( "con_mapfilter", "1", FCVAR_ARCHIVE, "when true show only maps in game folder" );
-	build = Cvar_Get( "build", va( "%i", Q_buildnum()), FCVAR_READ_ONLY, "returns a current build number" );
+	build = Cvar_Get( "buildnum", va( "%i", Q_buildnum()), FCVAR_READ_ONLY, "returns a current build number" );
 	ver = Cvar_Get( "ver", va( "%i/%s (hw build %i)", PROTOCOL_VERSION, XASH_VERSION, Q_buildnum()), FCVAR_READ_ONLY, "shows an engine version" );
 
 	Mod_Init();
