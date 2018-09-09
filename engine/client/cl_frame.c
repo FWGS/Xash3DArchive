@@ -1066,10 +1066,6 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 		ent->curstate = *state;
 
-		// XASH SPECIFIC
-		if( ent->curstate.rendermode == kRenderNormal && ent->curstate.renderfx == kRenderFxNone )
-			ent->curstate.renderamt = 255.0f;
-
 		if( !ent->model ) continue;
 
 		if( ent->curstate.rendermode == kRenderNormal )
@@ -1166,6 +1162,10 @@ void CL_LinkPacketEntities( frame_t *frame )
 			if( !ent->curstate.rendercolor.r && !ent->curstate.rendercolor.g && !ent->curstate.rendercolor.b )
 				ent->curstate.rendercolor.r = ent->curstate.rendercolor.g = ent->curstate.rendercolor.b = 255;
 		}
+
+		// XASH SPECIFIC
+		if( ent->curstate.rendermode == kRenderNormal && ent->curstate.renderfx == kRenderFxNone )
+			ent->curstate.renderamt = 255.0f;
 
 		if( ent->curstate.aiment != 0 && ent->curstate.movetype != MOVETYPE_COMPOUND )
 			ent->curstate.movetype = MOVETYPE_FOLLOW;

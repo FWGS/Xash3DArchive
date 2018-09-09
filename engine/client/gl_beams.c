@@ -418,8 +418,6 @@ static void R_DrawSegs( vec3_t source, vec3_t delta, float width, float scale, f
 
 	div = 1.0f / (segments - 1);
 	length *= 0.01f;
-
-	// UNDONE: Expose texture length scale factor to control "fuzziness"
 	vStep = length * div;	// Texture length texels per space pixel
 
 	// Scroll speed 3.5 -- initial texture position, scrolls 3.5/sec (1.0 is entire texture)
@@ -432,7 +430,6 @@ static void R_DrawSegs( vec3_t source, vec3_t delta, float width, float scale, f
 			segments = 16;
 			div = 1.0f / ( segments - 1 );
 		}
-
 		scale *= 100.0f;
 		length = segments * 0.1f;
 	}
@@ -442,12 +439,9 @@ static void R_DrawSegs( vec3_t source, vec3_t delta, float width, float scale, f
 	}
 
 	// Iterator to resample noise waveform (it needs to be generated in powers of 2)
-	noiseStep = noiseIndex = (int)((float)( NOISE_DIVISIONS - 1 ) * div * 65536.0f );
-
-	if( FBitSet( flags, FBEAM_SINENOISE ))
-		noiseIndex = 0;
-
+	noiseStep = (int)((float)( NOISE_DIVISIONS - 1 ) * div * 65536.0f );
 	brightness = 1.0f;
+	noiseIndex = 0;
 
 	if( FBitSet( flags, FBEAM_SHADEIN ))
 		brightness = 0;

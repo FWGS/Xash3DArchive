@@ -378,9 +378,10 @@ void CEngineSurface :: drawPrintText( const char *text, int textLen )
 		float t1 = staticFontInfo->texCoord[curCh][3];
 		int wide = abcB;
 
+		iTotalWidth += abcA;
 		drawSetTexture( staticFontInfo->bindIndex[staticFontInfo->pageForChar[curCh]] );
-		drawPrintChar( x, y, wide, tall, s0, t0, s1, t1, curTextColor );
-		iTotalWidth += abcA + abcB + abcC;
+		drawPrintChar( x + iTotalWidth, y, wide, tall, s0, t0, s1, t1, curTextColor );
+		iTotalWidth += wide + abcC;
 	}
 
 	_drawTextPos[0] += iTotalWidth;
