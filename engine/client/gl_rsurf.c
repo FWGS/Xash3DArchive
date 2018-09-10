@@ -273,7 +273,6 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 	medge_t		*pedges, *r_pedge;
 	mextrasurf_t	*info = fa->info;
 	float		sample_size;
-	int		vertpage;
 	texture_t		*tex;
 	gl_texture_t	*glt;
 	float		*vec;
@@ -299,7 +298,6 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 	// reconstruct the polygon
 	pedges = mod->edges;
 	lnumverts = fa->numedges;
-	vertpage = 0;
 
 	// detach if already created, reconstruct again
 	poly = fa->polys;
@@ -341,13 +339,13 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 		s = DotProduct( vec, info->lmvecs[0] ) + info->lmvecs[0][3];
 		s -= info->lightmapmins[0];
 		s += fa->light_s * sample_size;
-		s += sample_size / 2.0;
+		s += sample_size * 0.5f;
 		s /= BLOCK_SIZE * sample_size; //fa->texinfo->texture->width;
 
 		t = DotProduct( vec, info->lmvecs[1] ) + info->lmvecs[1][3];
 		t -= info->lightmapmins[1];
 		t += fa->light_t * sample_size;
-		t += sample_size / 2.0;
+		t += sample_size * 0.5f;
 		t /= BLOCK_SIZE * sample_size; //fa->texinfo->texture->height;
 
 		poly->verts[i][5] = s;
@@ -703,9 +701,9 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 	{
 		for( s = 0; s < smax; s++ )
 		{
-			dest[0] = min((bl[0] >> 7), 255 );
-			dest[1] = min((bl[1] >> 7), 255 );
-			dest[2] = min((bl[2] >> 7), 255 );
+			dest[0] = Q_min((bl[0] >> 7), 255 );
+			dest[1] = Q_min((bl[1] >> 7), 255 );
+			dest[2] = Q_min((bl[2] >> 7), 255 );
 			dest[3] = 255;
 
 			bl += 3;
@@ -824,7 +822,7 @@ void R_BlendLightmaps( void )
 	msurface_t	*surf, *newsurf = NULL;
 	int		i;
 
-	if( r_fullbright->value || !cl.worldmodel->lightdata )
+	if( CVAR_TO_BOOL( r_fullbright ) || !cl.worldmodel->lightdata )
 		return;
 
 	if( RI.currententity )
@@ -845,7 +843,7 @@ void R_BlendLightmaps( void )
 
 	GL_SetupFogColorForSurfaces ();
 
-	if( !r_lightmap->value )
+	if( !CVAR_TO_BOOL( r_lightmap ))
 		pglEnable( GL_BLEND );
 	else pglDisable( GL_BLEND );
 
@@ -872,7 +870,7 @@ void R_BlendLightmaps( void )
 	}
 
 	// render dynamic lightmaps
-	if( r_dynamic->value )
+	if( CVAR_TO_BOOL( r_dynamic ))
 	{
 		LM_InitBlock();
 
@@ -1082,7 +1080,7 @@ void R_RenderBrushPoly( msurface_t *fa, int cull_type )
 		draw_fullbrights = true;
 	}
 
-	if( r_detailtextures->value )
+	if( CVAR_TO_BOOL( r_detailtextures ))
 	{
 		if( pglIsEnabled( GL_FOG ))
 		{
@@ -1125,7 +1123,7 @@ void R_RenderBrushPoly( msurface_t *fa, int cull_type )
 		DrawSurfaceDecals( fa, true, (cull_type == CULL_BACKSIDE));
 	}
 
-	if( fa->flags & SURF_DRAWTILED )
+	if( FBitSet( fa->flags, SURF_DRAWTILED ))
 		return; // no lightmaps anyway
 
 	// check for lightmap modification
@@ -1543,7 +1541,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 	}
 
 	// sort faces if needs
-	if( !FBitSet( clmodel->flags, MODEL_LIQUID ) && e->curstate.rendermode == kRenderTransTexture && !gl_nosort->value )
+	if( !FBitSet( clmodel->flags, MODEL_LIQUID ) && e->curstate.rendermode == kRenderTransTexture && !CVAR_TO_BOOL( gl_nosort ))
 		qsort( world.draw_surfaces, num_sorted, sizeof( sortedface_t ), R_SurfaceCompare );
 
 	// draw sorted translucent surfaces

@@ -266,16 +266,27 @@ const char *Key_GetBinding( int keynum )
 Key_GetKey
 ===================
 */
-int Key_GetKey( const char *binding )
+int Key_GetKey( const char *pBinding )
 {
 	int	i;
 
-	if( !binding ) return -1;
+	if( !pBinding ) return -1;
 
 	for( i = 0; i < 256; i++ )
 	{
-		if( keys[i].binding && !Q_stricmp( binding, keys[i].binding ))
-			return i;
+		if( !keys[i].binding )
+			continue;
+
+		if( *keys[i].binding == '+' )
+                    {
+			if( !Q_strnicmp( keys[i].binding + 1, pBinding, Q_strlen( pBinding )))
+				return i;
+		}
+		else
+		{
+			if( !Q_strnicmp( keys[i].binding, pBinding, Q_strlen( pBinding )))
+				return i;
+		}
 	}
 
 	return -1;

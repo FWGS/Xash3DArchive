@@ -179,7 +179,7 @@ void CL_UpdateStudioTexture( mstudiotexture_t *ptexture, int topcolor, int botto
 	pic = FS_LoadImage( glt->name, raw, size );
 	if( !pic )
 	{
-		MsgDev( D_ERROR, "Couldn't update texture %s\n", glt->name );
+		Con_DPrintf( S_ERROR "Couldn't update texture %s\n", glt->name );
 		return;
 	}
 

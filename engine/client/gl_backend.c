@@ -185,7 +185,7 @@ void GL_SelectTexture( GLint tmu )
 
 	if( tmu >= GL_MaxTextureUnits( ))
 	{
-		MsgDev( D_ERROR, "GL_SelectTexture: bad tmu state %i\n", tmu );
+		Con_Reportf( S_ERROR "GL_SelectTexture: bad tmu state %i\n", tmu );
 		return; 
 	}
 
@@ -278,7 +278,7 @@ void GL_TextureTarget( uint target )
 {
 	if( glState.activeTMU < 0 || glState.activeTMU >= GL_MaxTextureUnits( ))
 	{
-		MsgDev( D_ERROR, "GL_TextureTarget: bad tmu state %i\n", glState.activeTMU );
+		Con_Reportf( S_ERROR "GL_TextureTarget: bad tmu state %i\n", glState.activeTMU );
 		return; 
 	}
 

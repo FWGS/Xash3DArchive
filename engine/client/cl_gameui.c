@@ -159,7 +159,7 @@ static void UI_DrawLogo( const char *filename, float x, float y, float width, fl
 
 		if( FS_FileExists( path, false ) && !fullpath )
 		{
-			MsgDev( D_ERROR, "Couldn't load %s from packfile. Please extract it\n", path );
+			Con_Printf( S_ERROR "Couldn't load %s from packfile. Please extract it\n", path );
 			gameui.drawLogo = false;
 			return;
 		}
@@ -378,7 +378,7 @@ static HIMAGE pfnPIC_Load( const char *szPicName, const byte *image_buf, long im
 
 	if( !szPicName || !*szPicName )
 	{
-		MsgDev( D_ERROR, "CL_LoadImage: bad name!\n" );
+		Con_Reportf( S_ERROR "CL_LoadImage: bad name!\n" );
 		return 0;
 	}
 
@@ -1039,7 +1039,7 @@ qboolean UI_LoadProgs( void )
 	if(( GetMenuAPI = (MENUAPI)COM_GetProcAddress( gameui.hInstance, "GetMenuAPI" )) == NULL )
 	{
 		COM_FreeLibrary( gameui.hInstance );
-		MsgDev( D_NOTE, "UI_LoadProgs: can't init menu API\n" );
+		Con_Reportf( "UI_LoadProgs: can't init menu API\n" );
 		gameui.hInstance = NULL;
 		return false;
 	}
@@ -1052,7 +1052,7 @@ qboolean UI_LoadProgs( void )
 	if( !GetMenuAPI( &gameui.dllFuncs, &gpEngfuncs, gameui.globals ))
 	{
 		COM_FreeLibrary( gameui.hInstance );
-		MsgDev( D_NOTE, "UI_LoadProgs: can't init menu API\n" );
+		Con_Reportf( "UI_LoadProgs: can't init menu API\n" );
 		Mem_FreePool( &gameui.mempool );
 		gameui.hInstance = NULL;
 		return false;

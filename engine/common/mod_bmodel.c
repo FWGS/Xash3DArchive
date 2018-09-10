@@ -2171,7 +2171,7 @@ static void Mod_LoadSurfaces( dbspmodel_t *bmod )
 
 			if(( in->firstedge + in->numedges ) > loadmodel->numsurfedges )
 			{
-				MsgDev( D_ERROR, "bad surface %i from %i\n", i, bmod->numsurfaces );
+				Con_Reportf( S_ERROR "bad surface %i from %i\n", i, bmod->numsurfaces );
 				continue;
 			}
 
@@ -2189,15 +2189,15 @@ static void Mod_LoadSurfaces( dbspmodel_t *bmod )
 		tex = out->texinfo->texture;
 
 		if( !Q_strncmp( tex->name, "sky", 3 ))
-			SetBits( out->flags, SURF_DRAWTILED|SURF_DRAWSKY );
+			SetBits( out->flags, SURF_DRAWSKY );
 
 		if(( tex->name[0] == '*' && Q_stricmp( tex->name, "*default" )) || tex->name[0] == '!' )
-			SetBits( out->flags, SURF_DRAWTURB|SURF_DRAWTILED );
+			SetBits( out->flags, SURF_DRAWTURB );
 
 		if( !CL_IsQuakeCompatible( ))
 		{
 			if( !Q_strncmp( tex->name, "water", 5 ) || !Q_strnicmp( tex->name, "laser", 5 ))
-				SetBits( out->flags, SURF_DRAWTURB|SURF_DRAWTILED );
+				SetBits( out->flags, SURF_DRAWTURB );
 		}
 
 		if( !Q_strncmp( tex->name, "scroll", 6 ))
@@ -2259,10 +2259,10 @@ static void Mod_LoadSurfaces( dbspmodel_t *bmod )
 		if( samples == 1 || samples == 3 )
 		{
 			bmod->lightmap_samples = (int)samples;
-			MsgDev( D_REPORT, "lighting: %s\n", (bmod->lightmap_samples == 1) ? "monochrome" : "colored" );
+			Con_Reportf( "lighting: %s\n", (bmod->lightmap_samples == 1) ? "monochrome" : "colored" );
 			bmod->lightmap_samples = Q_max( bmod->lightmap_samples, 1 ); // avoid division by zero
 		}
-		else MsgDev( D_WARN, "lighting invalid samplecount: %g, defaulting to %i\n", samples, bmod->lightmap_samples );
+		else Con_DPrintf( S_WARN "lighting invalid samplecount: %g, defaulting to %i\n", samples, bmod->lightmap_samples );
 	}
 }
 

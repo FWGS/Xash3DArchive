@@ -672,7 +672,7 @@ void R_InitSkyClouds( mip_t *mt, texture_t *tx, qboolean custom_palette )
 	// make sure what sky image is valid
 	if( !r_sky || !r_sky->palette || r_sky->type != PF_INDEXED_32 || r_sky->height == 0 )
 	{
-		MsgDev( D_ERROR, "R_InitSky: unable to load sky texture %s\n", tx->name );
+		Con_Reportf( S_ERROR "R_InitSky: unable to load sky texture %s\n", tx->name );
 		if( r_sky ) FS_FreeImage( r_sky );
 		return;
 	}

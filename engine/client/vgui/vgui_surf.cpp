@@ -75,6 +75,7 @@ void CEngineSurface :: SetupPaintState( const PaintStack *paintState )
 	_translateX = paintState->iTranslateX;
 	_translateY = paintState->iTranslateY;
 	SetScissorRect( paintState->iScissorLeft, paintState->iScissorTop, paintState->iScissorRight, paintState->iScissorBottom );
+	currentPanel = paintState->m_pPanel;
 }
 
 void CEngineSurface :: InitVertex( vpoint_t &vertex, int x, int y, float u, float v )
@@ -196,11 +197,7 @@ void CEngineSurface :: drawSetTextFont( Font *font )
 				if( y + tall + 1 > FONT_SIZE )
 				{
 					if( !staticFontInfo->bindIndex[currentPage] )
-					{
-						int bindIndex = createNewTextureID();
-						staticFontInfo->bindIndex[currentPage] = bindIndex;
-					}
-
+						staticFontInfo->bindIndex[currentPage] = createNewTextureID();
 					drawSetTextureRGBA( staticFontInfo->bindIndex[currentPage], staticRGBA, FONT_SIZE, FONT_SIZE );
 					currentPage++;
 
@@ -223,11 +220,7 @@ void CEngineSurface :: drawSetTextFont( Font *font )
 			if( currentPage != FONT_PAGES )
 			{
 				if( !staticFontInfo->bindIndex[currentPage] )
-				{
-					int bindIndex = createNewTextureID();
-					staticFontInfo->bindIndex[currentPage] = bindIndex;
-				}
-
+					staticFontInfo->bindIndex[currentPage] = createNewTextureID();
 				drawSetTextureRGBA( staticFontInfo->bindIndex[currentPage], staticRGBA, FONT_SIZE, FONT_SIZE );
 			}
 			staticFontInfo->pageCount = currentPage + 1;

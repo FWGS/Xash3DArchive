@@ -266,7 +266,7 @@ static qboolean R_BeamComputePoint( int beamEnt, vec3_t pt )
 
 	if( !ent )
 	{
-		MsgDev( D_ERROR, "R_BeamComputePoint: invalid entity %i\n", BEAMENT_ENTITY( beamEnt ));
+		Con_DPrintf( S_ERROR "R_BeamComputePoint: invalid entity %i\n", BEAMENT_ENTITY( beamEnt ));
 		VectorClear( pt );
 		return false;
 	}
@@ -1371,7 +1371,7 @@ void CL_AddCustomBeam( cl_entity_t *pEnvBeam )
 {
 	if( tr.draw_list->num_beam_entities >= MAX_VISIBLE_PACKET )
 	{
-		MsgDev( D_ERROR, "Too many custom beams %d!\n", tr.draw_list->num_beam_entities );
+		Con_Printf( S_ERROR "Too many beams %d!\n", tr.draw_list->num_beam_entities );
 		return;
 	}
 
@@ -1865,7 +1865,6 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		R_BeamEnts( startEnt, endEnt, modelIndex, life, width, noise, a, speed, startFrame, frameRate, r, g, b );
 		break;
 	case TE_BEAM:
-		MsgDev( D_ERROR, "TE_BEAM is obsolete\n" );
 		break;
 	case TE_BEAMSPRITE:
 		start[0] = MSG_ReadCoord( msg );
@@ -1928,7 +1927,6 @@ void CL_ParseViewBeam( sizebuf_t *msg, int beamType )
 		R_BeamRing( startEnt, endEnt, modelIndex, life, width, noise, a, speed, startFrame, frameRate, r, g, b );
 		break;
 	case TE_BEAMHOSE:
-		MsgDev( D_ERROR, "TE_BEAMHOSE is obsolete\n" );
 		break;
 	case TE_KILLBEAM:
 		startEnt = MSG_ReadShort( msg );

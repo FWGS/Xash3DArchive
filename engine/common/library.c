@@ -187,7 +187,7 @@ static void PerformBaseRelocation( MEMORYMODULE *module, DWORD delta )
 					*patchAddrHL += delta;
 					break;
 				default:
-					MsgDev( D_ERROR, "PerformBaseRelocation: unknown relocation: %d\n", type );
+					Con_Reportf( S_ERROR "PerformBaseRelocation: unknown relocation: %d\n", type );
 					break;
 				}
 			}
@@ -272,7 +272,7 @@ static int BuildImportTable( MEMORYMODULE *module )
 
 			if( handle == NULL )
 			{
-				MsgDev( D_ERROR, "couldn't load library %s\n", libname );
+				Con_Printf( S_ERROR "couldn't load library %s\n", libname );
 				result = 0;
 				break;
 			}
@@ -470,7 +470,7 @@ library_error:
 	// cleanup
 	if( data ) Mem_Free( data );
 	MemoryFreeLibrary( result );
-	MsgDev( D_ERROR, "LoadLibrary: %s\n", errorstring );
+	Con_Printf( S_ERROR "LoadLibrary: %s\n", errorstring );
 
 	return NULL;
 }
@@ -829,10 +829,10 @@ void COM_FreeLibrary( void *hInstance )
 	if( host.status == HOST_CRASHED )
 	{
 		// we need to hold down all modules, while MSVC can find error
-		MsgDev( D_NOTE, "Sys_FreeLibrary: hold %s for debugging\n", hInst->dllName );
+		Con_Reportf( "Sys_FreeLibrary: hold %s for debugging\n", hInst->dllName );
 		return;
 	}
-	else MsgDev( D_NOTE, "Sys_FreeLibrary: Unloading %s\n", hInst->dllName );
+	else Con_Reportf( "Sys_FreeLibrary: Unloading %s\n", hInst->dllName );
 	
 	if( hInst->custom_loader )
 		MemoryFreeLibrary( hInst->hInstance );

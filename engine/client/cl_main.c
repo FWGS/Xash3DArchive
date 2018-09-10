@@ -265,7 +265,7 @@ static float CL_LerpPoint( void )
 		f = 0.1f;
 	}
 #if 1
-	frac = (cl.time - cl.mtime[0]) / f;
+	frac = (cl.time - cl.mtime[1]) / f;
 
 	if( frac < 0.0f )
 	{
@@ -288,7 +288,7 @@ static float CL_LerpPoint( void )
 	else if( f > 0.001f )
 	{
 		// automatic lerp (classic mode)
-		frac = ( cl.time - cl.mtime[0] ) / f;
+		frac = ( cl.time - cl.mtime[1] ) / f;
 	}
 #endif
 	return frac;

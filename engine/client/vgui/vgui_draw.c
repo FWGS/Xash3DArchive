@@ -50,7 +50,7 @@ void VGUI_DrawShutdown( void )
 
 	for( i = 1; i < g_textureId; i++ )
 	{
-		GL_FreeImage( va( "*vgui%i", i ));
+		GL_FreeTexture( g_textures[i] );
 	}
 }
 

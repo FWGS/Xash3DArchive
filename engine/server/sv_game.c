@@ -4585,7 +4585,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 
 			COM_ParseVector( &pstart, origin, 3 );
 			Mem_Free( pkvd[i].szValue );	// release old value, so we don't need these
-			copystring( va( "%g %g %g", origin[0], origin[1], origin[2] - 16.0f ));
+			pkvd[i].szValue = copystring( va( "%g %g %g", origin[0], origin[1], origin[2] - 16.0f ));
 		}
 #endif
 		if( !Q_strcmp( pkvd[i].szKeyName, "light" ))

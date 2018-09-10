@@ -635,7 +635,7 @@ void CL_DeltaEntity( sizebuf_t *msg, frame_t *frame, int newnum, entity_state_t 
 
 	if(( newnum < 0 ) || ( newnum >= clgame.maxEntities ))
 	{
-		MsgDev( D_ERROR, "CL_DeltaEntity: invalid newnum: %d\n", newnum );
+		Con_DPrintf( S_ERROR "CL_DeltaEntity: invalid newnum: %d\n", newnum );
 		if( has_update )
 			MSG_ReadDeltaEntity( msg, old, state, newnum, delta_type, cl.mtime[0] );
 		return;
@@ -734,7 +734,6 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 
 		if(( cls.next_client_entities - oldframe->first_entity ) > ( cls.num_client_entities - NUM_PACKET_ENTITIES ))
 		{
-			MsgDev( D_NOTE, "CL_ParsePacketEntities: delta frame is too old (flush)\n");
 			Con_NPrintf( 2, "^3Warning:^1 delta frame is too old^7\n" );
 			CL_FlushEntityPacket( msg );
 			return playerbytes;
@@ -847,7 +846,7 @@ int CL_ParsePacketEntities( sizebuf_t *msg, qboolean delta )
 	}
 
 	if( newframe->num_entities != count && newframe->num_entities != 0 )
-		MsgDev( D_WARN, "CL_Parse%sPacketEntities: (%i should be %i)\n", delta ? "Delta" : "", newframe->num_entities, count );
+		Con_Reportf( S_WARN "CL_Parse%sPacketEntities: (%i should be %i)\n", delta ? "Delta" : "", newframe->num_entities, count );
 
 	if( !newframe->valid )
 		return playerbytes; // frame is not valid but message was parsed
@@ -943,7 +942,7 @@ void CL_LinkCustomEntity( cl_entity_t *ent, entity_state_t *state )
 	ent->curstate.movetype = state->modelindex; // !!!
 
 	if( ent->model->type != mod_sprite )
-		MsgDev( D_WARN, "bad model on beam ( %s )\n", ent->model->name );
+		Con_Reportf( S_WARN "bad model on beam ( %s )\n", ent->model->name );
 
 	ent->latched.prevsequence = ent->curstate.sequence;
 	VectorCopy( ent->origin, ent->latched.prevorigin );
@@ -1060,7 +1059,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 		if( !ent )
 		{
-			MsgDev( D_ERROR, "CL_LinkPacketEntity: bad entity %i\n", state->number );
+			Con_Reportf( S_ERROR "CL_LinkPacketEntity: bad entity %i\n", state->number );
 			continue;
 		}
 
