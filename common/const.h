@@ -123,6 +123,7 @@
 
 // entity flags
 #define EFLAG_SLERP			1	// do studio interpolation of this entity
+#define EFLAG_DOINTERP		128	// interpolation is ready
 		
 //
 // temp entity events

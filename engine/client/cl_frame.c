@@ -407,11 +407,8 @@ int CL_InterpolateModel( cl_entity_t *e )
 	VectorCopy( e->curstate.origin, e->origin );
 	VectorCopy( e->curstate.angles, e->angles );
 
-	if( cls.timedemo || !e->model )
+	if( cls.timedemo || !e->model || cl.maxclients <= 1 )
 		return 1;
-
-	if( fabs( cl_serverframetime() - cl_clientframetime()) < 0.0001f )
-		return 1;	// interpolation disabled
 
 	if( e->model->type == mod_brush && !cl_bmodelinterp->value )
 		return 1;
@@ -419,7 +416,6 @@ int CL_InterpolateModel( cl_entity_t *e )
 	if( cl.local.moving && cl.local.onground == e->index )
 		return 1;
 
-//	t = cl.time - cl_serverframetime();
 	t = cl.time - cl_interp->value;
 	CL_FindInterpolationUpdates( e, t, &ph0, &ph1 );
 
@@ -1091,7 +1087,9 @@ void CL_LinkPacketEntities( frame_t *frame )
 #ifdef STUDIO_INTERPOLATION_FIX
 					if( ent->lastmove >= cl.time )
 						VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
-					ent->curstate.movetype = MOVETYPE_STEP;
+					if( FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP ))
+						SetBits( ent->curstate.eflags, EFLAG_DOINTERP );
+					else ent->curstate.movetype = MOVETYPE_STEP;
 #else
 					if( ent->lastmove >= cl.time )
 					{
@@ -1144,7 +1142,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 			if( ent->model->type == mod_studio )
 			{
-				if( ent->curstate.movetype == MOVETYPE_STEP && FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
+				if( FBitSet( ent->curstate.eflags, EFLAG_DOINTERP ) && FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
 					R_StudioLerpMovement( ent, cl.time, ent->origin, ent->angles );
 			}
 		}
