@@ -270,8 +270,8 @@ void CL_ProcessEntityUpdate( cl_entity_t *ent )
 	ent->model = CL_ModelHandle( ent->curstate.modelindex );
 	ent->index = ent->curstate.number;
 
-	// g-cont. make sure what it's no broke XashXT physics
-	COM_NormalizeAngles( ent->curstate.angles );
+	if( FBitSet( ent->curstate.entityType, ENTITY_NORMAL ))
+		COM_NormalizeAngles( ent->curstate.angles );
 
 	parametric = CL_ParametricMove( ent );
 
@@ -1037,6 +1037,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 	cl_entity_t	*ent;
 	entity_state_t	*state;
 	qboolean		parametric;
+	qboolean		interpolate;
 	int		i;
 
 	for( i = 0; i < frame->num_entities; i++ )
@@ -1059,7 +1060,8 @@ void CL_LinkPacketEntities( frame_t *frame )
 			continue;
 		}
 
-		ent->curstate = *state;
+//		ent->curstate = *state;
+		interpolate = false;
 
 		if( !ent->model ) continue;
 
@@ -1088,7 +1090,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 					if( ent->lastmove >= cl.time )
 						VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
 					if( FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP ))
-						SetBits( ent->curstate.eflags, EFLAG_DOINTERP );
+						interpolate = true;
 					else ent->curstate.movetype = MOVETYPE_STEP;
 #else
 					if( ent->lastmove >= cl.time )
@@ -1142,7 +1144,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 			if( ent->model->type == mod_studio )
 			{
-				if( FBitSet( ent->curstate.eflags, EFLAG_DOINTERP ) && FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
+				if( interpolate && FBitSet( host.features, ENGINE_COMPUTE_STUDIO_LERP )) 
 					R_StudioLerpMovement( ent, cl.time, ent->origin, ent->angles );
 			}
 		}

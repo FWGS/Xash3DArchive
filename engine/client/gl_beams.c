@@ -1486,7 +1486,7 @@ void CL_DrawBeams( int fTrans )
 	BEAM	*pPrev = NULL;
 	int	i, flags;
 
-	if( !cl_draw_beams->value )
+	if( !CVAR_TO_BOOL( cl_draw_beams ))
 		return;
 
 	pglShadeModel( GL_SMOOTH );
