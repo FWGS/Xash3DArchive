@@ -132,7 +132,7 @@ void RoundUpHullSize( vec3_t size )
 		qboolean	negative = false;
                     float	result, value;
 
-		value = size[i];
+		value = result = size[i];
 		if( value < 0.0f ) negative = true;
 		value = Q_ceil( fabs( value ));
 

@@ -189,6 +189,7 @@ void R_StoreEfrags( efrag_t **ppefrag, int framecount )
 				if( CL_AddVisibleEntity( pent, ET_FRAGMENTED ))
 				{
 					// mark that we've recorded this entity for this frame
+					pent->curstate.messagenum = cl.parsecount;
 					pent->visframe = framecount;
 				}
 			}

@@ -1787,7 +1787,7 @@ static int CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask
 			}
 			else 
 			{
-				Con_DPrintf( "Transferring %s (%d)\n", STRING( pTable->classname ), NUM_FOR_EDICT( pent ));
+				Con_Reportf( "Transferring %s (%d)\n", STRING( pTable->classname ), NUM_FOR_EDICT( pent ));
 
 				if( svgame.dllFuncs.pfnRestore( pent, pSaveData, 0 ) < 0 )
 				{
@@ -1799,7 +1799,7 @@ static int CreateEntityTransitionList( SAVERESTOREDATA *pSaveData, int levelMask
 					{
 						// this can happen during normal processing - PVS is just a guess,
 						// some map areas won't exist in the new map
-						Con_DPrintf( "Suppressing %s\n", STRING( pTable->classname ));
+						Con_Reportf( "Suppressing %s\n", STRING( pTable->classname ));
 						SetBits( pent->v.flags, FL_KILLME );
 					}
 					else
