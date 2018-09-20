@@ -379,7 +379,7 @@ R_LightVec
 check bspmodels to get light from
 =================
 */
-colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot, vec3_t lvec )
+colorVec R_LightVecInternal( const vec3_t start, const vec3_t end, vec3_t lspot, vec3_t lvec )
 {
 	float	last_fraction;
 	int	i, maxEnts = 1;
@@ -447,6 +447,27 @@ colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot, vec3_t 
 	{
 		light.r = light.g = light.b = 255;
 		light.a = 0;
+	}
+
+	return light;
+}
+
+/*
+=================
+R_LightVec
+
+check bspmodels to get light from
+=================
+*/
+colorVec R_LightVec( const vec3_t start, const vec3_t end, vec3_t lspot, vec3_t lvec )
+{
+	colorVec	light = R_LightVecInternal( start, end, lspot, lvec );
+
+	if( CVAR_TO_BOOL( r_lighting_extended ) && lspot != NULL && lvec != NULL )
+	{
+		// trying to get light from ceiling (but ignore gradient analyze)
+		if(( light.r + light.g + light.b ) == 0 )
+			return R_LightVecInternal( end, start, lspot, lvec );
 	}
 
 	return light;

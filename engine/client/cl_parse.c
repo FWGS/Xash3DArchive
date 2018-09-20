@@ -160,7 +160,7 @@ void CL_ParseRestoreSoundPacket( sizebuf_t *msg )
 		char	sentenceName[32];
 
 		if( flags & SND_SEQUENCE )
-			Q_snprintf( sentenceName, sizeof( sentenceName ), "!#%i", sound + MAX_SOUNDS );
+			Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound + MAX_SOUNDS );
 		else Q_snprintf( sentenceName, sizeof( sentenceName ), "!%i", sound );
 
 		handle = S_RegisterSound( sentenceName );

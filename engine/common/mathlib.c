@@ -132,9 +132,10 @@ void RoundUpHullSize( vec3_t size )
 		qboolean	negative = false;
                     float	result, value;
 
-		value = result = size[i];
+		value = size[i];
 		if( value < 0.0f ) negative = true;
 		value = Q_ceil( fabs( value ));
+		result = Q_ceil( size[i] );
 
 		// lookup hull table to find nearest supposed value
 		for( j = 0; j < NUM_HULL_ROUNDS; j++ )

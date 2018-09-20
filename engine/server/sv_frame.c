@@ -138,7 +138,7 @@ static void SV_AddEntitiesToPacket( edict_t *pViewEnt, edict_t *pClient, client_
 			}
 
 			// if we are full, silently discard entities
-			if( ents->num_entities < MAX_VISIBLE_PACKET )
+			if( ents->num_entities < ( MAX_VISIBLE_PACKET - 1 ))
 			{
 				ents->num_entities++;	// entity accepted
 				c_fullsend++;		// debug counter
