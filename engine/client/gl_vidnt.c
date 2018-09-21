@@ -1015,6 +1015,8 @@ void R_SaveVideoMode( int vid_mode )
 	glState.width = vidmode[mode].width;
 	glState.height = vidmode[mode].height;
 	glState.wideScreen = vidmode[mode].wideScreen;
+	Cvar_FullSet( "width", va( "%i", glState.width ), FCVAR_READ_ONLY );
+	Cvar_FullSet( "height", va( "%i", glState.height ), FCVAR_READ_ONLY );
 	Cvar_SetValue( "vid_mode", mode ); // merge if it out of bounds
 
 	MsgDev( D_NOTE, "Set: %s [%dx%d]\n", vidmode[mode].desc, vidmode[mode].width, vidmode[mode].height );

@@ -513,6 +513,9 @@ void SV_PrepWorldFrame( void )
 
 		ClearBits( ent->v.effects, EF_MUZZLEFLASH|EF_NOINTERP );
 	}
+
+	if( svgame.physFuncs.pfnPrepWorldFrame != NULL )
+		svgame.physFuncs.pfnPrepWorldFrame();
 }
 
 /*
