@@ -1294,16 +1294,13 @@ static void R_EnvShot( const float *vieworg, const char *name, int skyshot, int 
 {
 	static vec3_t viewPoint;
 
-	if( !name )
-	{
-		MsgDev( D_ERROR, "R_%sShot: bad name\n", skyshot ? "Sky" : "Env" );
+	if( !COM_CheckString( name ))
 		return; 
-	}
 
 	if( cls.scrshot_action != scrshot_inactive )
 	{
 		if( cls.scrshot_action != scrshot_skyshot && cls.scrshot_action != scrshot_envshot )
-			MsgDev( D_ERROR, "R_%sShot: subsystem is busy, try later.\n", skyshot ? "Sky" : "Env" );
+			Con_Printf( S_ERROR "R_%sShot: subsystem is busy, try for next frame.\n", skyshot ? "Sky" : "Env" );
 		return;
 	}
 
@@ -1544,7 +1541,7 @@ qboolean R_InitRenderAPI( void )
 	{
 		if( clgame.dllFuncs.pfnGetRenderInterface( CL_RENDER_INTERFACE_VERSION, &gRenderAPI, &clgame.drawFuncs ))
 		{
-			MsgDev( D_REPORT, "CL_LoadProgs: ^2initailized extended RenderAPI ^7ver. %i\n", CL_RENDER_INTERFACE_VERSION );
+			Con_Reportf( "CL_LoadProgs: ^2initailized extended RenderAPI ^7ver. %i\n", CL_RENDER_INTERFACE_VERSION );
 			return true;
 		}
 

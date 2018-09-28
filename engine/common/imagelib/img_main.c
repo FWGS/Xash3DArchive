@@ -118,7 +118,6 @@ rgbdata_t *ImagePack( void )
 	if( image.cubemap && image.num_sides != 6 )
 	{
 		// this never be happens, just in case
-		MsgDev( D_NOTE, "ImagePack: inconsistent cubemap pack %d\n", image.num_sides );
 		FS_FreeImage( pack );
 		return NULL;
 	}
@@ -299,8 +298,6 @@ rgbdata_t *FS_LoadImage( const char *filename, const byte *buffer, size_t size )
 				// first side not found, probably it's not cubemap
 				// it contain info about image_type and dimensions, don't generate black cubemaps 
 				if( !image.cubemap ) break;
-				MsgDev( D_ERROR, "FS_LoadImage: couldn't load (%s%s), create black image\n", loadname, cmap->type[i].suf );
-
 				// Mem_Alloc already filled memblock with 0x00, no need to do it again
 				image.cubemap = Mem_Realloc( host.imagepool, image.cubemap, image.ptr + image.size );
 				image.ptr += image.size; // move to next
@@ -336,10 +333,8 @@ load_internal:
 		}
 	}
 
-	if( !image.loadformats || image.loadformats->ext == NULL )
-		MsgDev( D_NOTE, "FS_LoadImage: imagelib offline\n" );
-	else if( filename[0] != '#' )
-		MsgDev( D_WARN, "FS_LoadImage: couldn't load \"%s\"\n", loadname );
+	if( filename[0] != '#' )
+		Con_Reportf( S_WARN "FS_LoadImage: couldn't load \"%s\"\n", loadname );
 
 	// clear any force flags
 	image.force_flags = 0;
@@ -447,13 +442,10 @@ free RGBA buffer
 */
 void FS_FreeImage( rgbdata_t *pack )
 {
-	if( pack )
-	{
-		if( pack->buffer ) Mem_Free( pack->buffer );
-		if( pack->palette ) Mem_Free( pack->palette );
-		Mem_Free( pack );
-	}
-	else MsgDev( D_WARN, "FS_FreeImage: trying to free NULL image\n" );
+	if( !pack ) return;
+	if( pack->buffer ) Mem_Free( pack->buffer );
+	if( pack->palette ) Mem_Free( pack->palette );
+	Mem_Free( pack );
 }
 
 /*

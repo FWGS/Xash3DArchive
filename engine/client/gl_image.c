@@ -72,7 +72,7 @@ void GL_Bind( GLint tmu, GLenum texnum )
 	gl_texture_t	*texture;
 	GLuint		glTarget;
 
-	Assert( texnum > 0 && texnum < MAX_TEXTURES );
+	Assert( texnum >= 0 && texnum < MAX_TEXTURES );
 
 	// missed or invalid texture?
 	if( texnum <= 0 || texnum >= MAX_TEXTURES )
@@ -1064,8 +1064,8 @@ static void GL_CheckTexImageError( gl_texture_t *tex )
 	Assert( tex != NULL );
 
 	// catch possible errors
-	if(( err = pglGetError()) != GL_NO_ERROR )
-		MsgDev( D_ERROR, "GL_UploadTexture: error %x while uploading %s [%s]\n", err, tex->name, GL_TargetToString( tex->target ));
+	if( CVAR_TO_BOOL( gl_check_errors ) && ( err = pglGetError()) != GL_NO_ERROR )
+		Con_Printf( S_OPENGL_ERROR "%s while uploading %s [%s]\n", GL_ErrorString( err ), tex->name, GL_TargetToString( tex->target ));
 }
 
 /*
@@ -1093,7 +1093,7 @@ static qboolean GL_UploadTexture( gl_texture_t *tex, rgbdata_t *pic )
 	// make sure what target is correct
 	if( tex->target == GL_NONE )
 	{
-		MsgDev( D_ERROR, "GL_UploadTexture: %s is not supported by your hardware\n", tex->name );
+		Con_DPrintf( S_ERROR "GL_UploadTexture: %s is not supported by your hardware\n", tex->name );
 		return false;
 	}
 
@@ -1267,6 +1267,7 @@ qboolean GL_CheckTexName( const char *name )
 	if( !COM_CheckString( name ) || !glw_state.initialized )
 		return false;
 
+	// because multi-layered textures can exceed name string
 	if( Q_strlen( name ) >= sizeof( gl_textures->name ))
 	{
 		Con_Printf( S_ERROR "LoadTexture: too long name %s (%d)\n", name, Q_strlen( name ));

@@ -1062,6 +1062,7 @@ void CL_LinkPacketEntities( frame_t *frame )
 
 		// animtime must keep an actual
 		ent->curstate.animtime = state->animtime;
+		ent->curstate.frame = state->frame;
 		interpolate = false;
 
 		if( !ent->model ) continue;

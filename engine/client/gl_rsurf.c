@@ -353,7 +353,7 @@ void GL_BuildPolygonFromSurface( model_t *mod, msurface_t *fa )
 	}
 
 	// remove co-linear points - Ed
-	if( !gl_keeptjunctions->value && !( fa->flags & SURF_UNDERWATER ))
+	if( !CVAR_TO_BOOL( gl_keeptjunctions ) && !FBitSet( fa->flags, SURF_UNDERWATER ))
 	{
 		for( i = 0; i < lnumverts; i++ )
 		{
@@ -437,17 +437,8 @@ texture_t *R_TextureAnimation( msurface_t *s )
 	{
 		base = base->anim_next;
 
-		if( !base )
-		{
-			MsgDev( D_ERROR, "R_TextureAnimation: broken loop\n" );
+		if( !base || ++count > MOD_FRAMES )
 			return s->texinfo->texture;
-		}
-
-		if( ++count > MOD_FRAMES )
-		{
-			MsgDev( D_ERROR, "R_TextureAnimation: infinite loop\n" );
-			return s->texinfo->texture;
-		}
 	}
 
 	return base;
@@ -2178,9 +2169,6 @@ void GL_BuildLightmaps( void )
 	// now gamma and brightness are valid
 	ClearBits( vid_brightness->flags, FCVAR_CHANGED );
 	ClearBits( vid_gamma->flags, FCVAR_CHANGED );
-
-	if( !gl_keeptjunctions->value )
-		MsgDev( D_INFO, "Eliminate %i vertexes\n", nColinElim );
 }
 
 void GL_InitRandomTable( void )

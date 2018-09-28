@@ -419,7 +419,7 @@ channel_t *SND_PickStaticChannel( const vec3_t pos, sfx_t *sfx )
 		// no empty slots, alloc a new static sound channel
 		if( total_channels == MAX_CHANNELS )
 		{
-			MsgDev( D_ERROR, "S_PickStaticChannel: no free channels\n" );
+			Con_DPrintf( S_ERROR "S_PickStaticChannel: no free channels\n" );
 			return NULL;
 		}
 
@@ -920,12 +920,6 @@ void S_StartSound( const vec3_t pos, int ent, int chan, sound_t handle, float fv
 		// and we didn't find it (it's not playing), go ahead and start it up
 	}
 
-	if( pitch == 0 )
-	{
-		MsgDev( D_WARN, "S_StartSound: ( %s ) ignored, called with pitch 0\n", sfx->name );
-		return;
-	}
-
 	if( !pos ) pos = RI.vieworg;
 
 	if( chan == CHAN_STREAM )
@@ -1050,12 +1044,6 @@ void S_RestoreSound( const vec3_t pos, int ent, int chan, sound_t handle, float 
 
 	vol = bound( 0, fvol * 255, 255 );
 	if( pitch <= 1 ) pitch = PITCH_NORM; // Invasion issues
-
-	if( pitch == 0 )
-	{
-		MsgDev( D_WARN, "S_RestoreSound: ( %s ) ignored, called with pitch 0\n", sfx->name );
-		return;
-	}
 
 	// pick a channel to play on
 	if( chan == CHAN_STATIC ) target_chan = SND_PickStaticChannel( pos, sfx );
@@ -1183,12 +1171,6 @@ void S_AmbientSound( const vec3_t pos, int ent, sound_t handle, float fvol, floa
 		if( S_AlterChannel( ent, CHAN_STATIC, sfx, vol, pitch, flags ))
 			return;
 		if( flags & SND_STOP ) return;
-	}
-	
-	if( pitch == 0 )
-	{
-		MsgDev( D_WARN, "S_AmbientSound: ( %s ) ignored, called with pitch 0\n", sfx->name );
-		return;
 	}
 
 	// pick a channel to play on from the static area
@@ -1407,7 +1389,13 @@ void S_UpdateAmbientSounds( void )
 		chan = &channels[ambient_channel];	
 		chan->sfx = S_GetSfxByHandle( ambient_sfx[ambient_channel] );
 
-		if( !chan->sfx ) continue;
+		// ambient is unused
+		if( !chan->sfx )
+		{
+			chan->rightvol = 0;
+			chan->leftvol = 0;
+			continue;
+		}
 
 		vol = s_ambient_level->value * leaf->ambient_sound_level[ambient_channel];
 		if( vol < 0 ) vol = 0;
@@ -2206,7 +2194,7 @@ qboolean S_Init( void )
 {
 	if( Sys_CheckParm( "-nosound" ))
 	{
-		MsgDev( D_INFO, "Audio: Disabled\n" );
+		Con_Printf( "Audio: Disabled\n" );
 		return false;
 	}
 
@@ -2243,7 +2231,7 @@ qboolean S_Init( void )
 
 	if( !SNDDMA_Init( host.hWnd ))
 	{
-		MsgDev( D_INFO, "S_Init: sound system can't be initialized\n" );
+		Con_Printf( "Audio: sound system can't be initialized\n" );
 		return false;
 	}
 
@@ -2258,6 +2246,7 @@ qboolean S_Init( void )
 	SX_Init ();
 	S_InitScaletable ();
 	S_StopAllSounds ( true );
+	S_InitSounds ();
 	VOX_Init ();
 
 	return true;

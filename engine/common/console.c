@@ -973,7 +973,7 @@ void Con_Init( void )
 	Cmd_AddCommand( "contimes", Con_SetTimes_f, "change number of console overlay lines (4-64)" );
 	con.initialized = true;
 
-	MsgDev( D_INFO, "Console initialized.\n" );
+	Con_Printf( "Console initialized.\n" );
 }
 
 /*

@@ -166,7 +166,7 @@ void R_ParseTexFilters( const char *filename )
 			filter.blendFunc = GL_BLEND;
 		else if( !Q_stricmp( token, "add_signed" ) || !Q_stricmp( token, "GL_ADD_SIGNED" ))
 			filter.blendFunc = GL_ADD_SIGNED;
-		else MsgDev( D_WARN, "unknown blendFunc '%s' specified for texture '%s'\n", texname, token );
+		else filter.blendFunc = GL_REPLACE; // defaulting to replace
 
 		// reading flags
 		pfile = COM_ParseFile( pfile, token );
@@ -174,10 +174,7 @@ void R_ParseTexFilters( const char *filename )
 
 		// make sure what factor is not zeroed
 		if( filter.factor == 0.0f )
-		{
-			MsgDev( D_WARN, "texfilter for texture %s has factor 0! Ignored\n", texname );
 			continue;
-		}
 
 		// check if already existed
 		for( i = 0; i < num_texfilters; i++ )
@@ -185,10 +182,7 @@ void R_ParseTexFilters( const char *filename )
 			tf = tex_filters[i];
 
 			if( !Q_stricmp( tf->texname, texname ))
-			{
-				MsgDev( D_WARN, "texture %s has specified multiple filters! Ignored\n", texname );
 				break;
-			}
 		}
 
 		if( i != num_texfilters )

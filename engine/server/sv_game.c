@@ -3431,10 +3431,7 @@ void pfnFadeClientVolume( const edict_t *pEdict, int fadePercent, int fadeOutSec
 	sv_client_t	*cl;
 
 	if(( cl = SV_ClientFromEdict( pEdict, true )) == NULL )
-	{
-		MsgDev( D_ERROR, "SV_FadeClientVolume: client is not spawned!\n" );
 		return;
-	}
 
 	if( FBitSet( cl->flags, FCL_FAKECLIENT ))
 		return;

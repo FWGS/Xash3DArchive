@@ -355,10 +355,7 @@ static void pfnStuckTouch( int hitent, pmtrace_t *tr )
 	}
 
 	if( svgame.pmove->numtouch >= MAX_PHYSENTS )
-	{
-		MsgDev( D_ERROR, "PM_StuckTouch: MAX_TOUCHENTS limit exceeded\n" );
 		return;
-	}
 
 	VectorCopy( svgame.pmove->velocity, tr->deltavelocity );
 	tr->ent = hitent;
@@ -570,7 +567,7 @@ void SV_InitClientMove( void )
 	for( i = 0; i < MAX_MAP_HULLS; i++ )
 	{
 		if( svgame.dllFuncs.pfnGetHullBounds( i, host.player_mins[i], host.player_maxs[i] ))
-			MsgDev( D_NOTE, "SV: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
+			Con_Reportf( "SV: hull%i, player_mins: %g %g %g, player_maxs: %g %g %g\n", i,
 			host.player_mins[i][0], host.player_mins[i][1], host.player_mins[i][2],
 			host.player_maxs[i][0], host.player_maxs[i][1], host.player_maxs[i][2] );
 	}

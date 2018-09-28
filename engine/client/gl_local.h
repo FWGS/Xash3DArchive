@@ -454,6 +454,7 @@ void EmitWaterPolys( msurface_t *warp, qboolean reverse );
 void GL_CheckForErrors_( const char *filename, const int fileline );
 const char *VID_GetModeString( int vid_mode );
 void *GL_GetProcAddress( const char *name );
+const char *GL_ErrorString( int err );
 void GL_UpdateSwapInterval( void );
 qboolean GL_DeleteContext( void );
 qboolean GL_Support( int r_ext );

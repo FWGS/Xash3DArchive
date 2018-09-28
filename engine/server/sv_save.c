@@ -422,7 +422,7 @@ static int IsValidSave( void )
 	}
 
 	// ignore autosave during background
-	if( sv.background )
+	if( sv.background || UI_CreditsActive( ))
 		return 0;
 
 	if( svgame.physFuncs.SV_AllowSaveGame != NULL )
@@ -2009,6 +2009,9 @@ qboolean SV_LoadGame( const char *pPath )
 	int		flags;
 
 	if( host.type == HOST_DEDICATED )
+		return false;
+
+	if( UI_CreditsActive( ))
 		return false;
 
 	if( !COM_CheckString( pPath ))

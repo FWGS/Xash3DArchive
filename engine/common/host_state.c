@@ -46,6 +46,9 @@ void COM_NewGame( char const *pMapName )
 	if( GameState->nextstate != STATE_RUNFRAME )
 		return;
 
+	if( UI_CreditsActive( ))
+		return;
+
 	Q_strncpy( GameState->levelName, pMapName, sizeof( GameState->levelName ));
 	Host_SetNextState( STATE_LOAD_LEVEL );
 
@@ -58,6 +61,9 @@ void COM_NewGame( char const *pMapName )
 void COM_LoadLevel( char const *pMapName, qboolean background )
 {
 	if( GameState->nextstate != STATE_RUNFRAME )
+		return;
+
+	if( UI_CreditsActive( ))
 		return;
 
 	Q_strncpy( GameState->levelName, pMapName, sizeof( GameState->levelName ));
@@ -74,6 +80,9 @@ void COM_LoadGame( char const *pMapName )
 	if( GameState->nextstate != STATE_RUNFRAME )
 		return;
 
+	if( UI_CreditsActive( ))
+		return;
+
 	Q_strncpy( GameState->levelName, pMapName, sizeof( GameState->levelName ));
 	Host_SetNextState( STATE_LOAD_GAME );
 	GameState->backgroundMap = false;
@@ -84,6 +93,9 @@ void COM_LoadGame( char const *pMapName )
 void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName, qboolean background )
 {
 	if( GameState->nextstate != STATE_RUNFRAME )
+		return;
+
+	if( UI_CreditsActive( ))
 		return;
 
 	Q_strncpy( GameState->levelName, pNewLevel, sizeof( GameState->levelName ));

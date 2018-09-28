@@ -1842,7 +1842,6 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 			}
 
 			// if we waiting more than cl_timeout or packet was trashed
-			Msg( "got testpacket, size mismatched %d should be %d\n", MSG_GetMaxBytes( msg ), cls.max_fragment_size );
 			cls.connect_time = MAX_HEARTBEAT;
 			return; // just wait for a next responce
 		}
@@ -1856,7 +1855,7 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 		if( crcValue == crcValue2 )
 		{
 			// packet was sucessfully delivered, adjust the fragment size and get challenge
-			Msg( "CRC %p is matched, get challenge, fragment size %d\n", crcValue, cls.max_fragment_size );
+			Con_DPrintf( "CRC %p is matched, get challenge, fragment size %d\n", crcValue, cls.max_fragment_size );
 			Netchan_OutOfBandPrint( NS_CLIENT, from, "getchallenge\n" );
 			Cvar_SetValue( "cl_dlmax", cls.max_fragment_size );
 			cls.connect_time = host.realtime;
@@ -1873,7 +1872,6 @@ void CL_ConnectionlessPacket( netadr_t from, sizebuf_t *msg )
 				return;
 			}
 
-			Msg( "got testpacket, CRC mismatched %p should be %p, trying next fragment size %d\n", crcValue2, crcValue, cls.max_fragment_size >> 1 );
 			// trying the next size of packet
 			cls.connect_time = MAX_HEARTBEAT;
 		}
