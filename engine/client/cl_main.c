@@ -1623,10 +1623,13 @@ void CL_ParseStatusMessage( netadr_t from, sizebuf_t *msg )
 	CL_FixupColorStringsForInfoString( s, infostring );
 
 	if( !COM_CheckString( Info_ValueForKey( infostring, "gamedir" )))
-		return;	// unsupported proto
+	{
+		Con_Printf( "^1Server^7: %s, Info: %s\n", NET_AdrToString( from ), infostring );
+		return; // unsupported proto
+	}
 
 	// more info about servers
-	Con_Printf( "Server: %s, Game: %s\n", NET_AdrToString( from ), Info_ValueForKey( infostring, "gamedir" ));
+	Con_Printf( "^2Server^7: %s, Game: %s\n", NET_AdrToString( from ), Info_ValueForKey( infostring, "gamedir" ));
 
 	UI_AddServerToList( from, infostring );
 }

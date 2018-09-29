@@ -489,7 +489,7 @@ void Sys_InitLog( void )
 
 		if( !s_wcd.logfile )
 		{
-			Con_Printf( S_ERROR "Sys_InitLog: can't create log file %s\n", s_wcd.log_path );
+			MSGBOX( va( "can't create log file %s\n", s_wcd.log_path ));
 			return;
 		}
 

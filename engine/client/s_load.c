@@ -44,7 +44,7 @@ void S_SoundList_f( void )
 
 	for( i = 0, sfx = s_knownSfx; i < s_numSfx; i++, sfx++ )
 	{
-		if( !sfx->servercount )
+		if( !sfx->name[0] )
 			continue;
 
 		sc = sfx->cache;
@@ -54,7 +54,9 @@ void S_SoundList_f( void )
 
 			if( sc->loopStart >= 0 ) Con_Printf( "L" );
 			else Con_Printf( " " );
-			Con_Printf( " (%2db) %s : sound/%s\n", sc->width * 8, Q_memprint( sc->size ), sfx->name );
+			if( sfx->name[0] == '*' )
+				Con_Printf( " (%2db) %s : %s\n", sc->width * 8, Q_memprint( sc->size ), sfx->name );
+			else Con_Printf( " (%2db) %s : %s%s\n", sc->width * 8, Q_memprint( sc->size ), DEFAULT_SOUNDPATH, sfx->name );
 			totalSfx++;
 		}
 	}

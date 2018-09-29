@@ -294,20 +294,23 @@ static int BuildImportTable( MEMORYMODULE *module )
 
 			for( ; *thunkRef; thunkRef++, funcRef++ )
 			{
+				LPCSTR	funcName;
+
 				if( IMAGE_SNAP_BY_ORDINAL( *thunkRef ))
 				{
-					LPCSTR	funcName = (LPCSTR)IMAGE_ORDINAL( *thunkRef );
+					funcName = (LPCSTR)IMAGE_ORDINAL( *thunkRef );
 					*funcRef = (DWORD)COM_GetProcAddress( handle, funcName );
 				}
 				else
 				{
 					PIMAGE_IMPORT_BY_NAME thunkData = (PIMAGE_IMPORT_BY_NAME)CALCULATE_ADDRESS( codeBase, *thunkRef );
-					LPCSTR	funcName = (LPCSTR)&thunkData->Name;
+					funcName = (LPCSTR)&thunkData->Name;
 					*funcRef = (DWORD)COM_GetProcAddress( handle, funcName );
 				}
 
 				if( *funcRef == 0 )
 				{
+					Con_Printf( S_ERROR "%s unable to find address: %s\n", libname, funcName );
 					result = 0;
 					break;
 				}
@@ -816,7 +819,7 @@ void *COM_GetProcAddress( void *hInstance, const char *name )
 
 	if( hInst->custom_loader )
 		return (void *)MemoryGetProcAddress( hInst->hInstance, name );
-	return (void *)GetProcAddress( hInst->hInstance, GetMSVCName( name ));
+	return (void *)GetProcAddress( hInst->hInstance, name );
 }
 
 void COM_FreeLibrary( void *hInstance )

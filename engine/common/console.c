@@ -468,7 +468,7 @@ void Con_CheckResize( void )
 	int	i, width;
 
 	if( con.curFont && con.curFont->hFontTexture )
-		charWidth = con.curFont->charWidths['M'] - 1;
+		charWidth = con.curFont->charWidths['O'] - 1;
 
 	width = ( glState.width / charWidth ) - 2;
 	if( !glw_state.initialized ) width = (640 / 5);
@@ -1746,6 +1746,7 @@ void Key_Console( int key )
 
 		Con_ClearField( &con.input );
 		con.input.widthInChars = con.linewidth;
+		Con_Bottom();
 
 		if( cls.state == ca_disconnected )
 		{
@@ -1759,6 +1760,7 @@ void Key_Console( int key )
 	if( key == K_TAB )
 	{
 		Con_CompleteCommand( &con.input );
+		Con_Bottom();
 		return;
 	}
 
