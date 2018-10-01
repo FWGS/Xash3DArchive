@@ -1034,6 +1034,7 @@ void Con_FastClose( void );
 // s_main.c
 //
 void S_StreamRawSamples( int samples, int rate, int width, int channels, const byte *data );
+void S_StreamAviSamples( void *Avi, int entnum, float fvol, float attn, float synctime );
 void S_StartBackgroundTrack( const char *intro, const char *loop, long position, qboolean fullpath );
 void S_StopBackgroundTrack( void );
 void S_StreamSetPause( int pause );

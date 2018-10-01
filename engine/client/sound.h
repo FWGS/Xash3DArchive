@@ -81,6 +81,8 @@ extern byte *sndpool;
 #define S_RAW_SOUND_SOUNDTRACK	-1
 #define S_RAW_SAMPLES_PRECISION_BITS	14
 
+#define CIN_FRAMETIME		(1.0f / 30.0f)
+
 typedef struct
 {
 	int			left;
@@ -156,6 +158,8 @@ typedef struct rawchan_s
 	vec3_t			origin;		// only use if fixed_origin is set
 	float			radius;		// radius of this sound effect
 	volatile uint		s_rawend;
+	wavdata_t			sound_info;	// advance play position
+	float			oldtime;		// catch time jumps
 	size_t			max_samples;	// buffer length
 	portable_samplepair_t	rawsamples[1];	// variable sized
 } rawchan_t;

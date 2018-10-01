@@ -183,16 +183,16 @@ typedef struct render_api_s
 	void		(*R_EntityRemoveDecals)( struct model_s *mod ); // remove all the decals from specified entity (BSP only)
 
 	// AVIkit support
-	void		*(*AVI_LoadVideo)( const char *filename );
+	void		*(*AVI_LoadVideo)( const char *filename, qboolean load_audio );
 	int		(*AVI_GetVideoInfo)( void *Avi, long *xres, long *yres, float *duration );
 	long		(*AVI_GetVideoFrameNumber)( void *Avi, float time );
 	byte		*(*AVI_GetVideoFrame)( void *Avi, long frame );
 	void		(*AVI_UploadRawFrame)( int texture, int cols, int rows, int width, int height, const byte *data );
 	void		(*AVI_FreeVideo)( void *Avi );
 	int		(*AVI_IsActive)( void *Avi );
+	void		(*AVI_StreamSound)( void *Avi, int entnum, float fvol, float attn, float synctime );
 	void		(*AVI_Reserved0)( void );	// for potential interface expansion without broken compatibility
 	void		(*AVI_Reserved1)( void );
-	void		(*AVI_Reserved2)( void );
 
 	// glState related calls (must use this instead of normal gl-calls to prevent de-synchornize local states between engine and the client)
 	void		(*GL_Bind)( int tmu, unsigned int texnum );

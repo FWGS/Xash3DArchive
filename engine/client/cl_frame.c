@@ -1321,8 +1321,25 @@ qboolean CL_GetEntitySpatialization( channel_t *ch )
 
 qboolean CL_GetMovieSpatialization( rawchan_t *ch )
 {
-	// UNDONE
-	return false;
+	cl_entity_t	*ent;
+	qboolean		valid_origin;
+
+	valid_origin = VectorIsNull( ch->origin ) ? false : true;          
+	ent = CL_GetEntityByIndex( ch->entnum );
+
+	// entity is not present on the client but has valid origin
+	if( !ent || !ent->index || ent->curstate.messagenum == 0 )
+		return valid_origin;
+
+	// setup origin
+	VectorAverage( ent->curstate.mins, ent->curstate.maxs, ch->origin );
+	VectorAdd( ch->origin, ent->curstate.origin, ch->origin );
+
+	// setup radius
+	if( ent->model != NULL && ent->model->radius ) ch->radius = ent->model->radius;
+	else ch->radius = RadiusFromBounds( ent->curstate.mins, ent->curstate.maxs );
+
+	return true;
 }
 
 void CL_ExtraUpdate( void )
