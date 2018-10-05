@@ -143,7 +143,7 @@ void V_SetRefParams( ref_params_t *fd )
 	fd->demoplayback = cls.demoplayback;
 	fd->hardware = 1; // OpenGL
 
-	if( cl.first_frame )
+	if( cl.first_frame || cl.skip_interp )
 	{
 		cl.first_frame = false;		// now can be unlocked
 		fd->smoothing = true;		// NOTE: currently this used to prevent ugly un-duck effect while level is changed

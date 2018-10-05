@@ -213,7 +213,7 @@ void CL_UpdateAliasTexture( unsigned short *texture, int skinnum, int topcolor, 
 
 	if( *texture == 0 )
 	{
-		Q_snprintf( texname, sizeof( texname ), "%s:remap%i", RI.currentmodel->name, skinnum );
+		Q_snprintf( texname, sizeof( texname ), "%s:remap%i_%i", RI.currentmodel->name, skinnum, RI.currententity->index );
 		skin.width = tx->width;
 		skin.height = tx->height;
 		skin.depth = skin.numMips = 1;

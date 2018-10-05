@@ -16,6 +16,18 @@ VGUI:	- a VGUI implementation code in xash.dll
 Memory:	- a memory manager in xash.dll
 Physic:	- a server physics code in xash.dll
 
+build 4260
+
+Sound: implement system for playing in-game videos with positioned sound (e.g. XashXT, Paranoia2)
+Engine: RenderAPI added new function AVI_StreamSound for in-game videos with sound (compatibility will not suffer)
+Client: net_speeds now show total traffic size while demos is playing back
+Client: quake demos now use linear interpolation for all entities and player
+Render: fix particle trails during playback quake demos
+Client: fix some errors in parsing temp ents in Quake proto (Nehahra)
+Client: allow seamless change demos in case where current playing demo issued a next demo during parse network message
+Client: fix bugs with remap colors on alias playermodels
+Engine: fixed critical bug in modelloader
+
 build 4253
 
 Render: remove flags TF_TEXTURE_1D, TF_TEXTURE_2D_ARRAY it's just not needs

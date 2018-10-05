@@ -221,6 +221,7 @@ typedef struct
 	qboolean		background;		// not real game, just a background
 	qboolean		first_frame;		// first rendering frame
 	qboolean		proxy_redirect;		// spectator stuff
+	qboolean		skip_interp;		// skip interpolation this frame
 
 	uint		checksum;			// for catching cheater maps
 

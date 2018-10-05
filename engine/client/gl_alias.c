@@ -1174,15 +1174,18 @@ void R_AliasLerpMovement( cl_entity_t *e )
 	if( g_alias.interpolate && ( g_alias.time < e->curstate.animtime + 1.0f ) && ( e->curstate.animtime != e->latched.prevanimtime ))
 		f = ( g_alias.time - e->curstate.animtime ) / ( e->curstate.animtime - e->latched.prevanimtime );
 
+	if( cls.demoplayback == DEMO_QUAKE1 )
+		f = f + 1.0f;
+
 	g_alias.lerpfrac = bound( 0.0f, f, 1.0f );
 
 	if( e->player || e->curstate.movetype != MOVETYPE_STEP )
 		return; // monsters only
 
-	// Con_Printf( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, g_studio.time );
+	// Con_Printf( "%4.2f %.2f %.2f\n", f, e->curstate.animtime, g_alias.time );
 	VectorLerp( e->latched.prevorigin, f, e->curstate.origin, e->origin );
 
-	if( !VectorCompare( e->curstate.angles, e->latched.prevangles ))
+	if( !VectorCompareEpsilon( e->curstate.angles, e->latched.prevangles, ON_EPSILON ))
 	{
 		vec4_t	q, q1, q2;
 
@@ -1221,7 +1224,7 @@ void R_SetupAliasFrame( cl_entity_t *e, aliashdr_t *paliashdr )
 	else if( newframe >= paliashdr->numframes )
 	{
 		if( newframe > paliashdr->numframes )
-			Con_Reportf( S_WARN, "R_GetAliasFrame: no such frame %d (%s)\n", newframe, e->model->name );
+			Con_Reportf( S_WARN "R_GetAliasFrame: no such frame %d (%s)\n", newframe, e->model->name );
 		newframe = paliashdr->numframes - 1;
 	}
 

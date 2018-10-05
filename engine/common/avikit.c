@@ -290,6 +290,7 @@ long AVI_TimeToSoundPosition( movie_state_t *Avi, long time )
 	if( !Avi->active || !Avi->audio_stream )
 		return 0;
 
+	// UNDONE: what about compressed audio?
 	return pAVIStreamTimeToSample( Avi->audio_stream, time ) * Avi->audio_bytes_per_sample;
 }
 

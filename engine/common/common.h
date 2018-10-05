@@ -57,7 +57,7 @@ XASH SPECIFIC			- sort of hack that works only in Xash3D not in GoldSrc
 #define MAX_SERVERINFO_STRING	512	// server handles too many settings. expand to 1024?
 #define MAX_LOCALINFO_STRING	32768	// localinfo used on server and not sended to the clients
 #define MAX_SYSPATH		1024	// system filepath
-#define MAX_PRINT_MSG	8192	// how many symbols can handle single call of Msg or MsgDev
+#define MAX_PRINT_MSG	8192	// how many symbols can handle single call of Con_Printf or Con_DPrintf
 #define MAX_TOKEN		2048	// parse token length
 #define MAX_MODS		512	// environment games that engine can keep visible
 #define MAX_USERMSG_LENGTH	2048	// don't modify it's relies on a client-side definitions
