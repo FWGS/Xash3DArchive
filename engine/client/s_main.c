@@ -2101,7 +2101,7 @@ void S_Play2_f( void )
 
 	if( Cmd_Argc() == 1 )
 	{
-		Con_Printf( S_USAGE "play <soundfile>\n" );
+		Con_Printf( S_USAGE "play2 <soundfile>\n" );
 		return;
 	}
 

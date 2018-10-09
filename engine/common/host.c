@@ -418,7 +418,7 @@ double Host_CalcFPS( void )
 	if( host.type != HOST_DEDICATED && Host_IsLocalGame( ) && !CL_IsTimeDemo( ))
 	{
 		// ajdust fps for vertical synchronization
-		if( gl_vsync != NULL && gl_vsync->value )
+		if( CVAR_TO_BOOL( gl_vsync ))
 		{
 			if( vid_displayfrequency->value != 0.0f )
 				fps = vid_displayfrequency->value;
@@ -683,7 +683,7 @@ void Host_InitCommon( const char *hostname, qboolean bChangeGame )
 	host.con_showalways = true;
 
 	// we can specified custom name, from Sys_NewInstance
-	if( GetModuleFileName( NULL, szTemp, sizeof( szTemp )) && !host.change_game )
+	if( GetModuleFileName( NULL, szTemp, sizeof( szTemp )))
 		COM_FileBase( szTemp, SI.exeName );
 
 	COM_ExtractFilePath( szTemp, szRootPath );

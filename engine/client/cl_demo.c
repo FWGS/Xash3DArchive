@@ -725,7 +725,7 @@ void CL_DemoCompleted( void )
 
 	CL_StopPlayback();
 
-	if( !CL_NextDemo() && host_developer.value <= DEV_NONE )
+	if( !CL_NextDemo() && !cls.changedemo )
 		UI_SetActiveMenu( true );
 
 	Cvar_SetValue( "v_dark", 0.0f );
@@ -795,6 +795,7 @@ qboolean CL_ReadRawNetworkData( byte *buffer, size_t *length )
 		}
 	}
 
+	cls.netchan.last_received = host.realtime;
 	cls.netchan.total_received += msglen;
 	*length = msglen;
 
@@ -888,6 +889,7 @@ qboolean CL_DemoReadMessageQuake( byte *buffer, size_t *length )
 		}
 	}
 
+	cls.netchan.last_received = host.realtime;
 	cls.netchan.total_received += msglen;
 	*length = msglen;
 
@@ -1312,6 +1314,7 @@ void CL_CheckStartupDemos( void )
 
 	// run demos loop in background mode
 	Cvar_SetValue( "v_dark", 1.0f );
+	cls.demos_pending = false;
 	cls.demonum = 0;
 	CL_NextDemo ();
 }
@@ -1594,6 +1597,10 @@ Return to looping demos
 */
 void CL_Demos_f( void )
 {
+	// demos is starting up...
+	if( cls.demos_pending )
+		return;
+
 	if( cls.key_dest != key_menu )
 	{
 		Con_Printf( "'demos' is not valid from the console\n" );
