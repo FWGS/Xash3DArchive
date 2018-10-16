@@ -1597,27 +1597,21 @@ Return to looping demos
 */
 void CL_Demos_f( void )
 {
-	// demos is starting up...
-	if( cls.demos_pending )
-		return;
-
 	if( cls.key_dest != key_menu )
 	{
 		Con_Printf( "'demos' is not valid from the console\n" );
 		return;
 	}
 
+	// demos loop are not running
+	if( cls.olddemonum == -1 )
+		return;
+
 	cls.demonum = cls.olddemonum;
 
-	if( cls.demonum == -1 )
-		cls.demonum = 0;
-
+	// run demos loop in background mode
 	if( !SV_Active() && !cls.demoplayback )
-	{
-		// run demos loop in background mode
-		cls.changedemo = true;
 		CL_NextDemo ();
-	}
 }
 
 

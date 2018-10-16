@@ -973,12 +973,14 @@ void Cmd_ExecuteString( char *text )
 	if( host.type == HOST_NORMAL )
 	{
 		if( cls.state >= ca_connected )
+		{
 			Cmd_ForwardToServer();
-	}
-	else if( text[0] != '@' && host.type == HOST_NORMAL )
-	{
-		// commands with leading '@' are hidden system commands
-		Con_Printf( S_WARN "Unknown command \"%s\"\n", text );
+		}
+		else if( text[0] != '@' && Cvar_VariableInteger( "host_gameloaded" ))
+		{
+			// commands with leading '@' are hidden system commands
+			Con_Printf( S_WARN "Unknown command \"%s\"\n", text );
+		}
 	}
 }
 

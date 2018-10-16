@@ -967,6 +967,7 @@ void CL_ParseQuakeMessage( sizebuf_t *msg, qboolean normal_message )
 			cl.frames[cl.parsecountmod].graphdata.sound += MSG_GetNumBytesRead( msg ) - bufStart;
 			break;
 		case svc_time:
+			Cbuf_AddText( "\n" ); // new frame was started
 			CL_ParseServerTime( msg );
 			break;
 		case svc_print:

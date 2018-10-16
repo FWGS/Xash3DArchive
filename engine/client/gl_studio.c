@@ -1680,7 +1680,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		}
 	}
 
-	if(( light.r + light.g + light.b ) == 0 )
+	if(( light.r + light.g + light.b ) < 32 ) // TESTTEST
 	{
 		colorVec	gcolor;
 		float	grad[4];

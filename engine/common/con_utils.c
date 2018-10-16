@@ -805,6 +805,7 @@ qboolean Cmd_CheckMapsList( qboolean fRefresh )
 autocomplete_list_t cmd_list[] =
 {
 { "map_background", Cmd_GetMapList },
+{ "changelevel2", Cmd_GetMapList },
 { "changelevel", Cmd_GetMapList },
 { "playdemo", Cmd_GetDemoList, },
 { "timedemo", Cmd_GetDemoList, },

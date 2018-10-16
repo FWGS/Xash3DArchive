@@ -214,7 +214,7 @@ static void UI_CustomGame_Callback( void *self, int event )
 	case ID_YES:
 		// restart all engine systems with new game
 		char cmd[128];
-		sprintf( cmd, "game %s\n", uiCustomGame.modsDir[uiCustomGame.modList.curItem] );
+		sprintf( cmd, "game \"%s\"\n", uiCustomGame.modsDir[uiCustomGame.modList.curItem] );
 		CLIENT_COMMAND( FALSE, cmd );
 		UI_EndGameDialog();
 		break;

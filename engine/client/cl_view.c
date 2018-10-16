@@ -334,6 +334,7 @@ void V_RenderView( void )
 		}
 
 		R_RenderFrame( &rvp );
+		S_UpdateFrame( &rvp );
 		viewnum++;
 
 	} while( rp.nextView );

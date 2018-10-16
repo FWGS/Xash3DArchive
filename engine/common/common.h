@@ -930,6 +930,7 @@ void SV_DrawDebugTriangles( void );
 void SV_DrawOrthoTriangles( void );
 double CL_GetDemoFramerate( void );
 qboolean UI_CreditsActive( void );
+void CL_StopPlayback( void );
 void CL_ExtraUpdate( void );
 int CL_GetMaxClients( void );
 int SV_GetMaxClients( void );

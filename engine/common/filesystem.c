@@ -255,7 +255,7 @@ static void listlowercase( stringlist_t *list )
 	}
 }
 
-static void listdirectory( stringlist_t *list, const char *path )
+static void listdirectory( stringlist_t *list, const char *path, int lower )
 {
 	char		pattern[4096];
 	struct _finddata_t	n_file;
@@ -277,7 +277,7 @@ static void listdirectory( stringlist_t *list, const char *path )
 	_findclose( hFile );
 
 	// g-cont. disabled for some reasons
-//	listlowercase( list );
+	if( lower ) listlowercase( list );
 }
 
 /*
@@ -616,7 +616,7 @@ void FS_AddGameDirectory( const char *dir, int flags )
 		Q_strncpy( fs_writedir, dir, sizeof( fs_writedir ));
 
 	stringlistinit( &list );
-	listdirectory( &list, dir );
+	listdirectory( &list, dir, true );
 	stringlistsort( &list );
 
 	// add any PAK package in the directory
@@ -1370,7 +1370,7 @@ void FS_Init( void )
 
 	// ignore commandlineoption "-game" for other stuff
 	stringlistinit( &dirs );
-	listdirectory( &dirs, "./" );
+	listdirectory( &dirs, "./", true );
 	stringlistsort( &dirs );
 	SI.numgames = 0;
 
@@ -2698,7 +2698,7 @@ search_t *FS_Search( const char *pattern, int caseinsensitive, int gamedironly )
 			// get a directory listing and look at each name
 			Q_sprintf( netpath, "%s%s", searchpath->filename, basepath );
 			stringlistinit( &dirlist );
-			listdirectory( &dirlist, netpath );
+			listdirectory( &dirlist, netpath, false );
 
 			for( dirlistindex = 0; dirlistindex < dirlist.numstrings; dirlistindex++ )
 			{

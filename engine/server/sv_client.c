@@ -1232,13 +1232,13 @@ void SV_PutClientInServer( sv_client_t *cl )
 			SetBits( ent->v.flags, FL_GODMODE|FL_NOTARGET );
 
 		cl->pViewEntity = NULL; // reset pViewEntity
+	}
 
-		if( svgame.globals->cdAudioTrack )
-		{
-			MSG_BeginServerCmd( &msg, svc_stufftext );
-			MSG_WriteString( &msg, va( "cd loop %3d\n", svgame.globals->cdAudioTrack ));
-			svgame.globals->cdAudioTrack = 0;
-		}
+	if( svgame.globals->cdAudioTrack )
+	{
+		MSG_BeginServerCmd( &msg, svc_stufftext );
+		MSG_WriteString( &msg, va( "cd loop %3d\n", svgame.globals->cdAudioTrack ));
+		svgame.globals->cdAudioTrack = 0;
 	}
 
 #ifdef HACKS_RELATED_HLMODS

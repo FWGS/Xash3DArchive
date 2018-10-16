@@ -1946,6 +1946,23 @@ void S_ExtraUpdate( void )
 
 /*
 ============
+S_UpdateFrame
+
+update listener position
+============
+*/
+void S_UpdateFrame( ref_viewpass_t *rvp )
+{
+	if( !FBitSet( rvp->flags, RF_DRAW_WORLD ) || FBitSet( rvp->flags, RF_ONLY_CLIENTDRAW ))
+		return; 
+
+	VectorCopy( rvp->vieworigin, s_listener.origin );
+	AngleVectors( rvp->viewangles, s_listener.forward, s_listener.right, s_listener.up );
+	s_listener.entnum = rvp->viewentity; // can be camera entity too
+}
+
+/*
+============
 SND_UpdateSound
 
 Called once each time through the main loop
@@ -1968,16 +1985,12 @@ void SND_UpdateSound( void )
 	// release raw-channels that no longer used more than 10 secs
 	S_FreeIdleRawChannels();
 
-	s_listener.entnum = cl.viewentity;	// can be camera entity too
+	VectorCopy( cl.simvel, s_listener.velocity );
 	s_listener.frametime = (cl.time - cl.oldtime);
 	s_listener.waterlevel = cl.local.waterlevel;
 	s_listener.active = CL_IsInGame();
 	s_listener.inmenu = CL_IsInMenu();
 	s_listener.paused = cl.paused;
-
-	VectorCopy( RI.vieworg, s_listener.origin );
-	VectorCopy( cl.simvel, s_listener.velocity );
-	AngleVectors( RI.viewangles, s_listener.forward, s_listener.right, s_listener.up );
 
 	if( cl.worldmodel != NULL )
 		Mod_FatPVS( s_listener.origin, FATPHS_RADIUS, s_listener.pasbytes, world.visbytes, false, !s_phs->value );
