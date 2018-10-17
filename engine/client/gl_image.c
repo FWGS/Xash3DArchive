@@ -1208,7 +1208,7 @@ GL_ProcessImage
 do specified actions on pixels
 ===============
 */
-static void GL_ProcessImage( gl_texture_t *tex, rgbdata_t *pic, imgfilter_t *filter )
+static void GL_ProcessImage( gl_texture_t *tex, rgbdata_t *pic )
 {
 	uint	img_flags = 0; 
 
@@ -1242,6 +1242,12 @@ static void GL_ProcessImage( gl_texture_t *tex, rgbdata_t *pic, imgfilter_t *fil
 			tex->flags &= ~TF_MAKELUMA;
 		}
 
+		if( tex->flags & TF_ALLOW_EMBOSS )
+		{
+			img_flags |= IMAGE_EMBOSS;
+			tex->flags &= ~TF_ALLOW_EMBOSS;
+		}
+
 		if( !FBitSet( tex->flags, TF_IMG_UPLOADED ) && FBitSet( tex->flags, TF_KEEP_SOURCE ))
 			tex->original = FS_CopyImage( pic ); // because current pic will be expanded to rgba
 
@@ -1250,7 +1256,7 @@ static void GL_ProcessImage( gl_texture_t *tex, rgbdata_t *pic, imgfilter_t *fil
 			img_flags |= IMAGE_FORCE_RGBA;
 
 		// processing image before uploading (force to rgba, make luma etc)
-		if( pic->buffer ) Image_Process( &pic, 0, 0, img_flags, filter );
+		if( pic->buffer ) Image_Process( &pic, 0, 0, img_flags, gl_emboss_scale->value );
 
 		if( FBitSet( tex->flags, TF_LUMINANCE ))
 			ClearBits( pic->flags, IMAGE_HAS_COLOR );
@@ -1421,7 +1427,7 @@ void GL_UpdateTexSize( int texnum, int width, int height, int depth )
 GL_LoadTexture
 ================
 */
-int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, imgfilter_t *filter )
+int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags )
 {
 	gl_texture_t	*tex;
 	rgbdata_t		*pic;
@@ -1448,7 +1454,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 
 	// allocate the new one
 	tex = GL_AllocTexture( name, flags );
-	GL_ProcessImage( tex, pic, filter );
+	GL_ProcessImage( tex, pic );
 
 	if( !GL_UploadTexture( tex, pic ))
 	{
@@ -1469,7 +1475,7 @@ int GL_LoadTexture( const char *name, const byte *buf, size_t size, int flags, i
 GL_LoadTextureArray
 ================
 */
-int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
+int GL_LoadTextureArray( const char **names, int flags )
 {
 	rgbdata_t		*pic, *src;
 	char		basename[256];
@@ -1538,7 +1544,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 
 			// but allow to rescale raw images
 			if( ImageRAW( pic->type ) && ImageRAW( src->type ) && ( pic->width != src->width || pic->height != src->height ))
-				Image_Process( &src, pic->width, pic->height, IMAGE_RESAMPLE, NULL );
+				Image_Process( &src, pic->width, pic->height, IMAGE_RESAMPLE, 0.0f );
 
 			if( pic->size != src->size )
 			{
@@ -1589,7 +1595,7 @@ int GL_LoadTextureArray( const char **names, int flags, imgfilter_t *filter )
 
 	// allocate the new one
 	tex = GL_AllocTexture( name, flags );
-	GL_ProcessImage( tex, pic, filter );
+	GL_ProcessImage( tex, pic );
 
 	if( !GL_UploadTexture( tex, pic ))
 	{
@@ -1636,7 +1642,7 @@ int GL_LoadTextureFromBuffer( const char *name, rgbdata_t *pic, texFlags_t flags
 		tex = GL_AllocTexture( name, flags );
 	}
 
-	GL_ProcessImage( tex, pic, NULL );
+	GL_ProcessImage( tex, pic );
 	if( !GL_UploadTexture( tex, pic ))
 	{
 		memset( tex, 0, sizeof( gl_texture_t ));
@@ -1828,7 +1834,7 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 
 	// all the operations makes over the image copy not an original
 	pic = FS_CopyImage( image->original );
-	Image_Process( &pic, topColor, bottomColor, flags, NULL );
+	Image_Process( &pic, topColor, bottomColor, flags, 0.0f );
 
 	GL_UploadTexture( image, pic );
 	GL_ApplyTextureParams( image ); // update texture filter, wrap etc
@@ -2185,7 +2191,6 @@ void R_InitImages( void )
 	R_SetTextureParameters();
 	GL_CreateInternalTextures();
 
-	R_ParseTexFilters( "scripts/texfilter.txt" );
 	Cmd_AddCommand( "texturelist", R_TextureList_f, "display loaded textures list" );
 }
 

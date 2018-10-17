@@ -2106,7 +2106,7 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 		msg_dest = MSG_ALL;
 	else if( FBitSet( host.features, ENGINE_QUAKE_COMPATIBLE ))
 		msg_dest = MSG_ALL;
-	else msg_dest = MSG_PAS_R;
+	else msg_dest = (svs.maxclients <= 1 ) ? MSG_ALL : MSG_PAS_R;
 
 	// always sending stop sound command
 	if( FBitSet( flags, SND_STOP ))
@@ -2127,7 +2127,7 @@ pfnEmitAmbientSound
 */
 void pfnEmitAmbientSound( edict_t *ent, float *pos, const char *sample, float vol, float attn, int flags, int pitch )
 {
-	int	msg_dest = MSG_PAS_R;
+	int	msg_dest;
 
 	if( sv.state == ss_loading )
 		SetBits( flags, SND_SPAWNING );

@@ -126,7 +126,7 @@ void CL_DuplicateTexture( mstudiotexture_t *ptexture, int topcolor, int bottomco
 	memcpy( paletteBackup, pal, 768 );
 
 	raw = CL_CreateRawTextureFromPixels( tx, &size, topcolor, bottomcolor );
-	ptexture->index = GL_LoadTexture( texname, raw, size, TF_FORCE_COLOR, NULL ); // do copy
+	ptexture->index = GL_LoadTexture( texname, raw, size, TF_FORCE_COLOR ); // do copy
 
 	// restore original palette
 	memcpy( pal, paletteBackup, 768 );

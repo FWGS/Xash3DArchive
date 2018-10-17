@@ -848,6 +848,8 @@ static void FS_WriteGameInfo( const char *filepath, gameinfo_t *GameInfo )
 		FS_Printf( f, "sp_entity\t\t\"%s\"\n", GameInfo->sp_entity );
 	if( Q_strlen( GameInfo->mp_entity ))
 		FS_Printf( f, "mp_entity\t\t\"%s\"\n", GameInfo->mp_entity );
+	if( Q_strlen( GameInfo->mp_filter ))
+		FS_Printf( f, "mp_filter\t\t\"%s\"\n", GameInfo->mp_filter );
 
 	if( GameInfo->secure )
 		FS_Printf( f, "secure\t\t\"%i\"\n", GameInfo->secure );
@@ -1031,6 +1033,10 @@ static qboolean FS_ParseLiblistGam( const char *filename, const char *gamedir, g
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->mp_entity );
 		}
+		else if( !Q_stricmp( token, "mpfilter" ))
+		{
+			pfile = COM_ParseFile( pfile, GameInfo->mp_filter );
+		}
 		else if( !Q_stricmp( token, "secure" ))
 		{
 			pfile = COM_ParseFile( pfile, token );
@@ -1137,6 +1143,10 @@ static qboolean FS_ReadGameInfo( const char *filepath, const char *gamedir, game
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->mp_entity );
 		}
+		else if( !Q_stricmp( token, "mp_filter" ))
+		{
+			pfile = COM_ParseFile( pfile, GameInfo->mp_filter );
+		}
 		else if( !Q_stricmp( token, "gamedll" ))
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->game_dll );
@@ -1223,6 +1233,11 @@ static qboolean FS_ReadGameInfo( const char *filepath, const char *gamedir, game
 		{
 			pfile = COM_ParseFile( pfile, token );
 			GameInfo->nomodels = Q_atoi( token );
+		}
+		else if( !Q_stricmp( token, "noskills" ))
+		{
+			pfile = COM_ParseFile( pfile, token );
+			GameInfo->noskills = Q_atoi( token );
 		}
 		else if( !Q_strnicmp( token, "ambient", 7 ))
 		{
