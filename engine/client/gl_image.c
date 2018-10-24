@@ -684,8 +684,8 @@ static void GL_SetTextureFormat( gl_texture_t *tex, pixformat_t format, int chan
 		else if( haveAlpha )
 		{
 			if( FBitSet( tex->flags, TF_ARB_16BIT ) || glw_state.desktopBitsPixel == 16 )
-				tex->format = GL_LUMINANCE_ALPHA16F_ARB;
-			else tex->format = GL_LUMINANCE_ALPHA32F_ARB;
+				tex->format = GL_RG16F;
+			else tex->format = GL_RG32F;
 		}
 		else
 		{
@@ -2082,6 +2082,12 @@ void R_TextureList_f( void )
 			break;
 		case GL_LUMINANCE_ALPHA32F_ARB:
 			Con_Printf( "LA32F " );
+			break;
+		case GL_RG16F:
+			Con_Printf( "RG16F " );
+			break;
+		case GL_RG32F:
+			Con_Printf( "RG32F " );
 			break;
 		case GL_RGB16F_ARB:
 			Con_Printf( "RGB16F" );
