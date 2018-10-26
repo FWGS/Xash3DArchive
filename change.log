@@ -16,6 +16,26 @@ VGUI:	- a VGUI implementation code in xash.dll
 Memory:	- a memory manager in xash.dll
 Physic:	- a server physics code in xash.dll
 
+build 4281
+
+GameUI: new gameinfo setting "noskills" 0/1 that disables sub-menu for skill selection
+Client: fix some minor bugs with playing Quake demos
+Render: reorganize emboss-mapping with single cvar "gl_emboss_scale" instead of separate description from scripts\texfilter.txt
+Engine: added new gameinfo setting "mpfilter" for Cry Of Fear filtering single-player maps by name prefix
+Engine: added some missed settings while liblist.gam is converted into gameinfo.txt
+Engine: always allow console for QWrap.
+Server: fix bug with playing cd-track after changing level
+Server: command "god" is now work under Cry Of Fear.
+Server: commands "changelevel" and "changelevel2" reverted into engine for backward compatibility.
+GameUI: allow to delete saved games in menu before game was running
+Sound: fixed very old bug with sounds that playing from studiomodel events at server-side
+Server: prevent crash while some mods replaced key-value strings with constant values
+Physic: filtering MOVETYPE_PUSH method by edict->movetype for accurate moving player's and NPC's and compatible moving items or corpses
+GameUI: now keytable color can be replaced with gfx\shell\color.lst->INPUT_TEXT_COLOR
+GameUI: empty save image replaced from decals.wad\{GRAF001 with gfx.wad\lambda32
+GameUI: fix game switching if game folder have spaces in folder name
+GameUI: color of selection in scroll lists can be replaced with gfx\shell\color.lst->SELECT_TEXT_COLOR
+
 build 4260
 
 Sound: implement system for playing in-game videos with positioned sound (e.g. XashXT, Paranoia2)
