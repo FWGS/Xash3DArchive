@@ -1178,6 +1178,7 @@ void CL_StopPlayback( void )
 		// let game known about demo state	
 		Cvar_FullSet( "cl_background", "0", FCVAR_READ_ONLY );
 		cls.state = ca_disconnected;
+		cls.set_lastdemo = false;
 		S_StopBackgroundTrack();
 		cls.connect_time = 0;
 		cls.demonum = -1;
@@ -1443,7 +1444,7 @@ void CL_PlayDemo_f( void )
 	char	demoname[MAX_QPATH];
 	int	i;
 
-	if( Cmd_Argc() != 2 )
+	if( Cmd_Argc() < 2 )
 	{
 		Con_Printf( S_USAGE "playdemo <demoname>\n" );
 		return;
@@ -1464,6 +1465,14 @@ void CL_PlayDemo_f( void )
 	COM_StripExtension( demoname );
 	Q_snprintf( filename1, sizeof( filename1 ), "%s.dem", demoname );
 	Q_snprintf( filename2, sizeof( filename2 ), "demos/%s.dem", demoname );
+
+	// hidden parameter
+	if( Cmd_Argc() > 2 )
+		cls.set_lastdemo = Q_atoi( Cmd_Argv( 2 ));
+
+	// member last demo
+	if( cls.set_lastdemo )
+		Cvar_Set( "lastdemo", demoname );
 
 	if( FS_FileExists( filename1, true ))
 	{

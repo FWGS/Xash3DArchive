@@ -1,0 +1,152 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: engine - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\WINDOWS\TEMP\RSPE35.tmp" with contents
+[
+msvcrt.lib user32.lib gdi32.lib shell32.lib advapi32.lib winmm.lib mpeg.lib ../utils/vgui/lib/win32_vc6/vgui.lib /nologo /subsystem:windows /dll /pdb:none /machine:I386 /nodefaultlib:"libc" /out:"..\temp\engine\!release/xash.dll" /implib:"..\temp\engine\!release/xash.lib" /libpath:"./common/soundlib" /opt:nowin98 
+"\Xash3D\src_main\temp\engine\!release\avikit.obj"
+"\Xash3D\src_main\temp\engine\!release\build.obj"
+"\Xash3D\src_main\temp\engine\!release\cfgscript.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_cmds.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_custom.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_debug.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_demo.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_events.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_frame.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_game.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_gameui.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_main.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_netgraph.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_parse.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_pmove.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_qparse.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_remap.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_scrn.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_tent.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_video.obj"
+"\Xash3D\src_main\temp\engine\!release\cl_view.obj"
+"\Xash3D\src_main\temp\engine\!release\cmd.obj"
+"\Xash3D\src_main\temp\engine\!release\common.obj"
+"\Xash3D\src_main\temp\engine\!release\con_utils.obj"
+"\Xash3D\src_main\temp\engine\!release\console.obj"
+"\Xash3D\src_main\temp\engine\!release\crclib.obj"
+"\Xash3D\src_main\temp\engine\!release\crtlib.obj"
+"\Xash3D\src_main\temp\engine\!release\custom.obj"
+"\Xash3D\src_main\temp\engine\!release\cvar.obj"
+"\Xash3D\src_main\temp\engine\!release\filesystem.obj"
+"\Xash3D\src_main\temp\engine\!release\gamma.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_alias.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_backend.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_beams.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_cull.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_decals.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_draw.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_frustum.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_image.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_refrag.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_rlight.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_rmain.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_rmath.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_rmisc.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_rpart.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_rsurf.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_sprite.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_studio.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_vidnt.obj"
+"\Xash3D\src_main\temp\engine\!release\gl_warp.obj"
+"\Xash3D\src_main\temp\engine\!release\host.obj"
+"\Xash3D\src_main\temp\engine\!release\host_state.obj"
+"\Xash3D\src_main\temp\engine\!release\hpak.obj"
+"\Xash3D\src_main\temp\engine\!release\img_bmp.obj"
+"\Xash3D\src_main\temp\engine\!release\img_dds.obj"
+"\Xash3D\src_main\temp\engine\!release\img_main.obj"
+"\Xash3D\src_main\temp\engine\!release\img_quant.obj"
+"\Xash3D\src_main\temp\engine\!release\img_tga.obj"
+"\Xash3D\src_main\temp\engine\!release\img_utils.obj"
+"\Xash3D\src_main\temp\engine\!release\img_wad.obj"
+"\Xash3D\src_main\temp\engine\!release\infostring.obj"
+"\Xash3D\src_main\temp\engine\!release\input.obj"
+"\Xash3D\src_main\temp\engine\!release\keys.obj"
+"\Xash3D\src_main\temp\engine\!release\library.obj"
+"\Xash3D\src_main\temp\engine\!release\mathlib.obj"
+"\Xash3D\src_main\temp\engine\!release\matrixlib.obj"
+"\Xash3D\src_main\temp\engine\!release\mod_bmodel.obj"
+"\Xash3D\src_main\temp\engine\!release\mod_dbghulls.obj"
+"\Xash3D\src_main\temp\engine\!release\mod_studio.obj"
+"\Xash3D\src_main\temp\engine\!release\model.obj"
+"\Xash3D\src_main\temp\engine\!release\net_buffer.obj"
+"\Xash3D\src_main\temp\engine\!release\net_chan.obj"
+"\Xash3D\src_main\temp\engine\!release\net_encode.obj"
+"\Xash3D\src_main\temp\engine\!release\net_ws.obj"
+"\Xash3D\src_main\temp\engine\!release\pm_debug.obj"
+"\Xash3D\src_main\temp\engine\!release\pm_surface.obj"
+"\Xash3D\src_main\temp\engine\!release\pm_trace.obj"
+"\Xash3D\src_main\temp\engine\!release\s_backend.obj"
+"\Xash3D\src_main\temp\engine\!release\s_dsp.obj"
+"\Xash3D\src_main\temp\engine\!release\s_load.obj"
+"\Xash3D\src_main\temp\engine\!release\s_main.obj"
+"\Xash3D\src_main\temp\engine\!release\s_mix.obj"
+"\Xash3D\src_main\temp\engine\!release\s_mouth.obj"
+"\Xash3D\src_main\temp\engine\!release\s_stream.obj"
+"\Xash3D\src_main\temp\engine\!release\s_utils.obj"
+"\Xash3D\src_main\temp\engine\!release\s_vox.obj"
+"\Xash3D\src_main\temp\engine\!release\snd_main.obj"
+"\Xash3D\src_main\temp\engine\!release\snd_mp3.obj"
+"\Xash3D\src_main\temp\engine\!release\snd_utils.obj"
+"\Xash3D\src_main\temp\engine\!release\snd_wav.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_client.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_cmds.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_custom.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_frame.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_game.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_init.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_log.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_main.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_move.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_phys.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_pmove.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_save.obj"
+"\Xash3D\src_main\temp\engine\!release\sv_world.obj"
+"\Xash3D\src_main\temp\engine\!release\sys_con.obj"
+"\Xash3D\src_main\temp\engine\!release\sys_win.obj"
+"\Xash3D\src_main\temp\engine\!release\titles.obj"
+"\Xash3D\src_main\temp\engine\!release\vgui_clip.obj"
+"\Xash3D\src_main\temp\engine\!release\vgui_draw.obj"
+"\Xash3D\src_main\temp\engine\!release\vgui_input.obj"
+"\Xash3D\src_main\temp\engine\!release\vgui_int.obj"
+"\Xash3D\src_main\temp\engine\!release\vgui_surf.obj"
+"\Xash3D\src_main\temp\engine\!release\world.obj"
+"\Xash3D\src_main\temp\engine\!release\zone.obj"
+]
+Creating command line "link.exe @C:\WINDOWS\TEMP\RSPE35.tmp"
+Creating temporary file "C:\WINDOWS\TEMP\RSPE36.bat" with contents
+[
+@echo off
+copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Xash3D\xash.dll"
+copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Paranoia2\xash.dll"
+copy \Xash3D\src_main\temp\engine\!release\xash.dll "D:\Quake\xash.dll"
+copy \Xash3D\src_main\temp\engine\!release\xash.dll "E:\Xash3D\xash.dll"
+]
+Creating command line "C:\WINDOWS\TEMP\RSPE36.bat"
+Linking...
+   Creating library ..\temp\engine\!release/xash.lib and object ..\temp\engine\!release/xash.exp
+<h3>Output Window</h3>
+Performing Custom Build Step on \Xash3D\src_main\temp\engine\!release\xash.dll
+Скопировано файлов:         1.
+Скопировано файлов:         1.
+Отказано в доступе.
+Скопировано файлов:         0.
+Скопировано файлов:         1.
+
+
+
+<h3>Results</h3>
+xash.dll - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

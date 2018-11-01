@@ -654,6 +654,7 @@ typedef struct
 	qboolean		timedemo;
 	string		demoname;			// for demo looping
 	double		demotime;			// recording time
+	qboolean		set_lastdemo;		// store name of last played demo into the cvar
 
 	file_t		*demofile;
 	file_t		*demoheader;		// contain demo startup info in case we record a demo on this level
