@@ -997,7 +997,6 @@ qboolean R_DoResetGamma( void )
 		return false;
 	case scrshot_plaque:
 	case scrshot_savegame:
-	case scrshot_demoshot:
 	case scrshot_envshot:
 	case scrshot_skyshot:
 	case scrshot_mapshot:

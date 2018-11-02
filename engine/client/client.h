@@ -320,7 +320,6 @@ typedef enum
 	scrshot_snapshot,	// in-game snapshot
 	scrshot_plaque,  	// levelshot
 	scrshot_savegame,	// saveshot
-	scrshot_demoshot,	// for demos preview
 	scrshot_envshot,	// cubemap view
 	scrshot_skyshot,	// skybox view
 	scrshot_mapshot	// overview layer
@@ -735,7 +734,6 @@ void CL_PlayCDTrack_f( void );
 void CL_EnvShot_f( void );
 void CL_SkyShot_f( void );
 void CL_SaveShot_f( void );
-void CL_DemoShot_f( void );
 void CL_LevelShot_f( void );
 void CL_SetSky_f( void );
 void SCR_Viewpos_f( void );
