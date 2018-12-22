@@ -727,8 +727,16 @@ void DrawGLPoly( glpoly_t *p, float xScale, float yScale )
 		float		flConveyorSpeed;
 		float		flRate, flAngle;
 
-		flConveyorSpeed = (e->curstate.rendercolor.g<<8|e->curstate.rendercolor.b) / 16.0f;
-		if( e->curstate.rendercolor.r ) flConveyorSpeed = -flConveyorSpeed;
+		if( CL_IsQuakeCompatible() && RI.currententity == clgame.entities )
+		{
+			// FIXME: tune this
+			flConveyorSpeed = 100.0f;
+		}
+		else
+		{
+			flConveyorSpeed = (e->curstate.rendercolor.g<<8|e->curstate.rendercolor.b) / 16.0f;
+			if( e->curstate.rendercolor.r ) flConveyorSpeed = -flConveyorSpeed;
+		}
 		texture = R_GetTexture( glState.currentTextures[glState.activeTMU] );
 
 		flRate = abs( flConveyorSpeed ) / (float)texture->srcWidth;
