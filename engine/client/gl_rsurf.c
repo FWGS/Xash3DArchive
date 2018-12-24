@@ -723,14 +723,14 @@ void DrawGLPoly( glpoly_t *p, float xScale, float yScale )
 
 	if( p->flags & SURF_CONVEYOR )
 	{
-		gl_texture_t	*texture;
-		float		flConveyorSpeed;
+		float		flConveyorSpeed = 0.0f;
 		float		flRate, flAngle;
+		gl_texture_t	*texture;
 
 		if( CL_IsQuakeCompatible() && RI.currententity == clgame.entities )
 		{
-			// FIXME: tune this
-			flConveyorSpeed = 100.0f;
+			// same as doom speed
+			flConveyorSpeed = -35.0f;
 		}
 		else
 		{
