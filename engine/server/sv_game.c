@@ -4518,7 +4518,7 @@ qboolean SV_ParseEdict( char **pfile, edict_t *ent )
 
 		// keynames with a leading underscore are used for
 		// utility comments and are immediately discarded by engine
-		if( keyname[0] == '_' && Q_strcmp( keyname, "_light" ))
+		if( FBitSet( world.flags, FWORLD_SKYSPHERE ) && keyname[0] == '_' )
 			continue;
 
 		// ignore attempts to set value ""
