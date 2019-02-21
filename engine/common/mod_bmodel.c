@@ -1632,7 +1632,7 @@ static void Mod_LoadEntities( dbspmodel_t *bmod )
 {
 	byte	*entpatch = NULL;
 	char	token[MAX_TOKEN];
-	char	wadstring[2048];
+	char	wadstring[MAX_TOKEN];
 	string	keyname;
 	char	*pfile;
 
@@ -1640,7 +1640,7 @@ static void Mod_LoadEntities( dbspmodel_t *bmod )
 	{
 		char	entfilename[MAX_QPATH];
 		long	entpatchsize;
-		size_t	ft1, ft2;
+		long	ft1, ft2;
 
 		// world is check for entfile too
 		Q_strncpy( entfilename, loadmodel->name, sizeof( entfilename ));
@@ -1960,7 +1960,7 @@ static void Mod_LoadTextures( dbspmodel_t *bmod )
 		tx->width = mt->width;
 		tx->height = mt->height;
 
-		if( FBitSet( host.features, ENGINE_LOAD_DELUXEDATA ) && mt->name[0] == '{' )
+		if( FBitSet( host.features, ENGINE_IMPROVED_LINETRACE ) && mt->name[0] == '{' )
 			SetBits( txFlags, TF_KEEP_SOURCE ); // Paranoia2 texture alpha-tracing
 
 		if( mt->offsets[0] > 0 )

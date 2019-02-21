@@ -135,7 +135,6 @@ int SV_SoundIndex( const char *filename )
 	char	name[MAX_QPATH];
 	int	i;
 
-	// don't precache sentence names!
 	if( !COM_CheckString( filename ))
 		return 0;
 
@@ -263,7 +262,7 @@ int SV_GenericIndex( const char *filename )
 ================
 SV_ModelHandle
 
-register unique model for a server and client
+get model by handle
 ================
 */
 model_t *SV_ModelHandle( int modelindex )
@@ -273,6 +272,13 @@ model_t *SV_ModelHandle( int modelindex )
 	return sv.models[modelindex];
 }
 
+/*
+================
+SV_CreateGenericResources
+
+loads external resource list
+================
+*/
 void SV_CreateGenericResources( void )
 {
 	string	filename, token;
@@ -303,6 +309,13 @@ void SV_CreateGenericResources( void )
 	Mem_Free( afile );
 }
 
+/*
+================
+SV_CreateResourceList
+
+add resources to common list
+================
+*/
 void SV_CreateResourceList( void )
 {
 	qboolean	ffirstsent = false;

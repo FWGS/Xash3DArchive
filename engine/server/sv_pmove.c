@@ -304,7 +304,7 @@ void SV_AddLaddersToPmove( areanode_t *node, const vec3_t pmove_mins, const vec3
 	model_t	*mod;
 	physent_t	*pe;
 	
-	// get water edicts
+	// get ladder edicts
 	for( l = node->solid_edicts.next; l != &node->solid_edicts; l = next )
 	{
 		next = l->next;
@@ -760,11 +760,11 @@ static void SV_FinishPMove( playermove_t *pmove, sv_client_t *cl )
 
 	if( pmove->onground == -1 )
 	{
-		clent->v.flags &= ~FL_ONGROUND;
+		ClearBits( clent->v.flags, FL_ONGROUND );
 	}
 	else if( pmove->onground >= 0 && pmove->onground < pmove->numphysent )
 	{
-		clent->v.flags |= FL_ONGROUND;
+		SetBits( clent->v.flags, FL_ONGROUND );
 		clent->v.groundentity = EDICT_NUM( pmove->physents[pmove->onground].info );
 	}
 
@@ -885,10 +885,7 @@ void SV_SetupMoveInterpolant( sv_client_t *cl )
 				if( SV_UnlagCheckTeleport( state->origin, lerp->finalpos ))
 					lerp->nointerp = true;
 			}
-			else
-			{
-				lerp->firstframe = true;
-			}
+			else lerp->firstframe = true;
 
 			VectorCopy( state->origin, lerp->finalpos );
 		}
@@ -986,10 +983,10 @@ void SV_RestoreMoveInterpolant( sv_client_t *cl )
 
 		oldlerp = &svgame.interp[i];
 
-		if( VectorCompare( oldlerp->oldpos, oldlerp->newpos ) || !oldlerp->moving )
+		if( VectorCompareEpsilon( oldlerp->oldpos, oldlerp->newpos, ON_EPSILON ))
 			continue; // they didn't actually move.
 
-		if( !oldlerp->active )
+		if( !oldlerp->moving || !oldlerp->active )
 			continue;
 
 		if( VectorCompare( oldlerp->curpos, check->edict->v.origin ))
@@ -1039,9 +1036,7 @@ void SV_RunCmd( sv_client_t *cl, usercmd_t *ucmd, int random_seed )
 	}
 
 	if( !FBitSet( cl->flags, FCL_FAKECLIENT ))
-	{
 		SV_SetupMoveInterpolant( cl );
-	}
 
 	svgame.dllFuncs.pfnCmdStart( cl->edict, ucmd, random_seed );
 

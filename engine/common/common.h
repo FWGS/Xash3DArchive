@@ -891,7 +891,6 @@ void SV_StartSound( edict_t *ent, int chan, const char *sample, float vol, float
 void SV_StartMusic( const char *curtrack, const char *looptrack, long position );
 void SV_CreateDecal( struct sizebuf_s *msg, const float *origin, int decalIndex, int entityIndex, int modelIndex, int flags, float scale );
 void Log_Printf( const char *fmt, ... );
-struct sizebuf_s *SV_GetReliableDatagram( void );
 void SV_BroadcastCommand( const char *fmt, ... );
 qboolean SV_RestoreCustomDecal( struct decallist_s *entry, edict_t *pEdict, qboolean adjacent );
 void SV_BroadcastPrintf( struct sv_client_s *ignore, char *fmt, ... );

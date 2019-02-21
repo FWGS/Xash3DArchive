@@ -411,6 +411,7 @@ double Host_CalcFPS( void )
 	else
 	{
 		fps = host_maxfps->value;
+		if( fps == 0.0 ) fps = MAX_FPS;
 		fps = bound( MIN_FPS, fps, MAX_FPS );
 	}
 

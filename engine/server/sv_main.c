@@ -260,6 +260,13 @@ void SV_CheckCmdTimes( void )
 	}
 }
 
+/*
+=================
+SV_ProcessFile
+
+process incoming file (customization)
+=================
+*/
 void SV_ProcessFile( sv_client_t *cl, const char *filename )
 {
 	customization_t	*pList;
@@ -548,11 +555,6 @@ qboolean SV_IsSimulating( void )
 	return false;
 }
 
-/*
-=================
-SV_RunGameFrame
-=================
-*/
 /*
 =================
 SV_RunGameFrame
@@ -874,7 +876,7 @@ to totally exit after returning from this function.
 */
 void SV_FinalMessage( const char *message, qboolean reconnect )
 {
-	byte		msg_buf[64];
+	byte		msg_buf[1024];
 	sv_client_t	*cl;
 	sizebuf_t		msg;
 	int		i;

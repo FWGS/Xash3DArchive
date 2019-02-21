@@ -616,7 +616,6 @@ void MSG_ReadVec3Angles( sizebuf_t *sb, vec3_t fa )
 	fa[2] = MSG_ReadBitAngle( sb, 16 );
 }
 
-
 long MSG_ReadLong( sizebuf_t *sb )
 {
 	return MSG_ReadSBitLong( sb, sizeof( long ) << 3 );

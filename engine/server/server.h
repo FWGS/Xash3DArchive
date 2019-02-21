@@ -263,7 +263,6 @@ typedef struct sv_client_s
  a program error, like an overflowed reliable buffer
 =============================================================================
 */
-
 // MAX_CHALLENGES is made large to prevent a denial
 // of service attack that could cycle all of them
 // out before legitimate users connected

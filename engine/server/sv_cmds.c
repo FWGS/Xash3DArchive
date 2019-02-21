@@ -869,6 +869,7 @@ void SV_EntityInfo_f( void )
 		Con_Printf( "\n" );
 	}
 }
+
 /*
 ==================
 SV_InitHostCommands

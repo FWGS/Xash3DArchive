@@ -308,7 +308,7 @@ delta_info_t *Delta_FindStruct( const char *name )
 {
 	int	i;
 
-	if( !name || !name[0] )
+	if( !COM_CheckString( name ))
 		return NULL;
 
 	for( i = 0; i < NUM_FIELDS( dt_info ); i++ )
@@ -427,8 +427,12 @@ qboolean Delta_AddField( const char *pStructName, const char *pName, int flags, 
 	{
 		if( !Q_strcmp( pField->name, pName ))
 		{
-			Con_Reportf( "Delta_Add: %s->%s already existing\n", pStructName, pName );
-			return false; // field already exist		
+			// update existed field
+			pField->flags = flags;
+			pField->bits = bits;
+			pField->multiplier = mul;
+			pField->post_multiplier = post_mul;
+			return true;
 		}
 	}
 
@@ -470,7 +474,7 @@ void Delta_WriteTableField( sizebuf_t *msg, int tableIndex, const delta_t *pFiel
 	
 	Assert( pField != NULL );
 
-	if( !pField->name || !*pField->name )
+	if( !COM_CheckString( pField->name ))
 		return;	// not initialized ?
 
 	dt = Delta_FindStructByIndex( tableIndex );
@@ -480,7 +484,7 @@ void Delta_WriteTableField( sizebuf_t *msg, int tableIndex, const delta_t *pFiel
 	Assert( nameIndex >= 0 && nameIndex < dt->maxFields );
 
 	MSG_BeginServerCmd( msg, svc_deltatable );
-	MSG_WriteUBitLong( msg, tableIndex, 4 );		// assume we support 16 network tables
+	MSG_WriteUBitLong( msg, tableIndex, 4 );	// assume we support 16 network tables
 	MSG_WriteUBitLong( msg, nameIndex, 8 );		// 255 fields by struct should be enough
 	MSG_WriteUBitLong( msg, pField->flags, 10 );	// flags are indicated various input types
 	MSG_WriteUBitLong( msg, pField->bits - 1, 5 );	// max received value is 32 (32 bit)
@@ -526,10 +530,10 @@ void Delta_ParseTableField( sizebuf_t *msg )
 
 	if( MSG_ReadOneBit( msg ))
 		post_mul = MSG_ReadFloat( msg );
-
+#if 0
 	// delta encoders it's already initialized on this machine (local game)
 	if( delta_init ) return;
-
+#endif
 	// add field to table
 	Delta_AddField( dt->pName, pName, flags, bits, mul, post_mul );
 }
@@ -610,7 +614,6 @@ qboolean Delta_ParseField( char **delta_script, const delta_field_t *pInfo, delt
 	}
 
 	// read delta-bits
-
 	if(( *delta_script = COM_ParseFile( *delta_script, token )) == NULL )
 	{
 		Con_DPrintf( S_ERROR "Delta_ReadField: %s field bits argument is missing\n", pField->name );
@@ -765,13 +768,8 @@ void Delta_InitFields( void )
 
 		Delta_ParseTable( &pfile, dt, encodeDll, encodeFunc );
 	}
+
 	Mem_Free( afile );
-#if 0
-	// adding some required fields that user may forget or don't know how to specified
-	Delta_AddField( "event_t", "velocity[0]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
-	Delta_AddField( "event_t", "velocity[1]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );
-	Delta_AddField( "event_t", "velocity[2]", DT_SIGNED | DT_FLOAT, 16, 8.0f, 1.0f );	
-#endif
 }
 
 void Delta_Init( void )
@@ -1193,7 +1191,7 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 	else if( pField->flags & DT_TIMEWINDOW_8 )
 	{
 		flValue = *(float *)((byte *)to + pField->offset );
-		flTime = Q_rint( timebase * 100.0f ) - Q_rint(flValue * 100.0f);
+		flTime = Q_rint( timebase * 100.0f ) - Q_rint( flValue * 100.0f );
 		iValue = (uint)abs( flTime );
 
 		MSG_WriteBitLong( msg, iValue, pField->bits, bSigned );
