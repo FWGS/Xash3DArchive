@@ -79,7 +79,7 @@ qboolean SV_CopyEdictToPhysEnt( physent_t *pe, edict_t *ed )
 	else if( FBitSet( ed->v.flags, FL_CLIENT ))
 	{
 		// client
-		SV_GetTrueOrigin( &svs.clients[pe->info - 1], pe->info, pe->origin );
+		SV_GetTrueOrigin( sv.current_client, pe->info, pe->origin );
 		Q_strncpy( pe->name, "player", sizeof( pe->name ));
 		pe->player = pe->info;
 	}

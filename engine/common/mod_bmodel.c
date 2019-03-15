@@ -37,7 +37,7 @@ typedef struct leaflist_s
 	int			count;
 	int			maxcount;
 	qboolean			overflowed;
-	short			*list;
+	int			*list;
 	vec3_t			mins, maxs;
 	int			topnode;		// for overflows where each leaf can't be stored individually
 } leaflist_t;
@@ -669,7 +669,7 @@ static void Mod_BoxLeafnums_r( leaflist_t *ll, mnode_t *node )
 Mod_BoxLeafnums
 ==================
 */
-static int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, short *list, int listsize, int *topnode )
+static int Mod_BoxLeafnums( const vec3_t mins, const vec3_t maxs, int *list, int listsize, int *topnode )
 {
 	leaflist_t	ll;
 
@@ -700,7 +700,7 @@ is potentially visible
 */
 qboolean Mod_BoxVisible( const vec3_t mins, const vec3_t maxs, const byte *visbits )
 {
-	short	leafList[MAX_BOX_LEAFS];
+	int	leafList[MAX_BOX_LEAFS];
 	int	i, count;
 
 	if( !visbits || !mins || !maxs )

@@ -875,73 +875,18 @@ Delta_ClampIntegerField
 prevent data to out of range
 =====================
 */
-int Delta_ClampIntegerField( int iValue, qboolean bSigned, int bits )
+int Delta_ClampIntegerField( int iValue, qboolean bSigned, int numbits )
 {
-	switch( bits )
+#ifdef _DEBUG
+	if( numbits < 32 && abs( iValue ) >= (uint)BIT( numbits ))
+		Msg( "%d overflow %d\n", abs( iValue ), (uint)BIT( numbits ));
+#endif
+	if( numbits < 32 )
 	{
-	case 1:
-		iValue = bound( 0, (byte)iValue, 1 );
-		break;
-	case 2:
-		if( bSigned ) iValue = bound( -2, (short)iValue, 1 );
-		else iValue = bound( 0, (word)iValue, 3 );
-		break;
-	case 3:
-		if( bSigned ) iValue = bound( -4, (short)iValue, 3 );
-		else iValue = bound( 0, (word)iValue, 7 );
-		break;
-	case 4:
-		if( bSigned ) iValue = bound( -8, (short)iValue, 7 );
-		else iValue = bound( 0, (word)iValue, 15 );
-		break;
-	case 5:
-		if( bSigned ) iValue = bound( -16, (short)iValue, 15 );
-		else iValue = bound( 0, (word)iValue, 31 );
-		break;
-	case 6:
-		if( bSigned ) iValue = bound( -32, (short)iValue, 31 );
-		else iValue = bound( 0, (word)iValue, 63 );
-		break;
-	case 7:
-		if( bSigned ) iValue = bound( -64, (short)iValue, 63 );
-		else iValue = bound( 0, (word)iValue, 127 );
-		break;
-	case 8:
-		if( bSigned ) iValue = bound( -128, (short)iValue, 127 );
-		else iValue = bound( 0, (word)iValue, 255 );
-		break;
-	case 9:
-		if( bSigned ) iValue = bound( -256, (short)iValue, 255 );
-		else iValue = bound( 0, (word)iValue, 511 );
-		break;
-	case 10:
-		if( bSigned ) iValue = bound( -512, (short)iValue, 511 );
-		else iValue = bound( 0, (word)iValue, 1023 );
-		break;
-	case 11:
-		if( bSigned ) iValue = bound( -1024, (short)iValue, 1023 );
-		else iValue = bound( 0, (word)iValue, 2047 );
-		break;
-	case 12:
-		if( bSigned ) iValue = bound( -2048, (short)iValue, 2047 );
-		else iValue = bound( 0, (word)iValue, 4095 );
-		break;
-	case 13:
-		if( bSigned ) iValue = bound( -4096, (short)iValue, 4095 );
-		else iValue = bound( 0, (word)iValue, 8191 );
-		break;
-	case 14:
-		if( bSigned ) iValue = bound( -8192, (short)iValue, 8191 );
-		else iValue = bound( 0, (word)iValue, 16383 );
-		break;
-	case 15:
-		if( bSigned ) iValue = bound( -16384, (short)iValue, 16383 );
-		else iValue = bound( 0, (word)iValue, 32767 );
-		break;
-	case 16:
-		if( bSigned ) iValue = bound( -32768, (short)iValue, 32767 );
-		else iValue = bound( 0, (word)iValue, 65535 );
-		break;
+		int signbits = bSigned ? (numbits - 1) : numbits;
+		int maxnum = BIT( signbits ) - 1;
+		int minnum = bSigned ? -maxnum : 0;
+		iValue = bound( minnum, iValue, maxnum );
 	}
 
 	return iValue; // clamped;
@@ -1178,6 +1123,7 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 	{
 		flValue = *(float *)((byte *)to + pField->offset );
 		iValue = (int)(flValue * pField->multiplier);
+		iValue = Delta_ClampIntegerField( iValue, bSigned, pField->bits );
 		MSG_WriteBitLong( msg, iValue, pField->bits, bSigned );
 	}
 	else if( pField->flags & DT_ANGLE )
@@ -1193,7 +1139,7 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 		flValue = *(float *)((byte *)to + pField->offset );
 		flTime = Q_rint( timebase * 100.0f ) - Q_rint( flValue * 100.0f );
 		iValue = (uint)abs( flTime );
-
+		iValue = Delta_ClampIntegerField( iValue, bSigned, pField->bits );
 		MSG_WriteBitLong( msg, iValue, pField->bits, bSigned );
 	}
 	else if( pField->flags & DT_TIMEWINDOW_BIG )
@@ -1201,7 +1147,7 @@ qboolean Delta_WriteField( sizebuf_t *msg, delta_t *pField, void *from, void *to
 		flValue = *(float *)((byte *)to + pField->offset );
 		flTime = Q_rint( timebase * pField->multiplier ) - Q_rint( flValue * pField->multiplier );
 		iValue = (uint)abs( flTime );
-
+		iValue = Delta_ClampIntegerField( iValue, bSigned, pField->bits );
 		MSG_WriteBitLong( msg, iValue, pField->bits, bSigned );
 	}
 	else if( pField->flags & DT_STRING )
