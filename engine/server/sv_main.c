@@ -152,6 +152,9 @@ send updates to client if changed
 */
 void SV_UpdateMovevars( qboolean initialize )
 {
+	if( sv.state == ss_dead )
+		return;
+
 	if( !initialize && !host.movevars_changed )
 		return;
 
@@ -638,6 +641,17 @@ void Host_ServerFrame( void )
 
 	// send a heartbeat to the master if needed
 	Master_Heartbeat ();
+}
+
+/*
+==================
+Host_SetServerState
+==================
+*/
+void Host_SetServerState( int state )
+{
+	Cvar_FullSet( "host_serverstate", va( "%i", state ), FCVAR_READ_ONLY );
+	sv.state = state;
 }
 
 //============================================================================

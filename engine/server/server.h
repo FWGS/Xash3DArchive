@@ -456,6 +456,7 @@ void SV_ProcessFile( sv_client_t *cl, const char *filename );
 void SV_SendResource( resource_t *pResource, sizebuf_t *msg );
 void SV_SendResourceList( sv_client_t *cl );
 void SV_AddToMaster( netadr_t from, sizebuf_t *msg );
+void Host_SetServerState( int state );
 qboolean SV_IsSimulating( void );
 qboolean SV_InitGame( void );
 void SV_FreeClients( void );
