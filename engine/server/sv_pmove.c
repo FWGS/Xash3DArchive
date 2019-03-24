@@ -372,7 +372,7 @@ static int pfnPointContents( float *p, int *truecontents )
 {
 	int	cont, truecont;
 
-	truecont = cont = SV_TruePointContents( p );
+	truecont = cont = PM_PointContents( svgame.pmove, p );
 	if( truecontents ) *truecontents = truecont;
 
 	if( cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN )
@@ -382,7 +382,7 @@ static int pfnPointContents( float *p, int *truecontents )
 
 static int pfnTruePointContents( float *p )
 {
-	return SV_TruePointContents( p );
+	return PM_TruePointContents( svgame.pmove, p );
 }
 
 static int pfnHullPointContents( struct hull_s *hull, int num, float *p )

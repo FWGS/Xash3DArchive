@@ -997,6 +997,9 @@ void SV_Shutdown( const char *finalmsg )
 	SV_FreeClients();
 	svs.maxclients = 0;
 
+	// release all models
+	Mod_FreeAll();
+
 	HPAK_FlushHostQueue();
 	Log_Printf( "Server shutdown\n" );
 	Log_Close();
