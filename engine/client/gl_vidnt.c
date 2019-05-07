@@ -35,6 +35,7 @@ convar_t	*gl_texture_nearest;
 convar_t	*gl_lightmap_nearest;
 convar_t	*gl_wgl_msaa_samples;
 convar_t	*gl_keeptjunctions;
+convar_t	*gl_test_cubeview;
 convar_t	*gl_emboss_scale;
 convar_t	*gl_showtextures;
 convar_t	*gl_detailscale;
@@ -1611,6 +1612,7 @@ void GL_InitCommands( void )
 	gl_texture_anisotropy = Cvar_Get( "gl_anisotropy", "8", FCVAR_ARCHIVE, "textures anisotropic filter" );
 	gl_texture_lodbias =  Cvar_Get( "gl_texture_lodbias", "0.0", FCVAR_ARCHIVE, "LOD bias for mipmapped textures (perfomance|quality)" );
 	gl_keeptjunctions = Cvar_Get( "gl_keeptjunctions", "1", FCVAR_ARCHIVE, "removing tjuncs causes blinking pixels" ); 
+	gl_test_cubeview = Cvar_Get( "gl_test_cubeview", "0", 0, "rendering view from cubemap sides (debug thing)" ); 
 	gl_emboss_scale = Cvar_Get( "gl_emboss_scale", "0", FCVAR_ARCHIVE|FCVAR_LATCH, "fake bumpmapping scale" ); 
 	gl_showtextures = Cvar_Get( "r_showtextures", "0", FCVAR_CHEAT, "show all uploaded textures" );
 	gl_finish = Cvar_Get( "gl_finish", "0", FCVAR_ARCHIVE, "use glFinish instead of glFlush" );

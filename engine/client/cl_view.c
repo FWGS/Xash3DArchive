@@ -334,7 +334,9 @@ void V_RenderView( void )
 			pglClear( GL_COLOR_BUFFER_BIT );
 		}
 
-		R_RenderFrame( &rvp );
+		if( CVAR_TO_BOOL( gl_test_cubeview ))
+			R_TestCubeView( (int)gl_test_cubeview->value );
+		else R_RenderFrame( &rvp );
 		S_UpdateFrame( &rvp );
 		viewnum++;
 

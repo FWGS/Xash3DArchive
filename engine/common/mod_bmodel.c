@@ -2948,7 +2948,7 @@ check lump for existing
 */
 int Mod_CheckLump( const char *filename, const int lump, int *lumpsize )
 {
-	file_t		*f = FS_Open( filename, "rb", true );
+	file_t		*f = FS_Open( filename, "rb", false );
 	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
 	size_t		prefetch_size = sizeof( buffer );
 	dextrahdr_t	*extrahdr;
@@ -3007,7 +3007,7 @@ reading random lump by user request
 */
 int Mod_ReadLump( const char *filename, const int lump, void **lumpdata, int *lumpsize )
 {
-	file_t		*f = FS_Open( filename, "rb", true );
+	file_t		*f = FS_Open( filename, "rb", false );
 	byte		buffer[sizeof( dheader_t ) + sizeof( dextrahdr_t )];
 	size_t		prefetch_size = sizeof( buffer );
 	dextrahdr_t	*extrahdr;
