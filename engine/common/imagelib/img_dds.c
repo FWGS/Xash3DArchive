@@ -135,11 +135,21 @@ void Image_DXTGetPixelFormat( dds_t *hdr )
 		}
 		else 
 		{
-			if( bits == 32 )
+			switch( bits )
+			{
+			case 32:
 				image.type = PF_BGRA_32;
-			else if( bits == 24 )
+				break;
+			case 24:
 				image.type = PF_BGR_24;
-			else image.type = PF_UNKNOWN; // assume error;
+				break;
+			case 8:
+				image.type = PF_LUMINANCE;
+				break;
+			default:
+				image.type = PF_UNKNOWN;
+				break;
+			}
 		}
 	}
 
@@ -159,6 +169,7 @@ size_t Image_DXTGetLinearSize( int type, int width, int height, int depth )
 	case PF_DXT3:
 	case PF_DXT5:
 	case PF_ATI2: return ((( width + 3 ) / 4 ) * (( height + 3 ) / 4 ) * depth * 16 );
+	case PF_LUMINANCE: return (width * height * depth);
 	case PF_BGR_24:
 	case PF_RGB_24: return (width * height * depth * 3);
 	case PF_BGRA_32:
@@ -310,6 +321,9 @@ qboolean Image_LoadDDS( const char *name, const byte *buffer, size_t filesize )
 			SetBits( image.flags, IMAGE_HAS_COLOR );
 		break;
 	}
+
+	if( image.type == PF_LUMINANCE )
+		ClearBits( image.flags, IMAGE_HAS_COLOR|IMAGE_HAS_ALPHA );
 
 	if( header.dwReserved1[1] != 0 )
 	{

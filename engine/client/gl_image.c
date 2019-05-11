@@ -351,6 +351,9 @@ static size_t GL_CalcImageSize( pixformat_t format, int width, int height, int d
 
 	switch( format )
 	{
+	case PF_LUMINANCE:
+		size = width * height * depth;
+		break;
 	case PF_RGB_24:
 	case PF_BGR_24:
 		size = width * height * depth * 3;
@@ -1853,6 +1856,23 @@ void GL_ProcessTexture( int texnum, float gamma, int topColor, int bottomColor )
 	GL_ApplyTextureParams( image ); // update texture filter, wrap etc
 
 	FS_FreeImage( pic );
+}
+
+/*
+================
+GL_TexMemory
+
+return size of all uploaded textures
+================
+*/
+int GL_TexMemory( void )
+{
+	int	i, total = 0;
+
+	for( i = 0; i < gl_numTextures; i++ )
+		total += gl_textures[i].size;
+
+	return total;
 }
 
 /*

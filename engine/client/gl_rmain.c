@@ -1274,6 +1274,8 @@ static int GL_RenderGetParm( int parm, int arg )
 		return glState.stencilEnabled;
 	case PARM_WATER_ALPHA:
 		return FBitSet( world.flags, FWORLD_WATERALPHA );
+	case PARM_TEX_MEMORY:
+		return GL_TexMemory();
 	}
 	return 0;
 }
