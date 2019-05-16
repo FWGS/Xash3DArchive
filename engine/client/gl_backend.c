@@ -633,29 +633,6 @@ qboolean VID_CubemapShot( const char *base, uint size, const float *vieworg, qbo
 	return result;
 }
 
-/*
-=================
-R_TestCubeView
-
-debug thing
-=================
-*/
-void R_TestCubeView( int sidenum )
-{
-	qboolean	skyshot = (sidenum < 0) ? true : false;
-
-	sidenum = bound( 0, abs( sidenum ) - 1, 5 );
-
-	if( skyshot )
-	{
-		R_DrawCubemapView( RI.vieworg, r_skyBoxInfo[sidenum].angles, 256 );
-	}
-	else
-	{
-		R_DrawCubemapView( RI.vieworg, r_envMapInfo[sidenum].angles, 256 );
-	}
-}
-
 //=======================================================
 
 /*

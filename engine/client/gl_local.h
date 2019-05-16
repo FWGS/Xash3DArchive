@@ -272,7 +272,6 @@ void GL_DisableAllTexGens( void );
 void GL_SetRenderMode( int mode );
 void GL_TextureTarget( uint target );
 void GL_Cull( GLenum cull );
-void R_TestCubeView( int sidenum );
 void R_ShowTextures( void );
 void R_ShowTree( void );
 
@@ -648,7 +647,6 @@ extern convar_t	*gl_texture_lodbias;
 extern convar_t	*gl_texture_nearest;
 extern convar_t	*gl_lightmap_nearest;
 extern convar_t	*gl_keeptjunctions;
-extern convar_t	*gl_test_cubeview;
 extern convar_t	*gl_emboss_scale;
 extern convar_t	*gl_round_down;
 extern convar_t	*gl_detailscale;
