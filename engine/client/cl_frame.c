@@ -224,6 +224,10 @@ void CL_UpdateLatchedVars( cl_entity_t *ent )
 
 	memcpy( ent->latched.prevcontroller, ent->prevstate.controller, sizeof( ent->latched.prevcontroller ));
 	memcpy( ent->latched.prevblending, ent->prevstate.blending, sizeof( ent->latched.prevblending ));
+
+	// update custom latched vars
+	if( clgame.drawFuncs.CL_UpdateLatchedVars != NULL )
+		clgame.drawFuncs.CL_UpdateLatchedVars( ent );
 }
 
 /*

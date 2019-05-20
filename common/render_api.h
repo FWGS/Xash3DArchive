@@ -263,6 +263,8 @@ typedef struct render_interface_s
 	void		(*R_NewMap)( void );
 	// clear the render entities before each frame
 	void		(*R_ClearScene)( void );
+	// shuffle previous & next states for lerping
+	void		(*CL_UpdateLatchedVars)( struct cl_entity_s *e );
 } render_interface_t;
 
 #endif//RENDER_API_H
