@@ -1276,6 +1276,10 @@ static int GL_RenderGetParm( int parm, int arg )
 		return FBitSet( world.flags, FWORLD_WATERALPHA );
 	case PARM_TEX_MEMORY:
 		return GL_TexMemory();
+	case PARM_DELUXEDATA:
+		return *(int *)&world.deluxedata;
+	case PARM_SHADOWDATA:
+		return *(int *)&world.shadowdata;
 	}
 	return 0;
 }
@@ -1514,7 +1518,7 @@ static render_api_t gRenderAPI =
 	R_StudioGetTexture,
 	GL_GetOverviewParms,
 	CL_GenericHandle,
-	NULL,
+	COM_SaveFile,
 	NULL,
 	R_Mem_Alloc,
 	R_Mem_Free,
@@ -1540,12 +1544,14 @@ qboolean R_InitRenderAPI( void )
 {
 	// make sure what render functions is cleared
 	memset( &clgame.drawFuncs, 0, sizeof( clgame.drawFuncs ));
+	glConfig.fCustomRenderer = false;
 
 	if( clgame.dllFuncs.pfnGetRenderInterface )
 	{
 		if( clgame.dllFuncs.pfnGetRenderInterface( CL_RENDER_INTERFACE_VERSION, &gRenderAPI, &clgame.drawFuncs ))
 		{
 			Con_Reportf( "CL_LoadProgs: ^2initailized extended RenderAPI ^7ver. %i\n", CL_RENDER_INTERFACE_VERSION );
+			glConfig.fCustomRenderer = true;
 			return true;
 		}
 

@@ -1679,6 +1679,7 @@ creates texture from buffer
 */
 int GL_CreateTexture( const char *name, int width, int height, const void *buffer, texFlags_t flags )
 {
+	qboolean	update = FBitSet( flags, TF_UPDATE ) ? true : false;
 	int	datasize = 1;
 	rgbdata_t	r_empty;
 
@@ -1687,6 +1688,7 @@ int GL_CreateTexture( const char *name, int width, int height, const void *buffe
 	else if( FBitSet( flags, TF_ARB_FLOAT ))
 		datasize = 4;
 
+	ClearBits( flags, TF_UPDATE );
 	memset( &r_empty, 0, sizeof( r_empty ));
 	r_empty.width = width;
 	r_empty.height = height;
@@ -1712,7 +1714,7 @@ int GL_CreateTexture( const char *name, int width, int height, const void *buffe
 		r_empty.size *= 6;
 	}
 
-	return GL_LoadTextureInternal( name, &r_empty, flags );
+	return GL_LoadTextureFromBuffer( name, &r_empty, flags, update );
 }
 
 /*

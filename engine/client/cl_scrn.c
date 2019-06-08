@@ -311,6 +311,7 @@ void SCR_BeginLoadingPlaque( qboolean is_background )
 {
 	S_StopAllSounds( true );
 	cl.audio_prepped = false;			// don't play ambients
+	cl.video_prepped = false;
 
 	if( CL_IsInMenu( ) && !cls.changedemo && !is_background )
 	{

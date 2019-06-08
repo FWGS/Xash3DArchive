@@ -306,7 +306,7 @@ void CEngineSurface :: drawPrintChar( int x, int y, int wide, int tall, float s0
 
 	if( !ClipRect( ul, lr, &clippedRect[0], &clippedRect[1] ))
 		return;
-#if 1
+#if 0
 	// TESTTEST: needs to be more tested
 	addCharToBuffer( &clippedRect[0], &clippedRect[1], color );
 #else                                        

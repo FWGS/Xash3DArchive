@@ -597,6 +597,7 @@ typedef struct
 	gles_wrapper_t	wrapper;
 
 	qboolean		softwareGammaUpdate;
+	qboolean		fCustomRenderer;
 	int		prev_mode;
 } glconfig_t;
 

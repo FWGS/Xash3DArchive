@@ -227,7 +227,7 @@ void CL_UpdateLatchedVars( cl_entity_t *ent )
 
 	// update custom latched vars
 	if( clgame.drawFuncs.CL_UpdateLatchedVars != NULL )
-		clgame.drawFuncs.CL_UpdateLatchedVars( ent );
+		clgame.drawFuncs.CL_UpdateLatchedVars( ent, false );
 }
 
 /*
@@ -258,6 +258,10 @@ void CL_ResetLatchedVars( cl_entity_t *ent, qboolean full_reset )
 	VectorCopy( ent->curstate.origin, ent->latched.prevorigin );
 	VectorCopy( ent->curstate.angles, ent->latched.prevangles );
 	ent->latched.prevsequence = ent->curstate.sequence;
+
+	// update custom latched vars
+	if( clgame.drawFuncs.CL_UpdateLatchedVars != NULL )
+		clgame.drawFuncs.CL_UpdateLatchedVars( ent, true );
 }
 
 /*
