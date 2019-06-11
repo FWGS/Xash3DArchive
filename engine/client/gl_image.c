@@ -72,12 +72,12 @@ void GL_Bind( GLint tmu, GLenum texnum )
 	gl_texture_t	*texture;
 	GLuint		glTarget;
 
-	Assert( texnum >= 0 && texnum < MAX_TEXTURES );
-
 	// missed or invalid texture?
 	if( texnum <= 0 || texnum >= MAX_TEXTURES )
+	{
+		Con_DPrintf( S_ERROR "GL_Bind: invalid texturenum %d\n", texnum );
 		texnum = tr.defaultTexture;
-
+	}
 	if( tmu != GL_KEEP_UNIT )
 		GL_SelectTexture( tmu );
 	else tmu = glState.activeTMU;

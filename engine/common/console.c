@@ -1034,6 +1034,7 @@ void Con_Print( const char *txt )
 {
 	static int	cr_pending = 0;
 	static char	buf[MAX_PRINT_MSG];
+	qboolean		norefresh = false;
 	static int	lastlength = 0;
 	static qboolean	inupdate;
 	static int	bufpos = 0;
@@ -1048,6 +1049,12 @@ void Con_Print( const char *txt )
 		// go to colored text
 		if( Con_FixedFont( ))
 			mask = 128;
+		txt++;
+	}
+
+	if( txt[0] == 3 )
+	{
+		norefresh = true;
 		txt++;
 	}
 
@@ -1087,6 +1094,8 @@ void Con_Print( const char *txt )
 			break;
 		}
 	}
+
+	if( norefresh ) return;
 
 	// custom renderer cause problems while updates screen on-loading
 	if( SV_Active() && cls.state < ca_active && !cl.video_prepped && !cls.disable_screen )
@@ -2071,7 +2080,7 @@ int Con_DrawConsoleLine( int y, int lineno )
 {
 	con_lineinfo_t	*li = &CON_LINES( lineno );
 
-	if( *li->start == '\1' )
+	if( !li || !li->start || *li->start == '\1' )
 		return 0;	// this string will be shown only at notify
 
 	if( y >= con.curFont->charHeight )
