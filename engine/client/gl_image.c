@@ -75,7 +75,8 @@ void GL_Bind( GLint tmu, GLenum texnum )
 	// missed or invalid texture?
 	if( texnum <= 0 || texnum >= MAX_TEXTURES )
 	{
-		Con_DPrintf( S_ERROR "GL_Bind: invalid texturenum %d\n", texnum );
+		if( texnum != 0 )
+			Con_DPrintf( S_ERROR "GL_Bind: invalid texturenum %d\n", texnum );
 		texnum = tr.defaultTexture;
 	}
 	if( tmu != GL_KEEP_UNIT )

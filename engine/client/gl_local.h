@@ -365,6 +365,7 @@ qboolean R_InitRenderAPI( void );
 void R_AllowFog( int allowed );
 void R_SetupFrustum( void );
 void R_FindViewLeaf( void );
+void R_CheckGamma( void );
 void R_PushScene( void );
 void R_PopScene( void );
 void R_DrawFog( void );
