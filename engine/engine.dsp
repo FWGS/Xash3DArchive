@@ -43,8 +43,8 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "common" /I "common/imagelib" /I "common/soundlib" /I "server" /I "client" /I "client/vgui" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
-# SUBTRACT CPP /Fr /YX
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "./" /I "common" /I "common/imagelib" /I "common/soundlib" /I "server" /I "client" /I "client/vgui" /I "../common" /I "../game_shared" /I "../pm_shared" /I "../utils/vgui/include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fr /FD /c
+# SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -57,28 +57,13 @@ LINK32=link.exe
 # ADD LINK32 msvcrt.lib user32.lib gdi32.lib shell32.lib advapi32.lib winmm.lib mpeg.lib ../utils/vgui/lib/win32_vc6/vgui.lib /nologo /subsystem:windows /dll /pdb:none /machine:I386 /nodefaultlib:"libc" /out:"..\temp\engine\!release/xash.dll" /libpath:"./common/soundlib" /opt:nowin98
 # SUBTRACT LINK32 /debug /nodefaultlib
 # Begin Custom Build
-TargetDir=\Xash3D\src_main\temp\engine\!release
-InputPath=\Xash3D\src_main\temp\engine\!release\xash.dll
+TargetDir=\X3Dvanilla\temp\engine\!release
+InputPath=\X3Dvanilla\temp\engine\!release\xash.dll
 SOURCE="$(InputPath)"
 
-BuildCmds= \
-	copy $(TargetDir)\xash.dll "D:\Xash3D\xash.dll" \
-	copy $(TargetDir)\xash.dll "D:\Paranoia2\xash.dll" \
-	copy $(TargetDir)\xash.dll "D:\Quake\xash.dll" \
-	copy $(TargetDir)\xash.dll "E:\Xash3D\xash.dll" \
-	
+"d:\xash3d\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\xash.dll "d:\xash3d\xash.dll"
 
-"D:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-   $(BuildCmds)
-
-"D:\Paranoia2\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-   $(BuildCmds)
-
-"D:\Quake\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-   $(BuildCmds)
-
-"E:\Xash3D\xash.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-   $(BuildCmds)
 # End Custom Build
 
 !ELSEIF  "$(CFG)" == "engine - Win32 Debug"
@@ -109,8 +94,8 @@ LINK32=link.exe
 # ADD LINK32 msvcrtd.lib user32.lib gdi32.lib shell32.lib advapi32.lib winmm.lib mpeg_dbg.lib ../utils/vgui/lib/win32_vc6/vgui.lib /nologo /subsystem:windows /dll /debug /machine:I386 /nodefaultlib:"libcmtd.lib" /out:"..\temp\engine\!debug/xash.dll" /pdbtype:sept /libpath:"./common/soundlib"
 # SUBTRACT LINK32 /incremental:no /map /nodefaultlib
 # Begin Custom Build
-TargetDir=\Xash3D\src_main\temp\engine\!debug
-InputPath=\Xash3D\src_main\temp\engine\!debug\xash.dll
+TargetDir=\X3Dvanilla\temp\engine\!debug
+InputPath=\X3Dvanilla\temp\engine\!debug\xash.dll
 SOURCE="$(InputPath)"
 
 BuildCmds= \

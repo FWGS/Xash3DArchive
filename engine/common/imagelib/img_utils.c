@@ -285,9 +285,9 @@ void Image_SetPalette( const byte *pal, uint *d_table )
 	case LUMP_NORMAL:
 		for( i = 0; i < 256; i++ )
 		{
-			rgba[0] = pal[i*3+0];
-			rgba[1] = pal[i*3+1];
-			rgba[2] = pal[i*3+2];
+			rgba[0] = TextureToGamma(  pal[i*3+0]  );
+			rgba[1] = TextureToGamma(  pal[i*3+1]  );
+			rgba[2] = TextureToGamma(  pal[i*3+2]  );
 			rgba[3] = 0xFF;
 			d_table[i] = *(uint *)rgba;
 		}

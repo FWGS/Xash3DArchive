@@ -1617,6 +1617,7 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 	colorVec		light;
 	uint		lnum;
 	dlight_t		*dl;
+	
 
 	if( !plight || !ent || !ent->model )
 		return;
@@ -1663,13 +1664,35 @@ void R_StudioDynamicLight( cl_entity_t *ent, alight_t *plight )
 		if( trace.ent > 0 ) psurf = PM_TraceSurface( &clgame.pmove->physents[trace.ent], vecSrc, vecEnd );
  		else psurf = PM_TraceSurface( clgame.pmove->physents, vecSrc, vecEnd );
  
-		if( FBitSet( ent->model->flags, STUDIO_FORCE_SKYLIGHT ) || ( psurf && FBitSet( psurf->flags, SURF_DRAWSKY )))
+		// old Xash lighting of studiomodels
+/*		if( FBitSet( ent->model->flags, STUDIO_FORCE_SKYLIGHT ) || ( psurf && FBitSet( psurf->flags, SURF_DRAWSKY )))
 		{
 			VectorSet( lightDir, mv->skyvec_x, mv->skyvec_y, mv->skyvec_z );
 
 			light.r = LightToTexGamma( bound( 0, mv->skycolor_r, 255 ));
 			light.g = LightToTexGamma( bound( 0, mv->skycolor_g, 255 ));
 			light.b = LightToTexGamma( bound( 0, mv->skycolor_b, 255 ));
+		}*/
+
+		//  correct lighting of studio models
+		if( FBitSet( ent->model->flags, STUDIO_FORCE_SKYLIGHT ) || ( psurf && FBitSet( psurf->flags, SURF_DRAWSKY )))
+		{
+			VectorSet( lightDir, mv->skyvec_x, mv->skyvec_y, mv->skyvec_z );
+			total = Q_max( Q_max( mv->skycolor_r, mv->skycolor_g ), mv->skycolor_b );
+
+	//	to match the picture of Goldsource, uncomment if and else:
+		//	if( total > 255.0f)
+		//	{
+				light.r = LightToTexGamma( (mv->skycolor_r * ( 1.0f / total )) * 255.0f );
+				light.g = LightToTexGamma( (mv->skycolor_g * ( 1.0f / total )) * 255.0f );
+				light.b = LightToTexGamma( (mv->skycolor_b * ( 1.0f / total )) * 255.0f );
+		//	}
+		/*	else
+			{
+				light.r = LightToTexGamma( (mv->skycolor_r ) );
+				light.g = LightToTexGamma( (mv->skycolor_g ) );
+				light.b = LightToTexGamma( (mv->skycolor_b ) );
+			}*/
 		}
 	}
 

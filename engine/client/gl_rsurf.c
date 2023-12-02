@@ -658,6 +658,7 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 	mextrasurf_t	*info = surf->info;
 	color24		*lm;
 
+
 	sample_size = Mod_SampleSizeForFace( surf );
 	smax = ( info->lightextents[0] / sample_size ) + 1;
 	tmax = ( info->lightextents[1] / sample_size ) + 1;
@@ -671,10 +672,9 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 	for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255 && lm; map++ )
 	{
 		scale = tr.lightstylevalue[surf->styles[map]];
-
 		for( i = 0, bl = r_blocklights; i < size; i++, bl += 3, lm++ )
 		{
-			bl[0] += LightToTexGamma( lm->r ) * scale;
+			bl[0] += LightToTexGamma( lm->r)  * scale;
 			bl[1] += LightToTexGamma( lm->g ) * scale;
 			bl[2] += LightToTexGamma( lm->b ) * scale;
 		}
@@ -692,9 +692,11 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride, qboolean 
 	{
 		for( s = 0; s < smax; s++ )
 		{
-			dest[0] = Q_min((bl[0] >> 7), 255 );
-			dest[1] = Q_min((bl[1] >> 7), 255 );
-			dest[2] = Q_min((bl[2] >> 7), 255 );
+			int shift = CVAR_TO_BOOL( r_lightmap )?  7 : 8;  //   7 for lightmap view
+
+			dest[0] = Q_min(  (bl[0] >> shift), 255  );
+			dest[1] = Q_min(  (bl[1] >> shift), 255  );
+			dest[2] = Q_min(  (bl[2] >> shift), 255  );
 			dest[3] = 255;
 
 			bl += 3;
@@ -851,8 +853,11 @@ void R_BlendLightmaps( void )
 	pglDepthFunc( GL_EQUAL );
 
 	pglDisable( GL_ALPHA_TEST );
-	pglBlendFunc( GL_ZERO, GL_SRC_COLOR );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+	// overbright
+	pglBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
+
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE ); // whats it for???
 
 	// render static lightmaps first
 	for( i = 0; i < MAX_LIGHTMAPS; i++ )
@@ -945,7 +950,7 @@ void R_BlendLightmaps( void )
 	pglDisable( GL_BLEND );
 	pglDepthMask( GL_TRUE );
 	pglDepthFunc( GL_LEQUAL );
-	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
+	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE ); // whats it for???
 	pglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
 
 	// restore fog here

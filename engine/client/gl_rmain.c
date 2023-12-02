@@ -1000,6 +1000,7 @@ qboolean R_DoResetGamma( void )
 R_CheckGamma
 ===============
 */
+
 void R_CheckGamma( void )
 {
 	if( R_DoResetGamma( ))
@@ -1018,7 +1019,33 @@ void R_CheckGamma( void )
 		GL_RebuildLightmaps();
 		glConfig.softwareGammaUpdate = false;
 	}
+	else if( FBitSet( r_lightmap->flags, FCVAR_CHANGED ))
+	{
+		GL_RebuildLightmaps();
+		ClearBits( r_lightmap->flags, FCVAR_CHANGED );
+	}
 }
+
+/*
+void R_CheckGamma( void )
+{
+	if( R_DoResetGamma( ))
+	{
+		// paranoia cubemaps uses this
+		BuildGammaTable( 1.8f, 0.0f );
+
+		// paranoia cubemap rendering
+		if( clgame.drawFuncs.GL_BuildLightmaps )
+			clgame.drawFuncs.GL_BuildLightmaps( );
+	}
+	else if( FBitSet( vid_gamma->flags, FCVAR_CHANGED ) || FBitSet( vid_brightness->flags, FCVAR_CHANGED ))
+	{
+		BuildGammaTable( vid_gamma->value, vid_brightness->value );
+		glConfig.softwareGammaUpdate = true;
+		GL_RebuildLightmaps();
+		glConfig.softwareGammaUpdate = false;
+	}
+}*/
 
 /*
 ===============
